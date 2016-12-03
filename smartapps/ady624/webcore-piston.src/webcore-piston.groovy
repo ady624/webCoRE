@@ -15,9 +15,10 @@
  */
  
 
-def String version() {	return "v0.0.001.20161130" }
+def String version() {	return "v0.0.002.20161202" }
 /*
- *	11/30/2016 >>> v0.0.001.20161130 - ALPHA - Initial release
+ *	12/02/2016 >>> v0.0.002.20161202 - ALPHA - Small progress, Add new piston now points to the piston editor UI
+ *	10/28/2016 >>> v0.0.001.20161028 - ALPHA - Initial release
  */
  
 /******************************************************************************/
