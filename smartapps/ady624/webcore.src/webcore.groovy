@@ -19,8 +19,9 @@
  *  Version history
  */
 
-def version() {	return "v0.0.003.20170117" }
+def version() {	return "v0.0.004.20170117" }
 /*
+ *	01/17/2016 >>> v0.0.004.20170117 - ALPHA - Updated to allow multiple instances
  *	01/17/2016 >>> v0.0.003.20170117 - ALPHA - Improved security, object ids are hashed, added multiple-location-multiple-instance support (CoRE will be able to work across multiple location and installed instances)
  *	12/02/2016 >>> v0.0.002.20161202 - ALPHA - Small progress, Add new piston now points to the piston editor UI
  *	10/28/2016 >>> v0.0.001.20161028 - ALPHA - Initial release
@@ -34,9 +35,9 @@ def version() {	return "v0.0.003.20170117" }
 	name: "webCoRE",
 	namespace: "ady624",
 	author: "Adrian Caramaliu",
-	description: "CoRE - Web Edition",
+	description: "CoRE SE",
 	category: "Convenience",
-	singleInstance: true,
+	singleInstance: false,
 	iconUrl: "https://cdn.rawgit.com/ady624/CoRE/master/resources/images/app-CoRE.png",
 	iconX2Url: "https://cdn.rawgit.com/ady624/CoRE/master/resources/images/app-CoRE@2x.png",
 	iconX3Url: "https://cdn.rawgit.com/ady624/CoRE/master/resources/images/app-CoRE@2x.png"
@@ -314,10 +315,7 @@ private api_dashboard(params) {
 }
 
 private api_getDashboardData() {
-	def result = [
-    	now: now(),
-        pistons: [:]
-	]
+	def result = api_get_base_result()
    	//for (app in getChildApps()) {
 //    	result.pistons[app.id] = [n: app.label]
 //    }
