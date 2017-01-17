@@ -19,8 +19,9 @@
  *  Version history
  */
 
-def version() {	return "v0.0.002.20161202" }
+def version() {	return "v0.0.003.20170117" }
 /*
+ *	01/17/2016 >>> v0.0.003.20170117 - ALPHA - Improved security, object ids are hashed, added multiple-location-multiple-instance support (CoRE will be able to work across multiple location and installed instances)
  *	12/02/2016 >>> v0.0.002.20161202 - ALPHA - Small progress, Add new piston now points to the piston editor UI
  *	10/28/2016 >>> v0.0.001.20161028 - ALPHA - Initial release
  */
@@ -91,18 +92,18 @@ def pageMain() {
 			}
 		}
 		
-		section() {
+//		section() {
 	   // 	href "pageCreatePiston", title: "Add a new piston", description: "Tap here to add a new piston" 
-		}
+//		}
 		
-		def apps = getChildApps()
+//       	def apps = getChildApps()
 		section("Pistons") {
-			for (app in apps) {
-				href "", title: app.label, style: "external", url: "${state.endpoint}dashboard#/edit/" + app.id, image: "https://cdn.rawgit.com/ady624/CoRE/master/resources/images/icons/dashboard.png", required: false				
+//			for (app in apps) {
+//				href "", title: app.label, style: "external", url: "${state.endpoint}dashboard#/edit/" + app.id, image: "https://cdn.rawgit.com/ady624/CoRE/master/resources/images/icons/dashboard.png", required: false				
 //				href "pagePistonMain", title: app.label, description: "Piston " + app.id, required: false, params: [appId: app.id]
-			}
+//			}
 			href "", title: "Add a new piston", style: "external", url: "${state.endpoint}dashboard#/edit/new", image: "https://cdn.rawgit.com/ady624/CoRE/master/resources/images/icons/dashboard.png", required: false				
-			//app( name: "pistons", title: "Add a CoRE piston...", appName: "webCoRE Piston", namespace: "ady624", multiple: true, install: false, uninstall: false, image: "https://cdn.rawgit.com/ady624/CoRE/master/resources/images/icons/piston.png")
+//			app( name: "pistons", title: "Add a webCoRE piston...", appName: "webCoRE Piston", namespace: "ady624", multiple: true, install: false, uninstall: false, image: "https://cdn.rawgit.com/ady624/CoRE/master/resources/images/icons/piston.png")
 		}
 
 		section(title:"Application Info") {
@@ -295,7 +296,7 @@ def pageSettings() {
 
 mappings {
 	path("/dashboard") {action: [GET: "api_dashboard"]}
-	path("/init") {action: [GET: "api_init"]}
+	path("/getDashboardData") {action: [GET: "api_getDashboardData"]}
 	path("/piston") {action: [GET: "api_piston", POST: "api_piston"]}
 	path("/ifttt/:eventName") {action: [GET: "api_ifttt", POST: "api_ifttt"]}
 	path("/execute") {action: [POST: "api_execute"]}
@@ -312,9 +313,45 @@ private api_dashboard(params) {
 	render contentType: "text/html", data: "<!DOCTYPE html><html lang=\"en\" ng-app=\"CoRE\"><base href=\"${state.endpoint}\"><head><meta charset=\"utf-8\"/><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no\"><link rel=\"stylesheet prefetch\" href=\"$cdn/$theme/css/components/components.min.css\"/><link rel=\"stylesheet prefetch\" href=\"$cdn/$theme/css/app.css\"/><script type=\"text/javascript\" src=\"$cdn/$theme/js/components/components.min.js\"></script><script type=\"text/javascript\" src=\"$cdn/$theme/js/app.js\"></script><script type=\"text/javascript\" src=\"$cdn/$theme/js/modules/dashboard.module.js\"></script><script type=\"text/javascript\" src=\"$cdn/$theme/js/modules/edit.module.js\"></script></head><body><ng-view></ng-view></body></html>"
 }
 
-private api_init() {
-	def result = [now:now()]
+private api_getDashboardData() {
+	def result = [
+    	now: now(),
+        pistons: [:]
+	]
+   	//for (app in getChildApps()) {
+//    	result.pistons[app.id] = [n: app.label]
+//    }
 	return result
+}
+
+private api_get_base_result() {
+	def tz = location.getTimeZone()
+	return [
+        now: now(),
+        instance: [
+        	devices: listAvailableDevices().sort{ it.value.n }.collect{ [ id: hashId(it.key) ] + it.value },
+        	pistons: getChildApps().sort{ it.label }.collect{ [ id: hashId(it.id), 'name': it.label ] },
+            id: hashId(app.id),
+            locationId: hashId(location.id),
+            name: app.label ?: app.name,
+            uri: state.endpoint            
+        ],
+        location: [
+            contactBookEnabled: location.getContactBookEnabled(),
+            hubs: location.getHubs().collect{ [id: hashId(it.id), name: it.name, firmware: it.getFirmwareVersionString(), physical: it.getType().toString().contains('PHYSICAL') ]},
+            id: hashId(location.id),
+            mode: hashId(location.getCurrentMode().id),
+            modes: location.getModes().collect{ [id: hashId(it.id), name: it.name ]},
+            name: location.name,
+            temperatureScale: location.getTemperatureScale(),
+            timeZone: tz ? [
+                id: tz.ID,
+                name: tz.displayName,
+                offset: tz.rawOffset
+            ] : null,
+            zipCode: location.getZipCode(),
+        ],
+    ]
 }
 
 private api_piston() {
@@ -324,29 +361,23 @@ private api_piston() {
 	def clientDbVersion = data?.dbVersion
 	pistonId = 1
 	if (pistonId) {
-		def result = [
-			now: now(),
-			piston: [
-				id: pistonId
-	 		]
-		]
-		if (serverDbVersion != clientDbVersion) {
+		def result = api_get_base_result()
+		result.piston = [
+			id: pistonId
+        ]
+         if (serverDbVersion != clientDbVersion) {
 			result.dbVersion = serverDbVersion
-			result.capabilities = capabilities().sort{ it.d }
-			result.commands = commands().sort{ it.d }
-			result.virtualCommands = virtualCommands().sort{ it.d }
-			result.attributes = attributes().sort{ it.n }
-			result.colors = colors()
-			result.devices = []
-			def devices = [:]
-			for (devs in settings.findAll{ it.key.startsWith("dev:") }) {
-				for(dev in devs.value) {
-					devices[dev.id] = [n: dev.getDisplayName(), c: dev.getCapabilities()*.name, a: dev.getSupportedAttributes()*.name, o: dev.getSupportedCommands()*.name]
-				}
-			}
-			for(device in devices.sort{ it.value.name }) {
-				result.devices.push([ id: device.key ] + device.value)
-			}
+            result.db = [
+				capabilities: capabilities().sort{ it.d },
+				commands: [
+                	physical: commands().sort{ it.d },
+                    virtual: virtualCommands().sort{ it.d }
+				],
+				attributes: attributes().sort{ it.n },
+				colors: [                
+                	standard: colorUtil.ALL
+                ],
+            ]
 		}
 		return result
 	}
@@ -412,9 +443,20 @@ def initialize() {
 	*/
 }
 
+def listAvailableDevices(raw = false) {
+    def devices = [:]
+    for (devs in settings.findAll{ it.key.startsWith("dev:") }) {
+        for(dev in devs.value) {
+            devices[dev.id] = [n: dev.getDisplayName(), c: dev.getCapabilities()*.name, a: dev.getSupportedAttributes()*.name, o: dev.getSupportedCommands()*.name]
+            if (raw) devices[dev.id].dev = dev
+        }
+    }
+    return devices
+}
+
 private getDevice(deviceId) {
 	log.trace "LOOKING FOR DEVICE"
-	def device = settings["dev:colorControl"][0]
+	def device = listAvailableDevices(true)['4d6b2fea-cdae-4a3c-9a39-8ca4517e581c'].dev
 	log.trace "GOT DEVICE $device"
 	return device
 }
@@ -450,6 +492,25 @@ def mem(showBytes = true) {
 /*** UTILITIES																***/
 /***																		***/
 /******************************************************************************/
+
+
+def String md5(String md5) {
+   try {
+        java.security.MessageDigest md = java.security.MessageDigest.getInstance("MD5")
+        byte[] array = md.digest(md5.getBytes())
+        def result = ""
+        for (int i = 0; i < array.length; ++i) {
+          result += Integer.toHexString((array[i] & 0xFF) | 0x100).substring(1,3)
+       }
+        return result
+    } catch (java.security.NoSuchAlgorithmException e) {
+    }
+    return null;
+}
+
+def String hashId(id) {
+	return ":${md5("core." + id)}:"
+}
 
 /******************************************************************************/
 /*** DEBUG FUNCTIONS														***/
@@ -516,6 +577,7 @@ private debug(message, shift = null, cmd = null, err = null) {
 		log.debug "$prefix$message", err
 	}
 }
+
 
 private generatePistonName() {
 	def apps = getChildApps()

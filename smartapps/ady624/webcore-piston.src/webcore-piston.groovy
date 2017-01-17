@@ -40,7 +40,7 @@ def String version() {	return "v0.0.002.20161202" }
 
 preferences {
 	//common pages
-	page(name: "pagePiston")
+	page(name: "pageMain")
 }
 
 /******************************************************************************/
@@ -52,26 +52,33 @@ preferences {
 /******************************************************************************/
 /*** COMMON PAGES															***/
 /******************************************************************************/
-def pagePiston() {
-	pagePistonMain()
-}
-
-def pagePistonMain() {
+def pageMain() {
 	//webCoRE Piston main page
-	return dynamicPage(name: "pagePistonMain", title: "", install: true, uninstall: false) {
+	return dynamicPage(name: "pageMain", title: "", install: true, uninstall: false) {
 		def currentState = state.currentState
         
-		section("Rebuild or remove piston") {
-			href "pageRemove", title: "", description: "Remove this CoRE piston"
-		}
-		section(title:"Application Info") {
+        section ("General") {
 			label name: "name", title: "Name", required: true, state: (name ? "complete" : null), defaultValue: parent.generatePistonName()
 			input "description", "string", title: "Description", required: false, state: (description ? "complete" : null), capitalization: "sentences"
+        }
+        
+		section(title:"Application Info") {
 			paragraph version(), title: "Version"
 			paragraph mem(), title: "Memory Usage"
 			href "pageVariables", title: "Local Variables"
 		}
-        
+
+		section("Debugging") {
+			input "debugging", "bool", title: "Enable debugging", defaultValue: false, submitOnChange: true, required: false
+			def debugging = settings.debugging
+			if (debugging) {
+				input "log#info", "bool", title: "Log info messages", defaultValue: true, required: false
+				input "log#trace", "bool", title: "Log trace messages", defaultValue: true, required: false
+				input "log#debug", "bool", title: "Log debug messages", defaultValue: false, required: false
+				input "log#warn", "bool", title: "Log warning messages", defaultValue: true, required: false
+				input "log#error", "bool", title: "Log error messages", defaultValue: true, required: false
+			}        	
+		}
 	}
 }
 
@@ -87,7 +94,7 @@ def updated() {
 }
 
 def initialize() {
-	log.trace "GOT HERE"
+	log.trace "GOT HERE"    
 	def device = parent.getDevice("owekf34r24r324");
     log.trace device
     subscribe(device, "switch", handler)
