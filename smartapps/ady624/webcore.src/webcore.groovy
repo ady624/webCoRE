@@ -19,8 +19,9 @@
  *  Version history
  */
 
-def version() {	return "v0.0.004.20170117" }
+def version() {	return "v0.0.005.20170118" }
 /*
+ *	01/17/2016 >>> v0.0.005.20170118 - ALPHA - Moved UI to homecloudhub.com and added support for pretty url (core.homecloudhub.com) and web+core:// handle
  *	01/17/2016 >>> v0.0.004.20170117 - ALPHA - Updated to allow multiple instances
  *	01/17/2016 >>> v0.0.003.20170117 - ALPHA - Improved security, object ids are hashed, added multiple-location-multiple-instance support (CoRE will be able to work across multiple location and installed instances)
  *	12/02/2016 >>> v0.0.002.20161202 - ALPHA - Small progress, Add new piston now points to the piston editor UI
@@ -88,8 +89,8 @@ def pageMain() {
 			if (!state.endpoint) {
 				href "pageInitializeDashboard", title: "webCoRE Dashboard", description: "Tap here to initialize the webCoRE dashboard", image: "https://cdn.rawgit.com/ady624/CoRE/master/resources/images/icons/dashboard.png", required: false
 			} else {
-				log.trace "Dashboard URL: ${state.endpoint}dashboard *** DO NOT SHARE THIS LINK WITH ANYONE ***"
-				href "", title: "webCoRE Dashboard", style: "external", url: "${state.endpoint}dashboard", image: "https://cdn.rawgit.com/ady624/CoRE/master/resources/images/icons/dashboard.png", required: false
+				log.trace "Dashboard URL: ${state.endpoint}dashboard#/ *** DO NOT SHARE THIS LINK WITH ANYONE ***"
+				href "", title: "webCoRE Dashboard", style: "external", url: "${state.endpoint}dashboard#/", image: "https://cdn.rawgit.com/ady624/CoRE/master/resources/images/icons/dashboard.png", required: false
 			}
 		}
 		
@@ -309,7 +310,7 @@ mappings {
 }
 
 private api_dashboard(params) {
-	def cdn = "https://core.caramaliu.com/webCoRE/dashboard"
+	def cdn = "https://core.homecloudhub.com/dashboard"
 	def theme = (settings["dashboardTheme"] ?: "default").toLowerCase()
 	render contentType: "text/html", data: "<!DOCTYPE html><html lang=\"en\" ng-app=\"CoRE\"><base href=\"${state.endpoint}\"><head><meta charset=\"utf-8\"/><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no\"><link rel=\"stylesheet prefetch\" href=\"$cdn/$theme/css/components/components.min.css\"/><link rel=\"stylesheet prefetch\" href=\"$cdn/$theme/css/app.css\"/><script type=\"text/javascript\" src=\"$cdn/$theme/js/components/components.min.js\"></script><script type=\"text/javascript\" src=\"$cdn/$theme/js/app.js\"></script><script type=\"text/javascript\" src=\"$cdn/$theme/js/modules/dashboard.module.js\"></script><script type=\"text/javascript\" src=\"$cdn/$theme/js/modules/edit.module.js\"></script></head><body><ng-view></ng-view></body></html>"
 }
