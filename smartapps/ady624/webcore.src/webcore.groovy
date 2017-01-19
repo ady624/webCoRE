@@ -19,9 +19,10 @@
  *  Version history
  */
 
-def version() {	return "v0.0.005.20170118" }
+def version() {	return "v0.0.006.20170119" }
 /*
- *	01/17/2016 >>> v0.0.005.20170118 - ALPHA - Moved UI to homecloudhub.com and added support for pretty url (core.homecloudhub.com) and web+core:// handle
+ *	01/19/2016 >>> v0.0.006.20170119 - ALPHA - UI is now fully moved and security enabled - security password is now required
+ *	01/18/2016 >>> v0.0.005.20170118 - ALPHA - Moved UI to homecloudhub.com and added support for pretty url (core.homecloudhub.com) and web+core:// handle
  *	01/17/2016 >>> v0.0.004.20170117 - ALPHA - Updated to allow multiple instances
  *	01/17/2016 >>> v0.0.003.20170117 - ALPHA - Improved security, object ids are hashed, added multiple-location-multiple-instance support (CoRE will be able to work across multiple location and installed instances)
  *	12/02/2016 >>> v0.0.002.20161202 - ALPHA - Small progress, Add new piston now points to the piston editor UI
@@ -62,6 +63,8 @@ preferences {
 	page(name: "pageRemove")
 	page(name: "pagePistonMain")
 	page(name: "pageSettings")
+    page(name: "pageChangePassword")
+    page(name: "pageSavePassword")
 }
 
 
@@ -83,14 +86,19 @@ def pageMain() {
 	if (!state.installed) {
 		return pageInstallWebCoRE()
 	}
-	//CoRE main page   
+	//CoRE main page
+    def dashboardDomain = "core.homecloudhub.com"
+    def dashboardUrl = ""
 	dynamicPage(name: "pageMain", title: "", install: true, uninstall: false) {
 		section("Dashboard") {
 			if (!state.endpoint) {
 				href "pageInitializeDashboard", title: "webCoRE Dashboard", description: "Tap here to initialize the webCoRE dashboard", image: "https://cdn.rawgit.com/ady624/CoRE/master/resources/images/icons/dashboard.png", required: false
 			} else {
-				log.trace "Dashboard URL: ${state.endpoint}dashboard#/ *** DO NOT SHARE THIS LINK WITH ANYONE ***"
-				href "", title: "webCoRE Dashboard", style: "external", url: "${state.endpoint}dashboard#/", image: "https://cdn.rawgit.com/ady624/CoRE/master/resources/images/icons/dashboard.png", required: false
+            	dashboardUrl = "https://${dashboardDomain}/dashboard/default/#/init/${state.endpoint.replace("https://", "").replace(":443", "").replace(".api.smartthings.com/api/token/", "").replace("/smartapps/installations/", "").replace("-", "").replace("/", "")}"
+				log.trace "*** DO NOT SHARE THIS LINK WITH ANYONE *** Dashboard URL: ${dashboardUrl}"
+				//log.trace "Account ID: ${app.getAccountId()} *** DO NOT SHARE THIS LINK WITH ANYONE ***"
+				//href "", title: "webCoRE Dashboard", style: "external", url: "${state.endpoint}dashboard#/", image: "https://cdn.rawgit.com/ady624/CoRE/master/resources/images/icons/dashboard.png", required: false
+				href "", title: "CoRE Dashboard", style: "external", url: dashboardUrl, image: "https://cdn.rawgit.com/ady624/CoRE/master/resources/images/icons/dashboard.png", required: false
 			}
 		}
 		
@@ -165,6 +173,7 @@ private pageSelectDevices() {
 }
 
 private pageFinishInstall() {
+	initTokens()
 	dynamicPage(name: "pageFinishInstall", title: "", install: true) {
 		section() {
 			paragraph "Excellent! You have now completed all the webCoRE installation steps and are ready to go. Remember, you can now access webCoRE from the SmartApps section of the Automation tab of the SmartThings app. Now go ahead and tap Done and start enjoying webCoRE!"
@@ -273,7 +282,7 @@ def pageSettings() {
 			href "pageSelectDevices", title: "Available devices", description: "Tap here to select which devices are available to pistons" 
 		}
 		section("Security") {
-			href "pageInitializeDashboard", title: "Security", description: "Tap here to change your dashboard security settings" 
+			href "pageChangePassword", title: "Security", description: "Tap here to change your dashboard security settings" 
 		}
 		
 		section("Uninstall") {
@@ -283,6 +292,26 @@ def pageSettings() {
 	}
 }
 
+private pageChangePassword() {
+	dynamicPage(name: "pageChangePassword", title: "", nextPage: "pageSavePassword") {
+		section() {
+			paragraph "Choose a security password for your dashboard. You will need to enter this password when accessing your dashboard for the first time and possibly from time to time.", required: false			   
+		}
+		section() {
+			input "PIN", "password", title: "Choose a security password for your dashboard", required: true
+			input "expiry", "enum", options: ["Every day", "Every week", "Every month", "Every three months", "Never (I clearly don't know what I'm doing)"], defaultValue: "Every month", title: "Choose how often the dashboard login expires", required: true
+		}
+	}
+}
+
+private pageSavePassword() {
+	initTokens()
+    dynamicPage(name: "pageSavePassword", title: "") {
+		section() {
+			paragraph "Congratulations, your password has been changed. Please note you may need to reauthenticate when opening the dashboard.", required: false
+		}
+	}
+}
 
 
 
@@ -297,8 +326,8 @@ def pageSettings() {
 /******************************************************************************/
 
 mappings {
-	path("/dashboard") {action: [GET: "api_dashboard"]}
-	path("/getDashboardData") {action: [GET: "api_getDashboardData"]}
+	//path("/dashboard") {action: [GET: "api_dashboard"]}
+	path("/intf/dashboard/load") {action: [GET: "api_intf_dashboard_load"]}
 	path("/piston") {action: [GET: "api_piston", POST: "api_piston"]}
 	path("/ifttt/:eventName") {action: [GET: "api_ifttt", POST: "api_ifttt"]}
 	path("/execute") {action: [POST: "api_execute"]}
@@ -309,18 +338,26 @@ mappings {
 	path("/resume") {action: [POST: "api_resume"]}
 }
 
-private api_dashboard(params) {
-	def cdn = "https://core.homecloudhub.com/dashboard"
-	def theme = (settings["dashboardTheme"] ?: "default").toLowerCase()
-	render contentType: "text/html", data: "<!DOCTYPE html><html lang=\"en\" ng-app=\"CoRE\"><base href=\"${state.endpoint}\"><head><meta charset=\"utf-8\"/><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no\"><link rel=\"stylesheet prefetch\" href=\"$cdn/$theme/css/components/components.min.css\"/><link rel=\"stylesheet prefetch\" href=\"$cdn/$theme/css/app.css\"/><script type=\"text/javascript\" src=\"$cdn/$theme/js/components/components.min.js\"></script><script type=\"text/javascript\" src=\"$cdn/$theme/js/app.js\"></script><script type=\"text/javascript\" src=\"$cdn/$theme/js/modules/dashboard.module.js\"></script><script type=\"text/javascript\" src=\"$cdn/$theme/js/modules/edit.module.js\"></script></head><body><ng-view></ng-view></body></html>"
+private api_intf_dashboard_load() {
+	def result
+	if (!verifySecurityToken(params.token)) {
+    	if (params.pin) {
+        	if (settings.PIN && (md5("pin:${settings.PIN}") == params.pin)) {
+            	result = api_get_base_result()
+                result.instance.token = createSecurityToken()
+            }
+        }
+        if (!result) result = api_get_auth_err_result()
+    }
+    if (!result) result = api_get_base_result()
+	render contentType: "application/javascript", data: "${params.callback}(${result.encodeAsJSON()})"
 }
 
-private api_getDashboardData() {
-	def result = api_get_base_result()
-   	//for (app in getChildApps()) {
-//    	result.pistons[app.id] = [n: app.label]
-//    }
-	return result
+private api_get_auth_err_result() {
+	return [
+        now: now(),
+        error: "ERR_INVALID_TOKEN"
+    ]
 }
 
 private api_get_base_result() {
@@ -431,15 +468,6 @@ def updated() {
 def initialize() {
 	state.installed = true
 	incrementDbVersion()
-	/*
-	def devices = []
-	def d
-	for (capability in capabilities().findAll{ it.devices != null }.sort{ it.devices }) {
-		if (capability.devices != d) devices += settings["dev:${capability.name}"] ?: []
-		d = capability.devices
-	}
-	log.trace devices
-	*/
 }
 
 def listAvailableDevices(raw = false) {
@@ -472,9 +500,28 @@ private dbVersion() {
 private incrementDbVersion() {
 	int subVersion = atomicState.subVersion ?: 0
 	atomicState.subVersion = subVersion + 1
- }
+}
 
+private initTokens() {
+	atomicState.securityTokens = [:]
+}
 
+private verifySecurityToken(token) {
+	def tokens = atomicState.securityTokens
+    if (!tokens) return false
+	def t = tokens[token]
+    if (!t) return false
+    //check expiry
+    return true
+}
+
+private createSecurityToken() {
+	def token = UUID.randomUUID().toString()
+    def tokens = atomicState.securityTokens ?: [:]
+    tokens[token] = now()
+    atomicState.securityTokens = tokens
+    return token
+}
 
 /******************************************************************************/
 /*** 																		***/
