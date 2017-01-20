@@ -19,8 +19,9 @@
  *  Version history
  */
 
-def version() {	return "v0.0.008.20170120" }
+def version() {	return "v0.0.009.20170120" }
 /*
+ *	01/20/2016 >>> v0.0.009.20170120 - ALPHA - Reenabled the new piston UI at new URL
  *	01/20/2016 >>> v0.0.008.20170120 - ALPHA - Enabled html5 routing and rewrite to remove the /#/ contraption
  *	01/20/2016 >>> v0.0.007.20170120 - ALPHA - Cleaned up CoRE ST UI and removed "default" theme from URL.
  *	01/19/2016 >>> v0.0.006.20170119 - ALPHA - UI is now fully moved and security enabled - security password is now required
@@ -311,7 +312,7 @@ private pageSavePassword() {
 mappings {
 	//path("/dashboard") {action: [GET: "api_dashboard"]}
 	path("/intf/dashboard/load") {action: [GET: "api_intf_dashboard_load"]}
-	path("/piston") {action: [GET: "api_piston", POST: "api_piston"]}
+	path("/intf/dashboard/piston/get") {action: [GET: "api_intf_dashboard_piston_get"]}
 	path("/ifttt/:eventName") {action: [GET: "api_ifttt", POST: "api_ifttt"]}
 	path("/execute") {action: [POST: "api_execute"]}
 	path("/execute/:pistonName") {action: [GET: "api_execute", POST: "api_execute"]}
@@ -321,25 +322,11 @@ mappings {
 	path("/resume") {action: [POST: "api_resume"]}
 }
 
-private api_intf_dashboard_load() {
-	def result
-	if (!verifySecurityToken(params.token)) {
-    	if (params.pin) {
-        	if (settings.PIN && (md5("pin:${settings.PIN}") == params.pin)) {
-            	result = api_get_base_result()
-                result.instance.token = createSecurityToken()
-            }
-        }
-        if (!result) result = api_get_auth_err_result()
-    }
-    if (!result) result = api_get_base_result()
-	render contentType: "application/javascript", data: "${params.callback}(${result.encodeAsJSON()})"
-}
-
-private api_get_auth_err_result() {
+private api_get_auth_err_result(error) {
 	return [
         now: now(),
-        error: "ERR_INVALID_TOKEN"
+        name: location.name + ' \\ ' + (app.label ?: app.name),
+        error: error
     ]
 }
 
@@ -347,6 +334,7 @@ private api_get_base_result() {
 	def tz = location.getTimeZone()
 	return [
         now: now(),
+        name: location.name + ' \\ ' + (app.label ?: app.name),
         instance: [
         	devices: listAvailableDevices().sort{ it.value.n }.collect{ [ id: it.key ] + it.value },
         	pistons: getChildApps().sort{ it.label }.collect{ [ id: hashId(it.id), 'name': it.label ] },
@@ -373,33 +361,55 @@ private api_get_base_result() {
     ]
 }
 
-private api_piston() {
-	def data = request?.JSON
-	def pistonId = data?.pistonId
-	def serverDbVersion = dbVersion()
-	def clientDbVersion = data?.dbVersion
-	pistonId = 1
-	if (pistonId) {
-		def result = api_get_base_result()
-		result.piston = [
-			id: pistonId
-        ]
-         if (serverDbVersion != clientDbVersion) {
-			result.dbVersion = serverDbVersion
-            result.db = [
-				capabilities: capabilities().sort{ it.d },
-				commands: [
-                	physical: commands().sort{ it.d },
-                    virtual: virtualCommands().sort{ it.d }
-				],
-				attributes: attributes().sort{ it.n },
-				colors: [                
-                	standard: colorUtil.ALL
-                ],
+private api_intf_dashboard_load() {
+	def result
+	if (verifySecurityToken(params.token)) {
+    	result = api_get_base_result()
+    } else {
+    	if (params.pin) {
+        	if (settings.PIN && (md5("pin:${settings.PIN}") == params.pin)) {
+            	result = api_get_base_result()
+                result.instance.token = createSecurityToken()
+            }
+        }
+        if (!result) result = api_get_auth_err_result("ERR_INVALID_TOKEN")
+    }
+	render contentType: "application/javascript", data: "${params.callback}(${result.encodeAsJSON()})"
+}
+
+private api_intf_dashboard_piston_get() {
+	def result
+	if (verifySecurityToken(params.token)) {
+        def pistonId = params.id
+        def serverDbVersion = dbVersion()
+        def clientDbVersion = params.db
+        pistonId = 1
+        if (pistonId) {
+            result = api_get_base_result()
+            result.piston = [
+                id: pistonId
             ]
-		}
-		return result
-	}
+             if (serverDbVersion != clientDbVersion) {
+                result.dbVersion = serverDbVersion
+                result.db = [
+                    capabilities: capabilities().sort{ it.d },
+                    commands: [
+                        physical: commands().sort{ it.d },
+                        virtual: virtualCommands().sort{ it.d }
+                    ],
+                    attributes: attributes().sort{ it.n },
+                    colors: [                
+                        standard: colorUtil.ALL
+                    ],
+                ]
+            }
+        } else {
+	    	result = api_get_base_result("ERR_INVALID_ID")
+        }
+	} else {
+    	result = api_get_base_result("ERR_INVALID_TOKEN")
+    }
+    render contentType: "application/javascript", data: "${params.callback}(${result.encodeAsJSON()})"
 }
 
 private initializeWebCoREEndpoint() {
