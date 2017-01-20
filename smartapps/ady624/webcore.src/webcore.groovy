@@ -19,8 +19,9 @@
  *  Version history
  */
 
-def version() {	return "v0.0.007.20170120" }
+def version() {	return "v0.0.008.20170120" }
 /*
+ *	01/20/2016 >>> v0.0.008.20170120 - ALPHA - Enabled html5 routing and rewrite to remove the /#/ contraption
  *	01/20/2016 >>> v0.0.007.20170120 - ALPHA - Cleaned up CoRE ST UI and removed "default" theme from URL.
  *	01/19/2016 >>> v0.0.006.20170119 - ALPHA - UI is now fully moved and security enabled - security password is now required
  *	01/18/2016 >>> v0.0.005.20170118 - ALPHA - Moved UI to homecloudhub.com and added support for pretty url (core.homecloudhub.com) and web+core:// handle
@@ -98,7 +99,7 @@ def pageMain() {
 			if (!state.endpoint) {
 				href "pageInitializeDashboard", title: "webCoRE Dashboard", description: "Tap here to initialize the webCoRE dashboard", image: "https://cdn.rawgit.com/ady624/CoRE/master/resources/images/icons/dashboard.png", required: false
 			} else {
-            	dashboardUrl = "https://${dashboardDomain}/dashboard/#/init/${state.endpoint.replace("https://", "").replace(":443", "").replace(".api.smartthings.com/api/token/", "").replace("/smartapps/installations/", "").replace("-", "").replace("/", "")}"
+            	dashboardUrl = "https://${dashboardDomain}/dashboard/init/${state.endpoint.replace("https://", "").replace(":443", "").replace(".api.smartthings.com/api/token/", "").replace("/smartapps/installations/", "").replace("-", "").replace("/", "")}"
 				log.trace "*** DO NOT SHARE THIS LINK WITH ANYONE *** Dashboard URL: ${dashboardUrl}"
 				href "", title: "CoRE Dashboard", style: "external", url: dashboardUrl, image: "https://cdn.rawgit.com/ady624/CoRE/master/resources/images/icons/dashboard.png", required: false
 			}
