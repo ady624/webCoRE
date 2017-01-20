@@ -1,5 +1,5 @@
 /*
- *  webCoRE - Community's own Rule Engine - Web Edition
+ *  CoRE (SE) - Community's own Rule Engine - Web Edition
  *
  *  Copyright 2016 Adrian Caramaliu <ady624("at" sign goes here)gmail.com>
  *
@@ -19,8 +19,10 @@
  *  Version history
  */
 
-def version() {	return "v0.0.009.20170120" }
+def handle() { return "CoRE (SE)" }
+def version() {	return "v0.0.00a.20170120" }
 /*
+ *	01/20/2016 >>> v0.0.00a.20170120 - ALPHA - Fixed a problem with dashboard URL and shards other than na01
  *	01/20/2016 >>> v0.0.009.20170120 - ALPHA - Reenabled the new piston UI at new URL
  *	01/20/2016 >>> v0.0.008.20170120 - ALPHA - Enabled html5 routing and rewrite to remove the /#/ contraption
  *	01/20/2016 >>> v0.0.007.20170120 - ALPHA - Cleaned up CoRE ST UI and removed "default" theme from URL.
@@ -33,14 +35,14 @@ def version() {	return "v0.0.009.20170120" }
  */
  
 /******************************************************************************/
-/*** webCoRE DEFINITION														***/
+/*** CoRE (SE) DEFINITION													***/
 /******************************************************************************/
 
  definition(
 	name: "webCoRE",
 	namespace: "ady624",
 	author: "Adrian Caramaliu",
-	description: "CoRE SE",
+	description: handle(),
 	category: "Convenience",
 	singleInstance: false,
 	iconUrl: "https://cdn.rawgit.com/ady624/CoRE/master/resources/images/app-CoRE.png",
@@ -50,24 +52,15 @@ def version() {	return "v0.0.009.20170120" }
 
 
 preferences {
-	//common pages
+	//UI pages
 	page(name: "pageMain")
-	page(name: "pageViewVariable")
-	page(name: "pageDeleteVariable")
-	page(name: "pageRemove")
-
-	//webCoRE pages
-	page(name: "pageFinishInstall")
 	page(name: "pageInitializeDashboard")
+	page(name: "pageFinishInstall")
 	page(name: "pageSelectDevices")
-	page(name: "pageViewVariable")
-	page(name: "pageDeleteVariable")
-	page(name: "pageCreatePiston")
-	page(name: "pageRemove")
-	page(name: "pagePistonMain")
 	page(name: "pageSettings")
     page(name: "pageChangePassword")
     page(name: "pageSavePassword")
+	page(name: "pageRemove")
 }
 
 
@@ -87,7 +80,13 @@ preferences {
 /******************************************************************************/
 def pageMain() {
 	if (!state.installed) {
-		return pageInstallWebCoRE()
+        return dynamicPage(name: "pageMain", title: "", install: false, uninstall: false, nextPage: "pageInitializeDashboard") {
+            section() {
+                paragraph "Welcome to ${handle()}!"
+                paragraph "You will be guided through a few steps that will get ${handle()} ready for the road. First, we'll configure the dashboard. You will need to setup OAuth in the SmartThings IDE for the ${handle()}web app. If you haven't done so already, please go to the SmartThings IDE, go to the SmartApps tab, select ${handle()} and choose App Settings, then enable OAuth under the OAuth section."
+                paragraph "Once you're ready, tap Next"
+            }
+        }
 	}
 	//CoRE main page
     def dashboardDomain = "core.homecloudhub.com"
@@ -98,38 +97,26 @@ def pageMain() {
         }
 		section("Dashboard") {
 			if (!state.endpoint) {
-				href "pageInitializeDashboard", title: "webCoRE Dashboard", description: "Tap here to initialize the webCoRE dashboard", image: "https://cdn.rawgit.com/ady624/CoRE/master/resources/images/icons/dashboard.png", required: false
+				href "pageInitializeDashboard", title: "${handle()} Dashboard", description: "Tap here to initialize the ${handle()} dashboard", image: "https://cdn.rawgit.com/ady624/CoRE/master/resources/images/icons/dashboard.png", required: false
 			} else {
-            	dashboardUrl = "https://${dashboardDomain}/dashboard/init/${state.endpoint.replace("https://", "").replace(":443", "").replace(".api.smartthings.com/api/token/", "").replace("/smartapps/installations/", "").replace("-", "").replace("/", "")}"
+            	dashboardUrl = "https://${dashboardDomain}/dashboard/init/${apiServerUrl("/").replace("https://", '').replace(".api.smartthings.com", "").replace(":443", "")}${(state.accessToken + app.id).replace("-", "")}"
 				log.trace "*** DO NOT SHARE THIS LINK WITH ANYONE *** Dashboard URL: ${dashboardUrl}"
-				href "", title: "CoRE Dashboard", style: "external", url: dashboardUrl, image: "https://cdn.rawgit.com/ady624/CoRE/master/resources/images/icons/dashboard.png", required: false
+				href "", title: "${handle()} Dashboard", style: "external", url: dashboardUrl, image: "https://cdn.rawgit.com/ady624/CoRE/master/resources/images/icons/dashboard.png", required: false
 			}
-		}
-		
+		}	
 		section(title:"Settings") {
 			href "pageSettings", title: "Settings", image: "https://cdn.rawgit.com/ady624/CoRE/master/resources/images/icons/settings.png", required: false
 		}
 	}	
 }
 
-private pageInstallWebCoRE() {
-	//CoRE main page   
-	dynamicPage(name: "pageMain", title: "", install: false, uninstall: false, nextPage: "pageInitializeDashboard") {
-		section() {
-			paragraph "Welcome to webCoRE!"
-			paragraph "You will be guided through a few steps that will get webCoRE ready for the road. First, we'll configure the dashboard. You will need to setup OAuth in the SmartThings IDE for the webCoRE app. If you haven't done so already, please go to the SmartThings IDE, go to the SmartApps tab, select webCoRE and choose App Settings, then enable OAuth under the OAuth section."
-			paragraph "Once you're ready, tap Next"
-		}
-	}
-}
-
 private pageInitializeDashboard() {
 	//CoRE Dashboard initialization
-	def success = initializeWebCoREEndpoint()
+	def success = initializeCoREEndpoint()
 	dynamicPage(name: "pageInitializeDashboard", title: "", nextPage: state.installed && success ? null : "pageSelectDevices") {
 		if (!state.installed) section() {
 			if (success) {
-				paragraph "Success! Your CoRE dashboard is now enabled. ${state.installed ? "Tap Done to continue." : "Now, choose a security password for your dashboard. You will need to enter this password when accessing your dashboard for the first time and possibly from time to time."}", required: false			   
+				paragraph "Success! Your ${handle()} dashboard is now enabled. ${state.installed ? "Tap Done to continue." : "Now, choose a security password for your dashboard. You will need to enter this password when accessing your dashboard for the first time and possibly from time to time."}", required: false			   
 			} else {
 				paragraph "Please go to your SmartThings IDE, select the My SmartApps section, click the 'Edit Properties' button of the CoRE app, open the OAuth section and click the 'Enable OAuth in Smart App' button. Click the Update button to finish.\n\nOnce finished, tap Done and try again.", title: "Please enable OAuth for CoRE", required: true, state: null
 				return
@@ -145,8 +132,8 @@ private pageInitializeDashboard() {
 private pageSelectDevices() {
 	dynamicPage(name: "pageSelectDevices", title: "", nextPage: state.installed ? null : "pageFinishInstall") {
 		section() {
-			paragraph "${state.installed ? "Select the devices you want webCoRE to have access to." : "It's now time to allow webCoRE access to some of your devices."} Only allow webCoRE access to devices you plan on using with webCoRE pistons, as they only have access to these selected devices.${state.installed ? "" : " When ready, tap Done to finish installing webCoRE."}"
-			if (!state.installed) paragraph "NOTE: You can always come back to webCoRE and add or remove devices from the list."
+			paragraph "${state.installed ? "Select the devices you want ${handle()} to have access to." : "It's now time to allow ${handle()} access to some of your devices."} Only allow ${handle()} access to devices you plan on using with ${handle()} pistons, as they only have access to these selected devices.${state.installed ? "" : " When ready, tap Done to finish installing ${handle()}."}"
+			if (!state.installed) paragraph "NOTE: You can always come back to ${handle()} and add or remove devices from the list."
 			def s
 			for (capability in capabilities().findAll{ it.s != null }.sort{ it.s }) {
 				if (capability.s != s) input "dev:${capability.n}", "capability.${capability.n}", multiple: true, title: "Which ${capability.s}", required: false
@@ -160,102 +147,10 @@ private pageFinishInstall() {
 	initTokens()
 	dynamicPage(name: "pageFinishInstall", title: "", install: true) {
 		section() {
-			paragraph "Excellent! You have now completed all the webCoRE installation steps and are ready to go. Remember, you can now access webCoRE from the SmartApps section of the Automation tab of the SmartThings app. Now go ahead and tap Done and start enjoying webCoRE!"
+			paragraph "Excellent! You have now completed all the ${handle()} installation steps and are ready to go. Remember, you can now access ${handle()} from the SmartApps section of the Automation tab of the SmartThings app. Now go ahead and tap Done and start enjoying ${handle()}!"
 		}
 	}
 }
-
-def pageViewVariable(params) {
-	def var = params?.var
-		dynamicPage(name: "pageViewVariable", title: "", uninstall: false, install: false) {
-		if (var) {
-			section() {
-				paragraph var, title: "Variable name", required: false
-				def value = getVariable(var)
-				if (value == null) {
-					paragraph "Undefined value (null)", title: "Oh-oh", required: false
-				} else {
-					def type = "string"
-					if (value instanceof Boolean) {
-						type = "boolean"
-					} else if ((value instanceof Long) && (value >= 999999999999)) {
-						type = "time"
-					} else if ((value instanceof Float) || ((value instanceof String) && value.isFloat())) {
-						type = "decimal"
-					} else if ((value instanceof Integer) || ((value instanceof String) && value.isInteger())) {
-						type = "number"
-					}
-					paragraph "$type", title: "Data type", required: false
-					paragraph "$value", title: "Raw value", required: false
-					value = getVariable(var, true)
-					paragraph "$value", title: "Display value", required: false
-				}
-				if (!var.startsWith("\$")) {
-					href "pageDeleteVariable", title: "Delete variable", description: "CAUTION: Tapping here will delete this variable and its value", params: [var: var], required: false
-				}
-			}
-		} else {
-			section() {
-				paragraph "Sorry, variable not found.", required: false
-			}
-		}
-	}
-}
-
-def pageDeleteVariable(params) {
-	def var = params?.var
-		dynamicPage(name: "pageInitializedVariable", title: "", uninstall: false, install: false) {
-		if (var != null) {
-			section() {
-				deleteVariable(var)
-				paragraph "Variable {$var} was successfully deleted.\n\nPlease tap < or Done to continue.", title: "Success", required: false
-			}
-		} else {
-			section() {
-				paragraph "Sorry, variable not found.", required: false
-			}
-		}
-	}
-}
-
-def pageRemove() {
-	dynamicPage(name: "pageRemove", title: "", install: false, uninstall: true) {
-		section() {
-			paragraph "CAUTION: You are about to completely remove CoRE and all of its pistons. This action is irreversible. If you are sure you want to do this, please tap on the Remove button below.", required: true, state: null
-		}
-	}
-}
-
-def pageCreatePiston() {
-	dynamicPage(name: "pageCreatePiston", title: "", install: false, uninstall: true) {
-	   	def app = addChildApp("ady624", "webCoRE", "test")
-		log.trace "Created app $app"
-		log.trace "Created app ID ${app.id}"
-		def url = "${state.endpoint}dasboard/#edit/${app.id}"
-		section() {
-			paragraph "created"
-			href "", title: "Create a new webCoRE Piston", style: "external", url: url, image: "https://cdn.rawgit.com/ady624/CoRE/master/resources/images/icons/dashboard.png", required: false
-		}
-	}
-}
-
-def pagePistonMain(params) {
-//log.trace params
-	def appId = params?.appId ?: atomicState.currentAppId
-	atomicState.currentAppId = appId
-	def app = getChildApps().find{ it.id == appId }
-	if (app) {
-		return app.pagePistonMain()
-	} else {
-		dynamicPage(name: "pagePistonMain", title: "", install: false, uninstall: false) {
-			section() {
-				paragraph "Sorry, an error has occurred. "
-			}
-		}
-	}
-}
-
-
 
 def pageSettings() {
 	dynamicPage(name: "pageSettings", title: "", install: false, uninstall: false) {
@@ -270,7 +165,7 @@ def pageSettings() {
 		}
 		
 		section("Uninstall") {
-			href "pageRemove", title: "Uninstall webCoRE", description: "Tap here to uninstall webCore" 
+			href "pageRemove", title: "Uninstall ${handle()}", description: "Tap here to uninstall ${handle()}" 
 		}
 		
 	}
@@ -297,6 +192,13 @@ private pageSavePassword() {
 	}
 }
 
+def pageRemove() {
+	dynamicPage(name: "pageRemove", title: "", install: false, uninstall: true) {
+		section() {
+			paragraph "CAUTION: You are about to completely remove CoRE and all of its pistons. This action is irreversible. If you are sure you want to do this, please tap on the Remove button below.", required: true, state: null
+		}
+	}
+}
 
 
 
@@ -313,6 +215,7 @@ mappings {
 	//path("/dashboard") {action: [GET: "api_dashboard"]}
 	path("/intf/dashboard/load") {action: [GET: "api_intf_dashboard_load"]}
 	path("/intf/dashboard/piston/get") {action: [GET: "api_intf_dashboard_piston_get"]}
+	path("/intf/dashboard/piston/set") {action: [GET: "api_intf_dashboard_piston_set"]}
 	path("/ifttt/:eventName") {action: [GET: "api_ifttt", POST: "api_ifttt"]}
 	path("/execute") {action: [POST: "api_execute"]}
 	path("/execute/:pistonName") {action: [GET: "api_execute", POST: "api_execute"]}
@@ -412,7 +315,41 @@ private api_intf_dashboard_piston_get() {
     render contentType: "application/javascript", data: "${params.callback}(${result.encodeAsJSON()})"
 }
 
-private initializeWebCoREEndpoint() {
+private api_intf_dashboard_piston_set() {
+	def result
+	if (verifySecurityToken(params.token)) {
+        def pistonId = params.id
+        def serverDbVersion = dbVersion()
+        def clientDbVersion = params.db
+        pistonId = 1
+        if (pistonId) {
+            result = api_get_base_result()
+            result.piston = [
+                id: pistonId
+            ]
+             if (serverDbVersion != clientDbVersion) {
+                result.dbVersion = serverDbVersion
+                result.db = [
+                    capabilities: capabilities().sort{ it.d },
+                    commands: [
+                        physical: commands().sort{ it.d },
+                        virtual: virtualCommands().sort{ it.d }
+                    ],
+                    attributes: attributes().sort{ it.n },
+                    colors: [                
+                        standard: colorUtil.ALL
+                    ],
+                ]
+            }
+        } else {
+	    	result = api_get_base_result("ERR_INVALID_ID")
+        }
+	} else {
+    	result = api_get_base_result("ERR_INVALID_TOKEN")
+    }
+    render contentType: "application/javascript", data: "${params.callback}(${result.encodeAsJSON()})"
+}
+private initializeCoREEndpoint() {
 	if (!state.endpoint) {
 		try {
 			def accessToken = createAccessToken()
@@ -563,7 +500,7 @@ def String hashId(id) {
 
 private debug(message, shift = null, cmd = null, err = null) {
 	def debugging = settings.debugging
-	if (!debugging) {
+	if (!debugging && (cmd != "error")) {
 		return
 	}
 	cmd = cmd ? cmd : "debug"
@@ -628,7 +565,7 @@ private generatePistonName() {
 	def apps = getChildApps()
 	def i = 1
 	while (true) {
-		def name = i == 5 ? "Mambo No. 5" : "webCoRE Piston #$i"
+		def name = i == 5 ? "Mambo No. 5" : "${handle()} Piston #$i"
 		def found = false
 		for (app in apps) {
 			if (app.label == name) {
