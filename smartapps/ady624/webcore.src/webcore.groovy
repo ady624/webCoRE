@@ -19,8 +19,9 @@
  *  Version history
  */
 
-def version() {	return "v0.0.006.20170119" }
+def version() {	return "v0.0.007.20170120" }
 /*
+ *	01/20/2016 >>> v0.0.007.20170120 - ALPHA - Cleaned up CoRE ST UI and removed "default" theme from URL.
  *	01/19/2016 >>> v0.0.006.20170119 - ALPHA - UI is now fully moved and security enabled - security password is now required
  *	01/18/2016 >>> v0.0.005.20170118 - ALPHA - Moved UI to homecloudhub.com and added support for pretty url (core.homecloudhub.com) and web+core:// handle
  *	01/17/2016 >>> v0.0.004.20170117 - ALPHA - Updated to allow multiple instances
@@ -90,38 +91,19 @@ def pageMain() {
     def dashboardDomain = "core.homecloudhub.com"
     def dashboardUrl = ""
 	dynamicPage(name: "pageMain", title: "", install: true, uninstall: false) {
+    	section("Engine block") {
+			href "pageEngineBlock", title: "Cast iron", description: app.version(), image: "https://cdn.rawgit.com/ady624/CoRE/master/resources/images/app-CoRE.png", required: false
+        }
 		section("Dashboard") {
 			if (!state.endpoint) {
 				href "pageInitializeDashboard", title: "webCoRE Dashboard", description: "Tap here to initialize the webCoRE dashboard", image: "https://cdn.rawgit.com/ady624/CoRE/master/resources/images/icons/dashboard.png", required: false
 			} else {
-            	dashboardUrl = "https://${dashboardDomain}/dashboard/default/#/init/${state.endpoint.replace("https://", "").replace(":443", "").replace(".api.smartthings.com/api/token/", "").replace("/smartapps/installations/", "").replace("-", "").replace("/", "")}"
+            	dashboardUrl = "https://${dashboardDomain}/dashboard/#/init/${state.endpoint.replace("https://", "").replace(":443", "").replace(".api.smartthings.com/api/token/", "").replace("/smartapps/installations/", "").replace("-", "").replace("/", "")}"
 				log.trace "*** DO NOT SHARE THIS LINK WITH ANYONE *** Dashboard URL: ${dashboardUrl}"
-				//log.trace "Account ID: ${app.getAccountId()} *** DO NOT SHARE THIS LINK WITH ANYONE ***"
-				//href "", title: "webCoRE Dashboard", style: "external", url: "${state.endpoint}dashboard#/", image: "https://cdn.rawgit.com/ady624/CoRE/master/resources/images/icons/dashboard.png", required: false
 				href "", title: "CoRE Dashboard", style: "external", url: dashboardUrl, image: "https://cdn.rawgit.com/ady624/CoRE/master/resources/images/icons/dashboard.png", required: false
 			}
 		}
 		
-//		section() {
-	   // 	href "pageCreatePiston", title: "Add a new piston", description: "Tap here to add a new piston" 
-//		}
-		
-//       	def apps = getChildApps()
-		section("Pistons") {
-//			for (app in apps) {
-//				href "", title: app.label, style: "external", url: "${state.endpoint}dashboard#/edit/" + app.id, image: "https://cdn.rawgit.com/ady624/CoRE/master/resources/images/icons/dashboard.png", required: false				
-//				href "pagePistonMain", title: app.label, description: "Piston " + app.id, required: false, params: [appId: app.id]
-//			}
-			href "", title: "Add a new piston", style: "external", url: "${state.endpoint}dashboard#/edit/new", image: "https://cdn.rawgit.com/ady624/CoRE/master/resources/images/icons/dashboard.png", required: false				
-//			app( name: "pistons", title: "Add a webCoRE piston...", appName: "webCoRE Piston", namespace: "ady624", multiple: true, install: false, uninstall: false, image: "https://cdn.rawgit.com/ady624/CoRE/master/resources/images/icons/piston.png")
-		}
-
-		section(title:"Application Info") {
-			paragraph app.version(), title: "webCoRE Version", required: false		
-			href "pageGlobalVariables", title: "Global Variables", image: "https://cdn.rawgit.com/ady624/CoRE/master/resources/images/icons/variables.png", required: false
-			//href "pageStatistics", title: "Runtime Statistics", image: "https://cdn.rawgit.com/ady624/CoRE/master/resources/images/icons/statistics.png", required: false
-		}
-
 		section(title:"Settings") {
 			href "pageSettings", title: "Settings", image: "https://cdn.rawgit.com/ady624/CoRE/master/resources/images/icons/settings.png", required: false
 		}
@@ -365,7 +347,7 @@ private api_get_base_result() {
 	return [
         now: now(),
         instance: [
-        	devices: listAvailableDevices().sort{ it.value.n }.collect{ [ id: hashId(it.key) ] + it.value },
+        	devices: listAvailableDevices().sort{ it.value.n }.collect{ [ id: it.key ] + it.value },
         	pistons: getChildApps().sort{ it.label }.collect{ [ id: hashId(it.id), 'name': it.label ] },
             id: hashId(app.id),
             locationId: hashId(location.id),
@@ -474,8 +456,14 @@ def listAvailableDevices(raw = false) {
     def devices = [:]
     for (devs in settings.findAll{ it.key.startsWith("dev:") }) {
         for(dev in devs.value) {
-            devices[dev.id] = [n: dev.getDisplayName(), c: dev.getCapabilities()*.name, a: dev.getSupportedAttributes()*.name, o: dev.getSupportedCommands()*.name]
-            if (raw) devices[dev.id].dev = dev
+        	def devId = hashId(dev.id);
+        	if (!devices[devId]) {
+            	if (raw) {
+                    devices[devId] = dev
+                } else {
+                	devices[devId] = [n: dev.getDisplayName(), c: dev.getCapabilities()*.name, a: dev.getSupportedAttributes()*.name, o: dev.getSupportedCommands()*.name]
+                }
+            }
         }
     }
     return devices
