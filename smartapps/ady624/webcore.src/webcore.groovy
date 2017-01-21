@@ -20,8 +20,9 @@
  */
 
 def handle() { return "CoRE (SE)" }
-def version() {	return "v0.0.00a.20170120" }
+def version() {	return "v0.0.00b.20170121" }
 /*
+ *	01/21/2016 >>> v0.0.00b.20170121 - ALPHA - Made progress towards creating new pistons
  *	01/20/2016 >>> v0.0.00a.20170120 - ALPHA - Fixed a problem with dashboard URL and shards other than na01
  *	01/20/2016 >>> v0.0.009.20170120 - ALPHA - Reenabled the new piston UI at new URL
  *	01/20/2016 >>> v0.0.008.20170120 - ALPHA - Enabled html5 routing and rewrite to remove the /#/ contraption
@@ -164,6 +165,18 @@ def pageSettings() {
 			href "pageChangePassword", title: "Security", description: "Tap here to change your dashboard security settings" 
 		}
 		
+		section(title: "Debugging") {
+			input "debugging", "bool", title: "Enable debugging", defaultValue: false, submitOnChange: true, required: false
+			def debugging = settings.debugging
+			if (debugging) {
+				input "log#info", "bool", title: "Log info messages", defaultValue: true, required: false
+				input "log#trace", "bool", title: "Log trace messages", defaultValue: true, required: false
+				input "log#debug", "bool", title: "Log debug messages", defaultValue: false, required: false
+				input "log#warn", "bool", title: "Log warning messages", defaultValue: true, required: false
+				input "log#error", "bool", title: "Log error messages", defaultValue: true, required: false
+			}
+		}
+        
 		section("Uninstall") {
 			href "pageRemove", title: "Uninstall ${handle()}", description: "Tap here to uninstall ${handle()}" 
 		}
@@ -214,8 +227,13 @@ def pageRemove() {
 mappings {
 	//path("/dashboard") {action: [GET: "api_dashboard"]}
 	path("/intf/dashboard/load") {action: [GET: "api_intf_dashboard_load"]}
+	path("/intf/dashboard/piston/new") {action: [GET: "api_intf_dashboard_piston_new"]}
+	path("/intf/dashboard/piston/create") {action: [GET: "api_intf_dashboard_piston_create"]}
 	path("/intf/dashboard/piston/get") {action: [GET: "api_intf_dashboard_piston_get"]}
 	path("/intf/dashboard/piston/set") {action: [GET: "api_intf_dashboard_piston_set"]}
+	path("/intf/dashboard/piston/set.start") {action: [GET: "api_intf_dashboard_piston_set_start"]}
+	path("/intf/dashboard/piston/set.chunk") {action: [GET: "api_intf_dashboard_piston_set_chunk"]}
+	path("/intf/dashboard/piston/set.end") {action: [GET: "api_intf_dashboard_piston_set_end"]}
 	path("/ifttt/:eventName") {action: [GET: "api_ifttt", POST: "api_ifttt"]}
 	path("/execute") {action: [POST: "api_execute"]}
 	path("/execute/:pistonName") {action: [GET: "api_execute", POST: "api_execute"]}
@@ -225,7 +243,7 @@ mappings {
 	path("/resume") {action: [POST: "api_resume"]}
 }
 
-private api_get_auth_err_result(error) {
+private api_get_error_result(error) {
 	return [
         now: now(),
         name: location.name + ' \\ ' + (app.label ?: app.name),
@@ -266,6 +284,7 @@ private api_get_base_result() {
 
 private api_intf_dashboard_load() {
 	def result
+    debug "Dashboard: Request received to initialize instance"
 	if (verifySecurityToken(params.token)) {
     	result = api_get_base_result()
     } else {
@@ -273,50 +292,42 @@ private api_intf_dashboard_load() {
         	if (settings.PIN && (md5("pin:${settings.PIN}") == params.pin)) {
             	result = api_get_base_result()
                 result.instance.token = createSecurityToken()
+            } else {
+		        debug "Dashboard: Authentication failed due to an invalid PIN", "error"
             }
         }
-        if (!result) result = api_get_auth_err_result("ERR_INVALID_TOKEN")
+        if (!result) result = api_get_error_result("ERR_INVALID_TOKEN")
     }
 	render contentType: "application/javascript", data: "${params.callback}(${result.encodeAsJSON()})"
 }
 
-private api_intf_dashboard_piston_get() {
+
+private api_intf_dashboard_piston_new() {
 	def result
+    debug "Dashboard: Request received to generate a new piston name"
 	if (verifySecurityToken(params.token)) {
-        def pistonId = params.id
-        def serverDbVersion = dbVersion()
-        def clientDbVersion = params.db
-        pistonId = 1
-        if (pistonId) {
-            result = api_get_base_result()
-            result.piston = [
-                id: pistonId
-            ]
-             if (serverDbVersion != clientDbVersion) {
-                result.dbVersion = serverDbVersion
-                result.db = [
-                    capabilities: capabilities().sort{ it.d },
-                    commands: [
-                        physical: commands().sort{ it.d },
-                        virtual: virtualCommands().sort{ it.d }
-                    ],
-                    attributes: attributes().sort{ it.n },
-                    colors: [                
-                        standard: colorUtil.ALL
-                    ],
-                ]
-            }
-        } else {
-	    	result = api_get_base_result("ERR_INVALID_ID")
-        }
+    	result = [status: "ST_SUCCESS", name: generatePistonName()]
 	} else {
-    	result = api_get_base_result("ERR_INVALID_TOKEN")
+    	result = api_get_error_result("ERR_INVALID_TOKEN")
     }
     render contentType: "application/javascript", data: "${params.callback}(${result.encodeAsJSON()})"
 }
 
-private api_intf_dashboard_piston_set() {
+private api_intf_dashboard_piston_create() {
 	def result
+    debug "Dashboard: Request received to generate a new piston name"
+	if (verifySecurityToken(params.token)) {
+    	def piston = addChildApp("ady624", "webCoRE Piston", params.name?:generatePistonName())
+        result = [status: "ST_SUCCESS", id: hashId(piston.id)]
+	} else {
+    	result = api_get_error_result("ERR_INVALID_TOKEN")
+    }
+    render contentType: "application/javascript", data: "${params.callback}(${result.encodeAsJSON()})"
+}
+
+private api_intf_dashboard_piston_get() {
+	def result
+    debug "Dashboard: Request received to get piston ${params?.id}"
 	if (verifySecurityToken(params.token)) {
         def pistonId = params.id
         def serverDbVersion = dbVersion()
@@ -342,13 +353,116 @@ private api_intf_dashboard_piston_set() {
                 ]
             }
         } else {
-	    	result = api_get_base_result("ERR_INVALID_ID")
+	    	result = api_get_error_result("ERR_INVALID_ID")
         }
 	} else {
-    	result = api_get_base_result("ERR_INVALID_TOKEN")
+    	result = api_get_error_result("ERR_INVALID_TOKEN")
     }
     render contentType: "application/javascript", data: "${params.callback}(${result.encodeAsJSON()})"
 }
+
+
+private api_intf_dashboard_piston_set_save(data) {
+	log.trace "SAVING PISTON WITH DATA $data"
+    return true;
+}
+
+//set is used for small pistons, for large data, using set.start, set.chunk, and set.end
+private api_intf_dashboard_piston_set() {
+	def result
+    debug "Dashboard: Request received to set a piston"
+	if (verifySecurityToken(params.token)) {
+    	def data = params?.data
+        //save the piston here
+        if (api_intf_dashboard_piston_set_save(data)) {
+            result = [status: "ST_SUCCESS"]
+        } else {
+            result = [status: "ST_ERROR", error: "ERR_UNKNOWN"]
+        }
+    	result = [status: "ST_SUCCESS"]
+	} else {
+    	result = api_get_error_result("ERR_INVALID_TOKEN")
+    }
+    render contentType: "application/javascript", data: "${params.callback}(${result.encodeAsJSON()})"
+}
+
+private api_intf_dashboard_piston_set_start() {
+	def result
+    debug "Dashboard: Request received to set a piston (chunked start)"
+	if (verifySecurityToken(params.token)) {
+    	def chunks = params?.chunks;
+        if ((chunks > 0) && (chunks < 100)) {
+	        atomicState.chunks = [count: chunks];
+    		result = [status: "ST_READY"]
+        } else {
+    		result = [status: "ST_ERROR", error: "ERR_INVALID_CHUNK_COUNT"]
+        }
+	} else {
+    	result = api_get_error_result("ERR_INVALID_TOKEN")
+    }
+    render contentType: "application/javascript", data: "${params.callback}(${result.encodeAsJSON()})"
+}
+
+private api_intf_dashboard_piston_set_chunk() {
+	def result
+    def chunk = "${params?.chunk}"
+    chunk = chunk.isInteger() ? chunk.toInteger() : -1
+    debug "Dashboard: Request received to set a piston chunk (#${1 + chunk}/${atomicState.chunks?.count})"
+	if (verifySecurityToken(params.token)) {
+    	def data = params?.data
+        def chunks = atomicState.chunks
+        if (chunks && chunks.count && (chunk >= 0) && (chunk < chunks.count)) {
+        	chunks["chunk:$chunk"] = data;
+            atomicState.chunks = chunks;
+    		result = [status: "ST_READY"]
+        } else {
+    		result = [status: "ST_ERROR", error: "ERR_INVALID_CHUNK"]
+        }
+	} else {
+    	result = api_get_error_result("ERR_INVALID_TOKEN")
+    }
+    render contentType: "application/javascript", data: "${params.callback}(${result.encodeAsJSON()})"
+}
+
+private api_intf_dashboard_piston_set_end() {
+	def result
+    debug "Dashboard: Request received to set a piston (chunked end)"
+	if (verifySecurityToken(params.token)) {
+    	def chunks = atomicState.chunks
+        if (chunks && chunks.count) {
+        	def count = chunks.count
+            def ok = true
+            def data = ""
+            for(def i =0; i < count; i++) {
+            	def s = chunks["chunk:$i"]
+            	if (s) {
+                	data += s
+                } else {
+                	data = ""
+                	ok = false;
+                    break;
+                }
+            }
+            if (ok) {
+            	log.trace "PISTON CHUNKS RECEIVED, SAVING PISTON"                
+                //save the piston here
+                if (api_intf_dashboard_piston_set_save(data)) {
+	        		result = [status: "ST_SUCCESS"]
+                } else {
+	        		result = [status: "ST_ERROR", error: "ERR_UNKNOWN"]
+                }
+	        } else {
+    			result = [status: "ST_ERROR", error: "ERR_INVALID_CHUNK"]
+            }
+        } else {
+    		result = [status: "ST_ERROR", error: "ERR_INVALID_CHUNK"]
+        }
+	} else {
+    	result = api_get_error_result("ERR_INVALID_TOKEN")
+    }
+    render contentType: "application/javascript", data: "${params.callback}(${result.encodeAsJSON()})"
+}
+
 private initializeCoREEndpoint() {
 	if (!state.endpoint) {
 		try {
@@ -418,10 +532,11 @@ def listAvailableDevices(raw = false) {
 }
 
 private getDevice(deviceId) {
-	log.trace "LOOKING FOR DEVICE"
-	def device = listAvailableDevices(true)['4d6b2fea-cdae-4a3c-9a39-8ca4517e581c'].dev
-	log.trace "GOT DEVICE $device"
-	return device
+	return null;
+	//log.trace "LOOKING FOR DEVICE"
+	//def device = listAvailableDevices(true)['4d6b2fea-cdae-4a3c-9a39-8ca4517e581c'].dev
+	//log.trace "GOT DEVICE $device"
+	//return device
 }
 
 def handler(evt) {
@@ -439,6 +554,7 @@ private incrementDbVersion() {
 }
 
 private initTokens() {
+    debug "Dashboard: Initializing security tokens"
 	atomicState.securityTokens = [:]
 }
 
@@ -446,12 +562,16 @@ private verifySecurityToken(token) {
 	def tokens = atomicState.securityTokens
     if (!tokens) return false
 	def t = tokens[token]
-    if (!t) return false
+    if (!t) {
+        debug "Dashboard: Authentication failed due to an invalid token", "error"
+    	return false
+    }
     //check expiry
     return true
 }
 
 private createSecurityToken() {
+    debug "Dashboard: Generating new security token after a successful PIN authentication", "trace"
 	def token = UUID.randomUUID().toString()
     def tokens = atomicState.securityTokens ?: [:]
     tokens[token] = now()
@@ -498,7 +618,7 @@ def String hashId(id) {
 /*** DEBUG FUNCTIONS														***/
 /******************************************************************************/
 
-private debug(message, shift = null, cmd = null, err = null) {
+private debug(message, cmd = null, shift = null, err = null) {
 	def debugging = settings.debugging
 	if (!debugging && (cmd != "error")) {
 		return
