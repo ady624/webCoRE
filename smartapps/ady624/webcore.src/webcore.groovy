@@ -20,8 +20,9 @@
  */
 
 def handle() { return "CoRE (SE)" }
-def version() {	return "v0.0.00b.20170121" }
+def version() {	return "v0.0.00c.20170121" }
 /*
+ *	01/21/2016 >>> v0.0.00c.20170121 - ALPHA - Made more progress towards creating new pistons
  *	01/21/2016 >>> v0.0.00b.20170121 - ALPHA - Made progress towards creating new pistons
  *	01/20/2016 >>> v0.0.00a.20170120 - ALPHA - Fixed a problem with dashboard URL and shards other than na01
  *	01/20/2016 >>> v0.0.009.20170120 - ALPHA - Reenabled the new piston UI at new URL
@@ -332,13 +333,13 @@ private api_intf_dashboard_piston_get() {
         def pistonId = params.id
         def serverDbVersion = dbVersion()
         def clientDbVersion = params.db
-        pistonId = 1
         if (pistonId) {
-            result = api_get_base_result()
-            result.piston = [
-                id: pistonId
-            ]
-             if (serverDbVersion != clientDbVersion) {
+            result = api_get_base_result()            
+            def piston = getChildApps().find{ hashId(it.id) == pistonId };
+            if (piston) {
+            	result.piston = piston.getPiston() ?: [:]
+            }
+            if (serverDbVersion != clientDbVersion) {
                 result.dbVersion = serverDbVersion
                 result.db = [
                     capabilities: capabilities().sort{ it.d },
@@ -362,8 +363,13 @@ private api_intf_dashboard_piston_get() {
 }
 
 
-private api_intf_dashboard_piston_set_save(data) {
-	log.trace "SAVING PISTON WITH DATA $data"
+private api_intf_dashboard_piston_set_save(id, data) {
+	log.trace "SAVING PISTON $id WITH DATA $data"
+    def piston = getChildApps().find{ hashId(it.id) == id };
+    log.trace piston
+    if (piston) {
+    	piston.setPiston([:]);
+    }
     return true;
 }
 
@@ -374,7 +380,7 @@ private api_intf_dashboard_piston_set() {
 	if (verifySecurityToken(params.token)) {
     	def data = params?.data
         //save the piston here
-        if (api_intf_dashboard_piston_set_save(data)) {
+        if (api_intf_dashboard_piston_set_save(params?.id, data)) {
             result = [status: "ST_SUCCESS"]
         } else {
             result = [status: "ST_ERROR", error: "ERR_UNKNOWN"]
@@ -390,9 +396,10 @@ private api_intf_dashboard_piston_set_start() {
 	def result
     debug "Dashboard: Request received to set a piston (chunked start)"
 	if (verifySecurityToken(params.token)) {
-    	def chunks = params?.chunks;
+    	def chunks = "${params?.chunks}";
+        chunks = chunks.isInteger() ? chunks.toInteger() : 0;
         if ((chunks > 0) && (chunks < 100)) {
-	        atomicState.chunks = [count: chunks];
+	        atomicState.chunks = [id: params?.id, count: chunks];
     		result = [status: "ST_READY"]
         } else {
     		result = [status: "ST_ERROR", error: "ERR_INVALID_CHUNK_COUNT"]
@@ -429,24 +436,30 @@ private api_intf_dashboard_piston_set_end() {
     debug "Dashboard: Request received to set a piston (chunked end)"
 	if (verifySecurityToken(params.token)) {
     	def chunks = atomicState.chunks
+        log.trace chunks
         if (chunks && chunks.count) {
-        	def count = chunks.count
             def ok = true
             def data = ""
-            for(def i =0; i < count; i++) {
+            def i = 0;
+            def count = chunks.count;
+            while(i<count) {
+            	log.trace "checking chunk $i << $count"
             	def s = chunks["chunk:$i"]
             	if (s) {
                 	data += s
                 } else {
+                	log.trace "Chunk $i not found"
                 	data = ""
                 	ok = false;
                     break;
                 }
+                i++
             }
+            log.trace "OK is $ok"
             if (ok) {
             	log.trace "PISTON CHUNKS RECEIVED, SAVING PISTON"                
                 //save the piston here
-                if (api_intf_dashboard_piston_set_save(data)) {
+                if (api_intf_dashboard_piston_set_save(chunks.id, data)) {
 	        		result = [status: "ST_SUCCESS"]
                 } else {
 	        		result = [status: "ST_ERROR", error: "ERR_UNKNOWN"]
@@ -617,7 +630,6 @@ def String hashId(id) {
 /******************************************************************************/
 /*** DEBUG FUNCTIONS														***/
 /******************************************************************************/
-
 private debug(message, cmd = null, shift = null, err = null) {
 	def debugging = settings.debugging
 	if (!debugging && (cmd != "error")) {
