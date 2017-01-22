@@ -15,8 +15,9 @@
  */
  
 
-def String version() {	return "v0.0.00c.20170121" }
+def String version() {	return "v0.0.00d.20170122" }
 /*
+ *  01/22/2017 >>> v0.0.00d.20170122 - ALPHA - Optimized data usage for piston JSON class (might have broken some things), save now works
  *	01/21/2017 >>> v0.0.00c.20170121 - ALPHA - Added created/modified attributes
  *	12/02/2016 >>> v0.0.002.20161028 - ALPHA - Small progress, Add new piston now points to the piston editor UI
  *	10/28/2016 >>> v0.0.001.20161028 - ALPHA - Initial release
@@ -86,6 +87,7 @@ def pageMain() {
 def installed() {
    	state.created = now()
     state.modified = now()
+    state.build = 0
     state.piston = [:]
 	initialize()
 	return true
@@ -113,13 +115,15 @@ def getPiston() {
     piston.name = app.label ?: app.name
     piston.created = state.created
     piston.modified = state.modified
+    piston.build = state.build
     return piston
 }
 
 def setPiston(piston) {
-	log.trace "GOT HERE"
 	state.modified = now()
+    state.build = state.build ? state.build + 1 : 1
     state.piston = piston ?: [:]
+    return [build: state.build, modified: state.modified]
 }
 
 def handler(evt) {

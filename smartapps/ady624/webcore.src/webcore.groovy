@@ -20,8 +20,9 @@
  */
 
 def handle() { return "CoRE (SE)" }
-def version() {	return "v0.0.00c.20170121" }
+def version() {	return "v0.0.00d.20170122" }
 /*
+ *	01/22/2016 >>> v0.0.00d.20170122 - ALPHA - Optimized data usage for piston JSON class (might have broken some things), save now works
  *	01/21/2016 >>> v0.0.00c.20170121 - ALPHA - Made more progress towards creating new pistons
  *	01/21/2016 >>> v0.0.00b.20170121 - ALPHA - Made progress towards creating new pistons
  *	01/20/2016 >>> v0.0.00a.20170120 - ALPHA - Fixed a problem with dashboard URL and shards other than na01
@@ -366,11 +367,11 @@ private api_intf_dashboard_piston_get() {
 private api_intf_dashboard_piston_set_save(id, data) {
 	log.trace "SAVING PISTON $id WITH DATA $data"
     def piston = getChildApps().find{ hashId(it.id) == id };
-    log.trace piston
-    if (piston) {
-    	piston.setPiston([:]);
+    if (piston) {    
+		def p = new groovy.json.JsonSlurper().parseText(new String(data.decodeBase64()))
+		return piston.setPiston(p);
     }
-    return true;
+    return false;
 }
 
 //set is used for small pistons, for large data, using set.start, set.chunk, and set.end
@@ -380,15 +381,16 @@ private api_intf_dashboard_piston_set() {
 	if (verifySecurityToken(params.token)) {
     	def data = params?.data
         //save the piston here
-        if (api_intf_dashboard_piston_set_save(params?.id, data)) {
-            result = [status: "ST_SUCCESS"]
+        def saved = api_intf_dashboard_piston_set_save(params?.id, data)
+        if (saved) {
+            result = [status: "ST_SUCCESS"] + saved
         } else {
             result = [status: "ST_ERROR", error: "ERR_UNKNOWN"]
         }
-    	result = [status: "ST_SUCCESS"]
 	} else {
     	result = api_get_error_result("ERR_INVALID_TOKEN")
     }
+    log.trace "RETURNING " + result
     render contentType: "application/javascript", data: "${params.callback}(${result.encodeAsJSON()})"
 }
 
@@ -459,8 +461,9 @@ private api_intf_dashboard_piston_set_end() {
             if (ok) {
             	log.trace "PISTON CHUNKS RECEIVED, SAVING PISTON"                
                 //save the piston here
-                if (api_intf_dashboard_piston_set_save(chunks.id, data)) {
-	        		result = [status: "ST_SUCCESS"]
+                def saved = api_intf_dashboard_piston_set_save(chunks.id, data)
+                if (saved) {
+	        		result = [status: "ST_SUCCESS"] + saved
                 } else {
 	        		result = [status: "ST_ERROR", error: "ERR_UNKNOWN"]
                 }
