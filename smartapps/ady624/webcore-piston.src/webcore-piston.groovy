@@ -15,8 +15,9 @@
  */
  
 
-def String version() {	return "v0.0.00d.20170122" }
+def String version() {	return "v0.0.00e.20170122" }
 /*
+ *	01/22/2016 >>> v0.0.00e.20170122 - ALPHA - Enabled device cache on main app to speed up dashboard when using large number of devices
  *  01/22/2017 >>> v0.0.00d.20170122 - ALPHA - Optimized data usage for piston JSON class (might have broken some things), save now works
  *	01/21/2017 >>> v0.0.00c.20170121 - ALPHA - Added created/modified attributes
  *	12/02/2016 >>> v0.0.002.20161028 - ALPHA - Small progress, Add new piston now points to the piston editor UI

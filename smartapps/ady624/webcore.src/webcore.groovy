@@ -20,8 +20,9 @@
  */
 
 def handle() { return "CoRE (SE)" }
-def version() {	return "v0.0.00d.20170122" }
+def version() {	return "v0.0.00e.20170122" }
 /*
+ *	01/22/2016 >>> v0.0.00e.20170122 - ALPHA - Enabled device cache on main app to speed up dashboard when using large number of devices
  *	01/22/2016 >>> v0.0.00d.20170122 - ALPHA - Optimized data usage for piston JSON class (might have broken some things), save now works
  *	01/21/2016 >>> v0.0.00c.20170121 - ALPHA - Made more progress towards creating new pistons
  *	01/21/2016 >>> v0.0.00b.20170121 - ALPHA - Made progress towards creating new pistons
@@ -92,6 +93,12 @@ def pageMain() {
         }
 	}
 	//CoRE main page
+    //clear devices cache
+    if (atomicState.configuring) {
+    	atomicState.devices = null
+	   	atomicState.configuring = false
+    }
+
     def dashboardDomain = "core.homecloudhub.com"
     def dashboardUrl = ""
 	dynamicPage(name: "pageMain", title: "", install: true, uninstall: false) {
@@ -133,6 +140,7 @@ private pageInitializeDashboard() {
 }
 
 private pageSelectDevices() {
+	atomicState.configuring = true
 	dynamicPage(name: "pageSelectDevices", title: "", nextPage: state.installed ? null : "pageFinishInstall") {
 		section() {
 			paragraph "${state.installed ? "Select the devices you want ${handle()} to have access to." : "It's now time to allow ${handle()} access to some of your devices."} Only allow ${handle()} access to devices you plan on using with ${handle()} pistons, as they only have access to these selected devices.${state.installed ? "" : " When ready, tap Done to finish installing ${handle()}."}"
@@ -159,6 +167,7 @@ def pageSettings() {
 	dynamicPage(name: "pageSettings", title: "", install: false, uninstall: false) {
 		section("General") {
 			label name: "name", title: "Name", state: (name ? "complete" : null), defaultValue: app.name, required: false
+			paragraph "Memory usage is at ${mem()}", required: false			   
 		}
 		section("Available devices") {
 			href "pageSelectDevices", title: "Available devices", description: "Tap here to select which devices are available to pistons" 
@@ -255,11 +264,16 @@ private api_get_error_result(error) {
 
 private api_get_base_result() {
 	def tz = location.getTimeZone()
+    def devices = atomicState.devices;
+    if (!devices) {
+	    devices = listAvailableDevices().sort{ it.value.n }.collect{ [ id: it.key ] + it.value }
+        atomicState.devices = devices;
+    }
 	return [
         now: now(),
         name: location.name + ' \\ ' + (app.label ?: app.name),
         instance: [
-        	devices: listAvailableDevices().sort{ it.value.n }.collect{ [ id: it.key ] + it.value },
+        	devices: devices,
         	pistons: getChildApps().sort{ it.label }.collect{ [ id: hashId(it.id), 'name': it.label ] },
             id: hashId(app.id),
             locationId: hashId(location.id),
