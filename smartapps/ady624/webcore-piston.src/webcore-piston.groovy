@@ -12,15 +12,24 @@
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
  *
- */
- 
+*/
 
-def String version() {	return "v0.0.00e.20170122" }
+def version() {	return "v0.0.00f.20170123" }
 /*
+ *	01/23/2016 >>> v0.0.00f.20170123 - ALPHA - Automatic backup to myjson.com is now enabled. Restore is not implemented yet.
  *	01/22/2016 >>> v0.0.00e.20170122 - ALPHA - Enabled device cache on main app to speed up dashboard when using large number of devices
- *  01/22/2017 >>> v0.0.00d.20170122 - ALPHA - Optimized data usage for piston JSON class (might have broken some things), save now works
- *	01/21/2017 >>> v0.0.00c.20170121 - ALPHA - Added created/modified attributes
- *	12/02/2016 >>> v0.0.002.20161028 - ALPHA - Small progress, Add new piston now points to the piston editor UI
+ *	01/22/2016 >>> v0.0.00d.20170122 - ALPHA - Optimized data usage for piston JSON class (might have broken some things), save now works
+ *	01/21/2016 >>> v0.0.00c.20170121 - ALPHA - Made more progress towards creating new pistons
+ *	01/21/2016 >>> v0.0.00b.20170121 - ALPHA - Made progress towards creating new pistons
+ *	01/20/2016 >>> v0.0.00a.20170120 - ALPHA - Fixed a problem with dashboard URL and shards other than na01
+ *	01/20/2016 >>> v0.0.009.20170120 - ALPHA - Reenabled the new piston UI at new URL
+ *	01/20/2016 >>> v0.0.008.20170120 - ALPHA - Enabled html5 routing and rewrite to remove the /#/ contraption
+ *	01/20/2016 >>> v0.0.007.20170120 - ALPHA - Cleaned up CoRE ST UI and removed "default" theme from URL.
+ *	01/19/2016 >>> v0.0.006.20170119 - ALPHA - UI is now fully moved and security enabled - security password is now required
+ *	01/18/2016 >>> v0.0.005.20170118 - ALPHA - Moved UI to homecloudhub.com and added support for pretty url (core.homecloudhub.com) and web+core:// handle
+ *	01/17/2016 >>> v0.0.004.20170117 - ALPHA - Updated to allow multiple instances
+ *	01/17/2016 >>> v0.0.003.20170117 - ALPHA - Improved security, object ids are hashed, added multiple-location-multiple-instance support (CoRE will be able to work across multiple location and installed instances)
+ *	12/02/2016 >>> v0.0.002.20161202 - ALPHA - Small progress, Add new piston now points to the piston editor UI
  *	10/28/2016 >>> v0.0.001.20161028 - ALPHA - Initial release
  */
  
@@ -110,21 +119,46 @@ def initialize() {
 private getDevice(deviceId) {
 }
 
-def getPiston() {
+def get() {
 	def piston = state.piston ?: [:]
     piston.id = hashId(app.id);
     piston.name = app.label ?: app.name
     piston.created = state.created
     piston.modified = state.modified
     piston.build = state.build
+    piston.bin = state.bin
+    piston.active = state.active
     return piston
 }
 
-def setPiston(piston) {
+def set(piston) {
 	state.modified = now()
     state.build = state.build ? state.build + 1 : 1
-    state.piston = piston ?: [:]
+    state.piston = piston ?[
+    	r: piston.r ?: [],
+    	s: piston.s ?: [],
+    	v: piston.v ?: []        
+    ] : [:]
+    if (state.build == 1) {
+    	resume()
+    }
     return [build: state.build, modified: state.modified]
+}
+
+def bin(id) {
+	state.bin = id;
+}
+
+def pause() {
+	state.active = false;
+}
+
+def resume() {
+	state.active = true;
+}
+
+def execute() {
+
 }
 
 def handler(evt) {

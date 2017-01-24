@@ -20,8 +20,9 @@
  */
 
 def handle() { return "CoRE (SE)" }
-def version() {	return "v0.0.00e.20170122" }
+def version() {	return "v0.0.00f.20170123" }
 /*
+ *	01/23/2016 >>> v0.0.00f.20170123 - ALPHA - Automatic backup to myjson.com is now enabled. Restore is not implemented yet.
  *	01/22/2016 >>> v0.0.00e.20170122 - ALPHA - Enabled device cache on main app to speed up dashboard when using large number of devices
  *	01/22/2016 >>> v0.0.00d.20170122 - ALPHA - Optimized data usage for piston JSON class (might have broken some things), save now works
  *	01/21/2016 >>> v0.0.00c.20170121 - ALPHA - Made more progress towards creating new pistons
@@ -93,12 +94,6 @@ def pageMain() {
         }
 	}
 	//CoRE main page
-    //clear devices cache
-    if (atomicState.configuring) {
-    	atomicState.devices = null
-	   	atomicState.configuring = false
-    }
-
     def dashboardDomain = "core.homecloudhub.com"
     def dashboardUrl = ""
 	dynamicPage(name: "pageMain", title: "", install: true, uninstall: false) {
@@ -109,7 +104,7 @@ def pageMain() {
 			if (!state.endpoint) {
 				href "pageInitializeDashboard", title: "${handle()} Dashboard", description: "Tap here to initialize the ${handle()} dashboard", image: "https://cdn.rawgit.com/ady624/CoRE/master/resources/images/icons/dashboard.png", required: false
 			} else {
-            	dashboardUrl = "https://${dashboardDomain}/dashboard/init/${apiServerUrl("/").replace("https://", '').replace(".api.smartthings.com", "").replace(":443", "")}${(state.accessToken + app.id).replace("-", "")}"
+            	dashboardUrl = "https://${dashboardDomain}/dashboard/init/" + (apiServerUrl("").replace("https://", '').replace(".api.smartthings.com", "").replace(":443", "").replace("/", "") + (state.accessToken + app.id).replace("-", "")).bytes.encodeBase64()
 				log.trace "*** DO NOT SHARE THIS LINK WITH ANYONE *** Dashboard URL: ${dashboardUrl}"
 				href "", title: "${handle()} Dashboard", style: "external", url: dashboardUrl, image: "https://cdn.rawgit.com/ady624/CoRE/master/resources/images/icons/dashboard.png", required: false
 			}
@@ -140,7 +135,8 @@ private pageInitializeDashboard() {
 }
 
 private pageSelectDevices() {
-	atomicState.configuring = true
+	atomicState.updateDevices = true
+    atomicState.devices = null    
 	dynamicPage(name: "pageSelectDevices", title: "", nextPage: state.installed ? null : "pageFinishInstall") {
 		section() {
 			paragraph "${state.installed ? "Select the devices you want ${handle()} to have access to." : "It's now time to allow ${handle()} access to some of your devices."} Only allow ${handle()} access to devices you plan on using with ${handle()} pistons, as they only have access to these selected devices.${state.installed ? "" : " When ready, tap Done to finish installing ${handle()}."}"
@@ -164,6 +160,12 @@ private pageFinishInstall() {
 }
 
 def pageSettings() {
+    //clear devices cache
+    if (atomicState.updateDevices) {
+    	atomicState.devices = null
+	   	atomicState.updateDevices = false
+    }
+
 	dynamicPage(name: "pageSettings", title: "", install: false, uninstall: false) {
 		section("General") {
 			label name: "name", title: "Name", state: (name ? "complete" : null), defaultValue: app.name, required: false
@@ -245,13 +247,13 @@ mappings {
 	path("/intf/dashboard/piston/set.start") {action: [GET: "api_intf_dashboard_piston_set_start"]}
 	path("/intf/dashboard/piston/set.chunk") {action: [GET: "api_intf_dashboard_piston_set_chunk"]}
 	path("/intf/dashboard/piston/set.end") {action: [GET: "api_intf_dashboard_piston_set_end"]}
+	path("/intf/dashboard/piston/pause") {action: [GET: "api_intf_dashboard_piston_pause"]}
+	path("/intf/dashboard/piston/resume") {action: [GET: "api_intf_dashboard_piston_resume"]}
 	path("/ifttt/:eventName") {action: [GET: "api_ifttt", POST: "api_ifttt"]}
 	path("/execute") {action: [POST: "api_execute"]}
 	path("/execute/:pistonName") {action: [GET: "api_execute", POST: "api_execute"]}
 	path("/tap") {action: [POST: "api_tap"]}
 	path("/tap/:tapId") {action: [GET: "api_tap"]}
-	path("/pause") {action: [POST: "api_pause"]}
-	path("/resume") {action: [POST: "api_resume"]}
 }
 
 private api_get_error_result(error) {
@@ -262,24 +264,26 @@ private api_get_error_result(error) {
     ]
 }
 
-private api_get_base_result() {
+private api_get_base_result(requireDevices = true) {
 	def tz = location.getTimeZone()
-    def devices = atomicState.devices;
-    if (!devices) {
+    def sendDevices = (requireDevices == 'true')
+    def devices = atomicState.devices
+    if (!devices) {    	
 	    devices = listAvailableDevices().sort{ it.value.n }.collect{ [ id: it.key ] + it.value }
         atomicState.devices = devices;
+        sendDevices = true;
     }
 	return [
         now: now(),
         name: location.name + ' \\ ' + (app.label ?: app.name),
         instance: [
-        	devices: devices,
+	    	account: [id: app.getAccountId()],
         	pistons: getChildApps().sort{ it.label }.collect{ [ id: hashId(it.id), 'name': it.label ] },
             id: hashId(app.id),
             locationId: hashId(location.id),
             name: app.label ?: app.name,
             uri: state.endpoint            
-        ],
+        ] + (sendDevices ? [devices: devices] : [:]),
         location: [
             contactBookEnabled: location.getContactBookEnabled(),
             hubs: location.getHubs().collect{ [id: hashId(it.id), name: it.name, firmware: it.getFirmwareVersionString(), physical: it.getType().toString().contains('PHYSICAL') ]},
@@ -302,7 +306,7 @@ private api_intf_dashboard_load() {
 	def result
     debug "Dashboard: Request received to initialize instance"
 	if (verifySecurityToken(params.token)) {
-    	result = api_get_base_result()
+    	result = api_get_base_result(params.dev)
     } else {
     	if (params.pin) {
         	if (settings.PIN && (md5("pin:${settings.PIN}") == params.pin)) {
@@ -334,6 +338,9 @@ private api_intf_dashboard_piston_create() {
     debug "Dashboard: Request received to generate a new piston name"
 	if (verifySecurityToken(params.token)) {
     	def piston = addChildApp("ady624", "webCoRE Piston", params.name?:generatePistonName())
+        if (params.bin) {
+        	piston.bin(params.bin)           
+        }
         result = [status: "ST_SUCCESS", id: hashId(piston.id)]
 	} else {
     	result = api_get_error_result("ERR_INVALID_TOKEN")
@@ -349,10 +356,10 @@ private api_intf_dashboard_piston_get() {
         def serverDbVersion = dbVersion()
         def clientDbVersion = params.db
         if (pistonId) {
-            result = api_get_base_result()            
+            result = api_get_base_result(params.dev)            
             def piston = getChildApps().find{ hashId(it.id) == pistonId };
             if (piston) {
-            	result.piston = piston.getPiston() ?: [:]
+            	result.piston = piston.get() ?: [:]
             }
             if (serverDbVersion != clientDbVersion) {
                 result.dbVersion = serverDbVersion
@@ -374,6 +381,7 @@ private api_intf_dashboard_piston_get() {
 	} else {
     	result = api_get_error_result("ERR_INVALID_TOKEN")
     }
+    log.trace result
     render contentType: "application/javascript", data: "${params.callback}(${result.encodeAsJSON()})"
 }
 
@@ -383,7 +391,7 @@ private api_intf_dashboard_piston_set_save(id, data) {
     def piston = getChildApps().find{ hashId(it.id) == id };
     if (piston) {    
 		def p = new groovy.json.JsonSlurper().parseText(new String(data.decodeBase64()))
-		return piston.setPiston(p);
+		return piston.set(p);
     }
     return false;
 }
@@ -486,6 +494,41 @@ private api_intf_dashboard_piston_set_end() {
             }
         } else {
     		result = [status: "ST_ERROR", error: "ERR_INVALID_CHUNK"]
+        }
+	} else {
+    	result = api_get_error_result("ERR_INVALID_TOKEN")
+    }
+    render contentType: "application/javascript", data: "${params.callback}(${result.encodeAsJSON()})"
+}
+
+
+private api_intf_dashboard_piston_pause() {
+	def result
+    debug "Dashboard: Request received to pause a piston"
+	if (verifySecurityToken(params.token)) {
+	    def piston = getChildApps().find{ hashId(it.id) == params.id };
+	    if (piston) {
+        	piston.pause()
+			result = [status: "ST_SUCCESS", active: false]
+        } else {
+	    	result = api_get_error_result("ERR_INVALID_ID")
+        }
+	} else {
+    	result = api_get_error_result("ERR_INVALID_TOKEN")
+    }
+    render contentType: "application/javascript", data: "${params.callback}(${result.encodeAsJSON()})"
+}
+
+private api_intf_dashboard_piston_resume() {
+	def result
+    debug "Dashboard: Request received to pause a piston"
+	if (verifySecurityToken(params.token)) {
+	    def piston = getChildApps().find{ hashId(it.id) == params.id };
+	    if (piston) {
+        	piston.resume()
+			result = [status: "ST_SUCCESS", active: true]
+        } else {
+	    	result = api_get_error_result("ERR_INVALID_ID")
         }
 	} else {
     	result = api_get_error_result("ERR_INVALID_TOKEN")
