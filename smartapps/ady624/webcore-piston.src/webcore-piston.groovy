@@ -14,8 +14,9 @@
  *
 */
 
-def version() {	return "v0.0.00f.20170123" }
+def version() {	return "v0.0.010.20170123" }
 /*
+ *	01/23/2016 >>> v0.0.010.20170123 - ALPHA - Duplicate piston and restore from automatic backup :)
  *	01/23/2016 >>> v0.0.00f.20170123 - ALPHA - Automatic backup to myjson.com is now enabled. Restore is not implemented yet.
  *	01/22/2016 >>> v0.0.00e.20170122 - ALPHA - Enabled device cache on main app to speed up dashboard when using large number of devices
  *	01/22/2016 >>> v0.0.00d.20170122 - ALPHA - Optimized data usage for piston JSON class (might have broken some things), save now works
@@ -133,7 +134,7 @@ def get() {
 
 def set(piston) {
 	state.modified = now()
-    state.build = state.build ? state.build + 1 : 1
+    state.build = (int)(state.build ? (int)state.build + 1 : 1)
     state.piston = piston ?[
     	r: piston.r ?: [],
     	s: piston.s ?: [],
@@ -142,7 +143,7 @@ def set(piston) {
     if (state.build == 1) {
     	resume()
     }
-    return [build: state.build, modified: state.modified]
+    return [active: state.active, build: state.build, modified: state.modified]
 }
 
 def bin(id) {
