@@ -20,8 +20,9 @@
  */
 
 def handle() { return "CoRE (SE)" }
-def version() {	return "v0.0.011.20170123" }
+def version() {	return "v0.0.012.20170123" }
 /*
+ *	01/23/2016 >>> v0.0.012.20170123 - ALPHA - Implemented the "delete" piston
  *	01/23/2016 >>> v0.0.011.20170123 - ALPHA - Fixed a bug where account id was not hashed
  *	01/23/2016 >>> v0.0.010.20170123 - ALPHA - Duplicate piston and restore from automatic backup :)
  *	01/23/2016 >>> v0.0.00f.20170123 - ALPHA - Automatic backup to myjson.com is now enabled. Restore is not implemented yet.
@@ -251,6 +252,7 @@ mappings {
 	path("/intf/dashboard/piston/set.end") {action: [GET: "api_intf_dashboard_piston_set_end"]}
 	path("/intf/dashboard/piston/pause") {action: [GET: "api_intf_dashboard_piston_pause"]}
 	path("/intf/dashboard/piston/resume") {action: [GET: "api_intf_dashboard_piston_resume"]}
+	path("/intf/dashboard/piston/delete") {action: [GET: "api_intf_dashboard_piston_delete"]}
 	path("/ifttt/:eventName") {action: [GET: "api_ifttt", POST: "api_ifttt"]}
 	path("/execute") {action: [POST: "api_execute"]}
 	path("/execute/:pistonName") {action: [GET: "api_execute", POST: "api_execute"]}
@@ -383,13 +385,11 @@ private api_intf_dashboard_piston_get() {
 	} else {
     	result = api_get_error_result("ERR_INVALID_TOKEN")
     }
-    log.trace result
     render contentType: "application/javascript", data: "${params.callback}(${result.encodeAsJSON()})"
 }
 
 
 private api_intf_dashboard_piston_set_save(id, data) {
-	log.trace "SAVING PISTON $id WITH DATA $data"
     def piston = getChildApps().find{ hashId(it.id) == id };
     if (piston) {    
 		def p = new groovy.json.JsonSlurper().parseText(new String(data.decodeBase64()))
@@ -414,7 +414,6 @@ private api_intf_dashboard_piston_set() {
 	} else {
     	result = api_get_error_result("ERR_INVALID_TOKEN")
     }
-    log.trace "RETURNING " + result
     render contentType: "application/javascript", data: "${params.callback}(${result.encodeAsJSON()})"
 }
 
@@ -462,28 +461,23 @@ private api_intf_dashboard_piston_set_end() {
     debug "Dashboard: Request received to set a piston (chunked end)"
 	if (verifySecurityToken(params.token)) {
     	def chunks = atomicState.chunks
-        log.trace chunks
         if (chunks && chunks.count) {
             def ok = true
             def data = ""
             def i = 0;
             def count = chunks.count;
             while(i<count) {
-            	log.trace "checking chunk $i << $count"
             	def s = chunks["chunk:$i"]
             	if (s) {
                 	data += s
                 } else {
-                	log.trace "Chunk $i not found"
                 	data = ""
                 	ok = false;
                     break;
                 }
                 i++
             }
-            log.trace "OK is $ok"
             if (ok) {
-            	log.trace "PISTON CHUNKS RECEIVED, SAVING PISTON"                
                 //save the piston here
                 def saved = api_intf_dashboard_piston_set_save(chunks.id, data)
                 if (saved) {
@@ -529,6 +523,23 @@ private api_intf_dashboard_piston_resume() {
 	    if (piston) {
         	piston.resume()
 			result = [status: "ST_SUCCESS", active: true]
+        } else {
+	    	result = api_get_error_result("ERR_INVALID_ID")
+        }
+	} else {
+    	result = api_get_error_result("ERR_INVALID_TOKEN")
+    }
+    render contentType: "application/javascript", data: "${params.callback}(${result.encodeAsJSON()})"
+}
+
+private api_intf_dashboard_piston_delete() {
+	def result
+    debug "Dashboard: Request received to pause a piston"
+	if (verifySecurityToken(params.token)) {
+	    def piston = getChildApps().find{ hashId(it.id) == params.id };
+	    if (piston) {
+        	app.deleteChildApp(piston);
+			result = [status: "ST_SUCCESS"]
         } else {
 	    	result = api_get_error_result("ERR_INVALID_ID")
         }
