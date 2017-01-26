@@ -20,8 +20,9 @@
  */
 
 def handle() { return "CoRE (SE)" }
-def version() {	return "v0.0.012.20170123" }
+def version() {	return "v0.0.013.20170125" }
 /*
+ *	01/25/2016 >>> v0.0.013.20170125 - ALPHA - Implemented the author field and more improvements to the piston editor
  *	01/23/2016 >>> v0.0.012.20170123 - ALPHA - Implemented the "delete" piston
  *	01/23/2016 >>> v0.0.011.20170123 - ALPHA - Fixed a bug where account id was not hashed
  *	01/23/2016 >>> v0.0.010.20170123 - ALPHA - Duplicate piston and restore from automatic backup :)
@@ -342,8 +343,8 @@ private api_intf_dashboard_piston_create() {
     debug "Dashboard: Request received to generate a new piston name"
 	if (verifySecurityToken(params.token)) {
     	def piston = addChildApp("ady624", "webCoRE Piston", params.name?:generatePistonName())
-        if (params.bin) {
-        	piston.bin(params.bin)           
+        if (params.author || params.bin) {
+        	piston.config([bin: params.bin, author: params.author])
         }
         result = [status: "ST_SUCCESS", id: hashId(piston.id)]
 	} else {
@@ -393,6 +394,7 @@ private api_intf_dashboard_piston_set_save(id, data) {
     def piston = getChildApps().find{ hashId(it.id) == id };
     if (piston) {    
 		def p = new groovy.json.JsonSlurper().parseText(new String(data.decodeBase64()))
+        log.trace p
 		return piston.set(p);
     }
     return false;
@@ -472,6 +474,7 @@ private api_intf_dashboard_piston_set_end() {
                 	data += s
                 } else {
                 	data = ""
+                    log.trace "CHUNK $i NOT OK"
                 	ok = false;
                     break;
                 }
@@ -479,6 +482,7 @@ private api_intf_dashboard_piston_set_end() {
             }
             if (ok) {
                 //save the piston here
+                log.trace "CHUNKS OK"
                 def saved = api_intf_dashboard_piston_set_save(chunks.id, data)
                 if (saved) {
 	        		result = [status: "ST_SUCCESS"] + saved

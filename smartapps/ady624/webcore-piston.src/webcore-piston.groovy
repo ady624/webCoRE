@@ -14,8 +14,9 @@
  *
 */
 
-def version() {	return "v0.0.012.20170123" }
+def version() {	return "v0.0.013.20170125" }
 /*
+ *	01/25/2016 >>> v0.0.013.20170125 - ALPHA - Implemented the author field and more improvements to the piston editor
  *	01/23/2016 >>> v0.0.012.20170123 - ALPHA - Implemented the "delete" piston
  *	01/23/2016 >>> v0.0.011.20170123 - ALPHA - Fixed a bug where account id was not hashed
  *	01/23/2016 >>> v0.0.010.20170123 - ALPHA - Duplicate piston and restore from automatic backup :)
@@ -125,6 +126,7 @@ private getDevice(deviceId) {
 def get() {
 	def piston = state.piston ?: [:]
     piston.id = hashId(app.id);
+    piston.author = state.author;
     piston.name = app.label ?: app.name
     piston.created = state.created
     piston.modified = state.modified
@@ -139,8 +141,10 @@ def set(piston) {
     state.build = (int)(state.build ? (int)state.build + 1 : 1)
     state.piston = piston ?[
     	r: piston.r ?: [],
+        rn: !!piston.rn,
+        ro: piston.ro ?: 'and',
     	s: piston.s ?: [],
-    	v: piston.v ?: []        
+    	v: piston.v ?: [] 
     ] : [:]
     if (state.build == 1) {
     	resume()
@@ -148,8 +152,16 @@ def set(piston) {
     return [active: state.active, build: state.build, modified: state.modified]
 }
 
-def bin(id) {
-	state.bin = id;
+def config(data) {
+	if (!data) {
+    	return false;
+    }
+	if (data.bin) {
+		state.bin = data.bin;
+    }
+	if (data.author) {
+		state.author = data.author;
+    }
 }
 
 def pause() {
