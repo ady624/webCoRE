@@ -400,7 +400,7 @@ private api_intf_dashboard_piston_get() {
     debug "Dashboard: Request received to get piston ${params?.id}"
 	if (verifySecurityToken(params.token)) {
         def pistonId = params.id
-        def serverDbVersion = dbVersion()
+        def serverDbVersion = version()
         def clientDbVersion = params.db
         if (pistonId) {
             result = api_get_base_result(params.dev)            
