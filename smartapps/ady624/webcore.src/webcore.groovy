@@ -20,8 +20,9 @@
  */
 
 def handle() { return "CoRE (SE)" }
-def version() {	return "v0.0.016.20170127" }
+def version() {	return "v0.0.017.20170128" }
 /*
+ *. 01/28/2017 >>> v0.0.017.20170128 - ALPHA - Incremental update
  *	01/27/2016 >>> v0.0.016.20170127 - ALPHA - Minor compatibility fixes
  *	01/27/2016 >>> v0.0.015.20170127 - ALPHA - Updated capabilities, attributes, commands and refactored them into maps
  *	01/26/2016 >>> v0.0.014.20170126 - ALPHA - Progress getting comparisons to work
@@ -143,7 +144,6 @@ private pageInitializeDashboard() {
 
 private pageSelectDevices() {
 	atomicState.updateDevices = true
-    atomicState.devices = null    
 	dynamicPage(name: "pageSelectDevices", title: "", nextPage: state.installed ? null : "pageFinishInstall") {
 		section() {
 			paragraph "${state.installed ? "Select the devices you want ${handle()} to have access to." : "It's now time to allow ${handle()} access to some of your devices."} Only allow ${handle()} access to devices you plan on using with ${handle()} pistons, as they only have access to these selected devices.${state.installed ? "" : " When ready, tap Done to finish installing ${handle()}."}"
@@ -168,11 +168,6 @@ private pageFinishInstall() {
 
 def pageSettings() {
     //clear devices cache
-    if (atomicState.updateDevices) {
-    	atomicState.devices = null
-	   	atomicState.updateDevices = false
-    }
-
 	dynamicPage(name: "pageSettings", title: "", install: false, uninstall: false) {
 		section("General") {
 			label name: "name", title: "Name", state: (name ? "complete" : null), defaultValue: app.name, required: false
@@ -314,12 +309,10 @@ private api_get_error_result(error) {
 
 private api_get_base_result(requireDevices = true) {
 	def tz = location.getTimeZone()
+    requireDevices = requireDevices || atomicState.updateDevices
     def sendDevices = (requireDevices == 'true')
-    def devices = atomicState.devices
-    if (!devices) {    	
-	    devices = listAvailableDevices().sort{ it.value.n }.collect{ [ id: it.key ] + it.value }
-        atomicState.devices = devices;
-        sendDevices = true;
+    if (sendDevices) {
+    	atomicState.updateDevices = null
     }
 	return [
         now: now(),
@@ -331,7 +324,7 @@ private api_get_base_result(requireDevices = true) {
             locationId: hashId(location.id),
             name: app.label ?: app.name,
             uri: state.endpoint            
-        ] + (sendDevices ? [devices: devices] : [:]),
+        ] + (sendDevices ? [devices: listAvailableDevices()] : [:]),
         location: [
             contactBookEnabled: location.getContactBookEnabled(),
             hubs: location.getHubs().collect{ [id: hashId(it.id), name: it.name, firmware: it.getFirmwareVersionString(), physical: it.getType().toString().contains('PHYSICAL') ]},
@@ -403,19 +396,20 @@ private api_intf_dashboard_piston_get() {
         def pistonId = params.id
         def serverDbVersion = version()
         def clientDbVersion = params.db
+        def requireDb = serverDbVersion != clientDbVersion
         if (pistonId) {
-            result = api_get_base_result(params.dev)            
+            result = api_get_base_result(requireDb || !!params.dev)            
             def piston = getChildApps().find{ hashId(it.id) == pistonId };
             if (piston) {
             	result.piston = piston.get() ?: [:]
             }
-            if (serverDbVersion != clientDbVersion) {
+            if (requireDb) {
                 result.dbVersion = serverDbVersion
                 result.db = [
                     capabilities: capabilities().sort{ it.value.d },
                     commands: [
-                        physical: commands().sort{ it.value.d },
-                        virtual: virtualCommands().sort{ it.value.d }
+                        physical: commands().sort{ it.value.d ?: it.value.n },
+                        virtual: virtualCommands().sort{ it.value.d ?: it.value.n }
                     ],
                     attributes: attributes().sort{ it.key },
                     comparisons: comparisons(),
@@ -631,7 +625,7 @@ private Map listAvailableDevices(raw = false) {
             	if (raw) {
                     devices[devId] = dev
                 } else {
-                	devices[devId] = [n: dev.getDisplayName(), c: dev.getCapabilities()*.name, a: dev.getSupportedAttributes()*.name, o: dev.getSupportedCommands()*.name]
+                	devices[devId] = [n: dev.getDisplayName(), cn: dev.getCapabilities()*.name, a: dev.getSupportedAttributes().collect{[n: it.getName(), t: it.getDataType(), o: it.getValues()]}, c: dev.getSupportedCommands().collect{[n: it.getName(), p: it.getArguments()]}]
                 }
             }
         }
@@ -890,74 +884,74 @@ private static Map capabilities() {
 
 private Map attributes() {
 	return [
-		acceleration				: [ t: "enum",		o: ["active", "inactive"],																			],
-		activities					: [ t: "object",																										],
-		alarm						: [ t: "enum",		o: ["both", "off", "siren", "strobe"],																],
-		axisX						: [ t: "number",	r: [-1024, 1024],	s: "threeAxis",																	],
-		axisY						: [ t: "number",	r: [-1024, 1024],	s: "threeAxis",																	],
-		axisZ						: [ t: "number",	r: [-1024, 1024],	s: "threeAxis",																	],
-		battery						: [ t: "number",	r: [0, 100],		u: "%",																			],
-		button						: [ t: "enum",		o: ["pushed"],										c: "button",					m: true,		],
-		carbonDioxide				: [ t: "decimal",	r: [0, null],																						],
-		carbonMonoxide				: [ t: "enum",		o: ["clear", "detected", "tested"],																	],
-		color						: [ t: "color",																											],
-		colorTemperature			: [ t: "number",	r: [1000, 30000],	u: "°K",																		],
-		consumableStatus			: [ t: "enum",		o: ["good", "maintenance_required", "missing", "order", "replace"],									],
-		contact						: [ t: "enum",		o: ["closed", "open"],																				],
-		coolingSetpoint				: [ t: "decimal",	r: [-127, 127],		u: temperatureUnit(),															],
-		currentActivity				: [ t: "string",																										],
-		door						: [ t: "enum",		o: ["closed", "closing", "open", "opening", "unknown"],					i: true,					],
-		energy						: [ t: "decimal",	r: [0, null],		u: "kWh",																		],
-		eta							: [ t: "datetime",																										],
-		goal						: [ t: "number",	r: [0, null],																						],
-		heatingSetpoint				: [ t: "decimal",	r: [-127, 127],		u: temperatureUnit(),															],
-		hex							: [ t: "hexcolor",																										],
-		holdableButton				: [ t: "enum",		o: ["held", "pushed"],								c: "holdableButton",			m: true,		],
-		hue							: [ t: "number",	r: [0, 360],		u: "°",																			],
-		humidity					: [ t: "number",	r: [0, 100],		u: "%",																			],
-		illuminance					: [ t: "number",	r: [0, null],		u: "lux",																		],
-		image						: [ t: "image",																											],
-		indicatorStatus				: [ t: "enum",		o: ["never", "when off", "when on"],																],
-		infraredLevel				: [ t: "number",	r: [0, 100],		u: "%",																			],
-		level						: [ t: "number",	r: [0, 100],		u: "%",																			],
-		lock						: [ t: "enum",		o: ["locked", "unknown", "unlocked", "unlocked with timeout"],	c: "lock",			 i: true,		],
-		lqi							: [ t: "number",	r: [0, 255],																						],
-		motion						: [ t: "enum",		o: ["active", "inactive"],																			],
-		mute						: [ t: "enum",		o: ["muted", "unmuted"],																			],
-		orientation					: [ t: "enum",		o: threeAxisOrientations(),	s: "threeAxis",															],
-		pH							: [ t: "decimal",	r: [0, 14],																							],
-		phraseSpoken				: [ t: "string",																										],
-		power						: [ t: "decimal",	r: [0, null],		u: "W",																			],
-		powerSource					: [ t: "enum",		o: ["battery", "dc", "mains", "unknown"],															],
-		presence					: [ t: "enum",		o: ["not present", "present"],																		],
-		rssi						: [ t: "number",	r: [0, 100],		u: "%",																			],
-		saturation					: [ t: "number",	r: [0, 100],		u: "%",																			],
-		schedule					: [ t: "object",																										],
-		sessionStatus				: [ t: "enum",		o: ["canceled", "paused", "running", "stopped"],													],
-		shock						: [ t: "enum",		o: ["clear", "detected"],																			],
-		sleeping					: [ t: "enum",		o: ["not sleeping", "sleeping"],																	],
-		smoke						: [ t: "enum",		o: ["clear", "detected", "tested"],																	],
-		sound						: [ t: "enum",		o: ["detected", "not detected"],																	],
-		soundPressureLevel			: [ t: "number",	r: [0, null],		u: "dB",																		],
-		status						: [ t: "string",																										],
-		steps						: [ t: "number",	r: [0, null],																						],
-		switch						: [ t: "enum",		o: ["off", "on"],														i: true,					],
-		tamper						: [ t: "enum",		o: ["clear", "detected"],																			],
-		temperature					: [ t: "decimal",	r: [-460, 10000],	u: temperatureUnit(),															],
-		thermostatFanMode			: [ t: "enum",		o: ["auto", "circulate", "on"],																		],
-		thermostatMode				: [ t: "enum",		o: ["auto", "cool", "emergency heat", "heat", "off"],												],
-		thermostatOperatingState	: [ t: "enum",		o: ["cooling", "fan only", "heating", "idle", "pending cool", "pending heat", "vent economizer"],	],
-		thermostatSetpoint			: [ t: "decimal",	r: [-127, 127],		u: temperatureUnit(),															],
-		threeAxis					: [ t: "vector3",																										],
-		timeRemaining				: [ t: "number",	r: [0, null],		u: "s",																			],
-		touch						: [ t: "enum",		o: ["touched"],																						],
-		trackData					: [ t: "object",																										],
-		trackDescription			: [ t: "string",																										],
-		ultravioletIndex			: [ t: "number",	r: [0, null],																						],
-		valve						: [ t: "enum",		o: ["closed", "open"],																				],
-		voltage						: [ t: "decimal",	r: [null, null],	u: "V",																			],
-		water						: [ t: "enum",		o: ["dry", "wet"],																					],
-		windowShade					: [ t: "enum",		o: ["closed", "closing", "open", "opening", "partially open", "unknown"],							],
+		acceleration				: [ n: "acceleration",			t: "enum",		o: ["active", "inactive"],																			],
+		activities					: [ n: "activities", 			t: "object",																										],
+		alarm						: [ n: "alarm", 				t: "enum",		o: ["both", "off", "siren", "strobe"],																],
+		axisX						: [ n: "X axis",				t: "number",	r: [-1024, 1024],	s: "threeAxis",																	],
+		axisY						: [ n: "Y axis",				t: "number",	r: [-1024, 1024],	s: "threeAxis",																	],
+		axisZ						: [ n: "Z axis",				t: "number",	r: [-1024, 1024],	s: "threeAxis",																	],
+		battery						: [ n: "battery", 				t: "number",	r: [0, 100],		u: "%",																			],
+		button						: [ n: "button", 				t: "enum",		o: ["pushed"],										c: "button",					m: true,		],
+		carbonDioxide				: [ n: "carbon dioxide",		t: "decimal",	r: [0, null],																						],
+		carbonMonoxide				: [ n: "carbon monoxide",		t: "enum",		o: ["clear", "detected", "tested"],																	],
+		color						: [ n: "color",					t: "color",																											],
+		colorTemperature			: [ n: "color temperature",		t: "number",	r: [1000, 30000],	u: "°K",																		],
+		consumableStatus			: [ n: "consumable status",		t: "enum",		o: ["good", "maintenance_required", "missing", "order", "replace"],									],
+		contact						: [ n: "contact",				t: "enum",		o: ["closed", "open"],																				],
+		coolingSetpoint				: [ n: "cooling setpoint",		t: "decimal",	r: [-127, 127],		u: temperatureUnit(),															],
+		currentActivity				: [ n: "current activity",		t: "string",																										],
+		door						: [ n: "door",					t: "enum",		o: ["closed", "closing", "open", "opening", "unknown"],					i: true,					],
+		energy						: [ n: "energy",				t: "decimal",	r: [0, null],		u: "kWh",																		],
+		eta							: [ n: "ETA",					t: "datetime",																										],
+		goal						: [ n: "goal",					t: "number",	r: [0, null],																						],
+		heatingSetpoint				: [ n: "heating setpoint",		t: "decimal",	r: [-127, 127],		u: temperatureUnit(),															],
+		hex							: [ n: "hexadecimal code",		t: "hexcolor",																										],
+		holdableButton				: [ n: "holdable button",		t: "enum",		o: ["held", "pushed"],								c: "holdableButton",			m: true,		],
+		hue							: [ n: "hue",					t: "number",	r: [0, 360],		u: "°",																			],
+		humidity					: [ n: "relative humidity",		t: "number",	r: [0, 100],		u: "%",																			],
+		illuminance					: [ n: "illuminance",			t: "number",	r: [0, null],		u: "lux",																		],
+		image						: [ n: "image",					t: "image",																											],
+		indicatorStatus				: [ n: "indicator status",		t: "enum",		o: ["never", "when off", "when on"],																],
+		infraredLevel				: [ n: "infrared level",		t: "number",	r: [0, 100],		u: "%",																			],
+		level						: [ n: "level",					t: "number",	r: [0, 100],		u: "%",																			],
+		lock						: [ n: "lock",					t: "enum",		o: ["locked", "unknown", "unlocked", "unlocked with timeout"],	c: "lock",			 i: true,		],
+		lqi							: [ n: "link quality",			t: "number",	r: [0, 255],																						],
+		motion						: [ n: "motion",				t: "enum",		o: ["active", "inactive"],																			],
+		mute						: [ n: "mute",					t: "enum",		o: ["muted", "unmuted"],																			],
+		orientation					: [ n: "orientation",			t: "enum",		o: threeAxisOrientations(),	s: "threeAxis",															],
+		pH							: [ n: "pH level",				t: "decimal",	r: [0, 14],																							],
+		phraseSpoken				: [ n: "phrase",				t: "string",																										],
+		power						: [ n: "power",					t: "decimal",	r: [0, null],		u: "W",																			],
+		powerSource					: [ n: "power source",			t: "enum",		o: ["battery", "dc", "mains", "unknown"],															],
+		presence					: [ n: "presence",				t: "enum",		o: ["not present", "present"],																		],
+		rssi						: [ n: "signal strength",		t: "number",	r: [0, 100],		u: "%",																			],
+		saturation					: [ n: "saturation",			t: "number",	r: [0, 100],		u: "%",																			],
+		schedule					: [ n: "schedule",				t: "object",																										],
+		sessionStatus				: [ n: "session status",		t: "enum",		o: ["canceled", "paused", "running", "stopped"],													],
+		shock						: [ n: "shock",					t: "enum",		o: ["clear", "detected"],																			],
+		sleeping					: [ n: "sleeping",				t: "enum",		o: ["not sleeping", "sleeping"],																	],
+		smoke						: [ n: "smoke",					t: "enum",		o: ["clear", "detected", "tested"],																	],
+		sound						: [ n: "sound",					t: "enum",		o: ["detected", "not detected"],																	],
+		soundPressureLevel			: [ n: "sound pressure level",	t: "number",	r: [0, null],		u: "dB",																		],
+		status						: [ n: "status",				t: "string",																										],
+		steps						: [ n: "steps",					t: "number",	r: [0, null],																						],
+		switch						: [ n: "switch",				t: "enum",		o: ["off", "on"],														i: true,					],
+		tamper						: [ n: "tamper",				t: "enum",		o: ["clear", "detected"],																			],
+		temperature					: [ n: "temperature",			t: "decimal",	r: [-460, 10000],	u: temperatureUnit(),															],
+		thermostatFanMode			: [ n: "fan mode",				t: "enum",		o: ["auto", "circulate", "on"],																		],
+		thermostatMode				: [ n: "thermostat mode",		t: "enum",		o: ["auto", "cool", "emergency heat", "heat", "off"],												],
+		thermostatOperatingState	: [ n: "operating state",		t: "enum",		o: ["cooling", "fan only", "heating", "idle", "pending cool", "pending heat", "vent economizer"],	],
+		thermostatSetpoint			: [ n: "setpoint",				t: "decimal",	r: [-127, 127],		u: temperatureUnit(),															],
+		threeAxis					: [ n: "vector",				t: "vector3",																										],
+		timeRemaining				: [ n: "time remaining",		t: "number",	r: [0, null],		u: "s",																			],
+		touch						: [ n: "touch",					t: "enum",		o: ["touched"],																						],
+		trackData					: [ n: "track data",			t: "object",																										],
+		trackDescription			: [ n: "track description",		t: "string",																										],
+		ultravioletIndex			: [ n: "UV index",				t: "number",	r: [0, null],																						],
+		valve						: [ n: "valve",					t: "enum",		o: ["closed", "open"],																				],
+		voltage						: [ n: "voltage",				t: "decimal",	r: [null, null],	u: "V",																			],
+		water						: [ n: "water",					t: "enum",		o: ["dry", "wet"],																					],
+		windowShade					: [ n: "window shade",			t: "enum",		o: ["closed", "closing", "open", "opening", "partially open", "unknown"],							],
 	]
 }
 
@@ -1085,10 +1079,12 @@ private virtualCommands() {
 	return [
 		wait			: [	n: "Wait...", d: "Wait {0}",											p: [[n:"Duration", t:"duration"]],				],
 		waitRandom		: [ n: "Wait randomly...",	d: "Wait randomly between {0} and {1}",			p: [[n:"At least", t:"duration"],[n:"At most", t:"duration"]],	],
+		toggle			: [ n: "Toggle", r: ["on", "off"], 					],
+		toggleLevel		: [ n: "Toggle level...", 		d: "Toggle level between 0% and {0}%",	r: ["on", "off", "setLevel"],					p: [[n:"Level", t:"level"]],																																	],
+
+
 /*		[ n: "waitState",											d: "Wait for piston state change",	p: ["Change to:enum[any,false,true]"],															i: true,	l: true,						dd: "Wait for {0} state"],
 		[ n: "waitTime",											d: "Wait for time",			p: ["Time:enum[midnight,sunrise,noon,sunset]","?Offset [minutes]:number[-1440..1440]","Days of week:enums[Monday,Tuesday,Wednesday,Thursday,Friday,Saturday,Sunday]"],							i: true,	l: true,						dd: "Wait for next {0} (offset {1} min), on {2}"],
-		[ n: "toggle",				r: ["on", "off"], 				d: "Toggle",		],
-		[ n: "toggleLevel",			r: ["on", "off", "setLevel"],	d: "Toggle level",					p: ["Level:level"],																																	dd: "Toggle level between 0% and {0}%",	],
 		[ n: "setHueVariable",		r: ["setHue"],					d: "Set hue (variable)",						p: ["Hue:variable"], dd: "Set hue to {0}°"],
 		[ n: "fadeLevelHW",			r: ["setLevel"], 				d: "Fade to level (hardware)",		p: ["Target level:level","Duration (ms):number[1..60000]"],																							dd: "Fade to {0}% in {1}ms",				],
 		[ n: "fadeLevel",			r: ["setLevel"], 				d: "Fade to level",					p: ["?Start level (optional):level","Target level:level","Duration (seconds):number[1..600]"],															dd: "Fade level from {0}% to {1}% in {2}s",				],
