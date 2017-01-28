@@ -20,8 +20,9 @@
  */
 
 def handle() { return "CoRE (SE)" }
-def version() {	return "v0.0.015.20170127" }
+def version() {	return "v0.0.016.20170127" }
 /*
+ *	01/27/2016 >>> v0.0.016.20170127 - ALPHA - Minor compatibility fixes
  *	01/27/2016 >>> v0.0.015.20170127 - ALPHA - Updated capabilities, attributes, commands and refactored them into maps
  *	01/26/2016 >>> v0.0.014.20170126 - ALPHA - Progress getting comparisons to work
  *	01/25/2016 >>> v0.0.013.20170125 - ALPHA - Implemented the author field and more improvements to the piston editor
@@ -411,12 +412,12 @@ private api_intf_dashboard_piston_get() {
             if (serverDbVersion != clientDbVersion) {
                 result.dbVersion = serverDbVersion
                 result.db = [
-                    capabilities: capabilities().sort{ it.d },
+                    capabilities: capabilities().sort{ it.value.d },
                     commands: [
-                        physical: commands().sort{ it.d },
-                        virtual: virtualCommands().sort{ it.d }
+                        physical: commands().sort{ it.value.d },
+                        virtual: virtualCommands().sort{ it.value.d }
                     ],
-                    attributes: attributes().sort{ it.n },
+                    attributes: attributes().sort{ it.key },
                     comparisons: comparisons(),
                     colors: [                
                         standard: colorUtil.ALL
@@ -887,7 +888,7 @@ private static Map capabilities() {
 	]
 }
 
-private static Map attributes() {
+private Map attributes() {
 	return [
 		acceleration				: [ t: "enum",		o: ["active", "inactive"],																			],
 		activities					: [ t: "object",																										],
@@ -1224,7 +1225,7 @@ private static Map comparisons() {
 	]
 }
 
-private static Map threeAxisOrientations() {
+private static List threeAxisOrientations() {
 	return ["rear side up", "down side up", "left side up", "front side up", "up side up", "right side up"]
 }
 
