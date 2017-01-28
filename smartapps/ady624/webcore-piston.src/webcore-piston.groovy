@@ -14,8 +14,10 @@
  *
 */
 
-def version() {	return "v0.0.013.20170125" }
+def version() {	return "v0.0.015.20170127" }
 /*
+ *	01/27/2016 >>> v0.0.015.20170127 - ALPHA - Updated capabilities, attributes, commands and refactored them into maps
+ *	01/26/2016 >>> v0.0.014.20170126 - ALPHA - Progress getting comparisons to work
  *	01/25/2016 >>> v0.0.013.20170125 - ALPHA - Implemented the author field and more improvements to the piston editor
  *	01/23/2016 >>> v0.0.012.20170123 - ALPHA - Implemented the "delete" piston
  *	01/23/2016 >>> v0.0.011.20170123 - ALPHA - Fixed a bug where account id was not hashed
