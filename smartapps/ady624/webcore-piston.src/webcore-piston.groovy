@@ -14,8 +14,10 @@
  *
 */
 
-def version() {	return "v0.0.016.20170127" }
+def version() {	return "v0.0.018.2017029" }
 /*
+ *	01/29/2016 >>> v0.0.018.20170129 - ALPHA - Fixed a conditions where devices would not be sent over to the UI
+ *	01/28/2016 >>> v0.0.017.20170128 - ALPHA - Incremental update
  *	01/27/2016 >>> v0.0.016.20170127 - ALPHA - Minor compatibility fixes
  *	01/27/2016 >>> v0.0.015.20170127 - ALPHA - Updated capabilities, attributes, commands and refactored them into maps
  *	01/26/2016 >>> v0.0.014.20170126 - ALPHA - Progress getting comparisons to work

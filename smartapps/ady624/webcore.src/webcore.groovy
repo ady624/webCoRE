@@ -20,9 +20,10 @@
  */
 
 def handle() { return "CoRE (SE)" }
-def version() {	return "v0.0.017.20170128" }
+def version() {	return "v0.0.018.2017029" }
 /*
- *. 01/28/2017 >>> v0.0.017.20170128 - ALPHA - Incremental update
+ *	01/29/2016 >>> v0.0.018.20170129 - ALPHA - Fixed a conditions where devices would not be sent over to the UI
+ *	01/28/2016 >>> v0.0.017.20170128 - ALPHA - Incremental update
  *	01/27/2016 >>> v0.0.016.20170127 - ALPHA - Minor compatibility fixes
  *	01/27/2016 >>> v0.0.015.20170127 - ALPHA - Updated capabilities, attributes, commands and refactored them into maps
  *	01/26/2016 >>> v0.0.014.20170126 - ALPHA - Progress getting comparisons to work
@@ -309,8 +310,8 @@ private api_get_error_result(error) {
 
 private api_get_base_result(requireDevices = true) {
 	def tz = location.getTimeZone()
-    requireDevices = requireDevices || atomicState.updateDevices
-    def sendDevices = (requireDevices == 'true')
+	def Boolean sendDevices = (requireDevices =='true') || (requireDevices == true) || !!atomicState.updateDevices
+    log.trace "req $requireDevices send $sendDevices"
     if (sendDevices) {
     	atomicState.updateDevices = null
     }
@@ -398,7 +399,7 @@ private api_intf_dashboard_piston_get() {
         def clientDbVersion = params.db
         def requireDb = serverDbVersion != clientDbVersion
         if (pistonId) {
-            result = api_get_base_result(requireDb || !!params.dev)            
+            result = api_get_base_result(requireDb ?: params.dev)            
             def piston = getChildApps().find{ hashId(it.id) == pistonId };
             if (piston) {
             	result.piston = piston.get() ?: [:]
