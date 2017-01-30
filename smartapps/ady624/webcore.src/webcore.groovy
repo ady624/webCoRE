@@ -20,8 +20,9 @@
  */
 
 def handle() { return "CoRE (SE)" }
-def version() {	return "v0.0.018.2017029" }
+def version() {	return "v0.0.019.2017030" }
 /*
+ *	01/30/2016 >>> v0.0.019.20170130 - ALPHA - Improved comparisons - ouch
  *	01/29/2016 >>> v0.0.018.20170129 - ALPHA - Fixed a conditions where devices would not be sent over to the UI
  *	01/28/2016 >>> v0.0.017.20170128 - ALPHA - Incremental update
  *	01/27/2016 >>> v0.0.016.20170127 - ALPHA - Minor compatibility fixes
@@ -1137,88 +1138,81 @@ private virtualCommands() {
 
 
 private static Map comparisons() {
-	def optionsEnum = [
-		[ condition: "is", trigger: "changes to", parameters: 1, timed: false],
-		[ condition: "is not", trigger: "changes away from", parameters: 1, timed: false],
-		[ condition: "is one of", trigger: "changes to one of", parameters: 1, timed: false, multiple: true, minOptions: 2],
-		[ condition: "is not one of", trigger: "changes away from one of", parameters: 1, timed: false, multiple: true, minOptions: 2],
-		[ condition: "was", trigger: "stays", parameters: 1, timed: true],
-		[ condition: "was not", trigger: "stays away from", parameters: 1, timed: true],
-		[ trigger: "changes", parameters: 0, timed: false],
-		[ condition: "changed", parameters: 0, timed: true],
-		[ condition: "did not change", parameters: 0, timed: true],
-	]
-
-	def optionsMomentary = [
-		[ condition: "is", trigger: "changes to", parameters: 1, timed: false],
-	]
-
-	def optionsBool = [
-		[ condition: "is equal to", parameters: 1, timed: false],
-		[ condition: "is not equal to", parameters: 1, timed: false],
-		[ condition: "is true", parameters: 0, timed: false],
-		[ condition: "is false", parameters: 0, timed: false],
-	]
-	def optionsEvents = [
-		[ trigger: "executed", parameters: 1, timed: false],
-	]
-	def optionsNumber = [
-		[ condition: "is equal to", trigger: "changes to", parameters: 1, timed: false],
-		[ condition: "is not equal to", trigger: "changes away from", parameters: 1, timed: false],
-		[ condition: "is less than", trigger: "drops below", parameters: 1, timed: false],
-		[ condition: "is less than or equal to", trigger: "drops to or below", parameters: 1, timed: false],
-		[ condition: "is greater than", trigger: "raises above", parameters: 1, timed: false],
-		[ condition: "is greater than or equal to", trigger: "raises to or above", parameters: 1, timed: false],
-		[ condition: "is inside range", trigger: "enters range", parameters: 2, timed: false],
-		[ condition: "is outside of range", trigger: "exits range", parameters: 2, timed: false],
-		[ condition: "is even", trigger: "changes to an even value", parameters: 0, timed: false],
-		[ condition: "is odd", trigger: "changes to an odd value", parameters: 0, timed: false],
-		[ condition: "was equal to", trigger: "stays equal to", parameters: 1, timed: true],
-		[ condition: "was not equal to", trigger: "stays not equal to", parameters: 1, timed: true],
-		[ condition: "was less than", trigger: "stays less than", parameters: 1, timed: true],
-		[ condition: "was less than or equal to", trigger: "stays less than or equal to", parameters: 1, timed: true],
-		[ condition: "was greater than", trigger: "stays greater than", parameters: 1, timed: true],
-		[ condition: "was greater than or equal to", trigger: "stays greater than or equal to", parameters: 1, timed: true],
-		[ condition: "was inside range",trigger: "stays inside range",  parameters: 2, timed: true],
-		[ condition: "was outside of range", trigger: "stays outside of range", parameters: 2, timed: true],
-		[ condition: "was even", trigger: "stays even", parameters: 0, timed: true],
-		[ condition: "was odd", trigger: "stays odd", parameters: 0, timed: true],
-		[ trigger: "changes", parameters: 0, timed: false],
-		[ trigger: "raises", parameters: 0, timed: false],
-		[ trigger: "drops", parameters: 0, timed: false],
-		[ condition: "changed", parameters: 0, timed: true],
-		[ condition: "did not change", parameters: 0, timed: true],
-	]
-	def optionsTime = [
-		[ trigger: "happens at", parameters: 1],
-		[ condition: "is any time of day", parameters: 0],
-		[ condition: "is around", parameters: 1],
-		[ condition: "is before", parameters: 1],
-		[ condition: "is after", parameters: 1],
-		[ condition: "is between", parameters: 2],
-		[ condition: "is not between", parameters: 2],
-	]
 	return [
-		bool				: optionsBool,
-		boolean				: optionsBool,
-		vector3				: optionsEnum,
-		orientation			: optionsEnum,
-		string				: optionsEnum,
-		dynamic				: optionsEnum,
-		text				: optionsEnum,
-		enum				: optionsEnum,
-		mode				: optionsEnum,
-		alarmSystemStatus	: optionsEnum,
-		routine				: optionsEvents,
-		piston				: optionsEvents,
-		askAlexaMacro		: optionsEvents,
-		echoSistantProfile	: optionsEvents,
-		ifttt				: optionsEvents,
-		number				: optionsNumber,
-		variable			: optionsNumber,
-		decimal				: optionsNumber,
-		time				: optionsTime,
-		momentary			: optionsMomentary,
+    	conditions: [
+        	changed							: [ d: "changed",																	g:"bmns",						t: 1,	],
+        	did_not_change					: [ d: "did not change",															g:"bmns",						t: 1,	],
+    		is 								: [ d: "is",								dd: "are",								g:"bms",	p: 1						],
+    		is_not	 						: [ d: "is not",							dd: "are not",							g:"bms",	p: 1						],
+    		is_any_of 						: [ d: "is any of",							dd: "are any of",						g:"s", 		p: 1,	m: true,			],
+    		is_not_any_of 					: [ d: "is not any of",						dd: "are not any of",					g:"s", 		p: 1,	m: true,			],
+    		is_equal_to						: [ d: "is equal to",						dd: "are equal to",						g:"bn",		p: 1						],
+    		is_different_than				: [ d: "is different than",					dd: "are different than",				g:"bn",		p: 1						],
+    		is_less_than					: [ d: "is less than",						dd: "are less than",					g:"n",		p: 1						],
+    		is_less_to_or_equal_than		: [ d: "is less to or equal than",			dd: "are less to or equal than",		g:"n",		p: 1						],
+    		is_greater_than					: [ d: "is greater than",					dd: "are greater than",					g:"n",		p: 1						],
+    		is_greater_to_or_equal_than		: [ d: "is greater to or equal than",		dd: "are greater to or equal than",		g:"n",		p: 1						],
+    		is_inside_range					: [ d: "is inside range",					dd: "are inside range",					g:"n",		p: 2						],
+    		is_outside_range				: [ d: "is outside range",					dd: "are outside range",				g:"n",		p: 2						],
+			is_even							: [ d: "is even",							dd: "are even",							g:"n",									],
+			is_odd							: [ d: "is odd",							dd: "are odd",							g:"n",									],
+    		was 							: [ d: "was",								dd: "were",								g:"bs",		p: 1,				t: 2,	],
+    		was_not 						: [ d: "was not",							dd: "were not",							g:"bs",		p: 1,				t: 2,	],
+    		was_any_of 						: [ d: "was any of",						dd: "were any of",						g:"bs",		p: 1,	m: true,	t: 2,	],
+    		was_not_any_of 					: [ d: "was not any of",					dd: "were not any of",					g:"bs",		p: 1,	m: true,	t: 2,	],
+			was_equal_to 					: [ d: "was equal to",						dd: "were equal to",					g:"n",		p: 1,				t: 2,	],
+			was_different_than 				: [ d: "was different than",				dd: "were different than",				g:"n",		p: 1,				t: 2,	],
+			was_less_than 					: [ d: "was less than",						dd: "were less than",					g:"n",		p: 1,				t: 2,	],
+			was_less_than_or_equal_to 		: [ d: "was less than or equal to",			dd: "were less than or equal to",		g:"n",		p: 1,				t: 2,	],
+			was_greater_than 				: [ d: "was greater than",					dd: "were greater than",				g:"n",		p: 1,				t: 2,	],
+			was_greater_than_or_equal_to 	: [ d: "was greater than or equal to",		dd: "were greater than or equal to",	g:"n",		p: 1,				t: 2,	],
+			was_inside_range 				: [ d: "was inside range",					dd: "were inside range",				g:"n",		p: 2,				t: 2,	],
+			was_outside_range 				: [ d: "was outside range",					dd: "were outside range",				g:"n",		p: 2,				t: 2,	],
+    		was_even						: [ d: "was even",							dd: "were even",						g:"n",							t: 2,	],
+    		was_odd							: [ d: "was odd",							dd: "were odd",							g:"n",							t: 2,	],
+    	],
+        triggers: [
+    		changes 						: [ d: "changes",							dd: "change",							g:"bmns",								],
+    		changes_to 						: [ d: "changes",							dd: "change",							g:"bs",		P: 1,						],
+    		changes_away_from 				: [ d: "changes away from",					dd: "change away from",					g:"bs",		p: 1,						],
+    		changes_to_any_of 				: [ d: "changes to any of",					dd: "change to any of",					g:"s", 		p: 1,	m: true,			],
+    		changes_away_from_any_of 		: [ d: "changes away from any of",			dd: "change away from any of",			g:"s", 		p: 1,	m: true,			],
+            drops							: [ d: "drops",								dd: "drop",								g:"n",									],
+            does_not_drop					: [ d: "does not drop",						dd: "do not drop",						g:"n",									],
+            drops_below						: [ d: "drops below",						dd: "drop below",						g:"n",									],
+            drops_to_or_below				: [ d: "drops to or below",					dd: "drop to or below",					g:"n",									],
+            remains_below					: [ d: "remains below",						dd: "remains below",					g:"n",									],
+            remains_below_or_equal_to		: [ d: "remains below or equal to",			dd: "remains below or equal to",		g:"n",									],
+            raises							: [ d: "raises",							dd: "raise",							g:"n",									],
+            does_not_rise					: [ d: "does not rise",						dd: "do not rise",						g:"n",									],
+            raises_above					: [ d: "raises above",						dd: "raise above",						g:"n",									],
+            raises_to_or_above				: [ d: "raises to or above",				dd: "raise to or above",				g:"n",									],
+            remains_above					: [ d: "remains above",						dd: "remains above",					g:"n",									],
+            remains_above_or_equal_to		: [ d: "remains above or equal to",			dd: "remains above or equal to",		g:"n",									],
+            enters_range					: [ d: "enters range",						dd: "enter range",						g:"n",		p: 2,						],
+            remains_outside_of_range		: [ d: "remains outside of range",			dd: "remain outside of range",			g:"n",		p: 2,						],
+            exits_range						: [ d: "exits range",						dd: "exit range",						g:"n",		p: 2,						],
+            remains_inside_of_range			: [ d: "remains inside of range",			dd: "remain inside of range",			g:"n",		p: 2,						],
+			becomes_even					: [ d: "becomes even",						dd: "become even",						g:"n",									],
+			remains_even					: [ d: "remains even",						dd: "remain even",						g:"n",									],
+			becomes_odd						: [ d: "becomes odd",						dd: "become odd",						g:"n",									],
+			remains_odd						: [ d: "remains odd",						dd: "remain odd",						g:"n",									],
+    		stays_unchanged					: [ d: "stays unchanged",					dd: "stay unchanged",					g:"bsn",						t: 2,	],
+    		stays	 						: [ d: "stays",								dd: "stay",								g:"bs",		p: 1,				t: 2,	],
+    		stays_away_from					: [ d: "stays away from",					dd: "stay away from",					g:"bs",		p: 1,				t: 2,	],
+    		stays_any_of					: [ d: "stays any of",						dd: "stay any of",						g:"s",		p: 1,	m: true,	t: 2,	],
+    		stays_away_from_any_of			: [ d: "stays away from any of",			dd: "stay away from any of",			g:"bs",		p: 1,	m: true,	t: 2,	],
+			stays_equal_to 					: [ d: "stays equal to",					dd: "stay equal to",					g:"n",		p: 1,				t: 2,	],
+			stays_different_than			: [ d: "stays different than",				dd: "stay different than",				g:"n",		p: 1,				t: 2,	],
+			stays_less_than 				: [ d: "stays less than",					dd: "stay less than",					g:"n",		p: 1,				t: 2,	],
+			stays_less_than_or_equal_to 	: [ d: "stays less than or equal to",		dd: "stay less than or equal to",		g:"n",		p: 1,				t: 2,	],
+			stays_greater_than 				: [ d: "stays greater than",				dd: "stay greater than",				g:"n",		p: 1,				t: 2,	],
+			stays_greater_than_or_equal_to 	: [ d: "stays greater than or equal to",	dd: "stay greater than or equal to",	g:"n",		p: 1,				t: 2,	],
+			stays_inside_range 				: [ d: "stays inside range",				dd: "stay inside range",				g:"n",		p: 2,				t: 2,	],
+			stays_outside_range 			: [ d: "stays outside range",				dd: "stay outside range",				g:"n",		p: 2,				t: 2,	],
+			stays_even						: [ d: "stays even",						dd: "stay even",						g:"n",							t: 2,	],
+			stays_odd						: [ d: "stays odd",							dd: "stay odd",							g:"n",							t: 2,	],
+        ]
 	]
 }
 
