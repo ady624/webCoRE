@@ -14,8 +14,9 @@
  *
 */
 
-def version() {	return "v0.0.01a.20170201" }
+def version() {	return "v0.0.01b.20170206" }
 /*
+ *	02/06/2016 >>> v0.0.01b.20170206 - ALPHA - Fixed a problem with selecting thermostats
  *	02/01/2016 >>> v0.0.01a.20170201 - ALPHA - Updated comparisons
  *	01/30/2016 >>> v0.0.019.20170130 - ALPHA - Improved comparisons - ouch
  *	01/29/2016 >>> v0.0.018.20170129 - ALPHA - Fixed a conditions where devices would not be sent over to the UI
