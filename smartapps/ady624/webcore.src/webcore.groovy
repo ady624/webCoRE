@@ -20,8 +20,9 @@
  */
 
 def handle() { return "CoRE (SE)" }
-def version() {	return "v0.0.01d.20170227" }
+def version() {	return "v0.0.01e.20170227" }
 /*
+ *	02/27/2016 >>> v0.0.01e.20170227 - ALPHA - Fixed a bug in expression parser where integer + integer would result in a string
  *	02/27/2016 >>> v0.0.01d.20170227 - ALPHA - Made progress evaluating expressions
  *	02/24/2016 >>> v0.0.01c.20170224 - ALPHA - Added functions support to main app
  *	02/06/2016 >>> v0.0.01b.20170206 - ALPHA - Fixed a problem with selecting thermostats

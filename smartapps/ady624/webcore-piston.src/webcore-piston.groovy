@@ -14,8 +14,9 @@
  *
 */
 
-def version() {	return "v0.0.01d.20170227" }
+def version() {	return "v0.0.01e.20170227" }
 /*
+ *	02/27/2016 >>> v0.0.01e.20170227 - ALPHA - Fixed a bug in expression parser where integer + integer would result in a string
  *	02/27/2016 >>> v0.0.01d.20170227 - ALPHA - Made progress evaluating expressions
  *	02/24/2016 >>> v0.0.01c.20170224 - ALPHA - Added functions support to main app
  *	02/06/2016 >>> v0.0.01b.20170206 - ALPHA - Fixed a problem with selecting thermostats
@@ -314,15 +315,15 @@ def evaluateExpression(expression, dataType = null) {
                 if (idx >= items.size() - 1) idx = 0
                 //we're onto something
                 def v = null
-                def t = 'string'
                 def o = items[idx].o
                 def t1 = items[idx].t
                 def v1 = items[idx].v
                 def t2 = items[idx + 1].t
                 def v2 = items[idx + 1].t
+                def t = t1
                 //fix-ups
                 //integer with decimal gives decimal, also *, /, and ^ require decimals
-                if ((o == '*') || (o == '*') || (o == '/') || (o == '-')) {
+                if ((o == '*') || (o == '*') || (o == '/') || (o == '-') || (o == '^')) {
                     if ((t1 != 'number') && (t1 != 'integer') && (t1 != 'decimal') && (t1 != 'float')) t1 = 'decimal'
                     if ((t2 != 'number') && (t2 != 'integer') && (t2 != 'decimal') && (t2 != 'float')) t2 = 'decimal'
                     t = 'decimal'
@@ -332,7 +333,7 @@ def evaluateExpression(expression, dataType = null) {
                     t2 = 'boolean'
                     t = 'boolean'
                 }
-                if ((o == '+') && ((t1 == 'string') || (t1 == 'string') || (t1 == 'string') || (t1 == 'string'))) {
+                if ((o == '+') && ((t1 == 'string') || (t1 == 'text') || (t2 == 'string') || (t2 == 'text'))) {
                     t1 = 'string';
                     t2 = 'string';
                     t = 'string'
@@ -364,20 +365,22 @@ def evaluateExpression(expression, dataType = null) {
                     	v = !!v1 || !!v2
                     	break
                     case '+':
-                    default:
-                        v = v1 + v2
+                    default:                    	
+                        v = t == 'string' ? "$v1$v2" : v1 + v2
                     	break
                 }
+                log.trace "Executing  ($t1) $v1 $o ($t2) $v2 = ($t) $v"
                 //set the results
                 items[idx + 1].t = t
                 items[idx + 1].v = cast(v, t)
                 def sz = items.size()
                 items.remove(idx)
             }
-    	    result = [t:items[0].t, v: items[0].v]
+    	    result = [t:items[0].t, v: items[0].v]            
 	        break
     }
     //return the value, either directly or via cast, if certain data type is requested
+    //log.trace "Expression $expression >> $result"
     return result.t == "error" ? result : [t: dataType ?: result.t, v: cast(result.v, dataType?: result.t)]
 }
 
