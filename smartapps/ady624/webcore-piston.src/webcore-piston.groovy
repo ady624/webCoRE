@@ -421,7 +421,7 @@ private func_celsius(params) {
     }
     double t = evaluateExpression(params[0], 'decimal').v
     //convert temperature to Celsius
-    return [t: "decimal", v: (double) t * 9.0 / 5.0 + 32.0]
+    return [t: "decimal", v: (double) (t - 32.0) * 5.0 / 9.0]
 }
 
 
@@ -435,7 +435,7 @@ private func_fahrenheit(params) {
     }
     double t = evaluateExpression(params[0], 'decimal').v
     //convert temperature to Fahrenheit
-    return [t: "decimal", v: (double) (t - 32.0) * 5.0 / 9.0]
+    return [t: "decimal", v: (double) t * 9.0 / 5.0 + 32.0]
 }
 
 /******************************************************************************/
