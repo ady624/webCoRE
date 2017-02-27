@@ -20,8 +20,9 @@
  */
 
 def handle() { return "CoRE (SE)" }
-def version() {	return "v0.0.01e.20170227" }
+def version() {	return "v0.0.01f.20170227" }
 /*
+ *	02/27/2016 >>> v0.0.01f.20170227 - ALPHA - Added support for a bunch more functions
  *	02/27/2016 >>> v0.0.01e.20170227 - ALPHA - Fixed a bug in expression parser where integer + integer would result in a string
  *	02/27/2016 >>> v0.0.01d.20170227 - ALPHA - Made progress evaluating expressions
  *	02/24/2016 >>> v0.0.01c.20170224 - ALPHA - Added functions support to main app
@@ -1246,10 +1247,12 @@ private static Map functions() {
       	variance		: [ t: "decimal",					],
       	stdev			: [ t: "decimal",					],
       	round			: [ t: "decimal",					],
+      	ceil			: [ t: "decimal",					],
       	ceiling			: [ t: "decimal",					],
       	floor			: [ t: "decimal",					],
-      	min				: [ t: "dynamic",					],
-      	max				: [ t: "dynamic",					],
+      	min				: [ t: "decimal",					],
+      	max				: [ t: "decimal",					],
+      	sum				: [ t: "decimal",					],
       	count			: [ t: "integer",					],
       	left			: [ t: "string",					],
       	right			: [ t: "string",					],
@@ -1258,6 +1261,8 @@ private static Map functions() {
       	sprintf			: [ t: "string",					],
       	format			: [ t: "string",					],
       	string			: [ t: "string",					],
+      	replace			: [ t: "string",					],
+      	concat			: [ t: "string",					],
       	text			: [ t: "string",					],
       	lower			: [ t: "string",					],
       	upper			: [ t: "string",					],

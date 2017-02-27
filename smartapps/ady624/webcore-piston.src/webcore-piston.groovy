@@ -14,8 +14,9 @@
  *
 */
 
-def version() {	return "v0.0.01e.20170227" }
+def version() {	return "v0.0.01f.20170227" }
 /*
+ *	02/27/2016 >>> v0.0.01f.20170227 - ALPHA - Added support for a bunch more functions
  *	02/27/2016 >>> v0.0.01e.20170227 - ALPHA - Fixed a bug in expression parser where integer + integer would result in a string
  *	02/27/2016 >>> v0.0.01d.20170227 - ALPHA - Made progress evaluating expressions
  *	02/24/2016 >>> v0.0.01c.20170224 - ALPHA - Added functions support to main app
@@ -204,6 +205,8 @@ def evaluateExpression(expression, dataType = null) {
         case "string":
         case "integer":
         case "decimal":
+        case "boolean":
+        case "bool":
         	result = [t: expression.t, v: cast(expression.v, expression.t)]
         	break
         case "variable":
@@ -236,21 +239,21 @@ def evaluateExpression(expression, dataType = null) {
         	for(item in expression.i) {
 	            if (item.t == "operator") {
                 	if (operand < 0) {
-                    	switch (operator.o) {
+                    	switch (item.o) {
                         	case '+':
                             case '-':
                             case '^':
-                            	items.push([t: decimal, v: 0, o: operator.o])
+                            	items.push([t: decimal, v: 0, o: item.o])
                                 break;
                         	case '*':
                             case '/':
-                            	items.push([t: decimal, v: 1, o: operator.o])
+                            	items.push([t: decimal, v: 1, o: item.o])
                                 break;
                         	case '&':
-                            	items.push([t: boolean, v: true, o: operator.o])
+                            	items.push([t: boolean, v: true, o: item.o])
                                 break;
                         	case '|':
-                            	items.push([t: boolean, v: false, o: operator.o])
+                            	items.push([t: boolean, v: false, o: item.o])
                                 break;
                         }
                     } else {
@@ -369,7 +372,7 @@ def evaluateExpression(expression, dataType = null) {
                         v = t == 'string' ? "$v1$v2" : v1 + v2
                     	break
                 }
-                log.trace "Executing  ($t1) $v1 $o ($t2) $v2 = ($t) $v"
+                //log.trace "Executing  ($t1) $v1 $o ($t2) $v2 = ($t) $v"
                 //set the results
                 items[idx + 1].t = t
                 items[idx + 1].v = cast(v, t)
@@ -380,8 +383,7 @@ def evaluateExpression(expression, dataType = null) {
 	        break
     }
     //return the value, either directly or via cast, if certain data type is requested
-    //log.trace "Expression $expression >> $result"
-    return result.t == "error" ? result : [t: dataType ?: result.t, v: cast(result.v, dataType?: result.t)]
+    return result.t == "error" ? [t: "string", v: "[ERROR: ${result.v}]"] : [t: dataType ?: result.t, v: cast(result.v, dataType?: result.t)]
 }
 
 
@@ -442,16 +444,127 @@ private func_fahrenheit(params) {
 }
 
 /******************************************************************************/
-/*** integer/number converts a decimal value to it's integer value			***/
-/*** Usage: integer(decimal)												***/
+/*** integer converts a decimal value to it's integer value					***/
+/*** Usage: integer(decimal or string)										***/
 /******************************************************************************/
 private func_integer(params) {
 	if (!params || !(params instanceof List) || (params.size() < 1)) {
-    	return [t: "error", v: "Invalid parameters. Expecting integer(decimal)"];
+    	return [t: "error", v: "Invalid parameters. Expecting integer(decimal or string)"];
     }
     return [t: "integer", v: evaluateExpression(params[0], 'integer').v]
 }
-private func_number(params) { return func_number(params) }
+private func_int(params) { return func_number(params) }
+
+/******************************************************************************/
+/*** decimal/float converts an integer value to it's decimal value			***/
+/*** Usage: decimal(integer or string)										***/
+/******************************************************************************/
+private func_decimal(params) {
+	if (!params || !(params instanceof List) || (params.size() < 1)) {
+    	return [t: "error", v: "Invalid parameters. Expecting decimal(integer or string)"];
+    }
+    return [t: "decimal", v: evaluateExpression(params[0], 'decimal').v]
+}
+private func_float(params) { return func_decimal(params) }
+private func_number(params) { return func_decimal(params) }
+
+/******************************************************************************/
+/*** string converts an value to it's string value							***/
+/*** Usage: string(anything)												***/
+/******************************************************************************/
+private func_string(params) {
+	if (!params || !(params instanceof List) || (params.size() < 1)) {
+    	return [t: "error", v: "Invalid parameters. Expecting string(anything)"];
+    }
+	def result = ''
+    for(param in params) {
+    	result += evaluateExpression(param, 'string').v
+    }
+    return [t: "string", v: result]
+}
+private func_concat(params) { return func_string(params) }
+private func_text(params) { return func_string(params) }
+
+/******************************************************************************/
+/*** boolean converts a value to it's boolean value							***/
+/*** Usage: boolean(anything)												***/
+/******************************************************************************/
+private func_boolean(params) {
+	if (!params || !(params instanceof List) || (params.size() < 1)) {
+    	return [t: "error", v: "Invalid parameters. Expecting boolean(anything)"];
+    }
+    return [t: "boolean", v: evaluateExpression(params[0], 'boolean').v]
+}
+private func_bool(params) { return func_boolean(params) }
+
+/******************************************************************************/
+/*** sqr converts a decimal value to it's square decimal value				***/
+/*** Usage: sqr(integer or decimal or string)								***/
+/******************************************************************************/
+private func_sqr(params) {
+	if (!params || !(params instanceof List) || (params.size() < 1)) {
+    	return [t: "error", v: "Invalid parameters. Expecting sqr(integer or decimal or string)"];
+    }
+    return [t: "decimal", v: evaluateExpression(params[0], 'decimal').v ** 2]
+}
+
+/******************************************************************************/
+/*** sqrt converts a decimal value to it's square root decimal value		***/
+/*** Usage: sqrt(integer or decimal or string)								***/
+/******************************************************************************/
+private func_sqrt(params) {
+	if (!params || !(params instanceof List) || (params.size() < 1)) {
+    	return [t: "error", v: "Invalid parameters. Expecting sqrt(integer or decimal or string)"];
+    }
+    return [t: "decimal", v: Math.sqrt(evaluateExpression(params[0], 'decimal').v)]
+}
+
+/******************************************************************************/
+/*** power converts a decimal value to it's power decimal value				***/
+/*** Usage: power(integer or decimal or string, power)						***/
+/******************************************************************************/
+private func_power(params) {
+	if (!params || !(params instanceof List) || (params.size() < 2)) {
+    	return [t: "error", v: "Invalid parameters. Expecting sqrt(integer or decimal or string, power)"];
+    }
+    return [t: "decimal", v: evaluateExpression(params[0], 'decimal').v ** evaluateExpression(params[1], 'decimal').v]
+}
+
+/******************************************************************************/
+/*** round converts a decimal value to it's rounded value					***/
+/*** Usage: round(decimal or string[, precision])							***/
+/******************************************************************************/
+private func_round(params) {
+	if (!params || !(params instanceof List) || (params.size() < 1)) {
+    	return [t: "error", v: "Invalid parameters. Expecting round(decimal or string[, precision])"];
+    }
+    int precision = (params.size() > 1) ? evaluateExpression(params[1], 'integer').v : 0
+    return [t: "decimal", v: Math.round(evaluateExpression(params[0], 'decimal').v * (10 ** precision)) / (10 ** precision)]
+}
+
+/******************************************************************************/
+/*** floor converts a decimal value to it's closest lower integer value		***/
+/*** Usage: floor(decimal or string)										***/
+/******************************************************************************/
+private func_floor(params) {
+	if (!params || !(params instanceof List) || (params.size() < 1)) {
+    	return [t: "error", v: "Invalid parameters. Expecting floor(decimal or string)"];
+    }
+    return [t: "integer", v: cast(Math.floor(evaluateExpression(params[0], 'decimal').v), 'integer')]
+}
+
+/******************************************************************************/
+/*** ceiling converts a decimal value to it's closest higher integer value	***/
+/*** Usage: ceiling(decimal or string)										***/
+/******************************************************************************/
+private func_ceiling(params) {
+	if (!params || !(params instanceof List) || (params.size() < 1)) {
+    	return [t: "error", v: "Invalid parameters. Expecting ceiling(decimal or string)"];
+    }
+    return [t: "integer", v: cast(Math.ceil(evaluateExpression(params[0], 'decimal').v), 'integer')]
+}
+private func_ceil(params) { return func_ceiling(params) }
+
 
 /******************************************************************************/
 /*** sprintf converts formats a series of values into a string				***/
@@ -466,11 +579,252 @@ private func_sprintf(params) {
     for (int x = 1; x < params.size(); x++) {
     	args.push(evaluateExpression(params[x]).v)
     }
-    return [t: "string", v: sprintf(format, args)]
+    try {
+        return [t: "string", v: sprintf(format, args)]
+    } catch(all) {
+    	return [t: "error", v: "$all"]
+    }
 }
 private func_format(params) { return func_sprintf(params) }
 
+/******************************************************************************/
+/*** left returns a substring of a value									***/
+/*** Usage: left(string, count)												***/
+/******************************************************************************/
+private func_left(params) {
+	if (!params || !(params instanceof List) || (params.size() < 2)) {
+    	return [t: "error", v: "Invalid parameters. Expecting left(string, count)"];
+    }
+    def value = evaluateExpression(params[0], 'string').v
+    def count = evaluateExpression(params[1], 'integer').v
+    if (count > value.size()) count = value.size()    
+    return [t: "string", v: value.substring(0, count)]
+}
 
+/******************************************************************************/
+/*** right returns a substring of a value									***/
+/*** Usage: right(string, count)												***/
+/******************************************************************************/
+private func_right(params) {
+	if (!params || !(params instanceof List) || (params.size() < 2)) {
+    	return [t: "error", v: "Invalid parameters. Expecting right(string, count)"];
+    }
+    def value = evaluateExpression(params[0], 'string').v
+    def count = evaluateExpression(params[1], 'integer').v
+    if (count > value.size()) count = value.size()
+    return [t: "string", v: value.substring(value.size() - count, value.size())]
+}
+
+/******************************************************************************/
+/*** substring returns a substring of a value								***/
+/*** Usage: substring(string, start, count)									***/
+/******************************************************************************/
+private func_substring(params) {
+	if (!params || !(params instanceof List) || (params.size() < 2)) {
+    	return [t: "error", v: "Invalid parameters. Expecting substring(string, start, count)"];
+    }
+    def value = evaluateExpression(params[0], 'string').v
+    def start = evaluateExpression(params[1], 'integer').v
+   	def count = params.size() > 2 ? evaluateExpression(params[2], 'integer').v : null
+    def end = null
+    def result = ''
+    if ((start < value.size()) && (start > -value.size())) {
+        if (count != null) {
+        	if (count < 0) {
+           		//reverse
+                start = start < 0 ? -start : value.size() - start
+                count = - count
+                value = value.reverse()
+            }
+        	if (start >= 0) {
+            	if (count > value.size() - start) count = value.size() - start
+            } else {
+            	if (count > -start) count = -start
+            }
+        }
+        start = start >= 0 ? start : value.size() + start
+        if (count > value.size() - start) count = value.size() - start
+        result = value.substring(start, count == null ? null : start + count)
+    }
+    return [t: "string", v: result]
+}
+private func_substr(params) { return func_substring(params) }
+private func_mid(params) { return func_substring(params) }
+
+/******************************************************************************/
+/*** replace replaces a search text inside of a value						***/
+/*** Usage: replace(string, search, replace[, [..], search, replace])		***/
+/******************************************************************************/
+private func_replace(params) {
+	if (!params || !(params instanceof List) || (params.size() < 3)) {
+    	return [t: "error", v: "Invalid parameters. Expecting replace(string, search, replace)"];
+    }
+    def value = evaluateExpression(params[0], 'string').v
+    int cnt = Math.floor((params.size() - 1) / 2)
+    for (int i = 0; i < cnt; i++) {
+    	def search = evaluateExpression(params[i * 2 + 1], 'string').v
+        if ((search.size() > 2) && search.startsWith('/') && search.endsWith('/')) {
+        	search = ~search.substring(1, search.size() - 1)
+        }
+    	log.trace "value.replaceAll(${search}, ${evaluateExpression(params[i * 2 + 2], 'string').v})"
+        value = value.replaceAll(search, evaluateExpression(params[i * 2 + 2], 'string').v)
+    }
+    return [t: "string", v: value]
+}
+
+
+/******************************************************************************/
+/*** lower returns a lower case value of a string							***/
+/*** Usage: lower(string)													***/
+/******************************************************************************/
+private func_lower(params) {
+	if (!params || !(params instanceof List) || (params.size() < 1)) {
+    	return [t: "error", v: "Invalid parameters. Expecting lower(string)"];
+    }
+    def result = ''
+    for(param in params) {
+    	result += evaluateExpression(param, 'string').v
+    }
+    return [t: "string", v: result.toLowerCase()]
+}
+
+/******************************************************************************/
+/*** upper returns a upper case value of a string							***/
+/*** Usage: upper(string)													***/
+/******************************************************************************/
+private func_upper(params) {
+	if (!params || !(params instanceof List) || (params.size() < 1)) {
+    	return [t: "error", v: "Invalid parameters. Expecting upper(string)"];
+    }
+    def result = ''
+    for(param in params) {
+    	result += evaluateExpression(param, 'string').v
+    }
+    return [t: "string", v: result.toUpperCase()]
+}
+
+/******************************************************************************/
+/*** title returns a title case value of a string							***/
+/*** Usage: title(string)													***/
+/******************************************************************************/
+private func_title(params) {
+	if (!params || !(params instanceof List) || (params.size() < 1)) {
+    	return [t: "error", v: "Invalid parameters. Expecting title(string)"];
+    }
+    def result = ''
+    for(param in params) {
+    	result += evaluateExpression(param, 'string').v
+    }
+    return [t: "string", v: result.tokenize(" ")*.toLowerCase()*.capitalize().join(" ")]
+}
+
+/******************************************************************************/
+/*** avg calculates the average of a series of numeric values				***/
+/*** Usage: avg(values)														***/
+/******************************************************************************/
+private func_avg(params) {
+	if (!params || !(params instanceof List) || (params.size() < 1)) {
+    	return [t: "error", v: "Invalid parameters. Expecting avg(values)"];
+    }
+    float sum = 0
+    for (param in params) {
+    	sum += evaluateExpression(param, 'decimal').v
+    }
+    return [t: "decimal", v: sum / params.size()]
+}
+
+/******************************************************************************/
+/*** sum calculates the sum of a series of numeric values					***/
+/*** Usage: sum(values)														***/
+/******************************************************************************/
+private func_sum(params) {
+	if (!params || !(params instanceof List) || (params.size() < 1)) {
+    	return [t: "error", v: "Invalid parameters. Expecting sum(values)"];
+    }
+    float sum = 0
+    for (param in params) {
+    	sum += evaluateExpression(param, 'decimal').v
+    }
+    return [t: "decimal", v: sum]
+}
+
+/******************************************************************************/
+/*** variance calculates the standard deviation of a series of numeric values */
+/*** Usage: stdev(values)													***/
+/******************************************************************************/
+private func_variance(params) {
+	if (!params || !(params instanceof List) || (params.size() < 2)) {
+    	return [t: "error", v: "Invalid parameters. Expecting variance(value1, [..], valueN)"];
+    }
+    float sum = 0
+    List values = []
+    for (param in params) {
+    	float value = evaluateExpression(param, 'decimal').v
+        values.push(value)
+        sum += value
+    }
+    float avg = sum / values.size()
+    sum = 0
+    for(int i  = 0; i < values.size(); i++) {
+    	sum += (values[i] - avg) ** 2
+    }
+    return [t: "decimal", v: sum / values.size()]
+}
+
+/******************************************************************************/
+/*** stdev calculates the standard deviation of a series of numeric values	***/
+/*** Usage: stdev(values)													***/
+/******************************************************************************/
+private func_stdev(params) {
+	if (!params || !(params instanceof List) || (params.size() < 2)) {
+    	return [t: "error", v: "Invalid parameters. Expecting stdev(value1, [..], valueN)"];
+    }
+    def result = func_variance(params)
+    return [t: "decimal", v: Math.sqrt(result.v)]
+}
+
+/******************************************************************************/
+/*** min calculates the minimum of a series of numeric values				***/
+/*** Usage: min(values)														***/
+/******************************************************************************/
+private func_min(params) {
+	if (!params || !(params instanceof List) || (params.size() < 1)) {
+    	return [t: "error", v: "Invalid parameters. Expecting min(values)"];
+    }
+    def min = null
+    for (param in params) {
+    	float value = evaluateExpression(param, 'decimal').v
+        min = (min == null) ? value : ((min > value) ? value : min)
+    }
+    return [t: "decimal", v: min]
+}
+
+/******************************************************************************/
+/*** max calculates the maximum of a series of numeric values				***/
+/*** Usage: max(values)														***/
+/******************************************************************************/
+private func_max(params) {
+	if (!params || !(params instanceof List) || (params.size() < 1)) {
+    	return [t: "error", v: "Invalid parameters. Expecting max(values)"];
+    }
+    def max = null
+    for (param in params) {
+    	float value = evaluateExpression(param, 'decimal').v
+        max = (max == null) ? value : ((max < value) ? value : max)
+    }
+    return [t: "decimal", v: max]
+}
+
+/******************************************************************************/
+/*** count calculates the number of items in a series of numeric values		***/
+/*** Usage: max(values)														***/
+/******************************************************************************/
+private func_count(params) {
+	if (!params || !(params instanceof List) || (params.size() < 1)) {
+    	return [t: "error", v: "Invalid parameters. Expecting count(values)"];
+    }
+    return [t: "integer", v: params.size()]
+}
 
 /******************************************************************************/
 /*** 																		***/
@@ -509,13 +863,16 @@ def String hashId(id) {
 private cast(value, dataType) {
 	def trueStrings = ["1", "on", "open", "locked", "active", "wet", "detected", "present", "occupied", "muted", "sleeping"]
 	def falseStrings = ["0", "false", "off", "closed", "unlocked", "inactive", "dry", "clear", "not detected", "not present", "not occupied", "unmuted", "not sleeping"]
+    if (value instanceof GString) {
+    	value = value.toString()
+    }
 	switch (dataType) {
 		case "string":
 		case "text":
 			if (value instanceof Boolean) {
 				return value ? "true" : "false"
 			}
-			return value ? "$value" : ""
+			return "$value"
 		case "integer":
 		case "int32":
 		case "number":
@@ -570,8 +927,8 @@ private cast(value, dataType) {
 			}
 			return result ? result : (float) 0
 		case "boolean":
-			if (value instanceof String) {
-				if (!value || (value in falseStrings))
+        	if (value instanceof String) {
+				if (!value || (value.toLowerCase().trim() in falseStrings))
 					return false
 				return true
 			}
