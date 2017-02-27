@@ -14,8 +14,10 @@
  *
 */
 
-def version() {	return "v0.0.01b.20170206" }
+def version() {	return "v0.0.01d.20170227" }
 /*
+ *	02/27/2016 >>> v0.0.01d.20170227 - ALPHA - Made progress evaluating expressions
+ *	02/24/2016 >>> v0.0.01c.20170224 - ALPHA - Added functions support to main app
  *	02/06/2016 >>> v0.0.01b.20170206 - ALPHA - Fixed a problem with selecting thermostats
  *	02/01/2016 >>> v0.0.01a.20170201 - ALPHA - Updated comparisons
  *	01/30/2016 >>> v0.0.019.20170130 - ALPHA - Improved comparisons - ouch
@@ -122,9 +124,7 @@ def updated() {
 }
 
 def initialize() {
-	//log.trace "GOT HERE"    
 	//def device = parent.getDevice("owekf34r24r324");
-    //log.trace device
     //subscribe(device, "switch", handler)
 }
 
@@ -189,6 +189,285 @@ def handler(evt) {
 }
 
 
+/******************************************************************************/
+/*** 																		***/
+/*** EXPRESSION FUNCTIONS													***/
+/*** 																		***/
+/******************************************************************************/
+
+def evaluateExpression(expression, dataType = null) {
+    //if dealing with an expression that has multiple items, let's evaluate each item one by one
+    //let's evaluate this expression
+    Map result = [:]
+    switch (expression.t) {
+        case "string":
+        case "integer":
+        case "decimal":
+        	result = [t: expression.t, v: cast(expression.v, expression.t)]
+        	break
+        case "variable":
+        	//get variable as {n: name, t: type, v: value}
+        	def variable = [n: 'name', t: 'dynamic', v: '0']
+        	result = [t: variable.t, v: variable.v]
+        	break
+        case "device":
+        	//get variable as {n: name, t: type, v: value}
+        	def device = [:]; //get physical device
+			def attribute = [:]; //getAttribute
+        	def value = 0; //device.getValue(attribute)
+			result = [t: attribute.t, v: value]
+        	break
+        case "operand":
+        	result = [t: "string", v: cast(expression.v, "string")]
+        	break
+        case "function":
+            def fn = "func_${expression.n}"
+            try {
+				result = "$fn"(expression.i)
+			} catch (all) {
+				//log error
+                result = [t: "error", v: all]
+			}        	
+        	break
+        case "expression":
+        	List items = []
+            def operand = -1
+        	for(item in expression.i) {
+	            if (item.t == "operator") {
+                	if (operand < 0) {
+                    	switch (operator.o) {
+                        	case '+':
+                            case '-':
+                            case '^':
+                            	items.push([t: decimal, v: 0, o: operator.o])
+                                break;
+                        	case '*':
+                            case '/':
+                            	items.push([t: decimal, v: 1, o: operator.o])
+                                break;
+                        	case '&':
+                            	items.push([t: boolean, v: true, o: operator.o])
+                                break;
+                        	case '|':
+                            	items.push([t: boolean, v: false, o: operator.o])
+                                break;
+                        }
+                    } else {
+                    	items[operand].o = item.o;
+                        operand = -1;
+                    }
+	            } else {
+	                items.push(evaluateExpression(item))
+                    operand = items.size() - 1;
+	            }
+	        }
+            //clean up operators, ensure there's one for each
+            def idx = 0
+            for(item in items) {
+            	if (!item.o) {
+                	switch (item.t) {
+                    	case "integer":
+                    	case "float":
+                    	case "decimal":
+                    	case "number":
+                        	def nextType = 'string'
+                        	if (idx < items.size() - 1) nextType = items[idx+1].t
+                        	item.o = (nextType == 'string' || nextType == 'text') ? '+' : '*';
+                            break;
+                        default:
+                        	item.o = '+';
+                            break;
+                    }
+                }
+                idx++
+            }
+            //do the job
+            idx = 0
+            while (items.size() > 1) {
+	           	//order of operations :D
+                //we first look for power ^
+                idx = 0
+                for (item in items) {
+                	if ((item.o) == '^') break;
+                    idx++
+                }
+                if (idx >= items.size()) {
+                    //we then look for * or /
+                    idx = 0
+                    for (item in items) {
+                        if (((item.o) == '*') || ((item.o) == '/')) break;
+                        idx++
+                    }
+                }
+                if (idx >= items.size()) {
+                    //we then look for + or -
+                    idx = 0
+                    for (item in items) {
+                        if (((item.o) == '+') || ((item.o) == '-')) break;
+                        idx++
+                    }
+                }
+                if (idx >= items.size()) {
+                	//just get the first one
+                	idx = 0;
+                }                
+                if (idx >= items.size() - 1) idx = 0
+                //we're onto something
+                def v = null
+                def t = 'string'
+                def o = items[idx].o
+                def t1 = items[idx].t
+                def v1 = items[idx].v
+                def t2 = items[idx + 1].t
+                def v2 = items[idx + 1].t
+                //fix-ups
+                //integer with decimal gives decimal, also *, /, and ^ require decimals
+                if ((o == '*') || (o == '*') || (o == '/') || (o == '-')) {
+                    if ((t1 != 'number') && (t1 != 'integer') && (t1 != 'decimal') && (t1 != 'float')) t1 = 'decimal'
+                    if ((t2 != 'number') && (t2 != 'integer') && (t2 != 'decimal') && (t2 != 'float')) t2 = 'decimal'
+                    t = 'decimal'
+                }
+                if ((o == '&') || (o == '|')) {
+                    t1 = 'boolean'
+                    t2 = 'boolean'
+                    t = 'boolean'
+                }
+                if ((o == '+') && ((t1 == 'string') || (t1 == 'string') || (t1 == 'string') || (t1 == 'string'))) {
+                    t1 = 'string';
+                    t2 = 'string';
+                    t = 'string'
+                }
+                if ((((t1 == 'number') || (t1 == 'integer')) && ((t2 == 'decimal') || (t2 == 'float'))) || (((t2 == 'number') || (t2 == 'integer')) && ((t1 == 'decimal') || (t1 == 'float')))) {
+                    t1 = 'decimal'
+                    t2 = 'decimal'
+                    t = 'decimal'
+                }
+                v1 = evaluateExpression(items[idx], t1).v
+                v2 = evaluateExpression(items[idx + 1], t2).v
+                switch (o) {
+                    case '-':
+                    	v = v1 - v2
+                    	break
+                    case '*':
+                    	v = v1 * v2
+                    	break
+                    case '/':
+                    	v = (v2 != 0 ? v1 / v2 : 0)
+                    	break
+                    case '^':
+                    	v = v1 ** v2
+                    	break
+                    case '&':
+                    	v = !!v1 && !!v2
+                    	break
+                    case '|':
+                    	v = !!v1 || !!v2
+                    	break
+                    case '+':
+                    default:
+                        v = v1 + v2
+                    	break
+                }
+                //set the results
+                items[idx + 1].t = t
+                items[idx + 1].v = cast(v, t)
+                def sz = items.size()
+                items.remove(idx)
+            }
+    	    result = [t:items[0].t, v: items[0].v]
+	        break
+    }
+    //return the value, either directly or via cast, if certain data type is requested
+    return result.t == "error" ? result : [t: dataType ?: result.t, v: cast(result.v, dataType?: result.t)]
+}
+
+
+/******************************************************************************/
+/*** dewPoint returns the calculated dew point temperature					***/
+/*** Usage: dewPoint(temperature, relativeHumidity[, scale])				***/
+/******************************************************************************/
+def func_dewpoint(params) {
+	if (!params || !(params instanceof List) || (params.size() < 2)) {
+    	return [t: "error", v: "Invalid parameters. Expecting dewPoint(temperature, relativeHumidity[, scale])"];
+    }
+    double t = evaluateExpression(params[0], 'decimal').v
+    double rh = evaluateExpression(params[1], 'decimal').v
+    //if no temperature scale is provided, we assume the location's temperature scale
+    boolean fahrenheit = cast(params.size() > 2 ? evaluateExpression(params[2]).v : location.temperatureScale, "string").toUpperCase() == "F"
+    if (fahrenheit) {
+    	//convert temperature to Celsius
+        t = (t - 32.0) * 5.0 / 9.0
+    }
+    //convert rh to percentage
+    if ((rh > 0) && (rh < 1)) {
+    	rh = rh * 100.0
+    }
+    double b = (Math.log(rh / 100) + ((17.27 * t) / (237.3 + t))) / 17.27
+	double result = (237.3 * b) / (1 - b)
+    if (fahrenheit) {
+    	//convert temperature back to Fahrenheit
+        result = result * 9.0 / 5.0 + 32.0
+    }
+    return [t: "decimal", v: result]
+}
+
+/******************************************************************************/
+/*** celsius converts temperature from Fahrenheit to Celsius				***/
+/*** Usage: celsius(temperature)											***/
+/******************************************************************************/
+private func_celsius(params) {
+	if (!params || !(params instanceof List) || (params.size() < 1)) {
+    	return [t: "error", v: "Invalid parameters. Expecting celsius(temperature)"];
+    }
+    double t = evaluateExpression(params[0], 'decimal').v
+    //convert temperature to Celsius
+    return [t: "decimal", v: (double) t * 9.0 / 5.0 + 32.0]
+}
+
+
+/******************************************************************************/
+/*** fahrenheit converts temperature from Celsius to Fahrenheit				***/
+/*** Usage: fahrenheit(temperature)											***/
+/******************************************************************************/
+private func_fahrenheit(params) {
+	if (!params || !(params instanceof List) || (params.size() < 1)) {
+    	return [t: "error", v: "Invalid parameters. Expecting fahrenheit(temperature)"];
+    }
+    double t = evaluateExpression(params[0], 'decimal').v
+    //convert temperature to Fahrenheit
+    return [t: "decimal", v: (double) (t - 32.0) * 5.0 / 9.0]
+}
+
+/******************************************************************************/
+/*** integer/number converts a decimal value to it's integer value			***/
+/*** Usage: integer(decimal)												***/
+/******************************************************************************/
+private func_integer(params) {
+	if (!params || !(params instanceof List) || (params.size() < 1)) {
+    	return [t: "error", v: "Invalid parameters. Expecting integer(decimal)"];
+    }
+    return [t: "integer", v: evaluateExpression(params[0], 'integer').v]
+}
+private func_number(params) { return func_number(params) }
+
+/******************************************************************************/
+/*** sprintf converts formats a series of values into a string				***/
+/*** Usage: sprintf(format, arguments)										***/
+/******************************************************************************/
+private func_sprintf(params) {
+	if (!params || !(params instanceof List) || (params.size() < 2)) {
+    	return [t: "error", v: "Invalid parameters. Expecting sprintf(format, arguments)"];
+    }
+    def format = evaluateExpression(params[0], 'string').v
+    List args = []
+    for (int x = 1; x < params.size(); x++) {
+    	args.push(evaluateExpression(params[x]).v)
+    }
+    return [t: "string", v: sprintf(format, args)]
+}
+private func_format(params) { return func_sprintf(params) }
+
+
 
 /******************************************************************************/
 /*** 																		***/
@@ -224,6 +503,86 @@ def String hashId(id) {
 	return ":${md5("core." + id)}:"
 }
 
+private cast(value, dataType) {
+	def trueStrings = ["1", "on", "open", "locked", "active", "wet", "detected", "present", "occupied", "muted", "sleeping"]
+	def falseStrings = ["0", "false", "off", "closed", "unlocked", "inactive", "dry", "clear", "not detected", "not present", "not occupied", "unmuted", "not sleeping"]
+	switch (dataType) {
+		case "string":
+		case "text":
+			if (value instanceof Boolean) {
+				return value ? "true" : "false"
+			}
+			return value ? "$value" : ""
+		case "integer":
+		case "int32":
+		case "number":
+			if (value == null) return (int) 0
+			if (value instanceof String) {
+				if (value.isInteger())
+					return value.toInteger()
+				if (value.isFloat())
+					return (int) Math.floor(value.toFloat())
+				if (value in trueStrings)
+					return (int) 1
+			}
+			def result = (int) 0
+			try {
+				result = (int) value
+			} catch(all) {
+				result = (int) 0
+			}
+			return result ? result : (int) 0
+		case "int64":
+		case "long":
+			if (value == null) return (long) 0
+			if (value instanceof String) {
+				if (value.isInteger())
+					return (long) value.toInteger()
+				if (value.isFloat())
+					return (long) Math.round(value.toFloat())
+				if (value in trueStrings)
+					return (long) 1
+			}
+			def result = (long) 0
+			try {
+				result = (long) value
+			} catch(all) {
+			}
+			return result ? result : (long) 0
+		case "float":
+		case "decimal":
+			if (value == null) return (float) 0
+			if (value instanceof String) {
+				if (value.isFloat())
+					return (float) value.toFloat()
+				if (value.isInteger())
+					return (float) value.toInteger()
+				if (value in trueStrings)
+					return (float) 1
+			}
+			def result = (float) 0
+			try {
+				result = (float) value
+			} catch(all) {
+			}
+			return result ? result : (float) 0
+		case "boolean":
+			if (value instanceof String) {
+				if (!value || (value in falseStrings))
+					return false
+				return true
+			}
+			return !!value
+		case "time":
+			return value instanceof String ? adjustTime(value).time : cast(value, "long")
+		case "vector3":
+			return value instanceof String ? adjustTime(value).time : cast(value, "long")
+		case "orientation":
+			return getThreeAxisOrientation(value)
+	}
+	//anything else...
+	return value
+}
 /******************************************************************************/
 /*** DEBUG FUNCTIONS														***/
 /******************************************************************************/
