@@ -14,8 +14,9 @@
  *
 */
 
-def version() {	return "v0.0.01f.20170227" }
+def version() {	return "v0.0.020.20170228" }
 /*
+ *	02/28/2016 >>> v0.0.020.20170228 - ALPHA - Added runtime data - pistons are now aware of devices and global variables - expressions can query devices and variables (though not all system variables are ready yet)
  *	02/27/2016 >>> v0.0.01f.20170227 - ALPHA - Added support for a bunch more functions
  *	02/27/2016 >>> v0.0.01e.20170227 - ALPHA - Fixed a bug in expression parser where integer + integer would result in a string
  *	02/27/2016 >>> v0.0.01d.20170227 - ALPHA - Made progress evaluating expressions
@@ -130,9 +131,6 @@ def initialize() {
     //subscribe(device, "switch", handler)
 }
 
-private getDevice(deviceId) {
-}
-
 def get() {
 	def piston = state.piston ?: [:]
     piston.id = hashId(app.id);
@@ -143,6 +141,7 @@ def get() {
     piston.build = state.build
     piston.bin = state.bin
     piston.active = state.active
+    piston.v = state.vars
     return piston
 }
 
@@ -154,8 +153,8 @@ def set(piston) {
         rn: !!piston.rn,
         ro: piston.ro ?: 'and',
     	s: piston.s ?: [],
-    	v: piston.v ?: [] 
     ] : [:]
+    state.vars = piston ? (piston.v ?: [:]) : [:]
     if (state.build == 1) {
     	resume()
     }
@@ -186,8 +185,151 @@ def execute() {
 
 }
 
+private getRunTimeData(rtData = null) {
+	rtData = rtData ?: parent.getRunTimeData()
+    rtData.localVars = state.vars ?: [:]
+    rtData.systemVars = getSystemVars()
+    return rtData
+}
+
+
+private sanitizeVariableName(name) {
+	name = name ? "$name".trim().replace(" ", "_") : null
+}
+
+def getDevice(rtData, idOrName) {
+	def device = rtData.devices[idOrName] ?: rtData.devices.find{ it.value.name == idOrName }
+    return device    
+}
+
+def getVariable(rtData, name) {
+	name = sanitizeVariableName(name)
+	if (!name) return [t: "error", v: "Invalid empty variable name"]
+    /*
+    if (name.startsWith("\$"))
+		switch (name) {
+			case "\$now": return now()
+			case "\$hour24": return adjustTime().hours
+			case "\$hour":
+				def h = adjustTime().hours
+				return (h == 0 ? 12 : (h > 12 ? h - 12 : h))
+			case "\$meridian":
+				def h = adjustTime().hours
+				return ( h < 12 ? "AM" : "PM")
+			case "\$meridianWithDots":
+				def h = adjustTime().hours
+				return ( h <12 ? "A.M." : "P.M.")
+			case "\$minute": return adjustTime().minutes
+			case "\$second": return adjustTime().seconds
+			case "\$time":
+				def t = adjustTime()
+				def h = t.hours
+				def m = t.minutes
+				return (h == 0 ? 12 : (h > 12 ? h - 12 : h)) + ":" + (m < 10 ? "0$m" : "$m") + " " + (h <12 ? "A.M." : "P.M.")
+			case "\$time24":
+				def t = adjustTime()
+				def h = t.hours
+				def m = t.minutes
+				return h + ":" + (m < 10 ? "0$m" : "$m")
+			case "\$day": return adjustTime().date
+			case "\$dayOfWeek": return getDayOfWeekNumber()
+			case "\$dayOfWeekName": return getDayOfWeekName()
+			case "\$month": return adjustTime().month + 1
+			case "\$monthName": return getMonthName()
+			case "\$year": return adjustTime().year + 1900
+			case "\$now": return now()
+			case "\$random":
+				def result = getRandomValue(name) ?: (float)Math.random()
+				setRandomValue(name, result)
+				return result
+			case "\$randomColor":
+				def result = getRandomValue(name) ?: getColorByName("Random").rgb
+				setRandomValue(name, result)
+				return result
+			case "\$randomColorName":
+				def result = getRandomValue(name) ?: getColorByName("Random").name
+				setRandomValue(name, result)
+				return result
+			case "\$randomLevel":
+				def result = getRandomValue(name) ?: (int)Math.round(100 * Math.random())
+				setRandomValue(name, result)
+				return result
+			case "\$randomHue":
+				def result = getRandomValue(name) ?: (int)Math.round(360 * Math.random())
+				setRandomValue(name, result)
+				return result
+			case "\$randomSaturation":
+				def result = getRandomValue(name) ?: (int)Math.round(50 + (50 * Math.random()))
+				setRandomValue(name, result)
+				return result
+			case "\$midnight":
+				def rightNow = adjustTime().time
+				return convertDateToUnixTime(rightNow - rightNow.mod(86400000))
+			case "\$nextMidnight":
+				def rightNow = adjustTime().time
+				return convertDateToUnixTime(rightNow - rightNow.mod(86400000) + 86400000)
+			case "\$noon":
+				def rightNow = adjustTime().time
+				return convertDateToUnixTime(rightNow - rightNow.mod(86400000) + 43200000)
+			case "\$nextNoon":
+				def rightNow = adjustTime().time
+				if (rightNow - rightNow.mod(86400000) + 43200000 < rightNow) rightNow += 86400000
+				return convertDateToUnixTime(rightNow - rightNow.mod(86400000) + 43200000)
+			case "\$sunrise":
+				def sunrise = getSunrise()
+				def rightNow = adjustTime().time
+				return convertDateToUnixTime(rightNow - rightNow.mod(86400000) + sunrise.hours * 3600000 + sunrise.minutes * 60000)
+			case "\$nextSunrise":
+				def sunrise = getSunrise()
+				def rightNow = adjustTime().time
+				if (sunrise.time < rightNow) rightNow += 86400000
+				return convertDateToUnixTime(rightNow - rightNow.mod(86400000) + sunrise.hours * 3600000 + sunrise.minutes * 60000)
+			case "\$sunset":
+				def sunset = getSunset()
+				def rightNow = adjustTime().time
+				return convertDateToUnixTime(rightNow - rightNow.mod(86400000) + sunset.hours * 3600000 + sunset.minutes * 60000)
+			case "\$nextSunset":
+				def sunset = getSunset()
+				def rightNow = adjustTime().time
+				if (sunset.time < rightNow) rightNow += 86400000
+				return convertDateToUnixTime(rightNow - rightNow.mod(86400000) + sunset.hours * 3600000 + sunset.minutes * 60000)
+			case "\$currentStateDuration":
+				try {
+					return state.systemStore["\$currentStateSince"] ? now() - (new Date(state.systemStore["\$currentStateSince"])).time : null
+				} catch(all) {
+					return null
+				}
+				return null
+			case "\$locationMode":
+				return location.mode
+			case "\$shmStatus":
+				return getAlarmSystemStatus()
+		}
+    */
+    /* end of switch */
+	if (name.startsWith("@")) {
+    	def result = rtData.globalVars[name]
+        if (!(result instanceof Map)) result = [t: "error", v: "Variable '$name' not found"]
+		return result
+	} else {
+		if (name.startsWith("\$")) {
+			def result = rtData.systemVars[name]
+            if (!(result instanceof Map)) result = [t: "error", v: "Variable '$name' not found"]
+            if (result && result.v instanceof Closure) {
+            	return [t: result.t, v: result.v.call()]
+            }
+            return result
+		} else {
+			def result = rtData.localVars[name]
+            if (!(result instanceof Map)) result = [t: "error", v: "Variable '$name' not found"]
+            return result
+		}
+	}
+}
+
 def handler(evt) {
-	log.trace "EVENT!"
+	Map rtData = parent.getRunTimeData()
+    //todo start execution
 }
 
 
@@ -197,9 +339,13 @@ def handler(evt) {
 /*** 																		***/
 /******************************************************************************/
 
-def evaluateExpression(expression, dataType = null) {
+def proxyEvaluateExpression(rtData, expression, dataType = null) {
+	return evaluateExpression(getRunTimeData(rtData), expression, dataType)
+}
+private evaluateExpression(rtData, expression, dataType = null) {
     //if dealing with an expression that has multiple items, let's evaluate each item one by one
     //let's evaluate this expression
+    def time = now()
     Map result = [:]
     switch (expression.t) {
         case "string":
@@ -209,17 +355,28 @@ def evaluateExpression(expression, dataType = null) {
         case "bool":
         	result = [t: expression.t, v: cast(expression.v, expression.t)]
         	break
+        case "enum":
+        case "error":
+        	result = [t: "string", v: cast(expression.v, "string")]
+        	break
         case "variable":
         	//get variable as {n: name, t: type, v: value}
-        	def variable = [n: 'name', t: 'dynamic', v: '0']
-        	result = [t: variable.t, v: variable.v]
+        	result = getVariable(rtData, expression.x)
         	break
         case "device":
         	//get variable as {n: name, t: type, v: value}
-        	def device = [:]; //get physical device
-			def attribute = [:]; //getAttribute
-        	def value = 0; //device.getValue(attribute)
-			result = [t: attribute.t, v: value]
+            def deviceId = expression.id ?: getVariable(rtData, expression.x)?.v
+        	def device = getDevice(rtData, deviceId)
+            if (device) {
+            	def attribute = rtData.attributes[expression.a]
+                if (attribute) {
+            		result = [t: attribute.t, v: device.currentValue(expression.a)]
+                } else {
+					result = [t: "error", v: "Attribute ${expression.a} not found"]
+                }
+            } else {
+				result = [t: "error", v: "Device ${expression.id ?: expression.x} not found"]
+            }
         	break
         case "operand":
         	result = [t: "string", v: cast(expression.v, "string")]
@@ -227,7 +384,7 @@ def evaluateExpression(expression, dataType = null) {
         case "function":
             def fn = "func_${expression.n}"
             try {
-				result = "$fn"(expression.i)
+				result = "$fn"(rtData, expression.i)
 			} catch (all) {
 				//log error
                 result = [t: "error", v: all]
@@ -261,7 +418,7 @@ def evaluateExpression(expression, dataType = null) {
                         operand = -1;
                     }
 	            } else {
-	                items.push(evaluateExpression(item))
+	                items.push(evaluateExpression(rtData, item))
                     operand = items.size() - 1;
 	            }
 	        }
@@ -346,8 +503,18 @@ def evaluateExpression(expression, dataType = null) {
                     t2 = 'decimal'
                     t = 'decimal'
                 }
-                v1 = evaluateExpression(items[idx], t1).v
-                v2 = evaluateExpression(items[idx + 1], t2).v
+                if ((t1 == 'integer') || (t2 == 'integer')) {
+                    t1 = 'integer'
+                    t2 = 'integer'
+                    t = 'integer'
+                }
+                if ((t1 == 'number') || (t2 == 'number') || (t1 == 'decimal') || (t2 == 'decimal') || (t1 == 'float') || (t2 == 'float')) {
+                    t1 = 'decimal'
+                    t2 = 'decimal'
+                    t = 'decimal'
+                }
+				v1 = evaluateExpression(rtData, items[idx], t1).v
+                v2 = evaluateExpression(rtData, items[idx + 1], t2).v
                 switch (o) {
                     case '-':
                     	v = v1 - v2
@@ -383,7 +550,7 @@ def evaluateExpression(expression, dataType = null) {
 	        break
     }
     //return the value, either directly or via cast, if certain data type is requested
-    return result.t == "error" ? [t: "string", v: "[ERROR: ${result.v}]"] : [t: dataType ?: result.t, v: cast(result.v, dataType?: result.t)]
+    return result.t == "error" ? [t: "string", v: "[ERROR: ${result.v}]", d: now() - time] : [t: dataType ?: result.t, v: cast(result.v, dataType?: result.t), d: now() - time]
 }
 
 
@@ -391,14 +558,14 @@ def evaluateExpression(expression, dataType = null) {
 /*** dewPoint returns the calculated dew point temperature					***/
 /*** Usage: dewPoint(temperature, relativeHumidity[, scale])				***/
 /******************************************************************************/
-def func_dewpoint(params) {
+private func_dewpoint(rtData, params) {
 	if (!params || !(params instanceof List) || (params.size() < 2)) {
     	return [t: "error", v: "Invalid parameters. Expecting dewPoint(temperature, relativeHumidity[, scale])"];
     }
-    double t = evaluateExpression(params[0], 'decimal').v
-    double rh = evaluateExpression(params[1], 'decimal').v
+    double t = evaluateExpression(rtData, params[0], 'decimal').v
+    double rh = evaluateExpression(rtData, params[1], 'decimal').v
     //if no temperature scale is provided, we assume the location's temperature scale
-    boolean fahrenheit = cast(params.size() > 2 ? evaluateExpression(params[2]).v : location.temperatureScale, "string").toUpperCase() == "F"
+    boolean fahrenheit = cast(params.size() > 2 ? evaluateExpression(rtData, params[2]).v : location.temperatureScale, "string").toUpperCase() == "F"
     if (fahrenheit) {
     	//convert temperature to Celsius
         t = (t - 32.0) * 5.0 / 9.0
@@ -420,11 +587,11 @@ def func_dewpoint(params) {
 /*** celsius converts temperature from Fahrenheit to Celsius				***/
 /*** Usage: celsius(temperature)											***/
 /******************************************************************************/
-private func_celsius(params) {
+private func_celsius(rtData, params) {
 	if (!params || !(params instanceof List) || (params.size() < 1)) {
     	return [t: "error", v: "Invalid parameters. Expecting celsius(temperature)"];
     }
-    double t = evaluateExpression(params[0], 'decimal').v
+    double t = evaluateExpression(rtData, params[0], 'decimal').v
     //convert temperature to Celsius
     return [t: "decimal", v: (double) (t - 32.0) * 5.0 / 9.0]
 }
@@ -434,11 +601,11 @@ private func_celsius(params) {
 /*** fahrenheit converts temperature from Celsius to Fahrenheit				***/
 /*** Usage: fahrenheit(temperature)											***/
 /******************************************************************************/
-private func_fahrenheit(params) {
+private func_fahrenheit(rtData, params) {
 	if (!params || !(params instanceof List) || (params.size() < 1)) {
     	return [t: "error", v: "Invalid parameters. Expecting fahrenheit(temperature)"];
     }
-    double t = evaluateExpression(params[0], 'decimal').v
+    double t = evaluateExpression(rtData, params[0], 'decimal').v
     //convert temperature to Fahrenheit
     return [t: "decimal", v: (double) t * 9.0 / 5.0 + 32.0]
 }
@@ -447,137 +614,137 @@ private func_fahrenheit(params) {
 /*** integer converts a decimal value to it's integer value					***/
 /*** Usage: integer(decimal or string)										***/
 /******************************************************************************/
-private func_integer(params) {
+private func_integer(rtData, params) {
 	if (!params || !(params instanceof List) || (params.size() < 1)) {
     	return [t: "error", v: "Invalid parameters. Expecting integer(decimal or string)"];
     }
-    return [t: "integer", v: evaluateExpression(params[0], 'integer').v]
+    return [t: "integer", v: evaluateExpression(rtData, params[0], 'integer').v]
 }
-private func_int(params) { return func_number(params) }
+private func_int(rtData, params) { return func_integer(rtData, params) }
 
 /******************************************************************************/
 /*** decimal/float converts an integer value to it's decimal value			***/
 /*** Usage: decimal(integer or string)										***/
 /******************************************************************************/
-private func_decimal(params) {
+private func_decimal(rtData, params) {
 	if (!params || !(params instanceof List) || (params.size() < 1)) {
     	return [t: "error", v: "Invalid parameters. Expecting decimal(integer or string)"];
     }
-    return [t: "decimal", v: evaluateExpression(params[0], 'decimal').v]
+    return [t: "decimal", v: evaluateExpression(rtData, params[0], 'decimal').v]
 }
-private func_float(params) { return func_decimal(params) }
-private func_number(params) { return func_decimal(params) }
+private func_float(rtData, params) { return func_decimal(rtData, params) }
+private func_number(rtData, params) { return func_decimal(rtData, params) }
 
 /******************************************************************************/
 /*** string converts an value to it's string value							***/
 /*** Usage: string(anything)												***/
 /******************************************************************************/
-private func_string(params) {
+private func_string(rtData, params) {
 	if (!params || !(params instanceof List) || (params.size() < 1)) {
     	return [t: "error", v: "Invalid parameters. Expecting string(anything)"];
     }
 	def result = ''
     for(param in params) {
-    	result += evaluateExpression(param, 'string').v
+    	result += evaluateExpression(rtData, param, 'string').v
     }
     return [t: "string", v: result]
 }
-private func_concat(params) { return func_string(params) }
-private func_text(params) { return func_string(params) }
+private func_concat(rtData, params) { return func_string(rtData, params) }
+private func_text(rtData, params) { return func_string(rtData, params) }
 
 /******************************************************************************/
 /*** boolean converts a value to it's boolean value							***/
 /*** Usage: boolean(anything)												***/
 /******************************************************************************/
-private func_boolean(params) {
+private func_boolean(rtData, params) {
 	if (!params || !(params instanceof List) || (params.size() < 1)) {
     	return [t: "error", v: "Invalid parameters. Expecting boolean(anything)"];
     }
-    return [t: "boolean", v: evaluateExpression(params[0], 'boolean').v]
+    return [t: "boolean", v: evaluateExpression(rtData, params[0], 'boolean').v]
 }
-private func_bool(params) { return func_boolean(params) }
+private func_bool(rtData, params) { return func_boolean(rtData, params) }
 
 /******************************************************************************/
 /*** sqr converts a decimal value to it's square decimal value				***/
 /*** Usage: sqr(integer or decimal or string)								***/
 /******************************************************************************/
-private func_sqr(params) {
+private func_sqr(rtData, params) {
 	if (!params || !(params instanceof List) || (params.size() < 1)) {
     	return [t: "error", v: "Invalid parameters. Expecting sqr(integer or decimal or string)"];
     }
-    return [t: "decimal", v: evaluateExpression(params[0], 'decimal').v ** 2]
+    return [t: "decimal", v: evaluateExpression(rtData, params[0], 'decimal').v ** 2]
 }
 
 /******************************************************************************/
 /*** sqrt converts a decimal value to it's square root decimal value		***/
 /*** Usage: sqrt(integer or decimal or string)								***/
 /******************************************************************************/
-private func_sqrt(params) {
+private func_sqrt(rtData, params) {
 	if (!params || !(params instanceof List) || (params.size() < 1)) {
     	return [t: "error", v: "Invalid parameters. Expecting sqrt(integer or decimal or string)"];
     }
-    return [t: "decimal", v: Math.sqrt(evaluateExpression(params[0], 'decimal').v)]
+    return [t: "decimal", v: Math.sqrt(evaluateExpression(rtData, params[0], 'decimal').v)]
 }
 
 /******************************************************************************/
 /*** power converts a decimal value to it's power decimal value				***/
 /*** Usage: power(integer or decimal or string, power)						***/
 /******************************************************************************/
-private func_power(params) {
+private func_power(rtData, params) {
 	if (!params || !(params instanceof List) || (params.size() < 2)) {
     	return [t: "error", v: "Invalid parameters. Expecting sqrt(integer or decimal or string, power)"];
     }
-    return [t: "decimal", v: evaluateExpression(params[0], 'decimal').v ** evaluateExpression(params[1], 'decimal').v]
+    return [t: "decimal", v: evaluateExpression(rtData, params[0], 'decimal').v ** evaluateExpression(rtData, params[1], 'decimal').v]
 }
 
 /******************************************************************************/
 /*** round converts a decimal value to it's rounded value					***/
 /*** Usage: round(decimal or string[, precision])							***/
 /******************************************************************************/
-private func_round(params) {
+private func_round(rtData, params) {
 	if (!params || !(params instanceof List) || (params.size() < 1)) {
     	return [t: "error", v: "Invalid parameters. Expecting round(decimal or string[, precision])"];
     }
-    int precision = (params.size() > 1) ? evaluateExpression(params[1], 'integer').v : 0
-    return [t: "decimal", v: Math.round(evaluateExpression(params[0], 'decimal').v * (10 ** precision)) / (10 ** precision)]
+    int precision = (params.size() > 1) ? evaluateExpression(rtData, params[1], 'integer').v : 0
+    return [t: "decimal", v: Math.round(evaluateExpression(rtData, params[0], 'decimal').v * (10 ** precision)) / (10 ** precision)]
 }
 
 /******************************************************************************/
 /*** floor converts a decimal value to it's closest lower integer value		***/
 /*** Usage: floor(decimal or string)										***/
 /******************************************************************************/
-private func_floor(params) {
+private func_floor(rtData, params) {
 	if (!params || !(params instanceof List) || (params.size() < 1)) {
     	return [t: "error", v: "Invalid parameters. Expecting floor(decimal or string)"];
     }
-    return [t: "integer", v: cast(Math.floor(evaluateExpression(params[0], 'decimal').v), 'integer')]
+    return [t: "integer", v: cast(Math.floor(evaluateExpression(rtData, params[0], 'decimal').v), 'integer')]
 }
 
 /******************************************************************************/
 /*** ceiling converts a decimal value to it's closest higher integer value	***/
 /*** Usage: ceiling(decimal or string)										***/
 /******************************************************************************/
-private func_ceiling(params) {
+private func_ceiling(rtData, params) {
 	if (!params || !(params instanceof List) || (params.size() < 1)) {
     	return [t: "error", v: "Invalid parameters. Expecting ceiling(decimal or string)"];
     }
-    return [t: "integer", v: cast(Math.ceil(evaluateExpression(params[0], 'decimal').v), 'integer')]
+    return [t: "integer", v: cast(Math.ceil(evaluateExpression(rtData, params[0], 'decimal').v), 'integer')]
 }
-private func_ceil(params) { return func_ceiling(params) }
+private func_ceil(rtData, params) { return func_ceiling(rtData, params) }
 
 
 /******************************************************************************/
 /*** sprintf converts formats a series of values into a string				***/
 /*** Usage: sprintf(format, arguments)										***/
 /******************************************************************************/
-private func_sprintf(params) {
+private func_sprintf(rtData, params) {
 	if (!params || !(params instanceof List) || (params.size() < 2)) {
     	return [t: "error", v: "Invalid parameters. Expecting sprintf(format, arguments)"];
     }
-    def format = evaluateExpression(params[0], 'string').v
+    def format = evaluateExpression(rtData, params[0], 'string').v
     List args = []
     for (int x = 1; x < params.size(); x++) {
-    	args.push(evaluateExpression(params[x]).v)
+    	args.push(evaluateExpression(rtData, params[x]).v)
     }
     try {
         return [t: "string", v: sprintf(format, args)]
@@ -585,18 +752,18 @@ private func_sprintf(params) {
     	return [t: "error", v: "$all"]
     }
 }
-private func_format(params) { return func_sprintf(params) }
+private func_format(rtData, params) { return func_sprintf(rtData, params) }
 
 /******************************************************************************/
 /*** left returns a substring of a value									***/
 /*** Usage: left(string, count)												***/
 /******************************************************************************/
-private func_left(params) {
+private func_left(rtData, params) {
 	if (!params || !(params instanceof List) || (params.size() < 2)) {
     	return [t: "error", v: "Invalid parameters. Expecting left(string, count)"];
     }
-    def value = evaluateExpression(params[0], 'string').v
-    def count = evaluateExpression(params[1], 'integer').v
+    def value = evaluateExpression(rtData, params[0], 'string').v
+    def count = evaluateExpression(rtData, params[1], 'integer').v
     if (count > value.size()) count = value.size()    
     return [t: "string", v: value.substring(0, count)]
 }
@@ -605,12 +772,12 @@ private func_left(params) {
 /*** right returns a substring of a value									***/
 /*** Usage: right(string, count)												***/
 /******************************************************************************/
-private func_right(params) {
+private func_right(rtData, params) {
 	if (!params || !(params instanceof List) || (params.size() < 2)) {
     	return [t: "error", v: "Invalid parameters. Expecting right(string, count)"];
     }
-    def value = evaluateExpression(params[0], 'string').v
-    def count = evaluateExpression(params[1], 'integer').v
+    def value = evaluateExpression(rtData, params[0], 'string').v
+    def count = evaluateExpression(rtData, params[1], 'integer').v
     if (count > value.size()) count = value.size()
     return [t: "string", v: value.substring(value.size() - count, value.size())]
 }
@@ -619,13 +786,13 @@ private func_right(params) {
 /*** substring returns a substring of a value								***/
 /*** Usage: substring(string, start, count)									***/
 /******************************************************************************/
-private func_substring(params) {
+private func_substring(rtData, params) {
 	if (!params || !(params instanceof List) || (params.size() < 2)) {
     	return [t: "error", v: "Invalid parameters. Expecting substring(string, start, count)"];
     }
-    def value = evaluateExpression(params[0], 'string').v
-    def start = evaluateExpression(params[1], 'integer').v
-   	def count = params.size() > 2 ? evaluateExpression(params[2], 'integer').v : null
+    def value = evaluateExpression(rtData, params[0], 'string').v
+    def start = evaluateExpression(rtData, params[1], 'integer').v
+   	def count = params.size() > 2 ? evaluateExpression(rtData, params[2], 'integer').v : null
     def end = null
     def result = ''
     if ((start < value.size()) && (start > -value.size())) {
@@ -648,26 +815,25 @@ private func_substring(params) {
     }
     return [t: "string", v: result]
 }
-private func_substr(params) { return func_substring(params) }
-private func_mid(params) { return func_substring(params) }
+private func_substr(rtData, params) { return func_substring(rtData, params) }
+private func_mid(rtData, params) { return func_substring(rtData, params) }
 
 /******************************************************************************/
 /*** replace replaces a search text inside of a value						***/
 /*** Usage: replace(string, search, replace[, [..], search, replace])		***/
 /******************************************************************************/
-private func_replace(params) {
+private func_replace(rtData, params) {
 	if (!params || !(params instanceof List) || (params.size() < 3)) {
     	return [t: "error", v: "Invalid parameters. Expecting replace(string, search, replace)"];
     }
-    def value = evaluateExpression(params[0], 'string').v
+    def value = evaluateExpression(rtData, params[0], 'string').v
     int cnt = Math.floor((params.size() - 1) / 2)
     for (int i = 0; i < cnt; i++) {
-    	def search = evaluateExpression(params[i * 2 + 1], 'string').v
+    	def search = evaluateExpression(rtData, params[i * 2 + 1], 'string').v
         if ((search.size() > 2) && search.startsWith('/') && search.endsWith('/')) {
         	search = ~search.substring(1, search.size() - 1)
         }
-    	log.trace "value.replaceAll(${search}, ${evaluateExpression(params[i * 2 + 2], 'string').v})"
-        value = value.replaceAll(search, evaluateExpression(params[i * 2 + 2], 'string').v)
+        value = value.replaceAll(search, evaluateExpression(rtData, params[i * 2 + 2], 'string').v)
     }
     return [t: "string", v: value]
 }
@@ -677,13 +843,13 @@ private func_replace(params) {
 /*** lower returns a lower case value of a string							***/
 /*** Usage: lower(string)													***/
 /******************************************************************************/
-private func_lower(params) {
+private func_lower(rtData, params) {
 	if (!params || !(params instanceof List) || (params.size() < 1)) {
     	return [t: "error", v: "Invalid parameters. Expecting lower(string)"];
     }
     def result = ''
     for(param in params) {
-    	result += evaluateExpression(param, 'string').v
+    	result += evaluateExpression(rtData, param, 'string').v
     }
     return [t: "string", v: result.toLowerCase()]
 }
@@ -692,13 +858,13 @@ private func_lower(params) {
 /*** upper returns a upper case value of a string							***/
 /*** Usage: upper(string)													***/
 /******************************************************************************/
-private func_upper(params) {
+private func_upper(rtData, params) {
 	if (!params || !(params instanceof List) || (params.size() < 1)) {
     	return [t: "error", v: "Invalid parameters. Expecting upper(string)"];
     }
     def result = ''
     for(param in params) {
-    	result += evaluateExpression(param, 'string').v
+    	result += evaluateExpression(rtData, param, 'string').v
     }
     return [t: "string", v: result.toUpperCase()]
 }
@@ -707,13 +873,13 @@ private func_upper(params) {
 /*** title returns a title case value of a string							***/
 /*** Usage: title(string)													***/
 /******************************************************************************/
-private func_title(params) {
+private func_title(rtData, params) {
 	if (!params || !(params instanceof List) || (params.size() < 1)) {
     	return [t: "error", v: "Invalid parameters. Expecting title(string)"];
     }
     def result = ''
     for(param in params) {
-    	result += evaluateExpression(param, 'string').v
+    	result += evaluateExpression(rtData, param, 'string').v
     }
     return [t: "string", v: result.tokenize(" ")*.toLowerCase()*.capitalize().join(" ")]
 }
@@ -722,13 +888,13 @@ private func_title(params) {
 /*** avg calculates the average of a series of numeric values				***/
 /*** Usage: avg(values)														***/
 /******************************************************************************/
-private func_avg(params) {
+private func_avg(rtData, params) {
 	if (!params || !(params instanceof List) || (params.size() < 1)) {
     	return [t: "error", v: "Invalid parameters. Expecting avg(values)"];
     }
     float sum = 0
     for (param in params) {
-    	sum += evaluateExpression(param, 'decimal').v
+    	sum += evaluateExpression(rtData, param, 'decimal').v
     }
     return [t: "decimal", v: sum / params.size()]
 }
@@ -737,13 +903,13 @@ private func_avg(params) {
 /*** sum calculates the sum of a series of numeric values					***/
 /*** Usage: sum(values)														***/
 /******************************************************************************/
-private func_sum(params) {
+private func_sum(rtData, params) {
 	if (!params || !(params instanceof List) || (params.size() < 1)) {
     	return [t: "error", v: "Invalid parameters. Expecting sum(values)"];
     }
     float sum = 0
     for (param in params) {
-    	sum += evaluateExpression(param, 'decimal').v
+    	sum += evaluateExpression(rtData, param, 'decimal').v
     }
     return [t: "decimal", v: sum]
 }
@@ -752,14 +918,14 @@ private func_sum(params) {
 /*** variance calculates the standard deviation of a series of numeric values */
 /*** Usage: stdev(values)													***/
 /******************************************************************************/
-private func_variance(params) {
+private func_variance(rtData, params) {
 	if (!params || !(params instanceof List) || (params.size() < 2)) {
     	return [t: "error", v: "Invalid parameters. Expecting variance(value1, [..], valueN)"];
     }
     float sum = 0
     List values = []
     for (param in params) {
-    	float value = evaluateExpression(param, 'decimal').v
+    	float value = evaluateExpression(rtData, param, 'decimal').v
         values.push(value)
         sum += value
     }
@@ -775,11 +941,11 @@ private func_variance(params) {
 /*** stdev calculates the standard deviation of a series of numeric values	***/
 /*** Usage: stdev(values)													***/
 /******************************************************************************/
-private func_stdev(params) {
+private func_stdev(rtData, params) {
 	if (!params || !(params instanceof List) || (params.size() < 2)) {
     	return [t: "error", v: "Invalid parameters. Expecting stdev(value1, [..], valueN)"];
     }
-    def result = func_variance(params)
+    def result = func_variance(rtData, params)
     return [t: "decimal", v: Math.sqrt(result.v)]
 }
 
@@ -787,13 +953,13 @@ private func_stdev(params) {
 /*** min calculates the minimum of a series of numeric values				***/
 /*** Usage: min(values)														***/
 /******************************************************************************/
-private func_min(params) {
+private func_min(rtData, params) {
 	if (!params || !(params instanceof List) || (params.size() < 1)) {
     	return [t: "error", v: "Invalid parameters. Expecting min(values)"];
     }
     def min = null
     for (param in params) {
-    	float value = evaluateExpression(param, 'decimal').v
+    	float value = evaluateExpression(rtData, param, 'decimal').v
         min = (min == null) ? value : ((min > value) ? value : min)
     }
     return [t: "decimal", v: min]
@@ -803,13 +969,13 @@ private func_min(params) {
 /*** max calculates the maximum of a series of numeric values				***/
 /*** Usage: max(values)														***/
 /******************************************************************************/
-private func_max(params) {
+private func_max(rtData, params) {
 	if (!params || !(params instanceof List) || (params.size() < 1)) {
     	return [t: "error", v: "Invalid parameters. Expecting max(values)"];
     }
     def max = null
     for (param in params) {
-    	float value = evaluateExpression(param, 'decimal').v
+    	float value = evaluateExpression(rtData, param, 'decimal').v
         max = (max == null) ? value : ((max < value) ? value : max)
     }
     return [t: "decimal", v: max]
@@ -819,7 +985,7 @@ private func_max(params) {
 /*** count calculates the number of items in a series of numeric values		***/
 /*** Usage: max(values)														***/
 /******************************************************************************/
-private func_count(params) {
+private func_count(rtData, params) {
 	if (!params || !(params instanceof List) || (params.size() < 1)) {
     	return [t: "error", v: "Invalid parameters. Expecting count(values)"];
     }
@@ -885,6 +1051,9 @@ private cast(value, dataType) {
 				if (value in trueStrings)
 					return (int) 1
 			}
+			if (value instanceof Boolean) {
+            	return (int) (value ? 1 : 0)
+            }
 			def result = (int) 0
 			try {
 				result = (int) value
@@ -903,6 +1072,9 @@ private cast(value, dataType) {
 				if (value in trueStrings)
 					return (long) 1
 			}
+			if (value instanceof Boolean) {
+            	return (long) (value ? 1 : 0)
+            }
 			def result = (long) 0
 			try {
 				result = (long) value
@@ -920,6 +1092,9 @@ private cast(value, dataType) {
 				if (value in trueStrings)
 					return (float) 1
 			}
+			if (value instanceof Boolean) {
+            	return (float) (value ? 1 : 0)
+            }
 			def result = (float) 0
 			try {
 				result = (float) value
@@ -1006,4 +1181,93 @@ private debug(message, cmd = null, shift = null, err = null) {
 	} else {
 		log.debug "$prefix$message", err
 	}
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+private Map getSystemVars() {
+	return [
+		"\$currentEventAttribute": [t: 'string', v: null],
+		"\$currentEventDate": null,
+		"\$currentEventDelay": 0,
+		"\$currentEventDevice": null,
+		"\$currentEventDeviceIndex": 0,
+		"\$currentEventDevicePhysical": false,
+		"\$currentEventReceived": null,
+		"\$currentEventValue": null,
+		"\$currentState": null,
+		"\$currentStateDuration": 0,
+		"\$currentStateSince": null,
+		"\$currentStateSince": null,
+		"\$nextScheduledTime": null,
+		"\$now": [t: 'time', v: {(long) now()}],
+		"\$utc": [t: 'time', v: {(long) now()}],
+		"\$localNow": [t: 'time', v: {(long) now()}],
+		"\$hour": 0,
+		"\$hour24": 0,
+		"\$minute": 0,
+		"\$second": 0,
+		"\$meridian": "",
+		"\$meridianWithDots": "",
+		"\$day": 0,
+		"\$dayOfWeek": 0,
+		"\$dayOfWeekName": "",
+		"\$month": 0,
+		"\$monthName": "",
+		"\$index": 0,
+		"\$year": 0,
+		"\$meridianWithDots": "",
+		"\$previousEventAttribute": null,
+		"\$previousEventDate": null,
+		"\$previousEventDelay": 0,
+		"\$previousEventDevice": null,
+		"\$previousEventDeviceIndex": 0,
+		"\$previousEventDevicePhysical": 0,
+		"\$previousEventExecutionTime": 0,
+		"\$previousEventReceived": null,
+		"\$previousEventValue": null,
+		"\$previousState": null,
+		"\$previousStateDuration": 0,
+		"\$previousStateSince": null,
+		"\$random": 0,
+		"\$randomColor": "#FFFFFF",
+		"\$randomColorName": "White",
+		"\$randomLevel": 0,
+		"\$randomSaturation": 0,
+		"\$randomHue": 0,
+		"\$midnight": 999999999999,
+		"\$noon": 999999999999,
+		"\$sunrise": 999999999999,
+		"\$sunset": 999999999999,
+		"\$nextMidnight": 999999999999,
+		"\$nextNoon": 999999999999,
+		"\$nextSunrise": 999999999999,
+		"\$nextSunset": 999999999999,
+		"\$time": "",
+		"\$time24": "",
+		"\$httpStatusCode": 0,
+		"\$httpStatusOk": true,
+		"\$iftttStatusCode": 0,
+		"\$iftttStatusOk": true,
+		"\$locationMode": "",
+		"\$shmStatus": ""
+	]
 }

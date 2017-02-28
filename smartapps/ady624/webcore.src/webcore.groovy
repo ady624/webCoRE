@@ -20,8 +20,9 @@
  */
 
 def handle() { return "CoRE (SE)" }
-def version() {	return "v0.0.01f.20170227" }
+def version() {	return "v0.0.020.20170228" }
 /*
+ *	02/28/2016 >>> v0.0.020.20170228 - ALPHA - Added runtime data - pistons are now aware of devices and global variables - expressions can query devices and variables (though not all system variables are ready yet)
  *	02/27/2016 >>> v0.0.01f.20170227 - ALPHA - Added support for a bunch more functions
  *	02/27/2016 >>> v0.0.01e.20170227 - ALPHA - Fixed a bug in expression parser where integer + integer would result in a string
  *	02/27/2016 >>> v0.0.01d.20170227 - ALPHA - Made progress evaluating expressions
@@ -261,6 +262,7 @@ def updated() {
 
 def initialize() {
 	state.installed = true
+    state.vars = state.vars ?: [:]
 }
 
 private initializeCoREEndpoint() {
@@ -319,7 +321,6 @@ private api_get_error_result(error) {
 private api_get_base_result(requireDevices = true) {
 	def tz = location.getTimeZone()
 	def Boolean sendDevices = (requireDevices =='true') || (requireDevices == true) || !!atomicState.updateDevices
-    log.trace "req $requireDevices send $sendDevices"
     if (sendDevices) {
     	atomicState.updateDevices = null
     }
@@ -332,7 +333,7 @@ private api_get_base_result(requireDevices = true) {
             id: hashId(app.id),
             locationId: hashId(location.id),
             name: app.label ?: app.name,
-            uri: state.endpoint            
+            uri: atomicState.endpoint            
         ] + (sendDevices ? [devices: listAvailableDevices()] : [:]),
         location: [
             contactBookEnabled: location.getContactBookEnabled(),
@@ -363,7 +364,7 @@ private api_intf_dashboard_load() {
             	result = api_get_base_result()
                 result.instance.token = createSecurityToken()
             } else {
-		        debug "Dashboard: Authentication failed due to an invalid PIN", "error"
+		        error "Dashboard: Authentication failed due to an invalid PIN"
             }
         }
         if (!result) result = api_get_error_result("ERR_INVALID_TOKEN")
@@ -521,7 +522,6 @@ private api_intf_dashboard_piston_set_end() {
                 	data += s
                 } else {
                 	data = ""
-                    log.trace "CHUNK $i NOT OK"
                 	ok = false;
                     break;
                 }
@@ -529,7 +529,6 @@ private api_intf_dashboard_piston_set_end() {
             }
             if (ok) {
                 //save the piston here
-                log.trace "CHUNKS OK"
                 def saved = api_intf_dashboard_piston_set_save(chunks.id, data)
                 if (saved) {
 	        		result = [status: "ST_SUCCESS"] + saved
@@ -607,7 +606,9 @@ private api_intf_dashboard_piston_evaluate() {
 	    def piston = getChildApps().find{ hashId(it.id) == params.id };
 	    if (piston) {
 			def expression = new groovy.json.JsonSlurper().parseText(new String(params.expression.decodeBase64(), "UTF-8"))
-			result = [status: "ST_SUCCESS", value: piston.evaluateExpression(expression, params.dataType)]
+            def msg = timer "Evaluating expression"
+			result = [status: "ST_SUCCESS", value: piston.proxyEvaluateExpression(getRunTimeData(), expression, params.dataType)]
+            trace msg
         } else {
 	    	result = api_get_error_result("ERR_INVALID_ID")
         }
@@ -659,6 +660,10 @@ private Map listAvailableDevices(raw = false) {
     return devices
 }
 
+private Map listAvailableVariables() {
+	return atomicState.vars ?: [:]
+}
+
 private void initTokens() {
     debug "Dashboard: Initializing security tokens"
 	atomicState.securityTokens = [:]
@@ -669,7 +674,7 @@ private Boolean verifySecurityToken(token) {
     if (!tokens) return false
 	def t = tokens[token]
     if (!t) {
-        debug "Dashboard: Authentication failed due to an invalid token", "error"
+        error "Dashboard: Authentication failed due to an invalid token"
     	return false
     }
     //check expiry
@@ -677,7 +682,7 @@ private Boolean verifySecurityToken(token) {
 }
 
 private String createSecurityToken() {
-    debug "Dashboard: Generating new security token after a successful PIN authentication", "trace"
+    trace "Dashboard: Generating new security token after a successful PIN authentication"
 	def token = UUID.randomUUID().toString()
     def tokens = atomicState.securityTokens ?: [:]
     tokens[token] = now()
@@ -712,16 +717,40 @@ private String generatePistonName() {
 /******************************************************************************/
 
 public String mem(showBytes = true) {
-	def bytes = state.toString().length()
+	def bytes = atomicState.toString().length()
 	return Math.round(100.00 * (bytes/ 100000.00)) + "%${showBytes ? " ($bytes bytes)" : ""}"
 }
 
-public static Map getDevices() {
-	return listAvailableDevices(true);
-	//log.trace "LOOKING FOR DEVICE"
-	//def device = listAvailableDevices(true)['4d6b2fea-cdae-4a3c-9a39-8ca4517e581c'].dev
-	//log.trace "GOT DEVICE $device"
-	//return device
+public Map getRunTimeData() {
+	def msg = timer "Generated run time data"
+	Map result = [
+    	attributes: attributes(),
+        commands: commands(),
+    	devices: listAvailableDevices(true),
+        globalVars: listAvailableVariables()
+    ]
+    trace msg
+    return result
+}
+
+public void processRunTimeData(data) {
+	List events = []
+	Map vars = atomicState.vars ?: [:]
+    def modified = false
+    if (data && data.vars) {
+    	for(var in data.vars) {
+        	if (var.n && (vars[var.n]) && (var.v != vars[var.n].v)) {
+            	events.push([v: var.n, ov: vars[var.n].v, nv: var.v])
+            	vars[var.n].v = var.v
+                modified = true
+            }
+        }
+	}
+    if (modified) {
+    	atomicState.vars = vars
+    }
+    //broadcast variable change events
+    //todo
 }
 
 /******************************************************************************/
@@ -744,7 +773,15 @@ def String md5(String md5) {
 }
 
 def String hashId(id) {
-	return ":${md5("core." + id)}:"
+	//enabled hash caching for faster processing
+	def result = state.hash ? state.hash[id] : null
+    if (!result) {
+		result = ":${md5("core." + id)}:"
+        def hash = state.hash ?: [:]
+        hash[id] = result
+        state.hash = hash
+    }
+    return result
 }
 
 def String temperatureUnit() {
@@ -754,7 +791,15 @@ def String temperatureUnit() {
 /******************************************************************************/
 /*** DEBUG FUNCTIONS														***/
 /******************************************************************************/
-private void debug(message, cmd = null, shift = null, err = null) {
+private debug(message, shift = null, err = null, cmd = null) {
+    if (cmd == "timer") {
+    	return [m: message, t: now(), s: shift, e: err]
+    }
+    if (message instanceof Map) {
+    	shift = message.s
+        err = message.e
+        message = message.m + " (${now() - message.t}ms)"
+    }
 	def debugging = settings.debugging
 	if (!debugging && (cmd != "error")) {
 		return
@@ -815,6 +860,13 @@ private void debug(message, cmd = null, shift = null, err = null) {
 		log.debug "$prefix$message", err
 	}
 }
+private info(message, shift = null, err = null) { debug message, shift, err, 'info' }
+private trace(message, shift = null, err = null) { debug message, shift, err, 'trace' }
+private warn(message, shift = null, err = null) { debug message, shift, err, 'warn' }
+private error(message, shift = null, err = null) { debug message, shift, err, 'error' }
+private timer(message, shift = null, err = null) { debug message, shift, err, 'timer' }
+
+
 
 
 
@@ -1309,360 +1361,4 @@ private getAlarmSystemStatusOptions() {
 }
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 //debug
-
-
-
-private cast(value, dataType) {
-	def trueStrings = ["1", "on", "open", "locked", "active", "wet", "detected", "present", "occupied", "muted", "sleeping"]
-	def falseStrings = ["0", "false", "off", "closed", "unlocked", "inactive", "dry", "clear", "not detected", "not present", "not occupied", "unmuted", "not sleeping"]
-	switch (dataType) {
-		case "string":
-		case "text":
-			if (value instanceof Boolean) {
-				return value ? "true" : "false"
-			}
-			return value ? "$value" : ""
-		case "integer":
-		case "int32":
-		case "number":
-			if (value == null) return (int) 0
-			if (value instanceof String) {
-				if (value.isInteger())
-					return value.toInteger()
-				if (value.isFloat())
-					return (int) Math.floor(value.toFloat())
-				if (value in trueStrings)
-					return (int) 1
-			}
-			def result = (int) 0
-			try {
-				result = (int) value
-			} catch(all) {
-				result = (int) 0
-			}
-			return result ? result : (int) 0
-		case "int64":
-		case "long":
-			if (value == null) return (long) 0
-			if (value instanceof String) {
-				if (value.isInteger())
-					return (long) value.toInteger()
-				if (value.isFloat())
-					return (long) Math.round(value.toFloat())
-				if (value in trueStrings)
-					return (long) 1
-			}
-			def result = (long) 0
-			try {
-				result = (long) value
-			} catch(all) {
-			}
-			return result ? result : (long) 0
-		case "float":
-		case "decimal":
-			if (value == null) return (float) 0
-			if (value instanceof String) {
-				if (value.isFloat())
-					return (float) value.toFloat()
-				if (value.isInteger())
-					return (float) value.toInteger()
-				if (value in trueStrings)
-					return (float) 1
-			}
-			def result = (float) 0
-			try {
-				result = (float) value
-			} catch(all) {
-			}
-			return result ? result : (float) 0
-		case "boolean":
-			if (value instanceof String) {
-				if (!value || (value in falseStrings))
-					return false
-				return true
-			}
-			return !!value
-		case "time":
-			return value instanceof String ? adjustTime(value).time : cast(value, "long")
-		case "vector3":
-			return value instanceof String ? adjustTime(value).time : cast(value, "long")
-		case "orientation":
-			return getThreeAxisOrientation(value)
-	}
-	//anything else...
-	return value
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-def evaluateExpression(expression, dataType = null) {
-    //if dealing with an expression that has multiple items, let's evaluate each item one by one
-    //let's evaluate this expression
-    Map result = [:]
-    switch (expression.t) {
-        case "string":
-        case "integer":
-        case "decimal":
-        	result = [t: expression.t, v: cast(expression.v, expression.t)]
-        	break
-        case "variable":
-        	//get variable as {n: name, t: type, v: value}
-        	def variable = [n: 'name', t: 'dynamic', v: '0']
-        	result = [t: variable.t, v: variable.v]
-        	break
-        case "device":
-        	//get variable as {n: name, t: type, v: value}
-        	def device = [:]; //get physical device
-			def attribute = [:]; //getAttribute
-        	def value = 0; //device.getValue(attribute)
-			result = [t: attribute.t, v: value]
-        	break
-        case "operand":
-        	result = [t: "string", v: cast(expression.v, "string")]
-        	break
-        case "function":
-            def fn = "func_${expression.n}"
-            try {
-				result = "$fn"(expression.i)
-			} catch (all) {
-				//log error
-                result = [t: "error", v: all]
-			}        	
-        	break
-        case "expression":
-        	List items = []
-            def operand = -1
-        	for(item in expression.i) {
-	            if (item.t == "operator") {
-                	if (operand < 0) {
-                    	switch (operator.o) {
-                        	case '+':
-                            case '-':
-                            case '^':
-                            	items.push([t: decimal, v: 0, o: operator.o])
-                                break;
-                        	case '*':
-                            case '/':
-                            	items.push([t: decimal, v: 1, o: operator.o])
-                                break;
-                        	case '&':
-                            	items.push([t: boolean, v: true, o: operator.o])
-                                break;
-                        	case '|':
-                            	items.push([t: boolean, v: false, o: operator.o])
-                                break;
-                        }
-                    } else {
-                    	items[operand].o = item.o;
-                        operand = -1;
-                    }
-	            } else {
-	                items.push(evaluateExpression(item))
-                    operand = items.size() - 1;
-	            }
-	        }
-            //clean up operators, ensure there's one for each
-            def idx = 0
-            for(item in items) {
-            	if (!item.o) {
-                	switch (item.t) {
-                    	case "integer":
-                    	case "float":
-                    	case "decimal":
-                    	case "number":
-                        	def nextType = 'string'
-                        	if (idx < items.size() - 1) nextType = items[idx+1].t
-                        	item.o = (nextType == 'string' || nextType == 'text') ? '+' : '*';
-                            break;
-                        default:
-                        	item.o = '+';
-                            break;
-                    }
-                }
-                idx++
-            }
-            //do the job
-            idx = 0
-            while (items.size() > 1) {
-	           	//order of operations :D
-                //we first look for power ^
-                idx = 0
-                for (item in items) {
-                	if ((item.o) == '^') break;
-                    idx++
-                }
-                if (idx >= items.size()) {
-                    //we then look for * or /
-                    idx = 0
-                    for (item in items) {
-                        if (((item.o) == '*') || ((item.o) == '/')) break;
-                        idx++
-                    }
-                }
-                if (idx >= items.size()) {
-                    //we then look for + or -
-                    idx = 0
-                    for (item in items) {
-                        if (((item.o) == '+') || ((item.o) == '-')) break;
-                        idx++
-                    }
-                }
-                if (idx >= items.size()) {
-                	//just get the first one
-                	idx = 0;
-                }                
-                if (idx >= items.size() - 1) idx = 0
-                //we're onto something
-                def v = null
-                def t = 'string'
-                def o = items[idx].o
-                def t1 = items[idx].t
-                def v1 = items[idx].v
-                def t2 = items[idx + 1].t
-                def v2 = items[idx + 1].t
-                //fix-ups
-                //integer with decimal gives decimal, also *, /, and ^ require decimals
-                if ((o == '*') || (o == '*') || (o == '/') || (o == '-')) {
-                    if ((t1 != 'number') && (t1 != 'integer') && (t1 != 'decimal') && (t1 != 'float')) t1 = 'decimal'
-                    if ((t2 != 'number') && (t2 != 'integer') && (t2 != 'decimal') && (t2 != 'float')) t2 = 'decimal'
-                    t = 'decimal'
-                }
-                if ((o == '&') || (o == '|')) {
-                    t1 = 'boolean'
-                    t2 = 'boolean'
-                    t = 'boolean'
-                }
-                if ((o == '+') && ((t1 == 'string') || (t1 == 'string') || (t1 == 'string') || (t1 == 'string'))) {
-                    t1 = 'string';
-                    t2 = 'string';
-                    t = 'string'
-                }
-                if ((((t1 == 'number') || (t1 == 'integer')) && ((t2 == 'decimal') || (t2 == 'float'))) || (((t2 == 'number') || (t2 == 'integer')) && ((t1 == 'decimal') || (t1 == 'float')))) {
-                    t1 = 'decimal'
-                    t2 = 'decimal'
-                    t = 'decimal'
-                }
-                v1 = evaluateExpression(items[idx], t1).v
-                v2 = evaluateExpression(items[idx + 1], t2).v
-                switch (o) {
-                    case '-':
-                    	v = v1 - v2
-                    	break
-                    case '*':
-                    	v = v1 * v2
-                    	break
-                    case '/':
-                    	v = (v2 != 0 ? v1 / v2 : 0)
-                    	break
-                    case '^':
-                    	v = v1 ** v2
-                    	break
-                    case '&':
-                    	v = !!v1 && !!v2
-                    	break
-                    case '|':
-                    	v = !!v1 || !!v2
-                    	break
-                    case '+':
-                    default:
-                        v = v1 + v2
-                    	break
-                }
-                //set the results
-                items[idx + 1].t = t
-                items[idx + 1].v = cast(v, t)
-                def sz = items.size()
-                items.remove(idx)
-            }
-    	    result = [t:items[0].t, v: items[0].v]
-	        break
-    }
-    //return the value, either directly or via cast, if certain data type is requested
-    return result.t == "error" ? result : [t: dataType ?: result.t, v: cast(result.v, dataType?: result.t)]
-}
-
-
-
-
-
-def func_dewpoint(params) {
-	if (!params || !(params instanceof List) || (params.size() < 2)) {
-    	return [t: "error", v: "Invalid parameters. Expecting dewPoint(temperature, relativeHumidity[, scale])"];
-    }
-    double t = evaluateExpression(params[0], decimal).v
-    double rh = evaluateExpression(params[1], decimal).v
-    //if no temperature scale is provided, we assume the location's temperature scale
-    boolean fahrenheit = cast(params.size() > 2 ? evaluateExpression(params[2]).v : location.temperatureScale, "string").toUpperCase() == "F"
-    if (fahrenheit) {
-    	//convert temperature to Celsius
-        t = (t - 32.0) * 5.0 / 9.0
-    }
-    //convert rh to percentage
-    if ((rh > 0) && (rh < 1)) {
-    	rh = rh * 100.0
-    }
-    double b = (Math.log(rh / 100) + ((17.27 * t) / (237.3 + t))) / 17.27
-	double result = (237.3 * b) / (1 - b)
-    if (fahrenheit) {
-    	//convert temperature back to Fahrenheit
-        result = result * 9.0 / 5.0 + 32.0
-    }
-    return [t: "decimal", v: result]
-}
-
-
-
-private func_sprintf(params) {
-	if (!params || !(params instanceof List) || (params.size() < 2)) {
-    	return [t: "error", v: "Invalid parameters. Expecting sprintf(format, arguments)"];
-    }
-    def format = evaluateExpression(params[0], 'string').v
-    List args = []
-    for (int x = 1; x < params.size(); x++) {
-    	args.push(evaluateExpression(params[x]).v)
-    }
-    return [t: "string", v: sprintf(format, args)]
-}
