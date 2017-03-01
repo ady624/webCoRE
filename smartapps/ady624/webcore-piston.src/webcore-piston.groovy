@@ -14,8 +14,9 @@
  *
 */
 
-def version() {	return "v0.0.020.20170228" }
+def version() {	return "v0.0.021.20170301" }
 /*
+ *	03/01/2016 >>> v0.0.021.20170301 - ALPHA - Most conditions (and no triggers yet) are now parsed and evaluated during events - action tasks not yet executed, but getting close, very close
  *	02/28/2016 >>> v0.0.020.20170228 - ALPHA - Added runtime data - pistons are now aware of devices and global variables - expressions can query devices and variables (though not all system variables are ready yet)
  *	02/27/2016 >>> v0.0.01f.20170227 - ALPHA - Added support for a bunch more functions
  *	02/27/2016 >>> v0.0.01e.20170227 - ALPHA - Fixed a bug in expression parser where integer + integer would result in a string
@@ -77,10 +78,6 @@ preferences {
 /*** CONFIGURATION PAGES													***/
 /*** 																		***/
 /******************************************************************************/
-
-/******************************************************************************/
-/*** COMMON PAGES															***/
-/******************************************************************************/
 def pageMain() {
 	//webCoRE Piston main page
 	return dynamicPage(name: "pageMain", title: "", install: true, uninstall: false) {
@@ -111,6 +108,12 @@ def pageMain() {
 	}
 }
 
+/******************************************************************************/
+/*** 																		***/
+/*** PUBLIC METHODS															***/
+/*** 																		***/
+/******************************************************************************/
+
 def installed() {
    	state.created = now()
     state.modified = now()
@@ -127,8 +130,9 @@ def updated() {
 }
 
 def initialize() {
-	//def device = parent.getDevice("owekf34r24r324");
-    //subscribe(device, "switch", handler)
+	if (!!state.active) {
+    	subscribeAll()
+    }
 }
 
 def get() {
@@ -155,7 +159,7 @@ def set(piston) {
     	s: piston.s ?: [],
     ] : [:]
     state.vars = piston ? (piston.v ?: [:]) : [:]
-    if (state.build == 1) {
+    if ((state.build == 1) || (!!state.active)) {
     	resume()
     }
     return [active: state.active, build: state.build, modified: state.modified]
@@ -175,10 +179,15 @@ def config(data) {
 
 def pause() {
 	state.active = false;
+    unsubscribe()
+    info "Pausing piston..."
 }
 
 def resume() {
 	state.active = true;
+    //we need to subscribe
+    info "Initializing piston..."
+    subscribeAll()
 }
 
 def execute() {
@@ -187,9 +196,332 @@ def execute() {
 
 private getRunTimeData(rtData = null) {
 	rtData = rtData ?: parent.getRunTimeData()
+    rtData.piston = state.piston
     rtData.localVars = state.vars ?: [:]
     rtData.systemVars = getSystemVars()
     return rtData
+}
+
+/******************************************************************************/
+/*** 																		***/
+/*** EVENT HANDLING															***/
+/*** 																		***/
+/******************************************************************************/
+def handler(event) {
+	def msg = timer "Received event ${event.name} from device ${event.device} with value ${event.value} with a delay of ${now() - event.date.getTime()}ms"
+    state.temp = [:]
+    //todo start execution
+    Map rtData = getRunTimeData()
+	def msg2 = timer "Executing piston..."
+    handleEvent(rtData, event)
+    trace msg2
+    trace msg
+}
+
+private handleEvent(rtData, event) {
+	rtData = rtData ?: getRunTimeData()
+	//todo - check restrictions
+
+	evaluateStatements(rtData, rtData.piston.s)
+
+}
+
+private Boolean evaluateStatements(rtData, statements) {
+	for(statement in statements) {
+    	if (!evaluateStatement(rtData, statement)) {
+        	//stop processing
+        	return false
+        }
+    }
+    //continue processing
+    return true
+}
+
+private Boolean evaluateStatement(rtData, statement) {
+	if (!statement) return false
+    def value = true
+	switch (statement.t) {
+    	case 'if':
+        case 'while':
+    		//check conditions for if and while
+        	def perform = evaluateConditions(rtData, statement)
+            log.trace "Condition group evaluated as $perform"
+        	if (perform) {
+	        	if (!evaluateStatements(rtData, statement.s)) {
+	            	//stop processing
+	                return false
+	            }
+	            return true
+	        } else {
+	        	if (statement.t == 'if') {
+	            	//look for else-ifs
+	                for (elseIf in statement.ei) {
+	                    perform = evaluateConditions(rtData, elseIf)
+	                    if (perform) {
+	                        if (!evaluateStatements(rtData, elseIf.s)) {
+	                            //stop processing
+	                            return false
+	                        }
+	                        return true
+	                    }                	
+	                }
+	                if (!evaluateStatements(rtData, statement.e)) {
+	                	//stop processing
+	                	return false
+	                }
+	            }
+    	    }
+			break
+		case 'action':
+        	log.trace "Executing action statement"
+        	break
+    }
+}
+
+
+private Boolean evaluateConditions(rtData, conditions) {
+	def grouping = conditions.g
+    def value = (grouping == 'any' ? false : true)
+	for(condition in conditions.c) {
+    	def res = evaluateCondition(rtData, condition)
+        value = (grouping == 'any') ? value || res : value && res
+        if (value == (grouping == 'any') ? true : false) return value
+    }
+    return value
+}
+
+private Boolean evaluateCondition(rtData, condition) {
+    def comparison = rtData.comparisons.conditions[condition.co] ?: rtData.comparisons.triggers[condition.co]
+    if (comparison) {
+        def paramCount = comparison.p ?: 0
+        def lo = null
+        def ro = null
+        def ro2 = null
+        for(int i = 0; i <= paramCount; i++) {
+            def operand = (i == 0 ? condition.lo : (i == 1 ? condition.ro : condition.ro2))
+            //parse the operand
+            def values
+            switch (operand.t) {
+            	case "p": //physical device
+                	values = []
+                    for(deviceId in operand.d) {
+                    	values.push(getDeviceAttribute(rtData, deviceId, operand.a))
+                    }
+                    if (!(operand.g in ['any', 'all'])) {
+                    	try {
+                        	values = ["func_${operand.g}"(rtData, values)]
+                        } catch(all) {
+                        }
+                    }
+                	break;
+            	case "x": //constant
+                	values = [getVariable(rtData, operand.x)]
+            	case "c": //constant
+            	case "e": //expression
+                	values = [evaluateExpression(rtData, operand.exp)]
+            }
+            switch (i) {
+            	case 0:
+                	lo = [operand: operand, values: values]
+                    break
+            	case 1:
+                	ro = [operand: operand, values: values]
+                    break
+            	case 2:
+                	ro2 = [operand: operand, values: values]
+                    break
+            }
+        }
+        
+        //we now have all the operands, their values, and the comparison, let's get to work
+        def options = [smatches: true]
+        def result = evaluateComparison(rtData, condition.co, lo, ro, ro2, options)
+        log.trace "Evaluation of ${condition.co} yielded $result"
+        return result
+    }    
+    return false
+}
+
+private Boolean evaluateComparison(rtData, comparison, lo, ro = null, ro2 = null, options = null) {
+        def fn = "comp_${comparison}"
+        def result = (lo.operand.g == 'any' ? false : true)
+        if (options?.matches) {
+        	options.devices = [matched: [], unmatched: []]
+        }
+        //if multiple left values, go through each
+        for(value in lo.values) {
+        	def res
+            try {
+            	if (!ro) {
+                	res = "$fn"(rtData, value)
+                } else {
+                    def rres
+                	res = (ro.operand.g == 'any' ? false : true)
+                    //if multiple right values, go through each
+                	for (rvalue in ro.values) {
+                    	if (!ro2) {
+                    		rres = "$fn"(rtData, value, rvalue)
+                        } else {
+	                        rres = (ro2.operand.g == 'any' ? false : true)
+                            //if multiple right2 values, go through each
+        		        	for (r2value in ro2.values) {
+                    			def r2res = "$fn"(rtData, value, rvalue, r2value)
+                                rres = (ro2.operand.g == 'any' ? rres || r2res : rres && r2res)
+		                        if (((ro2.operand.g == 'any') && rres) || ((ro2.operand.g != 'any') && !rres)) break
+	                        }
+                        }
+	                   	res = (ro.operand.g == 'any' ? res || rres : res && rres)
+                        if (((ro.operand.g == 'any') && res) || ((ro.operand.g != 'any') && !res)) break
+                    }
+                }
+            } catch(all) {
+                error "Error calling comparison $fn: $all"
+                res = false
+            }            
+            result = (lo.operand.g == 'any' ? result || res : result && res)
+            if (options?.matches && value.d) {
+            	if (res) {
+                	options.devices.matched.push(value.d)
+                } else {
+                	options.devices.unmatched.push(value.d)
+                }
+            }
+            if ((lo.operand.g == 'any') && res && !(options?.matches)) {
+            	//logical OR if we're using the ANY keyword
+            	break;
+            }
+            if ((lo.operand.g == 'all') && !result && !(options?.matches)) {
+            	//logical AND if we're using the ALL keyword
+            	break;
+            }
+        }
+        return result
+}
+
+
+//comparison low level functions
+private boolean comp_is								(rtData, lv, rv = null, rv2 = null) { return cast(lv.v, 'string') == cast(rv.v, 'string') }
+private boolean comp_is_not							(rtData, lv, rv = null, rv2 = null) { return cast(lv.v, 'string') != cast(rv.v, 'string') }
+private boolean comp_is_equal_to					(rtData, lv, rv = null, rv2 = null) { return cast(lv.v, 'decimal') == cast(rv.v, 'decimal') }
+private boolean comp_is_not_equal_to				(rtData, lv, rv = null, rv2 = null) { return cast(lv.v, 'decimal') != cast(rv.v, 'decimal') }
+private boolean comp_is_different_than				(rtData, lv, rv = null, rv2 = null) { return cast(lv.v, 'decimal') != cast(rv.v, 'decimal') }
+private boolean comp_is_less_than					(rtData, lv, rv = null, rv2 = null) { return cast(lv.v, 'decimal') < cast(rv.v, 'decimal') }
+private boolean comp_is_less_than_or_equal_to		(rtData, lv, rv = null, rv2 = null) { return cast(lv.v, 'decimal') <= cast(rv.v, 'decimal') }
+private boolean comp_is_greater_than				(rtData, lv, rv = null, rv2 = null) { return cast(lv.v, 'decimal') > cast(rv.v, 'decimal') }
+private boolean comp_is_greater_than_or_equal_to	(rtData, lv, rv = null, rv2 = null) { return cast(lv.v, 'decimal') >= cast(rv.v, 'decimal') }
+private boolean comp_is_even						(rtData, lv, rv = null, rv2 = null) { return cast(lv.v, 'integer').mod(2) == 0 }
+private boolean comp_is_odd							(rtData, lv, rv = null, rv2 = null) { return cast(lv.v, 'integer').mod(2) != 0 }
+private boolean comp_is_true						(rtData, lv, rv = null, rv2 = null) { return !!cast(lv.v, 'boolean') }
+private boolean comp_is_false						(rtData, lv, rv = null, rv2 = null) { return !cast(lv.v, 'boolean') }
+private boolean comp_is_inside_range				(rtData, lv, rv = null, rv2 = null) { def v = cast(lv.v, 'decimal'); def v1 = cast(rv.v, 'decimal'); def v2 = cast(rv2.v, 'decimal'); return (v1 < v2) ? ((v >= v1) && (v <= v2)) : ((v >= v2) && (v <= v1)); }
+private boolean comp_is_outside_range				(rtData, lv, rv = null, rv2 = null) { return !comp_is_inside_range(rtData, lv, rv, rv2) }
+
+private boolean comp_changed(rtData, lv, rv = null, rv2 = null) {
+	return true
+}
+
+
+private traverseStatements(node, closure, parentNode = null) {
+    if (!node) return
+	//if a statements element, go through each item
+	if (node instanceof List) {
+    	for(item in node) {
+	    	traverseStatements(item, closure, parentNode)
+	    }
+        return
+	}
+    //got a statement, pass it on to the closure
+    if (closure instanceof Closure) {
+    	closure(node, parentNode)
+    }
+    //if the statements has substatements, go through them
+    if (node.s instanceof List) {
+    	traverseStatements(node.s, closure, node)
+    }
+}
+
+private traverseConditions(node, closure, parentNode = null) {
+    if (!node) return
+	//if a statements element, go through each item
+	if (node instanceof List) {
+    	for(item in node) {
+	    	traverseConditions(item, closure, parentNode)
+	    }
+        return
+	}
+    //got a statement, pass it on to the closure
+    if (closure instanceof Closure) {
+    	closure(node, parentNode)
+    }
+    //if the statements has substatements, go through them
+    if (node.c instanceof List) {
+    	traverseConditions(node.c, closure, node)
+    }
+}
+
+private traverseExpressions(node, closure, parentNode = null) {
+    if (!node) return
+	//if a statements element, go through each item
+	if (node instanceof List) {
+    	for(item in node) {
+	    	traverseExpressions(item, closure, parentNode)
+	    }
+        return
+	}
+    //got a statement, pass it on to the closure
+    if (closure instanceof Closure) {
+    	closure(node, parentNode)
+    }
+    //if the statements has substatements, go through them
+    if (node.i instanceof List) {
+    	traverseExpressions(node.i, closure, node)
+    }
+}
+
+private void subscribeAll() {
+	unsubscribe()
+	def rtData = getRunTimeData()
+    Map subscriptions = [:]
+    def count = 0
+    //traverse all statements
+    traverseStatements(rtData.piston.s, { node, parentNode ->
+        if (node.t in ['if', 'switch', 'while', 'repeat']) {
+        	traverseConditions(node.c?:[] + node.ei?:[], { condition, parentCondition ->
+                def comparison = rtData.comparisons.conditions[condition.co]
+                def comparisonType = 'condition'
+                if (!comparison) {
+                	comparisonType = 'trigger'
+                	comparison = rtData.comparisons.triggers[condition.co]                	
+                }
+                if (comparison) {
+	                def paramCount = comparison.p ?: 0
+                    for(int i = 0; i <= paramCount; i++) {
+                    	//get the operand to parse
+                    	def operand = (i == 0 ? condition.lo : (i == 1 ? condition.ro : condition.ro2))
+                        switch (operand.t) {
+                        	case "p": //physical device
+                            	for(device in operand.d) {
+                                	subscriptions["$device${operand.a}"] = [d: device, a: operand.a]
+                                }
+                                break;
+							case "c": //constant
+                            case "e": //expression
+                            	traverseExpressions(operand.exp?.i, { expression, parentExpression -> 
+                                	if ((expression.t == 'device') && (expression.id)) {
+	                                	subscriptions["${expression.id}${expression.a}"] = [d: expression.id, a: expression.a]
+                                    }
+                                })
+                                break
+                        }
+                    }
+                }
+            })
+        }
+    })
+    for (subscription in subscriptions) {
+    	def device = getDevice(rtData, subscription.value.d)
+        if (device) subscribe(device, subscription.value.a, handler)
+    }
 }
 
 
@@ -197,116 +529,27 @@ private sanitizeVariableName(name) {
 	name = name ? "$name".trim().replace(" ", "_") : null
 }
 
-def getDevice(rtData, idOrName) {
+private getDevice(rtData, idOrName) {
 	def device = rtData.devices[idOrName] ?: rtData.devices.find{ it.value.name == idOrName }
     return device    
+}
+
+private Map getDeviceAttribute(rtData, deviceId, attributeName) {
+	def device = getDevice(rtData, deviceId)
+    if (device) {
+        def attribute = rtData.attributes[attributeName]
+        if (attribute) {
+            return [t: attribute.t, v: device.currentValue(attributeName), d: deviceId, a: attributeName]
+        } else {
+            return [t: "error", v: "Attribute '${attributeName}' not found"]
+        }
+    }
+    return [t: "error", v: "Device '${deviceId}' not found"]
 }
 
 def getVariable(rtData, name) {
 	name = sanitizeVariableName(name)
 	if (!name) return [t: "error", v: "Invalid empty variable name"]
-    /*
-    if (name.startsWith("\$"))
-		switch (name) {
-			case "\$now": return now()
-			case "\$hour24": return adjustTime().hours
-			case "\$hour":
-				def h = adjustTime().hours
-				return (h == 0 ? 12 : (h > 12 ? h - 12 : h))
-			case "\$meridian":
-				def h = adjustTime().hours
-				return ( h < 12 ? "AM" : "PM")
-			case "\$meridianWithDots":
-				def h = adjustTime().hours
-				return ( h <12 ? "A.M." : "P.M.")
-			case "\$minute": return adjustTime().minutes
-			case "\$second": return adjustTime().seconds
-			case "\$time":
-				def t = adjustTime()
-				def h = t.hours
-				def m = t.minutes
-				return (h == 0 ? 12 : (h > 12 ? h - 12 : h)) + ":" + (m < 10 ? "0$m" : "$m") + " " + (h <12 ? "A.M." : "P.M.")
-			case "\$time24":
-				def t = adjustTime()
-				def h = t.hours
-				def m = t.minutes
-				return h + ":" + (m < 10 ? "0$m" : "$m")
-			case "\$day": return adjustTime().date
-			case "\$dayOfWeek": return getDayOfWeekNumber()
-			case "\$dayOfWeekName": return getDayOfWeekName()
-			case "\$month": return adjustTime().month + 1
-			case "\$monthName": return getMonthName()
-			case "\$year": return adjustTime().year + 1900
-			case "\$now": return now()
-			case "\$random":
-				def result = getRandomValue(name) ?: (float)Math.random()
-				setRandomValue(name, result)
-				return result
-			case "\$randomColor":
-				def result = getRandomValue(name) ?: getColorByName("Random").rgb
-				setRandomValue(name, result)
-				return result
-			case "\$randomColorName":
-				def result = getRandomValue(name) ?: getColorByName("Random").name
-				setRandomValue(name, result)
-				return result
-			case "\$randomLevel":
-				def result = getRandomValue(name) ?: (int)Math.round(100 * Math.random())
-				setRandomValue(name, result)
-				return result
-			case "\$randomHue":
-				def result = getRandomValue(name) ?: (int)Math.round(360 * Math.random())
-				setRandomValue(name, result)
-				return result
-			case "\$randomSaturation":
-				def result = getRandomValue(name) ?: (int)Math.round(50 + (50 * Math.random()))
-				setRandomValue(name, result)
-				return result
-			case "\$midnight":
-				def rightNow = adjustTime().time
-				return convertDateToUnixTime(rightNow - rightNow.mod(86400000))
-			case "\$nextMidnight":
-				def rightNow = adjustTime().time
-				return convertDateToUnixTime(rightNow - rightNow.mod(86400000) + 86400000)
-			case "\$noon":
-				def rightNow = adjustTime().time
-				return convertDateToUnixTime(rightNow - rightNow.mod(86400000) + 43200000)
-			case "\$nextNoon":
-				def rightNow = adjustTime().time
-				if (rightNow - rightNow.mod(86400000) + 43200000 < rightNow) rightNow += 86400000
-				return convertDateToUnixTime(rightNow - rightNow.mod(86400000) + 43200000)
-			case "\$sunrise":
-				def sunrise = getSunrise()
-				def rightNow = adjustTime().time
-				return convertDateToUnixTime(rightNow - rightNow.mod(86400000) + sunrise.hours * 3600000 + sunrise.minutes * 60000)
-			case "\$nextSunrise":
-				def sunrise = getSunrise()
-				def rightNow = adjustTime().time
-				if (sunrise.time < rightNow) rightNow += 86400000
-				return convertDateToUnixTime(rightNow - rightNow.mod(86400000) + sunrise.hours * 3600000 + sunrise.minutes * 60000)
-			case "\$sunset":
-				def sunset = getSunset()
-				def rightNow = adjustTime().time
-				return convertDateToUnixTime(rightNow - rightNow.mod(86400000) + sunset.hours * 3600000 + sunset.minutes * 60000)
-			case "\$nextSunset":
-				def sunset = getSunset()
-				def rightNow = adjustTime().time
-				if (sunset.time < rightNow) rightNow += 86400000
-				return convertDateToUnixTime(rightNow - rightNow.mod(86400000) + sunset.hours * 3600000 + sunset.minutes * 60000)
-			case "\$currentStateDuration":
-				try {
-					return state.systemStore["\$currentStateSince"] ? now() - (new Date(state.systemStore["\$currentStateSince"])).time : null
-				} catch(all) {
-					return null
-				}
-				return null
-			case "\$locationMode":
-				return location.mode
-			case "\$shmStatus":
-				return getAlarmSystemStatus()
-		}
-    */
-    /* end of switch */
 	if (name.startsWith("@")) {
     	def result = rtData.globalVars[name]
         if (!(result instanceof Map)) result = [t: "error", v: "Variable '$name' not found"]
@@ -316,7 +559,7 @@ def getVariable(rtData, name) {
 			def result = rtData.systemVars[name]
             if (!(result instanceof Map)) result = [t: "error", v: "Variable '$name' not found"]
             if (result && result.v instanceof Closure) {
-            	return [t: result.t, v: result.v.call()]
+            	return [t: result.t, v: result.v()]
             }
             return result
 		} else {
@@ -327,11 +570,6 @@ def getVariable(rtData, name) {
 	}
 }
 
-def handler(evt) {
-	Map rtData = parent.getRunTimeData()
-    //todo start execution
-}
-
 
 /******************************************************************************/
 /*** 																		***/
@@ -340,6 +578,7 @@ def handler(evt) {
 /******************************************************************************/
 
 def proxyEvaluateExpression(rtData, expression, dataType = null) {
+	resetRandomValues()
 	return evaluateExpression(getRunTimeData(rtData), expression, dataType)
 }
 private evaluateExpression(rtData, expression, dataType = null) {
@@ -353,6 +592,7 @@ private evaluateExpression(rtData, expression, dataType = null) {
         case "decimal":
         case "boolean":
         case "bool":
+        case "time":
         	result = [t: expression.t, v: cast(expression.v, expression.t)]
         	break
         case "enum":
@@ -366,17 +606,7 @@ private evaluateExpression(rtData, expression, dataType = null) {
         case "device":
         	//get variable as {n: name, t: type, v: value}
             def deviceId = expression.id ?: getVariable(rtData, expression.x)?.v
-        	def device = getDevice(rtData, deviceId)
-            if (device) {
-            	def attribute = rtData.attributes[expression.a]
-                if (attribute) {
-            		result = [t: attribute.t, v: device.currentValue(expression.a)]
-                } else {
-					result = [t: "error", v: "Attribute ${expression.a} not found"]
-                }
-            } else {
-				result = [t: "error", v: "Device ${expression.id ?: expression.x} not found"]
-            }
+            result = getDeviceAttribute(rtData, deviceId, expression.a)
         	break
         case "operand":
         	result = [t: "string", v: cast(expression.v, "string")]
@@ -484,9 +714,9 @@ private evaluateExpression(rtData, expression, dataType = null) {
                 //fix-ups
                 //integer with decimal gives decimal, also *, /, and ^ require decimals
                 if ((o == '*') || (o == '*') || (o == '/') || (o == '-') || (o == '^')) {
-                    if ((t1 != 'number') && (t1 != 'integer') && (t1 != 'decimal') && (t1 != 'float')) t1 = 'decimal'
-                    if ((t2 != 'number') && (t2 != 'integer') && (t2 != 'decimal') && (t2 != 'float')) t2 = 'decimal'
-                    t = 'decimal'
+                    if ((t1 != 'number') && (t1 != 'integer') && (t1 != 'decimal') && (t1 != 'float') && (t1 != 'time')) t1 = 'decimal'
+                    if ((t2 != 'number') && (t2 != 'integer') && (t2 != 'decimal') && (t2 != 'float') && (t2 != 'time')) t2 = 'decimal'
+                    t = (t1 == 'time') || (t2 == 'time') ? 'time' : 'decimal'
                 }
                 if ((o == '&') || (o == '|')) {
                     t1 = 'boolean'
@@ -503,12 +733,12 @@ private evaluateExpression(rtData, expression, dataType = null) {
                     t2 = 'decimal'
                     t = 'decimal'
                 }
-                if ((t1 == 'integer') || (t2 == 'integer')) {
+                if ((t != 'time') && ((t1 == 'integer') || (t2 == 'integer'))) {
                     t1 = 'integer'
                     t2 = 'integer'
                     t = 'integer'
                 }
-                if ((t1 == 'number') || (t2 == 'number') || (t1 == 'decimal') || (t2 == 'decimal') || (t1 == 'float') || (t2 == 'float')) {
+                if ((t != 'time') && ((t1 == 'number') || (t2 == 'number') || (t1 == 'decimal') || (t2 == 'decimal') || (t1 == 'float') || (t2 == 'float'))) {
                     t1 = 'decimal'
                     t2 = 'decimal'
                     t = 'decimal'
@@ -539,7 +769,6 @@ private evaluateExpression(rtData, expression, dataType = null) {
                         v = t == 'string' ? "$v1$v2" : v1 + v2
                     	break
                 }
-                //log.trace "Executing  ($t1) $v1 $o ($t2) $v2 = ($t) $v"
                 //set the results
                 items[idx + 1].t = t
                 items[idx + 1].v = cast(v, t)
@@ -900,6 +1129,40 @@ private func_avg(rtData, params) {
 }
 
 /******************************************************************************/
+/*** least returns the value that is least found a series of numeric values	***/
+/*** Usage: least(values)													***/
+/******************************************************************************/
+private func_least(rtData, params) {
+	if (!params || !(params instanceof List) || (params.size() < 1)) {
+    	return [t: "error", v: "Invalid parameters. Expecting least(values)"];
+    }
+    Map data = [:]
+    for (param in params) {
+    	def value = evaluateExpression(rtData, param)
+    	data[value.v] = [t: value.t, v: value.v, c: (data[value.v]?.c ?: 0) + 1]
+    }
+    def value = data.sort{ it.c }[0]
+    return [t: value.t, v: value.v]
+}
+
+/******************************************************************************/
+/*** most returns the value that is most found a series of numeric values	***/
+/*** Usage: most(values)													***/
+/******************************************************************************/
+private func_most(rtData, params) {
+	if (!params || !(params instanceof List) || (params.size() < 1)) {
+    	return [t: "error", v: "Invalid parameters. Expecting most(values)"];
+    }
+    Map data = [:]
+    for (param in params) {
+    	def value = evaluateExpression(rtData, param)
+    	data[value.v] = [t: value.t, v: value.v, c: (data[value.v]?.c ?: 0) + 1]
+    }
+    def value = data.sort{ - it.c }[0]
+    return [t: value.t, v: value.v]
+}
+
+/******************************************************************************/
 /*** sum calculates the sum of a series of numeric values					***/
 /*** Usage: sum(values)														***/
 /******************************************************************************/
@@ -981,15 +1244,20 @@ private func_max(rtData, params) {
     return [t: "decimal", v: max]
 }
 
+
 /******************************************************************************/
-/*** count calculates the number of items in a series of numeric values		***/
-/*** Usage: max(values)														***/
+/*** count calculates the number of true/non-zero/non-empty items in a series of numeric values		***/
+/*** Usage: count(values)														***/
 /******************************************************************************/
 private func_count(rtData, params) {
 	if (!params || !(params instanceof List) || (params.size() < 1)) {
     	return [t: "error", v: "Invalid parameters. Expecting count(values)"];
     }
-    return [t: "integer", v: params.size()]
+    def count = 0
+    for (param in params) {
+    	count += evaluateExpression(rtData, param, 'boolean').v ? 1 : 0
+    }
+    return [t: "integer", v: count]
 }
 
 /******************************************************************************/
@@ -1037,6 +1305,9 @@ private cast(value, dataType) {
 		case "text":
 			if (value instanceof Boolean) {
 				return value ? "true" : "false"
+			}										
+			if ((value instanceof Long) && (value > 9999999999)) {
+				return formatLocalTime(value)
 			}
 			return "$value"
 		case "integer":
@@ -1109,26 +1380,111 @@ private cast(value, dataType) {
 			}
 			return !!value
 		case "time":
-			return value instanceof String ? adjustTime(value).time : cast(value, "long")
+			return value instanceof String ? utcToLocalDate(value).time : cast(value, "long")
 		case "vector3":
-			return value instanceof String ? adjustTime(value).time : cast(value, "long")
+			return value instanceof String ? utcToLocalDate(value).time : cast(value, "long")
 		case "orientation":
 			return getThreeAxisOrientation(value)
 	}
 	//anything else...
 	return value
 }
+
+private utcToLocalDate(dateOrTimeOrString = null) {
+	if (dateOrTimeOrString instanceof String) {
+		//get UTC time
+		dateOrTimeOrString = timeToday(dateOrTimeOrString, location.timeZone).getTime()
+	}
+	if (dateOrTimeOrString instanceof Date) {
+		//get unix time
+		dateOrTimeOrString = dateOrTimeOrString.getTime()
+	}
+	if (!dateOrTimeOrString) {
+		dateOrTimeOrString = now()
+	}
+	if (dateOrTimeOrString instanceof Long) {
+		return new Date(dateOrTimeOrString + location.timeZone.getOffset(dateOrTimeOrString))
+	}
+	return null
+}
+private localDate() { return utcToLocalDate() }
+
+private utcToLocalTime(dateOrTimeOrString = null) {
+	if (dateOrTimeOrString instanceof String) {
+		//get UTC time
+		dateOrTimeOrString = timeToday(dateOrTimeOrString, location.timeZone).getTime()
+	}
+	if (dateOrTimeOrString instanceof Date) {
+		//get unix time
+		dateOrTimeOrString = dateOrTimeOrString.getTime()
+	}
+	if (!dateOrTimeOrString) {
+		dateOrTimeOrString = now()
+	}
+	if (dateOrTimeOrString instanceof Long) {
+		return dateOrTimeOrString + location.timeZone.getOffset(dateOrTimeOrString)
+	}
+	return null
+}
+private localTime() { return utcToLocalTime() }
+
+private localToUtcDate(dateOrTime) {
+	if (dateOrTime instanceof Date) {
+		//get unix time
+		dateOrTime = dateOrTime.getTime()
+	}
+	if (dateOrTime instanceof Long) {
+		return new Date(dateOrTime - location.timeZone.getOffset(dateOrTime))
+	}
+	return null
+}
+
+private localToUtcTime(dateOrTime) {
+	if (dateOrTime instanceof Date) {
+		//get unix time
+		dateOrTime = dateOrTime.getTime()
+	}
+	if (dateOrTime instanceof Long) {
+		return dateOrTime - location.timeZone.getOffset(dateOrTime)
+	}
+	return null
+}
+
+private formatLocalTime(time, format = "EEE, MMM d yyyy @ h:mm a z") {
+	if (time instanceof Long) {
+		time = new Date(time)
+	}
+	if (time instanceof String) {
+		//get UTC time
+		time = timeToday(time, location.timeZone)
+	}
+    if (!(time instanceof Date)) {
+		return null
+	}
+	def formatter = new java.text.SimpleDateFormat(format)
+	formatter.setTimeZone(location.timeZone)
+	return formatter.format(time)
+}
+
 /******************************************************************************/
 /*** DEBUG FUNCTIONS														***/
 /******************************************************************************/
-private debug(message, cmd = null, shift = null, err = null) {
+private debug(message, shift = null, err = null, cmd = null) {
+    if (cmd == "timer") {
+    	return [m: message, t: now(), s: shift, e: err]
+    }
+    if (message instanceof Map) {
+    	shift = message.s
+        err = message.e
+        message = message.m + " (done in ${now() - message.t}ms)"
+    }
 	def debugging = settings.debugging
 	if (!debugging && (cmd != "error")) {
-		return
+		//return
 	}
 	cmd = cmd ? cmd : "debug"
 	if (!settings["log#$cmd"]) {
-		return
+		//return
 	}
 	//mode is
 	// 0 - initialize level, level set to 1
@@ -1182,15 +1538,60 @@ private debug(message, cmd = null, shift = null, err = null) {
 		log.debug "$prefix$message", err
 	}
 }
+private info(message, shift = null, err = null) { debug message, shift, err, 'info' }
+private trace(message, shift = null, err = null) { debug message, shift, err, 'trace' }
+private warn(message, shift = null, err = null) { debug message, shift, err, 'warn' }
+private error(message, shift = null, err = null) { debug message, shift, err, 'error' }
+private timer(message, shift = null, err = null) { debug message, shift, err, 'timer' }
 
 
 
+private static Map weekDays() {
+	return [
+    	0: "Sunday",
+        1: "Monday",
+        2: "Tuesday",
+        3: "Wednesday",
+        4: "Thursday",
+        5: "Friday",
+        6: "Saturday"
+    ]
+}
 
+private static Map yearMonths() {
+	return [
+    	1: "January",
+        2: "February",
+        3: "March",
+        4: "April",
+        5: "May",
+        6: "June",
+        7: "July",
+        8: "August",
+        9: "September",
+        10: "October",
+        11: "November",
+        12: "December"
+    ]
+}
 
+private getSunrise() {
+	if (!(state.sunrise instanceof Date)) {
+		def sunTimes = getSunriseAndSunset()
+		state.sunrise = utcToLocalDate(sunTimes.sunrise)
+		state.sunset = utcToLocalDate(sunTimes.sunset)
+	}
+	return state.sunrise
+}
 
-
-
-
+private getSunset() {
+	if (!(state.sunset instanceof Date)) {
+		def sunTimes = getSunriseAndSunset()
+		state.sunrise = utcToLocalDate(sunTimes.sunrise)
+		state.sunset = utcToLocalDate(sunTimes.sunset)
+	}
+	return state.sunset
+}
 
 
 
@@ -1205,69 +1606,84 @@ private debug(message, cmd = null, shift = null, err = null) {
 
 private Map getSystemVars() {
 	return [
-		"\$currentEventAttribute": [t: 'string', v: null],
-		"\$currentEventDate": null,
-		"\$currentEventDelay": 0,
-		"\$currentEventDevice": null,
-		"\$currentEventDeviceIndex": 0,
-		"\$currentEventDevicePhysical": false,
-		"\$currentEventReceived": null,
-		"\$currentEventValue": null,
-		"\$currentState": null,
-		"\$currentStateDuration": 0,
-		"\$currentStateSince": null,
-		"\$currentStateSince": null,
-		"\$nextScheduledTime": null,
-		"\$now": [t: 'time', v: {(long) now()}],
-		"\$utc": [t: 'time', v: {(long) now()}],
-		"\$localNow": [t: 'time', v: {(long) now()}],
-		"\$hour": 0,
-		"\$hour24": 0,
-		"\$minute": 0,
-		"\$second": 0,
-		"\$meridian": "",
-		"\$meridianWithDots": "",
-		"\$day": 0,
-		"\$dayOfWeek": 0,
-		"\$dayOfWeekName": "",
-		"\$month": 0,
-		"\$monthName": "",
-		"\$index": 0,
-		"\$year": 0,
-		"\$meridianWithDots": "",
-		"\$previousEventAttribute": null,
-		"\$previousEventDate": null,
-		"\$previousEventDelay": 0,
-		"\$previousEventDevice": null,
-		"\$previousEventDeviceIndex": 0,
-		"\$previousEventDevicePhysical": 0,
+		"\$currentEventAttribute": [t: "string", v: null],
+		"\$currentEventDate": [t: "time", v: null],
+		"\$currentEventDelay": [t: "integer", v: null],
+		"\$currentEventDevice": [t: "device", v: null],
+		"\$currentEventDeviceIndex": [t: "integer", v: null],
+		"\$currentEventDevicePhysical": [t: "boolean", v: null],
+		"\$currentEventReceived": [t: "time", v: null],
+		"\$currentEventValue": [t: "string", v: null],
+		"\$currentState": [t: "string", v: null],
+		"\$currentStateDuration": [t: "string", v: null],
+		"\$currentStateSince": [t: "time", v: null],
+		"\$nextScheduledTime": [t: "time", v: null],
+		"\$now": [t: "time", v: {(long) now()}],
+		"\$utc": [t: "time", v: {(long) now()}],
+		"\$localNow": [t: "time", v: {(long) localTime()}],
+		"\$hour": [t: "integer", v: { def h = localDate().hours; return (h == 0 ? 12 : (h > 12 ? h - 12 : h)) }],
+		"\$hour24": [t: "integer", v: { localDate.hours}],
+		"\$minute": [t: "integer", v: { localDate().minutes }],
+		"\$second": [t: "integer", v: { localDate().seconds }],
+		"\$meridian": [t: "string", v: { def h = localDate().hours; return ( h < 12 ? "AM" : "PM") }],
+		"\$meridianWithDots":  [t: "string", v: { def h = localDate().hours; return ( h < 12 ? "A.M." : "P.M.") }],
+		"\$day": [t: "integer", v: { localDate().date }],
+		"\$dayOfWeek": [t: "integer", v: { localDate().day }],
+		"\$dayOfWeekName": [t: "string", v: { weekDays()[localDate().day] }],
+		"\$month": [t: "integer", v: { localDate().month + 1 }],
+		"\$monthName": [t: "string", v: { yearMonths()[localDate().month + 1] }],
+		"\$index": [t: "integer", v: null],
+		"\$year": [t: "integer", v: { localDate().year + 1900 }],
+		"\$previousEventAttribute": [t: "string", v: null],
+		"\$previousEventDate": [t: "time", v: null],
+		"\$previousEventDelay": [t: "integer", v: null],
+		"\$previousEventDevice": [t: "device", v: null],
+		"\$previousEventDeviceIndex": [t: "integer", v: null],
+		"\$previousEventDevicePhysical": [t: "boolean", v: null],
 		"\$previousEventExecutionTime": 0,
-		"\$previousEventReceived": null,
-		"\$previousEventValue": null,
-		"\$previousState": null,
-		"\$previousStateDuration": 0,
-		"\$previousStateSince": null,
-		"\$random": 0,
-		"\$randomColor": "#FFFFFF",
-		"\$randomColorName": "White",
-		"\$randomLevel": 0,
-		"\$randomSaturation": 0,
-		"\$randomHue": 0,
-		"\$midnight": 999999999999,
-		"\$noon": 999999999999,
-		"\$sunrise": 999999999999,
-		"\$sunset": 999999999999,
-		"\$nextMidnight": 999999999999,
-		"\$nextNoon": 999999999999,
-		"\$nextSunrise": 999999999999,
-		"\$nextSunset": 999999999999,
-		"\$time": "",
-		"\$time24": "",
-		"\$httpStatusCode": 0,
-		"\$httpStatusOk": true,
-		"\$iftttStatusCode": 0,
-		"\$iftttStatusOk": true,
-		"\$locationMode": "",
-		"\$shmStatus": ""
+		"\$previousEventReceived": [t: "time", v: null],
+		"\$previousEventValue": [t: "string", v: null],
+		"\$previousState": [t: "string", v: null],
+		"\$previousStateDuration": [t: "string", v: null],
+		"\$previousStateSince": [t: "time", v: null],
+		"\$random": [t: "decimal", v: { def result = getRandomValue("\$random") ?: (float)Math.random(); setRandomValue("\$random", result); return result }],
+		"\$randomColor": [t: "string", v: { def result = getRandomValue("\$randomColor") ?: colorUtil.RANDOM.rgb; setRandomValue("\$randomColor", result); return result }],
+		"\$randomColorName": [t: "string", v: { def result = getRandomValue("\$randomColorName") ?: colorUtil.RANDOM.name; setRandomValue("\$randomColorName", result); return result }],
+		"\$randomLevel": [t: "integer", v: { def result = getRandomValue("\$randomLevel") ?: (int)Math.round(100 * Math.random()); setRandomValue("\$randomLevel", result); return result }],
+		"\$randomSaturation": [t: "integer", v: { def result = getRandomValue("\$randomSaturation") ?: (int)Math.round(50 + 50 * Math.random()); setRandomValue("\$randomSaturation", result); return result }],
+		"\$randomHue": [t: "integer", v: { def result = getRandomValue("\$randomHue") ?: (int)Math.round(360 * Math.random()); setRandomValue("\$randomHue", result); return result }],
+		"\$midnight": [t: "time", v: { def rightNow = localTime(); return localToUtcTime(rightNow - rightNow.mod(86400000)) }],
+		"\$noon": [t: "time", v: { def rightNow = localTime(); return localToUtcTime(rightNow - rightNow.mod(86400000) + 43200000) }],
+		"\$sunrise": [t: "time", v: { def sunrise = getSunrise(); def rightNow = localTime(); return localToUtcTime(rightNow - rightNow.mod(86400000) + sunrise.hours * 3600000 + sunrise.minutes * 60000) }],
+		"\$sunset": [t: "time", v: { def sunset = getSunset(); def rightNow = localTime(); return localToUtcTime(rightNow - rightNow.mod(86400000) + sunset.hours * 3600000 + sunset.minutes * 60000) }],
+		"\$nextMidnight": [t: "time", v: { def rightNow = localTime(); return localToUtcTime(rightNow - rightNow.mod(86400000) + 86400000) }],
+		"\$nextNoon": [t: "time", v: { def rightNow = localTime(); if (rightNow - rightNow.mod(86400000) + 43200000 < rightNow) rightNow += 86400000; return localToUtcTime(rightNow - rightNow.mod(86400000) + 43200000) }],
+		"\$nextSunrise": [t: "time", v: { def sunrise = getSunrise(); def rightNow = localTime(); if (sunrise.time < rightNow) rightNow += 86400000; return localToUtcTime(rightNow - rightNow.mod(86400000) + sunrise.hours * 3600000 + sunrise.minutes * 60000)}],
+		"\$nextSunset": [t: "time", v: { def sunset = getSunset(); def rightNow = localTime(); if (sunset.time < rightNow) rightNow += 86400000; return localToUtcTime(rightNow - rightNow.mod(86400000) + sunset.hours * 3600000 + sunset.minutes * 60000)}],
+		"\$time": [t: "string", v: { def t = localDate(); def h = t.hours; def m = t.minutes; return (h == 0 ? 12 : (h > 12 ? h - 12 : h)) + ":" + (m < 10 ? "0$m" : "$m") + " " + (h <12 ? "A.M." : "P.M.") }],
+		"\$time24": [t: "string", v: { def t = localDate(); def h = t.hours; def m = t.minutes; return h + ":" + (m < 10 ? "0$m" : "$m") }],
+		"\$httpStatusCode": [t: "integer", v: null],
+		"\$httpStatusOk": [t: "boolean", v: null],
+		"\$iftttStatusCode": [t: "integer", v: null], 
+		"\$iftttStatusOk": [t: "boolean", v: null],
+		"\$locationMode": [t: "string", v: { return location.mode }],
+		"\$shmStatus": [t: "string", v: { return location.mode }]
 	]
+}
+
+private getRandomValue(name) {
+	state.temp = state.temp ?: [:]
+	state.temp.randoms = state.temp.randoms ?: [:]
+	return state.temp?.randoms[name]
+}
+
+private void setRandomValue(name, value) {
+	state.temp = state.temp ?: [:]
+	state.temp.randoms = state.temp.randoms ?: [:]
+	state.temp.randoms[name] = value
+}
+
+private void resetRandomValues() {
+	state.temp = state.temp ?: [:]
+	state.temp.randoms = [:]
 }

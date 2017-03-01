@@ -20,8 +20,9 @@
  */
 
 def handle() { return "CoRE (SE)" }
-def version() {	return "v0.0.020.20170228" }
+def version() {	return "v0.0.021.20170301" }
 /*
+ *	03/01/2016 >>> v0.0.021.20170301 - ALPHA - Most conditions (and no triggers yet) are now parsed and evaluated during events - action tasks not yet executed, but getting close, very close
  *	02/28/2016 >>> v0.0.020.20170228 - ALPHA - Added runtime data - pistons are now aware of devices and global variables - expressions can query devices and variables (though not all system variables are ready yet)
  *	02/27/2016 >>> v0.0.01f.20170227 - ALPHA - Added support for a bunch more functions
  *	02/27/2016 >>> v0.0.01e.20170227 - ALPHA - Fixed a bug in expression parser where integer + integer would result in a string
@@ -726,6 +727,7 @@ public Map getRunTimeData() {
 	Map result = [
     	attributes: attributes(),
         commands: commands(),
+        comparisons: comparisons(),
     	devices: listAvailableDevices(true),
         globalVars: listAvailableVariables()
     ]
