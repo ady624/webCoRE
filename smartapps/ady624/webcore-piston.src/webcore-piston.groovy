@@ -14,8 +14,9 @@
  *
 */
 
-def version() {	return "v0.0.021.20170301" }
+def version() {	return "v0.0.022.20170305" }
 /*
+ *	03/05/2016 >>> v0.0.022.20170305 - ALPHA - Some tasks are now executed. UI has an issue with initializing params on editing a task, will get fixed soon.
  *	03/01/2016 >>> v0.0.021.20170301 - ALPHA - Most conditions (and no triggers yet) are now parsed and evaluated during events - action tasks not yet executed, but getting close, very close
  *	02/28/2016 >>> v0.0.020.20170228 - ALPHA - Added runtime data - pistons are now aware of devices and global variables - expressions can query devices and variables (though not all system variables are ready yet)
  *	02/27/2016 >>> v0.0.01f.20170227 - ALPHA - Added support for a bunch more functions
@@ -145,7 +146,8 @@ def get() {
     piston.build = state.build
     piston.bin = state.bin
     piston.active = state.active
-    piston.v = state.vars
+    piston.vars = state.vars
+    piston.stats = state.stats
     return piston
 }
 
@@ -178,16 +180,21 @@ def config(data) {
 }
 
 def pause() {
+	def msg = timer "Piston pause complete", -1
+    trace "Pausing piston", 0
 	state.active = false;
     unsubscribe()
-    info "Pausing piston..."
+    trace msg
 }
 
 def resume() {
+	def msg = timer "Piston resume complete", -1
+    trace "Resuming piston", 0
 	state.active = true;
     //we need to subscribe
-    info "Initializing piston..."
+    trace "Initializing piston..."
     subscribeAll()
+    trace msg
 }
 
 def execute() {
@@ -199,6 +206,7 @@ private getRunTimeData(rtData = null) {
     rtData.piston = state.piston
     rtData.localVars = state.vars ?: [:]
     rtData.systemVars = getSystemVars()
+    rtData.stats = [:]
     return rtData
 }
 
@@ -208,14 +216,37 @@ private getRunTimeData(rtData = null) {
 /*** 																		***/
 /******************************************************************************/
 def handler(event) {
-	def msg = timer "Received event ${event.name} from device ${event.device} with value ${event.value} with a delay of ${now() - event.date.getTime()}ms"
+	def startTime = now()
+    def eventDelay = startTime - event.date.getTime()
+	def msg = timer "Event processed successfuly", -1
+    trace "Received event ${event.name} from device ${event.device} with value ${event.value} with a delay of ${eventDelay}ms", 0
     state.temp = [:]
     //todo start execution
+	def msg2 = timer "Load stage complete."
     Map rtData = getRunTimeData()
-	def msg2 = timer "Executing piston..."
+    trace msg2
+    rtData.stats.timing = [
+    	t: startTime,
+    	d: eventDelay,
+        l: now() - startTime
+    ]
+    startTime = now()
+	msg2 = timer "Execution stage complete.", -1
+    trace "Execution stage started", 1
     handleEvent(rtData, event)
+	rtData.stats.timing.e = now() - startTime
     trace msg2
     trace msg
+	startTime = now()
+	parent.updateRunTimeData(rtData)
+    rtData.stats.timing.u = now() - startTime
+    def stats = state.stats ?: [:]
+    stats.timing = stats.timing ?: []
+    stats.timing.push(rtData.stats.timing)
+    if (stats.timing.size() > 500) {
+    	stats.timing.remove(stats.timing[0]);
+    }
+    state.stats = stats
 }
 
 private handleEvent(rtData, event) {
@@ -245,7 +276,6 @@ private Boolean evaluateStatement(rtData, statement) {
         case 'while':
     		//check conditions for if and while
         	def perform = evaluateConditions(rtData, statement)
-            log.trace "Condition group evaluated as $perform"
         	if (perform) {
 	        	if (!evaluateStatements(rtData, statement.s)) {
 	            	//stop processing
@@ -273,24 +303,119 @@ private Boolean evaluateStatement(rtData, statement) {
     	    }
 			break
 		case 'action':
-        	log.trace "Executing action statement"
+        	def result = executeAction(rtData, statement)
+            if ((statement.a != '1') && !result) {
+            	//non-async action requests thread termination
+            	return false
+            }
         	break
     }
 }
 
 
+private Boolean executeAction(rtData, statement) {
+	def devices = []
+    for (d in statement.d) {
+    	def device = getDevice(rtData, d)
+        if (device) {
+        	devices.push(device)
+        }
+    }
+    if (devices.size()) {
+        for (task in statement.k) {
+        	def result = executeTask(rtData, devices, task)
+        }
+    }
+    return true
+}
+
+private Boolean executeTask(rtData, devices, task) {
+	//def cmd = rtData.commands.physical[task.c]
+    //parse parameters
+    def params = []
+    for (param in task.p) {
+		params.push evaluateExpression(rtData, param)
+    }
+ 	def vcmd = rtData.commands.virtual[task.c]
+    for (device in devices) {
+        if (device.hasCommand(task.c)) {
+        	def msg = timer "Executed [$device].${task.c}"
+        	try {
+            	"cmd_${task.c}"(device, params)
+            } catch(all) {
+	            device."${task.c}"(params*.v as Object[])
+			}
+            trace msg
+        } else {
+            if (vcmd) {
+	        	def result = executeVirtualCommand(rtData, vcmd.a ? devices : device, task, params)
+                if (!result || vcmd.a) {
+                	return result
+                }
+            }
+        }
+    }
+    
+    return true
+}
+
+private void cmd_setLevel(device, params) {
+	def level = params[0].v
+    def state = params.size() > 1 ? params[1].v : ""
+    def delay = params.size() > 2 ? params[2].v : 0
+    if (state.size() && (device.currentValue('switch') != state)) {
+        return
+    }
+    device.setLevel(level, [delay: delay ?: 0])
+}
+
+private Boolean executeVirtualCommand(rtData, devices, task, params) {
+   	def msg = timer "Executed virtual command ${devices instanceof List ? "$devices" : "[$devices]"}.${task.c}"
+    try {
+	    long delay = "vcmd_${task.c}"(devices, params)
+        if (delay > 5000) {
+        	//schedule a wake up
+	        trace msg
+        	return false
+        } else {
+        	pause(delay)
+        }
+    } catch(all) {
+    	error all
+    }
+    trace msg
+    return true
+}
+
+private long vcmd_wait(device, params) {
+	return params[0].v
+}
+
+private long vcmd_waitRandom(device, params) {
+	def min = params[0].v
+    def max = params[1].v
+    if (max < min) {
+    	def v = max
+        max = min
+        min = v
+    }
+	return min + (int)Math.round((max - min) * Math.random())
+}
+
 private Boolean evaluateConditions(rtData, conditions) {
-	def grouping = conditions.g
-    def value = (grouping == 'any' ? false : true)
+	def grouping = conditions.o
+    def not = !!conditions.n
+    def value = (grouping == 'or' ? false : true)
 	for(condition in conditions.c) {
     	def res = evaluateCondition(rtData, condition)
-        value = (grouping == 'any') ? value || res : value && res
-        if (value == (grouping == 'any') ? true : false) return value
+        value = (grouping == 'or') ? value || res : value && res
+        if (value == (grouping == 'or') ? true : false) return (not ? !value : !!value)
     }
-    return value
+    return (not ? !value : !!value)
 }
 
 private Boolean evaluateCondition(rtData, condition) {
+    def not = !!condition.n
     def comparison = rtData.comparisons.conditions[condition.co] ?: rtData.comparisons.triggers[condition.co]
     if (comparison) {
         def paramCount = comparison.p ?: 0
@@ -336,8 +461,7 @@ private Boolean evaluateCondition(rtData, condition) {
         //we now have all the operands, their values, and the comparison, let's get to work
         def options = [smatches: true]
         def result = evaluateComparison(rtData, condition.co, lo, ro, ro2, options)
-        log.trace "Evaluation of ${condition.co} yielded $result"
-        return result
+        return not ? !result : !!result
     }    
     return false
 }
@@ -479,10 +603,13 @@ private traverseExpressions(node, closure, parentNode = null) {
 }
 
 private void subscribeAll() {
+	def msg = timer "Finished subscribing", -1
+    trace "Subscribing to devices...", 1
 	unsubscribe()
 	def rtData = getRunTimeData()
     Map subscriptions = [:]
     def count = 0
+    def hasTriggers = false
     //traverse all statements
     traverseStatements(rtData.piston.s, { node, parentNode ->
         if (node.t in ['if', 'switch', 'while', 'repeat']) {
@@ -490,6 +617,7 @@ private void subscribeAll() {
                 def comparison = rtData.comparisons.conditions[condition.co]
                 def comparisonType = 'condition'
                 if (!comparison) {
+                    hasTriggers = true
                 	comparisonType = 'trigger'
                 	comparison = rtData.comparisons.triggers[condition.co]                	
                 }
@@ -501,14 +629,14 @@ private void subscribeAll() {
                         switch (operand.t) {
                         	case "p": //physical device
                             	for(device in operand.d) {
-                                	subscriptions["$device${operand.a}"] = [d: device, a: operand.a]
+                                	subscriptions["$device${operand.a}"] = [d: device, a: operand.a, t: comparisonType, c: condition]
                                 }
                                 break;
 							case "c": //constant
                             case "e": //expression
                             	traverseExpressions(operand.exp?.i, { expression, parentExpression -> 
                                 	if ((expression.t == 'device') && (expression.id)) {
-	                                	subscriptions["${expression.id}${expression.a}"] = [d: expression.id, a: expression.a]
+	                                	subscriptions["${expression.id}${expression.a}"] = [d: expression.id, a: expression.a, t: comparisonType, c: condition]
                                     }
                                 })
                                 break
@@ -518,10 +646,19 @@ private void subscribeAll() {
             })
         }
     })
+    //trace subscriptions
     for (subscription in subscriptions) {
-    	def device = getDevice(rtData, subscription.value.d)
-        if (device) subscribe(device, subscription.value.a, handler)
+    	subscription.value.c.s = false
+    	if ((subscription.value.t == "trigger") || (subscription.value.c.sm == "always") || (!hasTriggers && (subscription.value.c.sm != "never"))) {
+	    	def device = getDevice(rtData, subscription.value.d)
+    	    if (device) {
+        		trace "Subscribing to $device.${subscription.value.a}..."
+		    	subscription.value.c.s = true
+        		subscribe(device, subscription.value.a, handler)
+			}
+        }
     }
+    trace msg
 }
 
 
@@ -591,13 +728,34 @@ private evaluateExpression(rtData, expression, dataType = null) {
         case "integer":
         case "decimal":
         case "boolean":
-        case "bool":
         case "time":
         	result = [t: expression.t, v: cast(expression.v, expression.t)]
         	break
+        case "bool":
+        	result = [t: "boolean", v: cast(expression.v, "boolean")]
+        	break
+        case "number":
+        case "float":
+        	result = [t: "decimal", v: cast(expression.v, "decimal")]
+        	break
         case "enum":
         case "error":
+        case "text":
         	result = [t: "string", v: cast(expression.v, "string")]
+        	break
+        case "duration":
+        	def multiplier = 1
+            switch (expression.vt) {
+            	case 'ms': multiplier = 1; break;
+            	case 's': multiplier = 1000; break;
+            	case 'm': multiplier = 60000; break;
+            	case 'h': multiplier = 3600000; break;
+            	case 'd': multiplier = 86400000; break;
+            	case 'w': multiplier = 604800000; break;
+            	case 'n': multiplier = 2592000000; break;
+            	case 'y': multiplier = 31536000000; break;
+            }
+        	result = [t: "long", v: cast(expression.v * multiplier, "long")]
         	break
         case "variable":
         	//get variable as {n: name, t: type, v: value}
@@ -1495,48 +1653,31 @@ private debug(message, shift = null, err = null, cmd = null) {
 	def level = state.debugLevel ? state.debugLevel : 0
 	def levelDelta = 0
 	def prefix = "║"
-	def pad = "░"
+	def pad = "" //"░"
 	switch (shift) {
 		case 0:
 			level = 0
-			prefix = ""
-			break
 		case 1:
 			level += 1
 			prefix = "╚"
 			pad = "═"
 			break
 		case -1:
-			levelDelta = -(level > 0 ? 1 : 0)
+        	level -= 1
+			//levelDelta = -(level > 0 ? 1 : 0)
 			pad = "═"
 			prefix = "╔"
 		break
 	}
 
 	if (level > 0) {
-		prefix = prefix.padLeft(level, "║").padRight(maxLevel, pad)
-	}
+		prefix = prefix.padLeft(level + (shift == -1 ? 1 : 0), "║") //+ pad //padRight(maxLevel, pad)
+    }
 
-	level += levelDelta
+	//level += levelDelta
 	state.debugLevel = level
 
-	if (debugging) {
-		prefix += " "
-	} else {
-		prefix = ""
-	}
-
-	if (cmd == "info") {
-		log.info "$prefix$message", err
-	} else if (cmd == "trace") {
-		log.trace "$prefix$message", err
-	} else if (cmd == "warn") {
-		log.warn "$prefix$message", err
-	} else if (cmd == "error") {
-		log.error "$prefix$message", err
-	} else {
-		log.debug "$prefix$message", err
-	}
+	log."$cmd" "$prefix $message", err
 }
 private info(message, shift = null, err = null) { debug message, shift, err, 'info' }
 private trace(message, shift = null, err = null) { debug message, shift, err, 'trace' }

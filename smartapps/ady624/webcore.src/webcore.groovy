@@ -20,8 +20,9 @@
  */
 
 def handle() { return "CoRE (SE)" }
-def version() {	return "v0.0.021.20170301" }
+def version() {	return "v0.0.022.20170305" }
 /*
+ *	03/05/2016 >>> v0.0.022.20170305 - ALPHA - Some tasks are now executed. UI has an issue with initializing params on editing a task, will get fixed soon.
  *	03/01/2016 >>> v0.0.021.20170301 - ALPHA - Most conditions (and no triggers yet) are now parsed and evaluated during events - action tasks not yet executed, but getting close, very close
  *	02/28/2016 >>> v0.0.020.20170228 - ALPHA - Added runtime data - pistons are now aware of devices and global variables - expressions can query devices and variables (though not all system variables are ready yet)
  *	02/27/2016 >>> v0.0.01f.20170227 - ALPHA - Added support for a bunch more functions
@@ -727,6 +728,10 @@ public Map getRunTimeData() {
 	Map result = [
     	attributes: attributes(),
         commands: commands(),
+		commands: [
+        	physical: commands(),
+			virtual: virtualCommands()
+		],
         comparisons: comparisons(),
     	devices: listAvailableDevices(true),
         globalVars: listAvailableVariables()
@@ -735,7 +740,7 @@ public Map getRunTimeData() {
     return result
 }
 
-public void processRunTimeData(data) {
+public void updateRunTimeData(data) {
 	List events = []
 	Map vars = atomicState.vars ?: [:]
     def modified = false
@@ -976,7 +981,7 @@ private Map attributes() {
 		carbonDioxide				: [ n: "carbon dioxide",		t: "decimal",	r: [0, null],																						],
 		carbonMonoxide				: [ n: "carbon monoxide",		t: "enum",		o: ["clear", "detected", "tested"],																	],
 		color						: [ n: "color",					t: "color",																											],
-		colorTemperature			: [ n: "color temperature",		t: "number",	r: [1000, 30000],	u: "°K",																		],
+		colorTemperature			: [ n: "color temperature",		t: "integer",	r: [1000, 30000],	u: "°K",																		],
 		consumableStatus			: [ n: "consumable status",		t: "enum",		o: ["good", "maintenance_required", "missing", "order", "replace"],									],
 		contact						: [ n: "contact",				t: "enum",		o: ["closed", "open"],																				],
 		coolingSetpoint				: [ n: "cooling setpoint",		t: "decimal",	r: [-127, 127],		u: temperatureUnit(),															],
@@ -984,19 +989,19 @@ private Map attributes() {
 		door						: [ n: "door",					t: "enum",		o: ["closed", "closing", "open", "opening", "unknown"],					i: true,					],
 		energy						: [ n: "energy",				t: "decimal",	r: [0, null],		u: "kWh",																		],
 		eta							: [ n: "ETA",					t: "datetime",																										],
-		goal						: [ n: "goal",					t: "number",	r: [0, null],																						],
+		goal						: [ n: "goal",					t: "integer",	r: [0, null],																						],
 		heatingSetpoint				: [ n: "heating setpoint",		t: "decimal",	r: [-127, 127],		u: temperatureUnit(),															],
 		hex							: [ n: "hexadecimal code",		t: "hexcolor",																										],
 		holdableButton				: [ n: "holdable button",		t: "enum",		o: ["held", "pushed"],								c: "holdableButton",			m: true,		],
-		hue							: [ n: "hue",					t: "number",	r: [0, 360],		u: "°",																			],
-		humidity					: [ n: "relative humidity",		t: "number",	r: [0, 100],		u: "%",																			],
-		illuminance					: [ n: "illuminance",			t: "number",	r: [0, null],		u: "lux",																		],
+		hue							: [ n: "hue",					t: "integer",	r: [0, 360],		u: "°",																			],
+		humidity					: [ n: "relative humidity",		t: "integer",	r: [0, 100],		u: "%",																			],
+		illuminance					: [ n: "illuminance",			t: "integer",	r: [0, null],		u: "lux",																		],
 		image						: [ n: "image",					t: "image",																											],
 		indicatorStatus				: [ n: "indicator status",		t: "enum",		o: ["never", "when off", "when on"],																],
-		infraredLevel				: [ n: "infrared level",		t: "number",	r: [0, 100],		u: "%",																			],
-		level						: [ n: "level",					t: "number",	r: [0, 100],		u: "%",																			],
+		infraredLevel				: [ n: "infrared level",		t: "integer",	r: [0, 100],		u: "%",																			],
+		level						: [ n: "level",					t: "integer",	r: [0, 100],		u: "%",																			],
 		lock						: [ n: "lock",					t: "enum",		o: ["locked", "unknown", "unlocked", "unlocked with timeout"],	c: "lock",			 i: true,		],
-		lqi							: [ n: "link quality",			t: "number",	r: [0, 255],																						],
+		lqi							: [ n: "link quality",			t: "integer",	r: [0, 255],																						],
 		motion						: [ n: "motion",				t: "enum",		o: ["active", "inactive"],																			],
 		mute						: [ n: "mute",					t: "enum",		o: ["muted", "unmuted"],																			],
 		orientation					: [ n: "orientation",			t: "enum",		o: threeAxisOrientations(),	s: "threeAxis",															],
@@ -1005,15 +1010,15 @@ private Map attributes() {
 		power						: [ n: "power",					t: "decimal",	r: [0, null],		u: "W",																			],
 		powerSource					: [ n: "power source",			t: "enum",		o: ["battery", "dc", "mains", "unknown"],															],
 		presence					: [ n: "presence",				t: "enum",		o: ["not present", "present"],																		],
-		rssi						: [ n: "signal strength",		t: "number",	r: [0, 100],		u: "%",																			],
-		saturation					: [ n: "saturation",			t: "number",	r: [0, 100],		u: "%",																			],
+		rssi						: [ n: "signal strength",		t: "integer",	r: [0, 100],		u: "%",																			],
+		saturation					: [ n: "saturation",			t: "integer",	r: [0, 100],		u: "%",																			],
 		schedule					: [ n: "schedule",				t: "object",																										],
 		sessionStatus				: [ n: "session status",		t: "enum",		o: ["canceled", "paused", "running", "stopped"],													],
 		shock						: [ n: "shock",					t: "enum",		o: ["clear", "detected"],																			],
 		sleeping					: [ n: "sleeping",				t: "enum",		o: ["not sleeping", "sleeping"],																	],
 		smoke						: [ n: "smoke",					t: "enum",		o: ["clear", "detected", "tested"],																	],
 		sound						: [ n: "sound",					t: "enum",		o: ["detected", "not detected"],																	],
-		soundPressureLevel			: [ n: "sound pressure level",	t: "number",	r: [0, null],		u: "dB",																		],
+		soundPressureLevel			: [ n: "sound pressure level",	t: "integer",	r: [0, null],		u: "dB",																		],
 		status						: [ n: "status",				t: "string",																										],
 		steps						: [ n: "steps",					t: "number",	r: [0, null],																						],
 		switch						: [ n: "switch",				t: "enum",		o: ["off", "on"],														i: true,					],
@@ -1024,11 +1029,11 @@ private Map attributes() {
 		thermostatOperatingState	: [ n: "operating state",		t: "enum",		o: ["cooling", "fan only", "heating", "idle", "pending cool", "pending heat", "vent economizer"],	],
 		thermostatSetpoint			: [ n: "setpoint",				t: "decimal",	r: [-127, 127],		u: temperatureUnit(),															],
 		threeAxis					: [ n: "vector",				t: "vector3",																										],
-		timeRemaining				: [ n: "time remaining",		t: "number",	r: [0, null],		u: "s",																			],
+		timeRemaining				: [ n: "time remaining",		t: "integer",	r: [0, null],		u: "s",																			],
 		touch						: [ n: "touch",					t: "enum",		o: ["touched"],																						],
 		trackData					: [ n: "track data",			t: "object",																										],
 		trackDescription			: [ n: "track description",		t: "string",																										],
-		ultravioletIndex			: [ n: "UV index",				t: "number",	r: [0, null],																						],
+		ultravioletIndex			: [ n: "UV index",				t: "integer",	r: [0, null],																						],
 		valve						: [ n: "valve",					t: "enum",		o: ["closed", "open"],																				],
 		voltage						: [ n: "voltage",				t: "decimal",	r: [null, null],	u: "V",																			],
 		water						: [ n: "water",					t: "enum",		o: ["dry", "wet"],																					],
@@ -1158,10 +1163,10 @@ private static Map commands() {
 
 private virtualCommands() {
 	return [
-		wait			: [	n: "Wait...", d: "Wait {0}",											p: [[n:"Duration", t:"duration"]],				],
-		waitRandom		: [ n: "Wait randomly...",	d: "Wait randomly between {0} and {1}",			p: [[n:"At least", t:"duration"],[n:"At most", t:"duration"]],	],
+		wait			: [	n: "Wait...", 					a: true,	d: "Wait {0}",											p: [[n:"Duration", t:"duration"]],				],
+		waitRandom		: [ n: "Wait randomly...",			a: true,	d: "Wait randomly between {0} and {1}",			p: [[n:"At least", t:"duration"],[n:"At most", t:"duration"]],	],
 		toggle			: [ n: "Toggle", r: ["on", "off"], 					],
-		toggleLevel		: [ n: "Toggle level...", 		d: "Toggle level between 0% and {0}%",	r: ["on", "off", "setLevel"],					p: [[n:"Level", t:"level"]],																																	],
+		toggleLevel		: [ n: "Toggle level...", 			d: "Toggle level between 0% and {0}%",	r: ["on", "off", "setLevel"],					p: [[n:"Level", t:"level"]],																																	],
 
 
 /*		[ n: "waitState",											d: "Wait for piston state change",	p: ["Change to:enum[any,false,true]"],															i: true,	l: true,						dd: "Wait for {0} state"],
