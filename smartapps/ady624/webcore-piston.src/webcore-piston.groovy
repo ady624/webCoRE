@@ -14,8 +14,9 @@
  *
 */
 
-def version() {	return "v0.0.022.20170305" }
+def version() {	return "v0.0.023.20170306" }
 /*
+ *	03/06/2016 >>> v0.0.023.20170306 - ALPHA - Added logs to the dashboard
  *	03/05/2016 >>> v0.0.022.20170305 - ALPHA - Some tasks are now executed. UI has an issue with initializing params on editing a task, will get fixed soon.
  *	03/01/2016 >>> v0.0.021.20170301 - ALPHA - Most conditions (and no triggers yet) are now parsed and evaluated during events - action tasks not yet executed, but getting close, very close
  *	02/28/2016 >>> v0.0.020.20170228 - ALPHA - Added runtime data - pistons are now aware of devices and global variables - expressions can query devices and variables (though not all system variables are ready yet)
@@ -137,35 +138,72 @@ def initialize() {
 }
 
 def get() {
-	def piston = state.piston ?: [:]
-    piston.id = hashId(app.id);
-    piston.author = state.author;
-    piston.name = app.label ?: app.name
-    piston.created = state.created
-    piston.modified = state.modified
-    piston.build = state.build
-    piston.bin = state.bin
-    piston.active = state.active
-    piston.vars = state.vars
-    piston.stats = state.stats
-    return piston
+	return [
+    	meta: [
+			id: hashId(app.id),
+    		author: state.author,
+    		name: app.label ?: app.name,
+    		created: state.created,
+	    	modified: state.modified,
+	    	build: state.build,
+	    	bin: state.bin,
+	    	active: state.active
+		],
+        piston: state.piston,
+	    vars: state.vars,
+	    stats: state.stats,
+        logs: state.logs
+    ]
 }
 
-def set(piston) {
+def set(data) {
+	if (!data) return false
 	state.modified = now()
     state.build = (int)(state.build ? (int)state.build + 1 : 1)
-    state.piston = piston ?[
-    	r: piston.r ?: [],
-        rn: !!piston.rn,
-        ro: piston.ro ?: 'and',
-    	s: piston.s ?: [],
-    ] : [:]
+    def piston = [
+    	r: data.r ?: [],
+    	rn: !!data.rn,
+		ro: data.ro ?: 'and',
+		s: data.s ?: [],
+        v: data.v ?: [],
+        z: data.z ?: []
+    ]
+    setIds(piston)
+    state.piston = piston
+    //todo replace this
     state.vars = piston ? (piston.v ?: [:]) : [:]
     if ((state.build == 1) || (!!state.active)) {
     	resume()
     }
     return [active: state.active, build: state.build, modified: state.modified]
 }
+
+
+private setIds(node, maxId = 0, existingIds = [:], requiringIds = [], level = 0) {
+    if (node?.t in ['if', 'while', 'repeat', 'for', 'switch', 'action', 'condition', 'restriction', 'group']) {
+    	log.debug node
+        def id = node.$
+        if (!id || existingIds[id]) {
+            requiringIds.push(node)
+        } else {
+            maxId = maxId < id ? id : maxId
+            existingIds[id] = id
+        }
+    }
+	for (list in node.findAll{ it.value instanceof List }) { 
+        for (item in list.value.findAll{ it instanceof Map }) {
+            setIds(item, maxId, existingIds, requiringIds, level + 1)
+        }
+    }
+    if (level == 0) {
+    	for (item in requiringIds) {
+        	maxId += 1
+        	item.$ = maxId
+        }
+    }
+}
+
+
 
 def config(data) {
 	if (!data) {
@@ -180,19 +218,20 @@ def config(data) {
 }
 
 def pause() {
-	def msg = timer "Piston pause complete", -1
-    trace "Pausing piston", 0
+	def msg = timer "Piston pause complete", null, -1
+    trace "Pausing piston", null, 0
 	state.active = false;
     unsubscribe()
     trace msg
 }
 
 def resume() {
-	def msg = timer "Piston resume complete", -1
-    trace "Resuming piston", 0
+	def msg = timer "Piston resume complete", null,  -1
+    def rtData = getRunTimeData()
+    trace "Resuming piston", rtData, 0
 	state.active = true;
     //we need to subscribe
-    trace "Initializing piston..."
+    trace "Initializing piston...", rtData
     subscribeAll()
     trace msg
 }
@@ -202,11 +241,15 @@ def execute() {
 }
 
 private getRunTimeData(rtData = null) {
+	def timestamp = now()
 	rtData = rtData ?: parent.getRunTimeData()
     rtData.piston = state.piston
     rtData.localVars = state.vars ?: [:]
     rtData.systemVars = getSystemVars()
     rtData.stats = [:]
+    rtData.timestamp = timestamp
+    rtData.logs = [[t: timestamp]]
+    rtData.schedules = []
     return rtData
 }
 
@@ -218,12 +261,16 @@ private getRunTimeData(rtData = null) {
 def handler(event) {
 	def startTime = now()
     def eventDelay = startTime - event.date.getTime()
-	def msg = timer "Event processed successfuly", -1
-    trace "Received event ${event.name} from device ${event.device} with value ${event.value} with a delay of ${eventDelay}ms", 0
+	def msg = timer "Event processed successfully", null, -1
+    def tempRtData = [timestamp: startTime, logs:[]]
+    trace "Received event [${event.device}].${event.name} = ${event.value} with a delay of ${eventDelay}ms", tempRtData, 0
     state.temp = [:]
     //todo start execution
 	def msg2 = timer "Load stage complete."
     Map rtData = getRunTimeData()
+    rtData.logs = rtData.logs + tempRtData.logs
+    msg.d = rtData
+    msg2.d = rtData
     trace msg2
     rtData.stats.timing = [
     	t: startTime,
@@ -231,21 +278,32 @@ def handler(event) {
         l: now() - startTime
     ]
     startTime = now()
-	msg2 = timer "Execution stage complete.", -1
-    trace "Execution stage started", 1
+	msg2 = timer "Execution stage complete.", rtData, -1
+    trace "Execution stage started", rtData, 1
     handleEvent(rtData, event)
 	rtData.stats.timing.e = now() - startTime
     trace msg2
     trace msg
 	startTime = now()
 	parent.updateRunTimeData(rtData)
+
+    //update logs
+    def logs = (atomicState.logs?:[]) + (rtData.logs?:[])
+    while (logs.size() > 500) {
+    	logs.remove(logs[0]);
+    }
+    atomicState.logs = logs
+    state.logs = logs
+    
+    //update graph data
     rtData.stats.timing.u = now() - startTime
-    def stats = state.stats ?: [:]
+    def stats = atomicState.stats ?: [:]
     stats.timing = stats.timing ?: []
     stats.timing.push(rtData.stats.timing)
-    if (stats.timing.size() > 500) {
+    while (stats.timing.size() > 500) {
     	stats.timing.remove(stats.timing[0]);
     }
+    atomicState.stats = stats
     state.stats = stats
 }
 
@@ -257,9 +315,9 @@ private handleEvent(rtData, event) {
 
 }
 
-private Boolean evaluateStatements(rtData, statements) {
+private Boolean evaluateStatements(rtData, statements, async = false) {
 	for(statement in statements) {
-    	if (!evaluateStatement(rtData, statement)) {
+    	if (!evaluateStatement(rtData, statement, !!async)) {
         	//stop processing
         	return false
         }
@@ -268,16 +326,17 @@ private Boolean evaluateStatements(rtData, statements) {
     return true
 }
 
-private Boolean evaluateStatement(rtData, statement) {
+private Boolean evaluateStatement(rtData, statement, async = false) {
 	if (!statement) return false
     def value = true
+    async = !!async || (statement.a == "1")
 	switch (statement.t) {
     	case 'if':
         case 'while':
     		//check conditions for if and while
-        	def perform = evaluateConditions(rtData, statement)
+        	def perform = evaluateConditions(rtData, statement, async)
         	if (perform) {
-	        	if (!evaluateStatements(rtData, statement.s)) {
+	        	if (!evaluateStatements(rtData, statement.s, async)) {
 	            	//stop processing
 	                return false
 	            }
@@ -288,14 +347,14 @@ private Boolean evaluateStatement(rtData, statement) {
 	                for (elseIf in statement.ei) {
 	                    perform = evaluateConditions(rtData, elseIf)
 	                    if (perform) {
-	                        if (!evaluateStatements(rtData, elseIf.s)) {
+	                        if (!evaluateStatements(rtData, elseIf.s, async)) {
 	                            //stop processing
 	                            return false
 	                        }
 	                        return true
 	                    }                	
 	                }
-	                if (!evaluateStatements(rtData, statement.e)) {
+	                if (!evaluateStatements(rtData, statement.e, async)) {
 	                	//stop processing
 	                	return false
 	                }
@@ -303,7 +362,7 @@ private Boolean evaluateStatement(rtData, statement) {
     	    }
 			break
 		case 'action':
-        	def result = executeAction(rtData, statement)
+        	def result = executeAction(rtData, statement, async)
             if ((statement.a != '1') && !result) {
             	//non-async action requests thread termination
             	return false
@@ -313,7 +372,7 @@ private Boolean evaluateStatement(rtData, statement) {
 }
 
 
-private Boolean executeAction(rtData, statement) {
+private Boolean executeAction(rtData, statement, async) {
 	def devices = []
     for (d in statement.d) {
     	def device = getDevice(rtData, d)
@@ -323,13 +382,14 @@ private Boolean executeAction(rtData, statement) {
     }
     if (devices.size()) {
         for (task in statement.k) {
-        	def result = executeTask(rtData, devices, task)
+        	def result = executeTask(rtData, devices, task, async)
+            if (!result) return false
         }
     }
     return true
 }
 
-private Boolean executeTask(rtData, devices, task) {
+private Boolean executeTask(rtData, devices, task, async) {
 	//def cmd = rtData.commands.physical[task.c]
     //parse parameters
     def params = []
@@ -337,54 +397,62 @@ private Boolean executeTask(rtData, devices, task) {
 		params.push evaluateExpression(rtData, param)
     }
  	def vcmd = rtData.commands.virtual[task.c]
+    long delay = 0
     for (device in devices) {
         if (device.hasCommand(task.c)) {
-        	def msg = timer "Executed [$device].${task.c}"
+        	def msg = timer "Executed [$device].${task.c}", rtData
         	try {
-            	"cmd_${task.c}"(device, params)
+            	delay = "cmd_${task.c}"(device, params)
             } catch(all) {
 	            device."${task.c}"(params*.v as Object[])
 			}
             trace msg
         } else {
             if (vcmd) {
-	        	def result = executeVirtualCommand(rtData, vcmd.a ? devices : device, task, params)
+	        	delay = executeVirtualCommand(rtData, vcmd.a ? devices : device, task, params)
                 if (!result || vcmd.a) {
-                	return result
+               		break
                 }
             }
         }
     }
-    
+    //if we don't have to wait, we're home free
+    if (!delay) return true
+    //get remaining piston time
+    def timeLeft = 20000 + rtData.timestamp - now()
+    //we're aiming at waking up with at least 10s left
+    if ((timeLeft - delay < 10000) || (delay > 5000) || async) {
+        //schedule a wake up
+        log.debug "Need to schedule a wake up in ${delay}ms"
+        return false
+    } else {
+        pause(delay)
+    }
     return true
 }
 
-private void cmd_setLevel(device, params) {
+private long cmd_setLevel(device, params) {
 	def level = params[0].v
     def state = params.size() > 1 ? params[1].v : ""
     def delay = params.size() > 2 ? params[2].v : 0
     if (state.size() && (device.currentValue('switch') != state)) {
-        return
+        return 0
     }
     device.setLevel(level, [delay: delay ?: 0])
+    return 0
 }
 
-private Boolean executeVirtualCommand(rtData, devices, task, params) {
-   	def msg = timer "Executed virtual command ${devices instanceof List ? "$devices" : "[$devices]"}.${task.c}"
+private long executeVirtualCommand(rtData, devices, task, params) {
+   	def msg = timer "Executed virtual command ${devices instanceof List ? "$devices" : "[$devices]"}.${task.c}", rtData
+    long delay = 0
     try {
-	    long delay = "vcmd_${task.c}"(devices, params)
-        if (delay > 5000) {
-        	//schedule a wake up
-	        trace msg
-        	return false
-        } else {
-        	pause(delay)
-        }
+	    delay = "vcmd_${task.c}"(devices, params)
+	    trace msg
     } catch(all) {
-    	error all
+    	msg.m = "Error executing virtual command ${devices instanceof List ? "$devices" : "[$devices]"}.${task.c}: $all"
+        error msg
     }
-    trace msg
-    return true
+    return delay
 }
 
 private long vcmd_wait(device, params) {
@@ -402,19 +470,23 @@ private long vcmd_waitRandom(device, params) {
 	return min + (int)Math.round((max - min) * Math.random())
 }
 
-private Boolean evaluateConditions(rtData, conditions) {
+private Boolean evaluateConditions(rtData, conditions, async) {
 	def grouping = conditions.o
     def not = !!conditions.n
     def value = (grouping == 'or' ? false : true)
 	for(condition in conditions.c) {
-    	def res = evaluateCondition(rtData, condition)
+    	def res = evaluateCondition(rtData, condition, async)
         value = (grouping == 'or') ? value || res : value && res
         if (value == (grouping == 'or') ? true : false) return (not ? !value : !!value)
     }
-    return (not ? !value : !!value)
+    def result = not ? !value : !!value
+    //true/false actions
+    if (result && condition.ts && condition.ts.length) evaluateStatements(rtData, condition.ts, async) 
+    if (!result && condition.fs && condition.fs.length) evaluateStatements(rtData, condition.fs, async)
+	return result
 }
 
-private Boolean evaluateCondition(rtData, condition) {
+private Boolean evaluateCondition(rtData, condition, async) {
     def not = !!condition.n
     def comparison = rtData.comparisons.conditions[condition.co] ?: rtData.comparisons.triggers[condition.co]
     if (comparison) {
@@ -461,7 +533,11 @@ private Boolean evaluateCondition(rtData, condition) {
         //we now have all the operands, their values, and the comparison, let's get to work
         def options = [smatches: true]
         def result = evaluateComparison(rtData, condition.co, lo, ro, ro2, options)
-        return not ? !result : !!result
+        result = not ? !result : !!result
+        //true/false actions
+        if (result && condition.ts && condition.ts.length) evaluateStatements(rtData, condition.ts, async)
+        if (!result && condition.fs && condition.fs.length) evaluateStatements(rtData, condition.fs, async)
+        return result
     }    
     return false
 }
@@ -562,6 +638,9 @@ private traverseStatements(node, closure, parentNode = null) {
     if (node.s instanceof List) {
     	traverseStatements(node.s, closure, node)
     }
+    if (node.es instanceof List) {
+    	traverseStatements(node.es, closure, node)
+    }
 }
 
 private traverseConditions(node, closure, parentNode = null) {
@@ -603,17 +682,26 @@ private traverseExpressions(node, closure, parentNode = null) {
 }
 
 private void subscribeAll() {
-	def msg = timer "Finished subscribing", -1
-    trace "Subscribing to devices...", 1
+
+	def x = {
+    }
+	def msg = timer "Finished subscribing", null, -1
 	unsubscribe()
 	def rtData = getRunTimeData()
+    msg.d = rtData
+    trace "Subscribing to devices...", rtData, 1
+    Map devices = [:]
     Map subscriptions = [:]
     def count = 0
     def hasTriggers = false
     //traverse all statements
-    traverseStatements(rtData.piston.s, { node, parentNode ->
+    def statementTraverser
+    statementTraverser = { node, parentNode ->
+    	for(deviceId in node.d) {
+        	devices[deviceId] = devices[deviceId] ?: [c: 0]
+        }
         if (node.t in ['if', 'switch', 'while', 'repeat']) {
-        	traverseConditions(node.c?:[] + node.ei?:[], { condition, parentCondition ->
+            traverseConditions(node.c?:[] + node.ei?:[], { condition, parentCondition ->
                 def comparison = rtData.comparisons.conditions[condition.co]
                 def comparisonType = 'condition'
                 if (!comparison) {
@@ -628,14 +716,16 @@ private void subscribeAll() {
                     	def operand = (i == 0 ? condition.lo : (i == 1 ? condition.ro : condition.ro2))
                         switch (operand.t) {
                         	case "p": //physical device
-                            	for(device in operand.d) {
-                                	subscriptions["$device${operand.a}"] = [d: device, a: operand.a, t: comparisonType, c: condition]
+                            	for(deviceId in operand.d) {
+                                    devices[deviceId] = [c: 1]
+                                	subscriptions["$deviceId${operand.a}"] = [d: deviceId, a: operand.a, t: comparisonType, c: condition]
                                 }
                                 break;
 							case "c": //constant
                             case "e": //expression
                             	traverseExpressions(operand.exp?.i, { expression, parentExpression -> 
                                 	if ((expression.t == 'device') && (expression.id)) {
+                                    	devices[expression.id] = [c: 1]
 	                                	subscriptions["${expression.id}${expression.a}"] = [d: expression.id, a: expression.a, t: comparisonType, c: condition]
                                     }
                                 })
@@ -643,19 +733,30 @@ private void subscribeAll() {
                         }
                     }
                 }
+                if (condition.ts instanceof List) traverseStatements(condition.ts, statementTraverser)
+                if (condition.fs instanceof List) traverseStatements(condition.fs, statementTraverser)
             })
         }
-    })
+    }
+    traverseStatements(rtData.piston.s, statementTraverser)
     //trace subscriptions
     for (subscription in subscriptions) {
     	subscription.value.c.s = false
     	if ((subscription.value.t == "trigger") || (subscription.value.c.sm == "always") || (!hasTriggers && (subscription.value.c.sm != "never"))) {
 	    	def device = getDevice(rtData, subscription.value.d)
     	    if (device) {
-        		trace "Subscribing to $device.${subscription.value.a}..."
+        		trace "Subscribing to $device.${subscription.value.a}...", rtData
 		    	subscription.value.c.s = true
         		subscribe(device, subscription.value.a, handler)
 			}
+        }
+    }
+    //fake subscriptions for controlled devices to force the piston being displayed in those devices' Smart Apps tabs
+    for (d in devices.findAll{ it.value.c == 0 }) {
+    	def device = getDevice(rtData, d.key)
+        if (device) {
+       		trace "Subscribing to $device...", rtData
+			subscribe(device, "", handler)
         }
     }
     trace msg
@@ -1627,11 +1728,12 @@ private formatLocalTime(time, format = "EEE, MMM d yyyy @ h:mm a z") {
 /******************************************************************************/
 /*** DEBUG FUNCTIONS														***/
 /******************************************************************************/
-private debug(message, shift = null, err = null, cmd = null) {
+private log(message, rtData = null, shift = null, err = null, cmd = null) {
     if (cmd == "timer") {
-    	return [m: message, t: now(), s: shift, e: err]
+    	return [m: message, t: now(), d: rtData, s: shift, e: err]
     }
     if (message instanceof Map) {
+    	rtData = message.d
     	shift = message.s
         err = message.e
         message = message.m + " (done in ${now() - message.t}ms)"
@@ -1677,14 +1779,17 @@ private debug(message, shift = null, err = null, cmd = null) {
 	//level += levelDelta
 	state.debugLevel = level
 
+	if (rtData && (rtData instanceof Map) && (rtData.logs instanceof List)) {
+    	rtData.logs.push([o: now() - rtData.timestamp, m: "$prefix $message", c: cmd])
+    }
 	log."$cmd" "$prefix $message", err
 }
-private info(message, shift = null, err = null) { debug message, shift, err, 'info' }
-private trace(message, shift = null, err = null) { debug message, shift, err, 'trace' }
-private warn(message, shift = null, err = null) { debug message, shift, err, 'warn' }
-private error(message, shift = null, err = null) { debug message, shift, err, 'error' }
-private timer(message, shift = null, err = null) { debug message, shift, err, 'timer' }
-
+private info(message, rtData = null, shift = null, err = null) { log message, rtData, shift, err, 'info' }
+private trace(message, rtData = null,shift = null, err = null) { log message, rtData, shift, err, 'trace' }
+private debug(message, rtData = null,shift = null, err = null) { log message, rtData, shift, err, 'trace' }
+private warn(message, rtData = null,shift = null, err = null) { log message, rtData, shift, err, 'warn' }
+private error(message, rtData = null,shift = null, err = null) { log message, rtData, shift, err, 'error' }
+private timer(message, rtData = null,shift = null, err = null) { log message, rtData, shift, err, 'timer' }
 
 
 private static Map weekDays() {

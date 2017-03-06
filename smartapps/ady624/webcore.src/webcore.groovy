@@ -20,8 +20,9 @@
  */
 
 def handle() { return "CoRE (SE)" }
-def version() {	return "v0.0.022.20170305" }
+def version() {	return "v0.0.023.20170306" }
 /*
+ *	03/06/2016 >>> v0.0.023.20170306 - ALPHA - Added logs to the dashboard
  *	03/05/2016 >>> v0.0.022.20170305 - ALPHA - Some tasks are now executed. UI has an issue with initializing params on editing a task, will get fixed soon.
  *	03/01/2016 >>> v0.0.021.20170301 - ALPHA - Most conditions (and no triggers yet) are now parsed and evaluated during events - action tasks not yet executed, but getting close, very close
  *	02/28/2016 >>> v0.0.020.20170228 - ALPHA - Added runtime data - pistons are now aware of devices and global variables - expressions can query devices and variables (though not all system variables are ready yet)
@@ -413,7 +414,7 @@ private api_intf_dashboard_piston_get() {
             result = api_get_base_result(requireDb ?: params.dev)            
             def piston = getChildApps().find{ hashId(it.id) == pistonId };
             if (piston) {
-            	result.piston = piston.get() ?: [:]
+            	result.data = piston.get() ?: [:]
             }
             if (requireDb) {
                 result.dbVersion = serverDbVersion
@@ -445,6 +446,7 @@ private api_intf_dashboard_piston_set_save(id, data) {
     def piston = getChildApps().find{ hashId(it.id) == id };
     if (piston) {
 		def p = new groovy.json.JsonSlurper().parseText(new String(data.decodeBase64(), "UTF-8"))
+        log.trace p
 		return piston.set(p);
     }
     return false;
@@ -809,11 +811,11 @@ private debug(message, shift = null, err = null, cmd = null) {
     }
 	def debugging = settings.debugging
 	if (!debugging && (cmd != "error")) {
-		return
+		//return
 	}
 	cmd = cmd ? cmd : "debug"
 	if (!settings["log#$cmd"]) {
-		return
+		//return
 	}
 	//mode is
 	// 0 - initialize level, level set to 1
