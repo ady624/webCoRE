@@ -14,8 +14,9 @@
  *
 */
 
-def version() {	return "v0.0.024.20170307" }
+def version() {	return "v0.0.025.20170307" }
 /*
+ *	03/07/2016 >>> v0.0.025.20170307 - ALPHA - Improved logs and traces, added basic time event handler
  *	03/07/2016 >>> v0.0.024.20170307 - ALPHA - Improved logs (reverse order and live updates) and added trace support
  *	03/06/2016 >>> v0.0.023.20170306 - ALPHA - Added logs to the dashboard
  *	03/05/2016 >>> v0.0.022.20170305 - ALPHA - Some tasks are now executed. UI has an issue with initializing params on editing a task, will get fixed soon.
@@ -242,7 +243,7 @@ def config(data) {
 }
 
 def pause() {
-    def rtData = getRunTimeData([timestamp:now(), logs: []])
+    def rtData = getRunTimeData(null, true)
 	def msg = timer "Piston successfully stopped", rtData, -1
     trace "Stopping piston...", rtData, 0
 	state.active = false;
@@ -268,17 +269,18 @@ def execute() {
 
 }
 
-private getRunTimeData(rtData = null) {
+private getRunTimeData(rtData = null, lightWeight = false) {
 	def timestamp = rtData?.timestamp ?: now()
-	rtData = rtData ?: parent.getRunTimeData()
-    rtData.piston = state.piston
-    rtData.localVars = state.vars ?: [:]
-    rtData.systemVars = getSystemVariables()
-    rtData.stats = [:]
+	rtData = rtData ?: (lightWeight ? [:] : parent.getRunTimeData())
     rtData.timestamp = timestamp
     rtData.logs = [[t: timestamp]]
     rtData.trace = [t: timestamp, points: [:]]
+    if (lightWeight) return rtData
+    rtData.stats = [:]
     rtData.schedules = []
+    rtData.piston = state.piston
+    rtData.localVars = state.vars ?: [:]
+    rtData.systemVars = getSystemVariables()
     return rtData
 }
 
@@ -287,7 +289,13 @@ private getRunTimeData(rtData = null) {
 /*** EVENT HANDLING															***/
 /*** 																		***/
 /******************************************************************************/
-def handler(event) {
+def fakeHandler(event) {
+	def rtData = getRunTimeData(null, true)
+	warn "Received unexpected event [${event.device}].${event.name} = ${event.value} (device has no active subscriptions)... ", rtData
+    updateLogs(rtData)
+}
+
+def deviceHandler(event) {
 	def startTime = now()
     def eventDelay = startTime - event.date.getTime()
 	def msg = timer "Event processed successfully", null, -1
@@ -312,26 +320,51 @@ def handler(event) {
     handleEvent(rtData, event)
 	rtData.stats.timing.e = now() - startTime
     trace msg2
-    trace msg
-	startTime = now()
+    finalizeEvent(rtData, msg)
+}
+
+def timeHandler(event) {
+	def rtData = getRunTimeData(null, true)
+	warn "Time event received, but not yet implemented... ", rtData
+    updateLogs(rtData)
+}
+
+private finalizeEvent(rtData, initialMsg) {
+	def startTime = now()
+    //reschedule stuff
+    //todo
+    def schedules = atomicState.schedules
+    //do some stuff    
+    schedules = rtData.schedules   
+    if (schedules.size()) {
+    	def next = schedules.sort{ it.t }[0]
+        def t = (next.t - now()) / 1000
+        t = (t < 1 ? 1 : t)
+        rtData.stats.nextSchedule = next.t
+        info "Setting up schedule job in ${t}s", rtData
+        runIn(t, timeHandler, [data: next])
+    } else {
+    	rtData.stats.nextSchedule = 0
+    }
+    //write the remaining schedules to state
+    atomicState.schedules = schedules
+
 	parent.updateRunTimeData(rtData)
 
-	updateLogs(rtData)
+    if (initialMsg) trace initialMsg
     
-    //update graph data
+	updateLogs(rtData)
+	//update graph data
     rtData.stats.timing.u = now() - startTime
     def stats = atomicState.stats ?: [:]
     stats.timing = stats.timing ?: []
     stats.timing.push(rtData.stats.timing)
-    if (stats.timing.size() > 500) {
-    	stats.timing = stats.timing[0..499]
-    	//stats.timing.remove(stats.timing[0]);
-    }
+    if (stats.timing.size() > 500) stats.timing = stats.timing[stats.timing.size() - 500..stats.timing.size() - 1]
     atomicState.stats = stats
     state.stats = stats
-    log.trace rtData.trace
     atomicState.trace = rtData.trace
     state.trace = rtData.trace
+    state.schedules = atomicState.schedules
 }
 
 private updateLogs(rtData) {
@@ -428,14 +461,14 @@ private Boolean executeAction(rtData, statement, async) {
     }
     if (devices.size()) {
         for (task in statement.k) {
-        	def result = executeTask(rtData, devices, task, async)
+        	def result = executeTask(rtData, devices, statement, task, async)
             if (!result) return false
         }
     }
     return true
 }
 
-private Boolean executeTask(rtData, devices, task, async) {
+private Boolean executeTask(rtData, devices, statement, task, async) {
 	//def cmd = rtData.commands.physical[task.c]
     //parse parameters
     def t = now()
@@ -470,17 +503,25 @@ private Boolean executeTask(rtData, devices, task, async) {
     	//we're aiming at waking up with at least 10s left
     	if ((timeLeft - delay < 10000) || (delay > 5000) || async) {
 	        //schedule a wake up
-	        debug "Requesting a wake up in ${delay}ms", rtData
+	        info "Requesting a wake up in ${delay}ms", rtData
             tracePoint(rtData, "t:${task.$}", now() - t, -delay)
+            requestWakeUp(rtData, statement, task, delay)
 	        return false
 	    } else {
-	        debug "Waiting for ${delay}ms", rtData
+	        info "Waiting for ${delay}ms", rtData
 	        pause(delay)
 	    }
 	}
 	tracePoint(rtData, "t:${task.$}", now() - t, delay)
     return true
 }
+
+
+private requestWakeUp(rtData, statement, task, timeOrDelay) {
+	def time = timeOrDelay > 9999999999 ? timeOrDelay : now() + timeOrDelay
+    rtData.schedules.push(t: time, a: statement.$, i: task.$)
+}
+
 
 private long cmd_setLevel(device, params) {
 	def level = params[0].v
@@ -771,7 +812,7 @@ private void subscribeAll(rtData) {
                         switch (operand.t) {
                         	case "p": //physical device
                             	for(deviceId in operand.d) {
-                                    devices[deviceId] = [c: 1]
+                                    devices[deviceId] = [c: 1 + (devices[deviceId]?.c ?: 0)]
                                 	subscriptions["$deviceId${operand.a}"] = [d: deviceId, a: operand.a, t: comparisonType, c: condition]
                                 }
                                 break;
@@ -779,7 +820,7 @@ private void subscribeAll(rtData) {
                             case "e": //expression
                             	traverseExpressions(operand.exp?.i, { expression, parentExpression -> 
                                 	if ((expression.t == 'device') && (expression.id)) {
-                                    	devices[expression.id] = [c: 1]
+                                    	devices[expression.id] = [c: 1 + (devices[expression.id]?.c ?: 0)]
 	                                	subscriptions["${expression.id}${expression.a}"] = [d: expression.id, a: expression.a, t: comparisonType, c: condition]
                                     }
                                 })
@@ -801,16 +842,20 @@ private void subscribeAll(rtData) {
     	    if (device) {
         		info "Subscribing to $device.${subscription.value.a}...", rtData
 		    	subscription.value.c.s = true
-        		subscribe(device, subscription.value.a, handler)
-			}
+        		subscribe(device, subscription.value.a, deviceHandler)
+            } else {
+            	error "Failed subscribing to $device.${subscription.value.a}, device not found", rtData
+            }
+        } else {
+        	devices[subscription.value.d].c = devices[subscription.value.d].c - 1
         }
     }
     //fake subscriptions for controlled devices to force the piston being displayed in those devices' Smart Apps tabs
-    for (d in devices.findAll{ it.value.c == 0 }) {
+    for (d in devices.findAll{ it.value.c <= 0 }) {
     	def device = getDevice(rtData, d.key)
         if (device) {
-       		info "Subscribing to $device...", rtData
-			subscribe(device, "", handler)
+       		warn "Subscribing to $device...", rtData
+			subscribe(device, "", fakeHandler)
         }
     }
     trace msg
@@ -1851,7 +1896,7 @@ private timer(message, rtData = null,shift = null, err = null) { log message, rt
 
 private tracePoint(rtData, objectId, duration, value) {
 	if (objectId && rtData && rtData.trace) {
-    	rtData.trace.points[objectId] = [o: now() - rtData.trace.t, d: duration, v: value]
+    	rtData.trace.points[objectId] = [o: now() - rtData.trace.t - duration, d: duration, v: value]
     } else {
     	error "Invalid object ID $objectID for trace point...", rtData
     }
