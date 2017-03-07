@@ -14,8 +14,9 @@
  *
 */
 
-def version() {	return "v0.0.023.20170306" }
+def version() {	return "v0.0.024.20170307" }
 /*
+ *	03/07/2016 >>> v0.0.024.20170307 - ALPHA - Improved logs (reverse order and live updates) and added trace support
  *	03/06/2016 >>> v0.0.023.20170306 - ALPHA - Added logs to the dashboard
  *	03/05/2016 >>> v0.0.022.20170305 - ALPHA - Some tasks are now executed. UI has an issue with initializing params on editing a task, will get fixed soon.
  *	03/01/2016 >>> v0.0.021.20170301 - ALPHA - Most conditions (and no triggers yet) are now parsed and evaluated during events - action tasks not yet executed, but getting close, very close
@@ -133,7 +134,7 @@ def updated() {
 
 def initialize() {
 	if (!!state.active) {
-    	subscribeAll()
+    	resume()
     }
 }
 
@@ -152,8 +153,21 @@ def get() {
         piston: state.piston,
 	    vars: state.vars,
 	    stats: state.stats,
-        logs: state.logs
+        logs: state.logs,
+        trace: state.trace        
     ]
+}
+
+def activity(lastLogTimestamp) {
+	def logs = state.logs
+    def llt = lastLogTimestamp && lastLogTimestamp instanceof String && lastLogTimestamp.isLong() ? lastLogTimestamp.toLong() : 0
+    def index = llt ? logs.findIndexOf{ it.t == llt } : 0
+    index = index > 0 ? index : 0
+	return [
+    	logs: index ? logs[0..index-1] : [],
+    	trace: state.trace,
+        vars: state.vars
+    ]    
 }
 
 def set(data) {
@@ -181,13 +195,23 @@ def set(data) {
 
 private setIds(node, maxId = 0, existingIds = [:], requiringIds = [], level = 0) {
     if (node?.t in ['if', 'while', 'repeat', 'for', 'switch', 'action', 'condition', 'restriction', 'group']) {
-    	log.debug node
         def id = node.$
         if (!id || existingIds[id]) {
             requiringIds.push(node)
         } else {
             maxId = maxId < id ? id : maxId
             existingIds[id] = id
+        }
+        if ((node.t == 'action') && (node.k)) {
+			for (task in node.k) {
+		        id = task.$
+                if (!id || existingIds[id]) {
+                    requiringIds.push(task)
+                } else {
+                    maxId = maxId < id ? id : maxId
+                    existingIds[id] = id
+                }
+            }
         }
     }
 	for (list in node.findAll{ it.value instanceof List }) { 
@@ -218,22 +242,26 @@ def config(data) {
 }
 
 def pause() {
-	def msg = timer "Piston pause complete", null, -1
-    trace "Pausing piston", null, 0
+    def rtData = getRunTimeData([timestamp:now(), logs: []])
+	def msg = timer "Piston successfully stopped", rtData, -1
+    trace "Stopping piston...", rtData, 0
 	state.active = false;
     unsubscribe()
     trace msg
+    updateLogs(rtData)    
 }
 
 def resume() {
-	def msg = timer "Piston resume complete", null,  -1
+	def tempRtData = [timestamp: now(), logs:[]]
+    def msg = timer "Piston successfully started", tempRtData,  -1
+	trace "Starting piston...", tempRtData, 0
     def rtData = getRunTimeData()
-    trace "Resuming piston", rtData, 0
+    rtData.logs = rtData.logs + tempRtData.logs
+    msg.d = rtData
 	state.active = true;
-    //we need to subscribe
-    trace "Initializing piston...", rtData
-    subscribeAll()
+    subscribeAll(rtData)
     trace msg
+    updateLogs(rtData)
 }
 
 def execute() {
@@ -241,14 +269,15 @@ def execute() {
 }
 
 private getRunTimeData(rtData = null) {
-	def timestamp = now()
+	def timestamp = rtData?.timestamp ?: now()
 	rtData = rtData ?: parent.getRunTimeData()
     rtData.piston = state.piston
     rtData.localVars = state.vars ?: [:]
-    rtData.systemVars = getSystemVars()
+    rtData.systemVars = getSystemVariables()
     rtData.stats = [:]
     rtData.timestamp = timestamp
     rtData.logs = [[t: timestamp]]
+    rtData.trace = [t: timestamp, points: [:]]
     rtData.schedules = []
     return rtData
 }
@@ -266,7 +295,7 @@ def handler(event) {
     trace "Received event [${event.device}].${event.name} = ${event.value} with a delay of ${eventDelay}ms", tempRtData, 0
     state.temp = [:]
     //todo start execution
-	def msg2 = timer "Load stage complete."
+	def msg2 = timer "Runtime successfully initialized"
     Map rtData = getRunTimeData()
     rtData.logs = rtData.logs + tempRtData.logs
     msg.d = rtData
@@ -287,24 +316,32 @@ def handler(event) {
 	startTime = now()
 	parent.updateRunTimeData(rtData)
 
-    //update logs
-    def logs = (atomicState.logs?:[]) + (rtData.logs?:[])
-    while (logs.size() > 500) {
-    	logs.remove(logs[0]);
-    }
-    atomicState.logs = logs
-    state.logs = logs
+	updateLogs(rtData)
     
     //update graph data
     rtData.stats.timing.u = now() - startTime
     def stats = atomicState.stats ?: [:]
     stats.timing = stats.timing ?: []
     stats.timing.push(rtData.stats.timing)
-    while (stats.timing.size() > 500) {
-    	stats.timing.remove(stats.timing[0]);
+    if (stats.timing.size() > 500) {
+    	stats.timing = stats.timing[0..499]
+    	//stats.timing.remove(stats.timing[0]);
     }
     atomicState.stats = stats
     state.stats = stats
+    log.trace rtData.trace
+    atomicState.trace = rtData.trace
+    state.trace = rtData.trace
+}
+
+private updateLogs(rtData) {
+    def logs = (rtData.logs?:[]) + (atomicState.logs?:[])
+    if (logs.size() > 500) {
+    	logs = logs[0..499]
+    	//logs.remove(logs[logs.size() - 1]);
+    }
+    atomicState.logs = logs
+    state.logs = logs
 }
 
 private handleEvent(rtData, event) {
@@ -328,6 +365,7 @@ private Boolean evaluateStatements(rtData, statements, async = false) {
 
 private Boolean evaluateStatement(rtData, statement, async = false) {
 	if (!statement) return false
+    def t = now()
     def value = true
     async = !!async || (statement.a == "1")
 	switch (statement.t) {
@@ -338,9 +376,11 @@ private Boolean evaluateStatement(rtData, statement, async = false) {
         	if (perform) {
 	        	if (!evaluateStatements(rtData, statement.s, async)) {
 	            	//stop processing
-	                return false
+	                value = false
+                    break
 	            }
-	            return true
+                value = true
+                break
 	        } else {
 	        	if (statement.t == 'if') {
 	            	//look for else-ifs
@@ -349,14 +389,17 @@ private Boolean evaluateStatement(rtData, statement, async = false) {
 	                    if (perform) {
 	                        if (!evaluateStatements(rtData, elseIf.s, async)) {
 	                            //stop processing
-	                            return false
+	                            value = false
+                                break
 	                        }
-	                        return true
+                            value = true
+	                        break
 	                    }                	
 	                }
 	                if (!evaluateStatements(rtData, statement.e, async)) {
 	                	//stop processing
-	                	return false
+                        value = false
+                        break
 	                }
 	            }
     	    }
@@ -365,10 +408,13 @@ private Boolean evaluateStatement(rtData, statement, async = false) {
         	def result = executeAction(rtData, statement, async)
             if ((statement.a != '1') && !result) {
             	//non-async action requests thread termination
-            	return false
+            	value = false
+                break
             }
         	break
     }
+	tracePoint(rtData, "s:${statement.$}", now() - t, value)
+	return value
 }
 
 
@@ -392,6 +438,7 @@ private Boolean executeAction(rtData, statement, async) {
 private Boolean executeTask(rtData, devices, task, async) {
 	//def cmd = rtData.commands.physical[task.c]
     //parse parameters
+    def t = now()
     def params = []
     for (param in task.p) {
 		params.push evaluateExpression(rtData, param)
@@ -417,17 +464,21 @@ private Boolean executeTask(rtData, devices, task, async) {
         }
     }
     //if we don't have to wait, we're home free
-    if (!delay) return true
-    //get remaining piston time
-    def timeLeft = 20000 + rtData.timestamp - now()
-    //we're aiming at waking up with at least 10s left
-    if ((timeLeft - delay < 10000) || (delay > 5000) || async) {
-        //schedule a wake up
-        log.debug "Need to schedule a wake up in ${delay}ms"
-        return false
-    } else {
-        pause(delay)
-    }
+    if (delay) {
+    	//get remaining piston time
+    	def timeLeft = 20000 + rtData.timestamp - now()
+    	//we're aiming at waking up with at least 10s left
+    	if ((timeLeft - delay < 10000) || (delay > 5000) || async) {
+	        //schedule a wake up
+	        debug "Requesting a wake up in ${delay}ms", rtData
+            tracePoint(rtData, "t:${task.$}", now() - t, -delay)
+	        return false
+	    } else {
+	        debug "Waiting for ${delay}ms", rtData
+	        pause(delay)
+	    }
+	}
+	tracePoint(rtData, "t:${task.$}", now() - t, delay)
     return true
 }
 
@@ -471,6 +522,7 @@ private long vcmd_waitRandom(device, params) {
 }
 
 private Boolean evaluateConditions(rtData, conditions, async) {
+	def t = now()
 	def grouping = conditions.o
     def not = !!conditions.n
     def value = (grouping == 'or' ? false : true)
@@ -483,10 +535,12 @@ private Boolean evaluateConditions(rtData, conditions, async) {
     //true/false actions
     if (result && condition.ts && condition.ts.length) evaluateStatements(rtData, condition.ts, async) 
     if (!result && condition.fs && condition.fs.length) evaluateStatements(rtData, condition.fs, async)
+    tracePoint(rtData, "c:${conditions.$}", now() - t, result)
 	return result
 }
 
 private Boolean evaluateCondition(rtData, condition, async) {
+	def t = now()
     def not = !!condition.n
     def comparison = rtData.comparisons.conditions[condition.co] ?: rtData.comparisons.triggers[condition.co]
     if (comparison) {
@@ -534,6 +588,7 @@ private Boolean evaluateCondition(rtData, condition, async) {
         def options = [smatches: true]
         def result = evaluateComparison(rtData, condition.co, lo, ro, ro2, options)
         result = not ? !result : !!result
+	    tracePoint(rtData, "c:${condition.$}", now() - t, result)
         //true/false actions
         if (result && condition.ts && condition.ts.length) evaluateStatements(rtData, condition.ts, async)
         if (!result && condition.fs && condition.fs.length) evaluateStatements(rtData, condition.fs, async)
@@ -681,13 +736,12 @@ private traverseExpressions(node, closure, parentNode = null) {
     }
 }
 
-private void subscribeAll() {
-
+private void subscribeAll(rtData) {
+	rtData = rtData ?: getRunTimeData()
 	def x = {
     }
-	def msg = timer "Finished subscribing", null, -1
+	def msg = timer "Finished subscribing", rtData, -1
 	unsubscribe()
-	def rtData = getRunTimeData()
     msg.d = rtData
     trace "Subscribing to devices...", rtData, 1
     Map devices = [:]
@@ -745,7 +799,7 @@ private void subscribeAll() {
     	if ((subscription.value.t == "trigger") || (subscription.value.c.sm == "always") || (!hasTriggers && (subscription.value.c.sm != "never"))) {
 	    	def device = getDevice(rtData, subscription.value.d)
     	    if (device) {
-        		trace "Subscribing to $device.${subscription.value.a}...", rtData
+        		info "Subscribing to $device.${subscription.value.a}...", rtData
 		    	subscription.value.c.s = true
         		subscribe(device, subscription.value.a, handler)
 			}
@@ -755,7 +809,7 @@ private void subscribeAll() {
     for (d in devices.findAll{ it.value.c == 0 }) {
     	def device = getDevice(rtData, d.key)
         if (device) {
-       		trace "Subscribing to $device...", rtData
+       		info "Subscribing to $device...", rtData
 			subscribe(device, "", handler)
         }
     }
@@ -796,8 +850,8 @@ def getVariable(rtData, name) {
 		if (name.startsWith("\$")) {
 			def result = rtData.systemVars[name]
             if (!(result instanceof Map)) result = [t: "error", v: "Variable '$name' not found"]
-            if (result && result.v instanceof Closure) {
-            	return [t: result.t, v: result.v()]
+            if (result && result.d) {
+            	return [t: result.t, v: getSystemVariableValue(name)]
             }
             return result
 		} else {
@@ -1755,6 +1809,7 @@ private log(message, rtData = null, shift = null, err = null, cmd = null) {
 	def level = state.debugLevel ? state.debugLevel : 0
 	def levelDelta = 0
 	def prefix = "║"
+    def prefix2 = "║"
 	def pad = "" //"░"
 	switch (shift) {
 		case 0:
@@ -1762,6 +1817,7 @@ private log(message, rtData = null, shift = null, err = null, cmd = null) {
 		case 1:
 			level += 1
 			prefix = "╚"
+			prefix2 = "╔"
 			pad = "═"
 			break
 		case -1:
@@ -1769,27 +1825,37 @@ private log(message, rtData = null, shift = null, err = null, cmd = null) {
 			//levelDelta = -(level > 0 ? 1 : 0)
 			pad = "═"
 			prefix = "╔"
+			prefix2 = "╚"           
 		break
 	}
 
 	if (level > 0) {
-		prefix = prefix.padLeft(level + (shift == -1 ? 1 : 0), "║") //+ pad //padRight(maxLevel, pad)
+		prefix = prefix.padLeft(level + (shift == -1 ? 1 : 0), "║")
+		prefix2 = prefix2.padLeft(level + (shift == -1 ? 1 : 0), "║")
     }
 
 	//level += levelDelta
 	state.debugLevel = level
 
 	if (rtData && (rtData instanceof Map) && (rtData.logs instanceof List)) {
-    	rtData.logs.push([o: now() - rtData.timestamp, m: "$prefix $message", c: cmd])
+    	rtData.logs.push([o: now() - rtData.timestamp, p: prefix2, m: message, c: cmd])
     }
 	log."$cmd" "$prefix $message", err
 }
 private info(message, rtData = null, shift = null, err = null) { log message, rtData, shift, err, 'info' }
 private trace(message, rtData = null,shift = null, err = null) { log message, rtData, shift, err, 'trace' }
-private debug(message, rtData = null,shift = null, err = null) { log message, rtData, shift, err, 'trace' }
+private debug(message, rtData = null,shift = null, err = null) { log message, rtData, shift, err, 'debug' }
 private warn(message, rtData = null,shift = null, err = null) { log message, rtData, shift, err, 'warn' }
 private error(message, rtData = null,shift = null, err = null) { log message, rtData, shift, err, 'error' }
 private timer(message, rtData = null,shift = null, err = null) { log message, rtData, shift, err, 'timer' }
+
+private tracePoint(rtData, objectId, duration, value) {
+	if (objectId && rtData && rtData.trace) {
+    	rtData.trace.points[objectId] = [o: now() - rtData.trace.t, d: duration, v: value]
+    } else {
+    	error "Invalid object ID $objectID for trace point...", rtData
+    }
+}
 
 
 private static Map weekDays() {
@@ -1850,7 +1916,7 @@ private getSunset() {
 
 
 
-private Map getSystemVars() {
+private static Map getSystemVariables() {
 	return [
 		"\$currentEventAttribute": [t: "string", v: null],
 		"\$currentEventDate": [t: "time", v: null],
@@ -1864,22 +1930,32 @@ private Map getSystemVars() {
 		"\$currentStateDuration": [t: "string", v: null],
 		"\$currentStateSince": [t: "time", v: null],
 		"\$nextScheduledTime": [t: "time", v: null],
-		"\$now": [t: "time", v: {(long) now()}],
-		"\$utc": [t: "time", v: {(long) now()}],
-		"\$localNow": [t: "time", v: {(long) localTime()}],
-		"\$hour": [t: "integer", v: { def h = localDate().hours; return (h == 0 ? 12 : (h > 12 ? h - 12 : h)) }],
-		"\$hour24": [t: "integer", v: { localDate.hours}],
-		"\$minute": [t: "integer", v: { localDate().minutes }],
-		"\$second": [t: "integer", v: { localDate().seconds }],
-		"\$meridian": [t: "string", v: { def h = localDate().hours; return ( h < 12 ? "AM" : "PM") }],
-		"\$meridianWithDots":  [t: "string", v: { def h = localDate().hours; return ( h < 12 ? "A.M." : "P.M.") }],
-		"\$day": [t: "integer", v: { localDate().date }],
-		"\$dayOfWeek": [t: "integer", v: { localDate().day }],
-		"\$dayOfWeekName": [t: "string", v: { weekDays()[localDate().day] }],
-		"\$month": [t: "integer", v: { localDate().month + 1 }],
-		"\$monthName": [t: "string", v: { yearMonths()[localDate().month + 1] }],
+		"\$now": [t: "time", d: true],
+		"\$utc": [t: "time", d: true],
+		"\$localNow": [t: "time", d: true],
+		"\$hour": [t: "integer", d: true],
+		"\$hour24": [t: "integer", d: true],
+		"\$minute": [t: "integer", d: true],
+		"\$second": [t: "integer", d: true],
+		"\$meridian": [t: "string", d: true],
+		"\$meridianWithDots":  [t: "string", d: true],
+		"\$day": [t: "integer", d: true],
+		"\$dayOfWeek": [t: "integer", d: true],
+		"\$dayOfWeekName": [t: "string", d: true],
+		"\$month": [t: "integer", d: true],
+		"\$monthName": [t: "string", d: true],
+		"\$year": [t: "integer", d: true],
+		"\$midnight": [t: "time", d: true],
+		"\$noon": [t: "time", d: true],
+		"\$sunrise": [t: "time", d: true],
+		"\$sunset": [t: "time", d: true],
+		"\$nextMidnight": [t: "time", d: true],
+		"\$nextNoon": [t: "time", d: true],
+		"\$nextSunrise": [t: "time", d: true],
+		"\$nextSunset": [t: "time", d: true],
+		"\$time": [t: "string", d: true],
+		"\$time24": [t: "string", d: true],
 		"\$index": [t: "integer", v: null],
-		"\$year": [t: "integer", v: { localDate().year + 1900 }],
 		"\$previousEventAttribute": [t: "string", v: null],
 		"\$previousEventDate": [t: "time", v: null],
 		"\$previousEventDelay": [t: "integer", v: null],
@@ -1892,29 +1968,57 @@ private Map getSystemVars() {
 		"\$previousState": [t: "string", v: null],
 		"\$previousStateDuration": [t: "string", v: null],
 		"\$previousStateSince": [t: "time", v: null],
-		"\$random": [t: "decimal", v: { def result = getRandomValue("\$random") ?: (float)Math.random(); setRandomValue("\$random", result); return result }],
-		"\$randomColor": [t: "string", v: { def result = getRandomValue("\$randomColor") ?: colorUtil.RANDOM.rgb; setRandomValue("\$randomColor", result); return result }],
-		"\$randomColorName": [t: "string", v: { def result = getRandomValue("\$randomColorName") ?: colorUtil.RANDOM.name; setRandomValue("\$randomColorName", result); return result }],
-		"\$randomLevel": [t: "integer", v: { def result = getRandomValue("\$randomLevel") ?: (int)Math.round(100 * Math.random()); setRandomValue("\$randomLevel", result); return result }],
-		"\$randomSaturation": [t: "integer", v: { def result = getRandomValue("\$randomSaturation") ?: (int)Math.round(50 + 50 * Math.random()); setRandomValue("\$randomSaturation", result); return result }],
-		"\$randomHue": [t: "integer", v: { def result = getRandomValue("\$randomHue") ?: (int)Math.round(360 * Math.random()); setRandomValue("\$randomHue", result); return result }],
-		"\$midnight": [t: "time", v: { def rightNow = localTime(); return localToUtcTime(rightNow - rightNow.mod(86400000)) }],
-		"\$noon": [t: "time", v: { def rightNow = localTime(); return localToUtcTime(rightNow - rightNow.mod(86400000) + 43200000) }],
-		"\$sunrise": [t: "time", v: { def sunrise = getSunrise(); def rightNow = localTime(); return localToUtcTime(rightNow - rightNow.mod(86400000) + sunrise.hours * 3600000 + sunrise.minutes * 60000) }],
-		"\$sunset": [t: "time", v: { def sunset = getSunset(); def rightNow = localTime(); return localToUtcTime(rightNow - rightNow.mod(86400000) + sunset.hours * 3600000 + sunset.minutes * 60000) }],
-		"\$nextMidnight": [t: "time", v: { def rightNow = localTime(); return localToUtcTime(rightNow - rightNow.mod(86400000) + 86400000) }],
-		"\$nextNoon": [t: "time", v: { def rightNow = localTime(); if (rightNow - rightNow.mod(86400000) + 43200000 < rightNow) rightNow += 86400000; return localToUtcTime(rightNow - rightNow.mod(86400000) + 43200000) }],
-		"\$nextSunrise": [t: "time", v: { def sunrise = getSunrise(); def rightNow = localTime(); if (sunrise.time < rightNow) rightNow += 86400000; return localToUtcTime(rightNow - rightNow.mod(86400000) + sunrise.hours * 3600000 + sunrise.minutes * 60000)}],
-		"\$nextSunset": [t: "time", v: { def sunset = getSunset(); def rightNow = localTime(); if (sunset.time < rightNow) rightNow += 86400000; return localToUtcTime(rightNow - rightNow.mod(86400000) + sunset.hours * 3600000 + sunset.minutes * 60000)}],
-		"\$time": [t: "string", v: { def t = localDate(); def h = t.hours; def m = t.minutes; return (h == 0 ? 12 : (h > 12 ? h - 12 : h)) + ":" + (m < 10 ? "0$m" : "$m") + " " + (h <12 ? "A.M." : "P.M.") }],
-		"\$time24": [t: "string", v: { def t = localDate(); def h = t.hours; def m = t.minutes; return h + ":" + (m < 10 ? "0$m" : "$m") }],
+		"\$random": [t: "decimal", d: true],
+		"\$randomColor": [t: "string", d: true],
+		"\$randomColorName": [t: "string", d: true],
+		"\$randomLevel": [t: "integer", d: true],
+		"\$randomSaturation": [t: "integer", d: true],
+		"\$randomHue": [t: "integer", d: true],
 		"\$httpStatusCode": [t: "integer", v: null],
 		"\$httpStatusOk": [t: "boolean", v: null],
 		"\$iftttStatusCode": [t: "integer", v: null], 
 		"\$iftttStatusOk": [t: "boolean", v: null],
-		"\$locationMode": [t: "string", v: { return location.mode }],
-		"\$shmStatus": [t: "string", v: { return location.mode }]
+		"\$locationMode": [t: "string", d: true],
+		"\$shmStatus": [t: "string", d: true]
 	]
+}
+
+private getSystemVariableValue(name) {
+	switch (name) {
+		case "\$now": return (long) now()
+		case "\$utc": return (long) now()
+		case "\$localNow": return (long) localTime()
+		case "\$hour": def h = localDate().hours; return (h == 0 ? 12 : (h > 12 ? h - 12 : h)) 
+		case "\$hour24": return localDate.hours
+		case "\$minute": return localDate().minutes 
+		case "\$second": return localDate().seconds 
+		case "\$meridian": def h = localDate().hours; return ( h < 12 ? "AM" : "PM") 
+		case "\$meridianWithDots": def h = localDate().hours; return ( h < 12 ? "A.M." : "P.M.") 
+		case "\$day": return localDate().date 
+		case "\$dayOfWeek": return localDate().day 
+		case "\$dayOfWeekName": return weekDays()[localDate().day] 
+		case "\$month": return localDate().month + 1 
+		case "\$monthName": return yearMonths()[localDate().month + 1] 
+		case "\$year": return localDate().year + 1900 
+		case "\$midnight": def rightNow = localTime(); return localToUtcTime(rightNow - rightNow.mod(86400000)) 
+		case "\$noon": def rightNow = localTime(); return localToUtcTime(rightNow - rightNow.mod(86400000) + 43200000) 
+		case "\$sunrise": def sunrise = getSunrise(); def rightNow = localTime(); return localToUtcTime(rightNow - rightNow.mod(86400000) + sunrise.hours * 3600000 + sunrise.minutes * 60000) 
+		case "\$sunset": def sunset = getSunset(); def rightNow = localTime(); return localToUtcTime(rightNow - rightNow.mod(86400000) + sunset.hours * 3600000 + sunset.minutes * 60000) 
+		case "\$nextMidnight": def rightNow = localTime(); return localToUtcTime(rightNow - rightNow.mod(86400000) + 86400000) 
+		case "\$nextNoon": def rightNow = localTime(); if (rightNow - rightNow.mod(86400000) + 43200000 < rightNow) rightNow += 86400000; return localToUtcTime(rightNow - rightNow.mod(86400000) + 43200000) 
+		case "\$nextSunrise": def sunrise = getSunrise(); def rightNow = localTime(); if (sunrise.time < rightNow) rightNow += 86400000; return localToUtcTime(rightNow - rightNow.mod(86400000) + sunrise.hours * 3600000 + sunrise.minutes * 60000)
+		case "\$nextSunset": def sunset = getSunset(); def rightNow = localTime(); if (sunset.time < rightNow) rightNow += 86400000; return localToUtcTime(rightNow - rightNow.mod(86400000) + sunset.hours * 3600000 + sunset.minutes * 60000)
+		case "\$time": def t = localDate(); def h = t.hours; def m = t.minutes; return (h == 0 ? 12 : (h > 12 ? h - 12 : h)) + ":" + (m < 10 ? "0$m" : "$m") + " " + (h <12 ? "A.M." : "P.M.") 
+		case "\$time24": def t = localDate(); def h = t.hours; def m = t.minutes; return h + ":" + (m < 10 ? "0$m" : "$m") 
+		case "\$random": def result = getRandomValue("\$random") ?: (float)Math.random(); setRandomValue("\$random", result); return result 
+		case "\$randomColor": def result = getRandomValue("\$randomColor") ?: colorUtil.RANDOM.rgb; setRandomValue("\$randomColor", result); return result 
+		case "\$randomColorName": def result = getRandomValue("\$randomColorName") ?: colorUtil.RANDOM.name; setRandomValue("\$randomColorName", result); return result 
+		case "\$randomLevel": def result = getRandomValue("\$randomLevel") ?: (int)Math.round(100 * Math.random()); setRandomValue("\$randomLevel", result); return result 
+		case "\$randomSaturation": def result = getRandomValue("\$randomSaturation") ?: (int)Math.round(50 + 50 * Math.random()); setRandomValue("\$randomSaturation", result); return result 
+		case "\$randomHue": def result = getRandomValue("\$randomHue") ?: (int)Math.round(360 * Math.random()); setRandomValue("\$randomHue", result); return result 
+  		case "\$locationMode": return location.getMode()
+		case "\$shmStatus": return location.getMode()
+    }
 }
 
 private getRandomValue(name) {
