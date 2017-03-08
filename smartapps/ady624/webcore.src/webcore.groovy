@@ -20,8 +20,9 @@
  */
 
 def handle() { return "CoRE (SE)" }
-def version() {	return "v0.0.025.20170307" }
+def version() {	return "v0.0.026.20170308" }
 /*
+ *	03/08/2016 >>> v0.0.026.20170308 - ALPHA - More bug fixes, trace enhancements
  *	03/07/2016 >>> v0.0.025.20170307 - ALPHA - Improved logs and traces, added basic time event handler
  *	03/07/2016 >>> v0.0.024.20170307 - ALPHA - Improved logs (reverse order and live updates) and added trace support
  *	03/06/2016 >>> v0.0.023.20170306 - ALPHA - Added logs to the dashboard
@@ -318,9 +319,9 @@ mappings {
 
 private api_get_error_result(error) {
 	return [
-        now: now(),
         name: location.name + ' \\ ' + (app.label ?: app.name),
-        error: error
+        error: error,
+        now: now()
     ]
 }
 
@@ -331,7 +332,6 @@ private api_get_base_result(requireDevices = true) {
     	atomicState.updateDevices = null
     }
 	return [
-        now: now(),
         name: location.name + ' \\ ' + (app.label ?: app.name),
         instance: [
 	    	account: [id: hashId(app.getAccountId())],
@@ -356,6 +356,7 @@ private api_get_base_result(requireDevices = true) {
             ] : null,
             zipCode: location.getZipCode(),
         ],
+        now: now(),        
     ]
 }
 
@@ -375,6 +376,8 @@ private api_intf_dashboard_load() {
         }
         if (!result) result = api_get_error_result("ERR_INVALID_TOKEN")
     }
+    //for accuracy, use the time as close as possible to the render
+    result.now = now()            
 	render contentType: "application/javascript;charset=utf-8", data: "${params.callback}(${result.encodeAsJSON()})"
 }
 
@@ -441,6 +444,8 @@ private api_intf_dashboard_piston_get() {
 	} else {
     	result = api_get_error_result("ERR_INVALID_TOKEN")
     }
+    //for accuracy, use the time as close as possible to the render
+    result.now = now()            
     render contentType: "application/javascript;charset=utf-8", data: "${params.callback}(${result.encodeAsJSON()})"
 }
 

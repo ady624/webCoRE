@@ -14,8 +14,9 @@
  *
 */
 
-def version() {	return "v0.0.025.20170307" }
+def version() {	return "v0.0.026.20170308" }
 /*
+ *	03/08/2016 >>> v0.0.026.20170308 - ALPHA - More bug fixes, trace enhancements
  *	03/07/2016 >>> v0.0.025.20170307 - ALPHA - Improved logs and traces, added basic time event handler
  *	03/07/2016 >>> v0.0.024.20170307 - ALPHA - Improved logs (reverse order and live updates) and added trace support
  *	03/06/2016 >>> v0.0.023.20170306 - ALPHA - Added logs to the dashboard
@@ -185,6 +186,7 @@ def set(data) {
     ]
     setIds(piston)
     state.piston = piston
+    state.trace = [:]
     //todo replace this
     state.vars = piston ? (piston.v ?: [:]) : [:]
     if ((state.build == 1) || (!!state.active)) {
@@ -194,22 +196,33 @@ def set(data) {
 }
 
 
-private setIds(node, maxId = 0, existingIds = [:], requiringIds = [], level = 0) {
+private int setIds(node, maxId = 0, existingIds = [:], requiringIds = [], level = 0) {
     if (node?.t in ['if', 'while', 'repeat', 'for', 'switch', 'action', 'condition', 'restriction', 'group']) {
-        def id = node.$
+        def id = node['$']
         if (!id || existingIds[id]) {
             requiringIds.push(node)
         } else {
             maxId = maxId < id ? id : maxId
             existingIds[id] = id
         }
+        if ((node.t == 'if') && (node.ei)) {
+			for (elseIf in node.ei) {
+		        id = elseIf['$']
+                if (!id || existingIds[id]) {               
+                    requiringIds.push(elseIf)
+                } else {
+                    maxId = (maxId < id) ? id : maxId
+                    existingIds[id] = id
+                }
+            }
+        }
         if ((node.t == 'action') && (node.k)) {
 			for (task in node.k) {
-		        id = task.$
-                if (!id || existingIds[id]) {
+		        id = task['$']
+                if (!id || existingIds[id]) {               
                     requiringIds.push(task)
                 } else {
-                    maxId = maxId < id ? id : maxId
+                    maxId = (maxId < id) ? id : maxId
                     existingIds[id] = id
                 }
             }
@@ -217,15 +230,16 @@ private setIds(node, maxId = 0, existingIds = [:], requiringIds = [], level = 0)
     }
 	for (list in node.findAll{ it.value instanceof List }) { 
         for (item in list.value.findAll{ it instanceof Map }) {
-            setIds(item, maxId, existingIds, requiringIds, level + 1)
+            maxId = setIds(item, maxId, existingIds, requiringIds, level + 1)
         }
     }
     if (level == 0) {
     	for (item in requiringIds) {
         	maxId += 1
-        	item.$ = maxId
+        	item['$'] = maxId
         }
     }
+    return maxId
 }
 
 
@@ -317,10 +331,11 @@ def deviceHandler(event) {
     startTime = now()
 	msg2 = timer "Execution stage complete.", rtData, -1
     trace "Execution stage started", rtData, 1
-    handleEvent(rtData, event)
+    def success = handleEvent(rtData, event)
 	rtData.stats.timing.e = now() - startTime
     trace msg2
-    finalizeEvent(rtData, msg)
+    if (!success) msg.m = "Event processing failed"
+    finalizeEvent(rtData, msg, success)
 }
 
 def timeHandler(event) {
@@ -329,7 +344,7 @@ def timeHandler(event) {
     updateLogs(rtData)
 }
 
-private finalizeEvent(rtData, initialMsg) {
+private finalizeEvent(rtData, initialMsg, success = true) {
 	def startTime = now()
     //reschedule stuff
     //todo
@@ -351,7 +366,13 @@ private finalizeEvent(rtData, initialMsg) {
 
 	parent.updateRunTimeData(rtData)
 
-    if (initialMsg) trace initialMsg
+    if (initialMsg) {
+    	if (success) {
+        	trace initialMsg
+        } else {
+        	error initialMsg
+        }
+    }
     
 	updateLogs(rtData)
 	//update graph data
@@ -362,6 +383,7 @@ private finalizeEvent(rtData, initialMsg) {
     if (stats.timing.size() > 500) stats.timing = stats.timing[stats.timing.size() - 500..stats.timing.size() - 1]
     atomicState.stats = stats
     state.stats = stats
+    rtData.trace.d = now() - rtData.trace.t
     atomicState.trace = rtData.trace
     state.trace = rtData.trace
     state.schedules = atomicState.schedules
@@ -378,11 +400,15 @@ private updateLogs(rtData) {
 }
 
 private handleEvent(rtData, event) {
-	rtData = rtData ?: getRunTimeData()
-	//todo - check restrictions
-
-	evaluateStatements(rtData, rtData.piston.s)
-
+	try {
+		rtData = rtData ?: getRunTimeData()
+		//todo - check restrictions	
+		evaluateStatements(rtData, rtData.piston.s)
+		return true
+    } catch(all) {
+    	error "An error occurred while processing the event: ", rtData, null, all
+    }
+    return false
 }
 
 private Boolean evaluateStatements(rtData, statements, async = false) {
@@ -418,7 +444,7 @@ private Boolean evaluateStatement(rtData, statement, async = false) {
 	        	if (statement.t == 'if') {
 	            	//look for else-ifs
 	                for (elseIf in statement.ei) {
-	                    perform = evaluateConditions(rtData, elseIf)
+	                    perform = evaluateConditions(rtData, elseIf, async)
 	                    if (perform) {
 	                        if (!evaluateStatements(rtData, elseIf.s, async)) {
 	                            //stop processing
@@ -429,7 +455,7 @@ private Boolean evaluateStatement(rtData, statement, async = false) {
 	                        break
 	                    }                	
 	                }
-	                if (!evaluateStatements(rtData, statement.e, async)) {
+	                if (!perform && !evaluateStatements(rtData, statement.e, async)) {
 	                	//stop processing
                         value = false
                         break
@@ -570,13 +596,13 @@ private Boolean evaluateConditions(rtData, conditions, async) {
 	for(condition in conditions.c) {
     	def res = evaluateCondition(rtData, condition, async)
         value = (grouping == 'or') ? value || res : value && res
-        if (value == (grouping == 'or') ? true : false) return (not ? !value : !!value)
+        if (value == (grouping == 'or') ? true : false) break
     }
     def result = not ? !value : !!value
-    //true/false actions
-    if (result && condition.ts && condition.ts.length) evaluateStatements(rtData, condition.ts, async) 
-    if (!result && condition.fs && condition.fs.length) evaluateStatements(rtData, condition.fs, async)
     tracePoint(rtData, "c:${conditions.$}", now() - t, result)
+    //true/false actions
+    if (result && conditions.ts && conditions.ts.length) evaluateStatements(rtData, conditions.ts, async) 
+    if (!result && conditions.fs && conditions.fs.length) evaluateStatements(rtData, conditions.fs, async)
 	return result
 }
 
@@ -1883,7 +1909,7 @@ private log(message, rtData = null, shift = null, err = null, cmd = null) {
 	state.debugLevel = level
 
 	if (rtData && (rtData instanceof Map) && (rtData.logs instanceof List)) {
-    	rtData.logs.push([o: now() - rtData.timestamp, p: prefix2, m: message, c: cmd])
+    	rtData.logs.push([o: now() - rtData.timestamp, p: prefix2, m: message + (all ? " $all" : ""), c: cmd])
     }
 	log."$cmd" "$prefix $message", err
 }
