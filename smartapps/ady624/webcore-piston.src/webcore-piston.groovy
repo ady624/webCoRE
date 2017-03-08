@@ -14,8 +14,9 @@
  *
 */
 
-def version() {	return "v0.0.026.20170308" }
+def version() {	return "v0.0.027.20170308" }
 /*
+ *	03/08/2016 >>> v0.0.027.20170308 - ALPHA - Very early implementation of wait/delay scheduling, needs extensive testing
  *	03/08/2016 >>> v0.0.026.20170308 - ALPHA - More bug fixes, trace enhancements
  *	03/07/2016 >>> v0.0.025.20170307 - ALPHA - Improved logs and traces, added basic time event handler
  *	03/07/2016 >>> v0.0.024.20170307 - ALPHA - Improved logs (reverse order and live updates) and added trace support
@@ -261,9 +262,11 @@ def pause() {
 	def msg = timer "Piston successfully stopped", rtData, -1
     trace "Stopping piston...", rtData, 0
 	state.active = false;
+    state.schedules = []
+    state.trace = [:]
     unsubscribe()
     trace msg
-    updateLogs(rtData)    
+    updateLogs(rtData) 
 }
 
 def resume() {
@@ -310,6 +313,14 @@ def fakeHandler(event) {
 }
 
 def deviceHandler(event) {
+	handleEvent(event)
+}
+
+def timeHandler(event) {
+	deviceHandler([date: new Date(event.t), device: 'time', name: 'time', value: event.t, schedule: event])
+}
+
+def handleEvent(event) {
 	def startTime = now()
     def eventDelay = startTime - event.date.getTime()
 	def msg = timer "Event processed successfully", null, -1
@@ -331,32 +342,64 @@ def deviceHandler(event) {
     startTime = now()
 	msg2 = timer "Execution stage complete.", rtData, -1
     trace "Execution stage started", rtData, 1
-    def success = handleEvent(rtData, event)
+    def success = true
+    if (event.device != 'time') {
+    	success = executeEvent(rtData, event)
+    }
+    //process all time schedules in order
+    while (success && (20000 + rtData.timestamp - now() > 10000)) {
+        //we only keep doing stuff if we haven't passed the 10s execution time mark
+        def schedules = atomicState.schedules
+        //anything less than 1 second in the future is considered due
+        event = [date: event.date, device: 'time', name: 'time', value: now(), schedule: schedules.sort{ it.t }.find{ it.t < now() + 1000 }]
+        if (!event.schedule) break
+        schedules.remove(event.schedule)
+        atomicState.schedules = schedules
+        success = executeEvent(rtData, event)
+    }
 	rtData.stats.timing.e = now() - startTime
     trace msg2
     if (!success) msg.m = "Event processing failed"
     finalizeEvent(rtData, msg, success)
 }
 
-def timeHandler(event) {
-	def rtData = getRunTimeData(null, true)
-	warn "Time event received, but not yet implemented... ", rtData
-    updateLogs(rtData)
+private Boolean executeEvent(rtData, event) {
+	try {
+		rtData = rtData ?: getRunTimeData()
+        rtData.event = event
+        rtData.fastForwardTo = null
+        if (event.device == 'time') {
+        	rtData.fastForwardTo = event.schedule.i
+        }
+		//todo - check restrictions	
+		evaluateStatements(rtData, rtData.piston.s)
+		return true
+    } catch(all) {
+    	error "An error occurred while processing the event: ", rtData, null, all
+    }
+    return false
 }
 
 private finalizeEvent(rtData, initialMsg, success = true) {
 	def startTime = now()
     //reschedule stuff
-    //todo
-    def schedules = atomicState.schedules
-    //do some stuff    
-    schedules = rtData.schedules   
+    //todo, override tasks, if any
+    def schedules = atomicState.schedules + rtData.schedules
+    //add traces for all remaining schedules
+    for (schedule in schedules.sort{ it.t }) {
+    	def t = now() - schedule.t
+        if ((t < 0) && !rtData.trace.points["t:${schedule.i}"]) {
+        	//warn "fake trace point for t = $t, $schedule"
+            //we enter a fake trace point to show it on the trace view
+    		tracePoint(rtData, "t:${schedule.i}", 0, t)
+        }
+    }
     if (schedules.size()) {
     	def next = schedules.sort{ it.t }[0]
         def t = (next.t - now()) / 1000
         t = (t < 1 ? 1 : t)
         rtData.stats.nextSchedule = next.t
-        info "Setting up schedule job in ${t}s", rtData
+        info "Setting up scheduled job in ${t}s", rtData
         runIn(t, timeHandler, [data: next])
     } else {
     	rtData.stats.nextSchedule = 0
@@ -399,17 +442,7 @@ private updateLogs(rtData) {
     state.logs = logs
 }
 
-private handleEvent(rtData, event) {
-	try {
-		rtData = rtData ?: getRunTimeData()
-		//todo - check restrictions	
-		evaluateStatements(rtData, rtData.piston.s)
-		return true
-    } catch(all) {
-    	error "An error occurred while processing the event: ", rtData, null, all
-    }
-    return false
-}
+
 
 private Boolean evaluateStatements(rtData, statements, async = false) {
 	for(statement in statements) {
@@ -432,7 +465,7 @@ private Boolean evaluateStatement(rtData, statement, async = false) {
         case 'while':
     		//check conditions for if and while
         	def perform = evaluateConditions(rtData, statement, async)
-        	if (perform) {
+        	if (perform || rtData.fastForwardTo) {
 	        	if (!evaluateStatements(rtData, statement.s, async)) {
 	            	//stop processing
 	                value = false
@@ -440,12 +473,13 @@ private Boolean evaluateStatement(rtData, statement, async = false) {
 	            }
                 value = true
                 break
-	        } else {
+	        }
+            if (!perform || rtData.fastForwardTo) {
 	        	if (statement.t == 'if') {
 	            	//look for else-ifs
 	                for (elseIf in statement.ei) {
 	                    perform = evaluateConditions(rtData, elseIf, async)
-	                    if (perform) {
+	                    if (perform || rtData.fastForwardTo) {
 	                        if (!evaluateStatements(rtData, elseIf.s, async)) {
 	                            //stop processing
 	                            value = false
@@ -455,7 +489,7 @@ private Boolean evaluateStatement(rtData, statement, async = false) {
 	                        break
 	                    }                	
 	                }
-	                if (!perform && !evaluateStatements(rtData, statement.e, async)) {
+	                if ((!perform || rtData.fastForwardTo) && !evaluateStatements(rtData, statement.e, async)) {
 	                	//stop processing
                         value = false
                         break
@@ -466,14 +500,19 @@ private Boolean evaluateStatement(rtData, statement, async = false) {
 		case 'action':
         	def result = executeAction(rtData, statement, async)
             if ((statement.a != '1') && !result) {
-            	//non-async action requests thread termination
+            	//a non-async action requests thread termination
+            	value = false
+                break
+            }
+            if ((statement.a == '1') && (rtData.event.device == 'time')) {
+            	//time event resumed an async operation, exit when the async operation completes
             	value = false
                 break
             }
         	break
     }
-	tracePoint(rtData, "s:${statement.$}", now() - t, value)
-	return value
+	if (!rtData.fastForwardTo) tracePoint(rtData, "s:${statement.$}", now() - t, value)
+	return value || !!rtData.fastForwardTo
 }
 
 
@@ -488,7 +527,7 @@ private Boolean executeAction(rtData, statement, async) {
     if (devices.size()) {
         for (task in statement.k) {
         	def result = executeTask(rtData, devices, statement, task, async)
-            if (!result) return false
+            if (!result && !rtData.fastForwardTo) return false
         }
     }
     return true
@@ -498,6 +537,14 @@ private Boolean executeTask(rtData, devices, statement, task, async) {
 	//def cmd = rtData.commands.physical[task.c]
     //parse parameters
     def t = now()
+    if (rtData.fastForwardTo) {
+	    if (task.$ == rtData.fastForwardTo) {
+    		//finally found the resuming point, play nicely from hereon
+    		rtData.fastForwardTo = null
+        }
+       	//we're not doing anything, we're fast forwarding...
+       	return true
+    }
     def params = []
     for (param in task.p) {
 		params.push evaluateExpression(rtData, param)
@@ -596,69 +643,74 @@ private Boolean evaluateConditions(rtData, conditions, async) {
 	for(condition in conditions.c) {
     	def res = evaluateCondition(rtData, condition, async)
         value = (grouping == 'or') ? value || res : value && res
-        if (value == (grouping == 'or') ? true : false) break
+        if (!rtData.fastForwardTo && (value == (grouping == 'or') ? true : false)) break
     }
     def result = not ? !value : !!value
-    tracePoint(rtData, "c:${conditions.$}", now() - t, result)
+    if (!rtData.fastForwardTo) tracePoint(rtData, "c:${conditions.$}", now() - t, result)
     //true/false actions
-    if (result && conditions.ts && conditions.ts.length) evaluateStatements(rtData, conditions.ts, async) 
-    if (!result && conditions.fs && conditions.fs.length) evaluateStatements(rtData, conditions.fs, async)
+    if ((result || rtData.fastForwardTo) && conditions.ts && conditions.ts.length) evaluateStatements(rtData, conditions.ts, async) 
+    if ((!result || rtData.fastForwardTo) && conditions.fs && conditions.fs.length) evaluateStatements(rtData, conditions.fs, async)
 	return result
 }
 
 private Boolean evaluateCondition(rtData, condition, async) {
 	def t = now()
     def not = !!condition.n
+    def result = false
     def comparison = rtData.comparisons.conditions[condition.co] ?: rtData.comparisons.triggers[condition.co]
-    if (comparison) {
-        def paramCount = comparison.p ?: 0
-        def lo = null
-        def ro = null
-        def ro2 = null
-        for(int i = 0; i <= paramCount; i++) {
-            def operand = (i == 0 ? condition.lo : (i == 1 ? condition.ro : condition.ro2))
-            //parse the operand
-            def values
-            switch (operand.t) {
-            	case "p": //physical device
-                	values = []
-                    for(deviceId in operand.d) {
-                    	values.push(getDeviceAttribute(rtData, deviceId, operand.a))
-                    }
-                    if (!(operand.g in ['any', 'all'])) {
-                    	try {
-                        	values = ["func_${operand.g}"(rtData, values)]
-                        } catch(all) {
+    if (rtData.fastForwardTo || comparison) {
+    	if (!rtData.fastForwardTo) {
+            def paramCount = comparison.p ?: 0
+            def lo = null
+            def ro = null
+            def ro2 = null
+            for(int i = 0; i <= paramCount; i++) {
+                def operand = (i == 0 ? condition.lo : (i == 1 ? condition.ro : condition.ro2))
+                //parse the operand
+                def values
+                switch (operand.t) {
+                    case "p": //physical device
+                        values = []
+                        for(deviceId in operand.d) {
+                            values.push(getDeviceAttribute(rtData, deviceId, operand.a))
                         }
-                    }
-                	break;
-            	case "x": //constant
-                	values = [getVariable(rtData, operand.x)]
-            	case "c": //constant
-            	case "e": //expression
-                	values = [evaluateExpression(rtData, operand.exp)]
+                        if (!(operand.g in ['any', 'all'])) {
+                            try {
+                                values = ["func_${operand.g}"(rtData, values)]
+                            } catch(all) {
+                            }
+                        }
+                        break;
+                    case "x": //constant
+                        values = [getVariable(rtData, operand.x)]
+                    case "c": //constant
+                    case "e": //expression
+                        values = [evaluateExpression(rtData, operand.exp)]
+                }
+                switch (i) {
+                    case 0:
+                        lo = [operand: operand, values: values]
+                        break
+                    case 1:
+                        ro = [operand: operand, values: values]
+                        break
+                    case 2:
+                        ro2 = [operand: operand, values: values]
+                        break
+                }
             }
-            switch (i) {
-            	case 0:
-                	lo = [operand: operand, values: values]
-                    break
-            	case 1:
-                	ro = [operand: operand, values: values]
-                    break
-            	case 2:
-                	ro2 = [operand: operand, values: values]
-                    break
-            }
+
+            //we now have all the operands, their values, and the comparison, let's get to work
+            def options = [smatches: true]
+            result = evaluateComparison(rtData, condition.co, lo, ro, ro2, options)
+            result = not ? !result : !!result
+            if (!rtData.fastForwardTo) tracePoint(rtData, "c:${condition.$}", now() - t, result)
+        } else {
+        	result = true
         }
-        
-        //we now have all the operands, their values, and the comparison, let's get to work
-        def options = [smatches: true]
-        def result = evaluateComparison(rtData, condition.co, lo, ro, ro2, options)
-        result = not ? !result : !!result
-	    tracePoint(rtData, "c:${condition.$}", now() - t, result)
         //true/false actions
-        if (result && condition.ts && condition.ts.length) evaluateStatements(rtData, condition.ts, async)
-        if (!result && condition.fs && condition.fs.length) evaluateStatements(rtData, condition.fs, async)
+        if ((result || rtData.fastForwardTo) && condition.ts && condition.ts.length) evaluateStatements(rtData, condition.ts, async)
+        if ((!result || rtData.fastForwardTo) && condition.fs && condition.fs.length) evaluateStatements(rtData, condition.fs, async)
         return result
     }    
     return false
