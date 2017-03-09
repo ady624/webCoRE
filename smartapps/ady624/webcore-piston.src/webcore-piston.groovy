@@ -14,8 +14,9 @@
  *
 */
 
-def version() {	return "v0.0.027.20170308" }
+def version() {	return "v0.0.028.20170308" }
 /*
+ *	03/08/2016 >>> v0.0.028.20170308 - ALPHA - Scheduler fixes
  *	03/08/2016 >>> v0.0.027.20170308 - ALPHA - Very early implementation of wait/delay scheduling, needs extensive testing
  *	03/08/2016 >>> v0.0.026.20170308 - ALPHA - More bug fixes, trace enhancements
  *	03/07/2016 >>> v0.0.025.20170307 - ALPHA - Improved logs and traces, added basic time event handler
@@ -351,6 +352,7 @@ def handleEvent(event) {
         //we only keep doing stuff if we haven't passed the 10s execution time mark
         def schedules = atomicState.schedules
         //anything less than 1 second in the future is considered due
+        if (!schedules || !schedules.size()) break
         event = [date: event.date, device: 'time', name: 'time', value: now(), schedule: schedules.sort{ it.t }.find{ it.t < now() + 1000 }]
         if (!event.schedule) break
         schedules.remove(event.schedule)
@@ -384,7 +386,7 @@ private finalizeEvent(rtData, initialMsg, success = true) {
 	def startTime = now()
     //reschedule stuff
     //todo, override tasks, if any
-    def schedules = atomicState.schedules + rtData.schedules
+    def schedules = (atomicState.schedules ?: []) + (rtData.schedules ?: [])
     //add traces for all remaining schedules
     for (schedule in schedules.sort{ it.t }) {
     	def t = now() - schedule.t

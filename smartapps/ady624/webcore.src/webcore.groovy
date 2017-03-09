@@ -20,8 +20,9 @@
  */
 
 def handle() { return "CoRE (SE)" }
-def version() {	return "v0.0.027.20170308" }
+def version() {	return "v0.0.028.20170308" }
 /*
+ *	03/08/2016 >>> v0.0.028.20170308 - ALPHA - Scheduler fixes
  *	03/08/2016 >>> v0.0.027.20170308 - ALPHA - Very early implementation of wait/delay scheduling, needs extensive testing
  *	03/08/2016 >>> v0.0.026.20170308 - ALPHA - More bug fixes, trace enhancements
  *	03/07/2016 >>> v0.0.025.20170307 - ALPHA - Improved logs and traces, added basic time event handler
