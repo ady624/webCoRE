@@ -22,6 +22,7 @@
 def handle() { return "CoRE (SE)" }
 def version() {	return "v0.0.029.20170309" }
 /*
+ *	03/09/2016 >>> v0.0.02a.20170309 - ALPHA - Fixed parameter issues, added support for expressions in all parameters, added notification virtual tasks
  *	03/09/2016 >>> v0.0.029.20170309 - ALPHA - More execution flow fixes, sticky trace lines fixed
  *	03/08/2016 >>> v0.0.028.20170308 - ALPHA - Scheduler fixes
  *	03/08/2016 >>> v0.0.027.20170308 - ALPHA - Very early implementation of wait/delay scheduling, needs extensive testing
@@ -1109,18 +1110,18 @@ private static Map commands() {
 		restoreTrack				: [ n: "Restore track...",				d: "Restore track <uri>{0}</uri>",																			p: [[n:"Track URL",t:"url"]],  																								],
 		resumeTrack					: [ n: "Resume track...",				d: "Resume track <uri>{0}</uri>",																			p: [[n:"Track URL",t:"url"]],  																								],
 		setColor					: [ n: "Set color...",					d: "Set color to {0}{1}",						a: "color",													p: [[n:"Color",t:"color"], [n:"Only if already", t:"enum",o:["on","off"], d:" if already {v}"]],  							],
-		setColorTemperature			: [ n: "Set color temperature...",		d: "Set color temperature to {0}{1}",			a: "colorTemperature",										p: [[n:"Color Temperature", t:"colorTemperature"], [n:"Only if already", t:"enum",o:["on","off"], d:" if already {v}"]],	],
+		setColorTemperature			: [ n: "Set color temperature...",		d: "Set color temperature to {0}°K{1}",			a: "colorTemperature",										p: [[n:"Color Temperature", t:"colorTemperature"], [n:"Only if already", t:"enum",o:["on","off"], d:" if already {v}"]],	],
 		setConsumableStatus			: [ n: "Set consumable status...",		d: "Set consumable status to {0}",																			p: [[n:"Status", t:"consumable"]],																							],
-		setCoolingSetpoint			: [ n: "Set cooling point...",			d: "Set cooling point at {0}",					a: "thermostatCoolingSetpoint",								p: [[n:"Desired temperature", t:"thermostatSetpoint"]], 																	],
-		setHeatingSetpoint			: [ n: "Set heating point...",			d: "Set heating point at {0}",					a: "thermostatHeatingSetpoint",								p: [[n:"Desired temperature", t:"thermostatSetpoint"]], 																	],
-		setHue						: [ n: "Set hue...",					d: "Set hue to {0}{1}",							a: "hue",													p: [[n:"Hue", t:"hue"], [n:"Only if already", t:"enum",o:["on","off"], d:" if already {v}"]], 								],
-		setInfraredLevel			: [ n: "Set infrared level...",			d: "Set infrared level to {0}{1}",				a: "infraredLevel",											p: [[n:"Level",t:"infraredLevel"], [n:"Only if already", t:"enum",o:["on","off"], d:" if already {v}"]], 					],
-		setLevel					: [ n: "Set level...",					d: "Set level to {0}{1}",						a: "level",													p: [[n:"Level",t:"level"], [n:"Only if already", t:"enum",o:["on","off"], d:" if already {v}"]], 							],
+		setCoolingSetpoint			: [ n: "Set cooling point...",			d: "Set cooling point at {0}{T}",				a: "thermostatCoolingSetpoint",								p: [[n:"Desired temperature", t:"thermostatSetpoint"]], 																	],
+		setHeatingSetpoint			: [ n: "Set heating point...",			d: "Set heating point at {0}{T}",				a: "thermostatHeatingSetpoint",								p: [[n:"Desired temperature", t:"thermostatSetpoint"]], 																	],
+		setHue						: [ n: "Set hue...",					d: "Set hue to {0}°{1}",						a: "hue",													p: [[n:"Hue", t:"hue"], [n:"Only if already", t:"enum",o:["on","off"], d:" if already {v}"]], 								],
+		setInfraredLevel			: [ n: "Set infrared level...",			d: "Set infrared level to {0}%{1}",				a: "infraredLevel",											p: [[n:"Level",t:"infraredLevel"], [n:"Only if already", t:"enum",o:["on","off"], d:" if already {v}"]], 					],
+		setLevel					: [ n: "Set level...",					d: "Set level to {0}%{1}",						a: "level",													p: [[n:"Level",t:"level"], [n:"Only if already", t:"enum",o:["on","off"], d:" if already {v}"]], 							],
 		setSaturation				: [ n: "Set saturation...",				d: "Set saturation to {0}{1}",					a: "saturation",											p: [[n:"Saturation", t:"saturation"], [n:"Only if already", t:"enum",o:["on","off"], d:" if already {v}"]],					],
 		setSchedule					: [ n: "Set thermostat schedule...",	d: "Set schedule to {0}",						a: "schedule",												p: [[n:"Schedule", t:"object"]],																							],
 		setThermostatFanMode		: [ n: "Set fan mode...",				d: "Set fan mode to {0}",						a: "thermostatFanMode",										p: [[n:"Fan mode", t:"thermostatFanMode"]],																					],
 		setThermostatMode			: [ n: "Set thermostat mode...",		d: "Set thermostate mode to {0}",				a: "thermostatMode",										p: [[n:"Thermostat mode",t:"thermostatMode"]],																				],
-		setTimeRemaining			: [ n: "Set remaining time...",			d: "Set remaining time to {0}",					a: "timeRemaining",											p: [[n:"Remaining time", t:"number"]],																						],
+		setTimeRemaining			: [ n: "Set remaining time...",			d: "Set remaining time to {0}s",				a: "timeRemaining",											p: [[n:"Remaining time [seconds]", t:"number"]],																						],
 		setTrack					: [ n: "Set track...",					d: "Set track to <uri>{0}</uri>",																			p: [[n:"Track URL",t:"url"]], 																								],
 		siren						: [ n: "Siren",																			a: "alarm",							v: "siren",																																			],
 		speak						: [ n: "Speak...",						d: "Speak \"{0}\"",																							p: [[n:"Message", t:"string"]],																								],
@@ -1133,8 +1134,8 @@ private static Map commands() {
 		unmute						: [ n: "Unmute",																		a: "mute",							v: "unmuted",																																		],
 		/* predfined commands below */
 		//general
-		quickSetCool				: [ n: "Quick set cooling point...",	d: "Set quick cooling point at {0}",																		p: [[n:"Desired temperature",t:"thermostatSetpoint"]],																		],
-		quickSetHeat				: [ n: "Quick set heating point...",	d: "Set quick heating point at {0}",																		p: [[n:"Desired temperature",t:"thermostatSetpoint"]],																		],
+		quickSetCool				: [ n: "Quick set cooling point...",	d: "Set quick cooling point at {0}{T}",																		p: [[n:"Desired temperature",t:"thermostatSetpoint"]],																		],
+		quickSetHeat				: [ n: "Quick set heating point...",	d: "Set quick heating point at {0}{T}",																		p: [[n:"Desired temperature",t:"thermostatSetpoint"]],																		],
 		toggle						: [ n: "Toggle",																																																																],
 		reset						: [ n: "Reset",																																																																	],
 		//hue
@@ -1143,7 +1144,7 @@ private static Map commands() {
 		setLoopTime					: [ n: "Set loop duration...",			d: "Set loop duration to {0}",																				p: [[n:"Duration", t:"duration"]]																							],
 		setDirection				: [ n: "Switch loop direction",																																																													],
 		alert						: [ n: "Alert with lights...",			d: "Alert \"{0}\" with lights",																				p: [[n:"Alert type", t:"enum", o:["Blink","Breathe","Okay","Stop"]]], 														],
-		setAdjustedColor			: [ n: "Transition to color...",		d: "Transition to color {0} in {1}s",																		p: [[n:"Color", t:"color"], [n:"Duration",t:"duration"]],																	],
+		setAdjustedColor			: [ n: "Transition to color...",		d: "Transition to color {0} in {1}",																		p: [[n:"Color", t:"color"], [n:"Duration",t:"duration"]],																	],
 		//harmony
 		allOn						: [ n: "Turn all on",																																																															],
 		allOff						: [ n: "Turn all off",																																																															],
@@ -1188,11 +1189,18 @@ private static Map commands() {
 }
 
 private virtualCommands() {
+	//a = aggregate
+    //d = display
+	//n = name
+    //t = type
 	return [
-		wait			: [	n: "Wait...", 					a: true,	d: "Wait {0}",											p: [[n:"Duration", t:"duration"]],				],
-		waitRandom		: [ n: "Wait randomly...",			a: true,	d: "Wait randomly between {0} and {1}",			p: [[n:"At least", t:"duration"],[n:"At most", t:"duration"]],	],
-		toggle			: [ n: "Toggle", r: ["on", "off"], 					],
-		toggleLevel		: [ n: "Toggle level...", 			d: "Toggle level between 0% and {0}%",	r: ["on", "off", "setLevel"],					p: [[n:"Level", t:"level"]],																																	],
+		noop				: [	n: "No operation",				a: true,	d: "No operation",																										],
+		wait				: [	n: "Wait...", 					a: true,	d: "Wait {0}",															p: [[n:"Duration", t:"duration"]],				],
+		waitRandom			: [ n: "Wait randomly...",			a: true,	d: "Wait randomly between {0} and {1}",									p: [[n:"At least", t:"duration"],[n:"At most", t:"duration"]],	],
+		toggle				: [ n: "Toggle", r: ["on", "off"], 					],
+		toggleLevel			: [ n: "Toggle level...", 						d: "Toggle level between 0% and {0}%",	r: ["on", "off", "setLevel"],	p: [[n:"Level", t:"level"]],																																	],
+		sendPushNotification: [ n: "Send PUSH notification...",	a: true,	d: "Send PUSH notification \"{0}\"{1}",									p: [[n:"Message", t:"string"],[n:"Store in Messages", t:"boolean", d:" and store in Messages"]],	],
+		sendSMSNotification	: [ n: "Send SMS notification...",	a: true,	d: "Send SMS notification \"{0}\" to {1}{2}",							p: [[n:"Message", t:"string"],[n:"Phone number",t:"phone"],[n:"Store in Messages", t:"boolean", d:" and store in Messages"]],	],
 
 
 /*		[ n: "waitState",											d: "Wait for piston state change",	p: ["Change to:enum[any,false,true]"],															i: true,	l: true,						dd: "Wait for {0} state"],

@@ -16,6 +16,7 @@
 
 def version() {	return "v0.0.029.20170309" }
 /*
+ *	03/09/2016 >>> v0.0.02a.20170309 - ALPHA - Fixed parameter issues, added support for expressions in all parameters, added notification virtual tasks
  *	03/09/2016 >>> v0.0.029.20170309 - ALPHA - More execution flow fixes, sticky trace lines fixed
  *	03/08/2016 >>> v0.0.028.20170308 - ALPHA - Scheduler fixes
  *	03/08/2016 >>> v0.0.027.20170308 - ALPHA - Very early implementation of wait/delay scheduling, needs extensive testing
@@ -556,7 +557,13 @@ private Boolean executeTask(rtData, devices, statement, task, async) {
     }
     def params = []
     for (param in task.p) {
-		params.push evaluateExpression(rtData, param)
+    	def p = evaluateExpression(rtData, param.v, param.t)
+        //ensure value type is successfuly passed through
+        if (param.vt) p.vt = param.vt
+        if (p.t == 'duration') {
+        	p = evaluateExpression(rtData, p)
+		}        
+		params.push p
     }
  	def vcmd = rtData.commands.virtual[task.c]
     long delay = 0
@@ -629,6 +636,10 @@ private long executeVirtualCommand(rtData, devices, task, params) {
     return delay
 }
 
+private long vcmd_noop(device, params) {
+	return 0
+}
+
 private long vcmd_wait(device, params) {
 	return params[0].v
 }
@@ -642,6 +653,33 @@ private long vcmd_waitRandom(device, params) {
         min = v
     }
 	return min + (int)Math.round((max - min) * Math.random())
+}
+
+private long vcmd_sendPUSHNotification(device, params) {
+	def message = params[0].v
+    def save = !!params[1].v
+	if (save) {
+		sendPush(message)
+	} else {
+		sendPushMessage(message)
+	}
+    return 0
+}
+
+private long vcmd_sendSMSNotification(device, params) {
+	def message = params[0].v
+	def phones = "${params[1].v}".replace(" ", "").replace("-", "").replace("(", "").replace(")", "").tokenize(",;*|").unique()
+	def save = !!params[2].v
+	for(def phone in phones) {
+		if (save) {
+			sendSms(phone, message)
+		} else {
+			sendSmsMessage(phone, message)
+		}
+		//we only need one notification
+		save = false
+	}
+    return 0
 }
 
 private Boolean evaluateConditions(rtData, conditions, async) {
@@ -1027,11 +1065,6 @@ private evaluateExpression(rtData, expression, dataType = null) {
         case "float":
         	result = [t: "decimal", v: cast(expression.v, "decimal")]
         	break
-        case "enum":
-        case "error":
-        case "text":
-        	result = [t: "string", v: cast(expression.v, "string")]
-        	break
         case "duration":
         	def multiplier = 1
             switch (expression.vt) {
@@ -1044,7 +1077,7 @@ private evaluateExpression(rtData, expression, dataType = null) {
             	case 'n': multiplier = 2592000000; break;
             	case 'y': multiplier = 31536000000; break;
             }
-        	result = [t: "long", v: cast(expression.v * multiplier, "long")]
+        	result = [t: "long", v: cast(cast(expression.v, 'decimal') * multiplier, "long")]
         	break
         case "variable":
         	//get variable as {n: name, t: type, v: value}
@@ -1224,6 +1257,14 @@ private evaluateExpression(rtData, expression, dataType = null) {
             }
     	    result = [t:items[0].t, v: items[0].v]            
 	        break
+        case "enum":
+        case "error":
+        case "phone":
+        case "text":
+        default:
+        	result = [t: "string", v: cast(expression.v, "string")]
+        	break
+            
     }
     //return the value, either directly or via cast, if certain data type is requested
     return result.t == "error" ? [t: "string", v: "[ERROR: ${result.v}]", d: now() - time] : [t: dataType ?: result.t, v: cast(result.v, dataType?: result.t), d: now() - time]
