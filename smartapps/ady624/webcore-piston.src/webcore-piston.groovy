@@ -14,8 +14,9 @@
  *
 */
 
-def version() {	return "v0.0.028.20170308" }
+def version() {	return "v0.0.029.20170309" }
 /*
+ *	03/09/2016 >>> v0.0.029.20170309 - ALPHA - More execution flow fixes, sticky trace lines fixed
  *	03/08/2016 >>> v0.0.028.20170308 - ALPHA - Scheduler fixes
  *	03/08/2016 >>> v0.0.027.20170308 - ALPHA - Very early implementation of wait/delay scheduling, needs extensive testing
  *	03/08/2016 >>> v0.0.026.20170308 - ALPHA - More bug fixes, trace enhancements
@@ -337,7 +338,7 @@ def handleEvent(event) {
     trace msg2
     rtData.stats.timing = [
     	t: startTime,
-    	d: eventDelay,
+    	d: eventDelay > 0 ? eventDelay : 0,
         l: now() - startTime
     ]
     startTime = now()
@@ -351,12 +352,18 @@ def handleEvent(event) {
     while (success && (20000 + rtData.timestamp - now() > 10000)) {
         //we only keep doing stuff if we haven't passed the 10s execution time mark
         def schedules = atomicState.schedules
-        //anything less than 1 second in the future is considered due
+        //anything less than 2 seconds in the future is considered due, we'll do some pause to sync with it
+        //we're doing this because many times, the scheduler will run a job early, usually 0-1.5 seconds early...
         if (!schedules || !schedules.size()) break
-        event = [date: event.date, device: 'time', name: 'time', value: now(), schedule: schedules.sort{ it.t }.find{ it.t < now() + 1000 }]
+        event = [date: event.date, device: 'time', name: 'time', value: now(), schedule: schedules.sort{ it.t }.find{ it.t < now() + 2000 }]        
         if (!event.schedule) break
         schedules.remove(event.schedule)
         atomicState.schedules = schedules
+        def delay = event.schedule.t - now()
+        if (delay > 0) {
+        	warn "Time event fired early, waiting for ${delay}ms...", rtData
+        	pause(delay)
+        }
         success = executeEvent(rtData, event)
     }
 	rtData.stats.timing.e = now() - startTime
@@ -367,14 +374,16 @@ def handleEvent(event) {
 
 private Boolean executeEvent(rtData, event) {
 	try {
-		rtData = rtData ?: getRunTimeData()
+    	rtData = rtData ?: getRunTimeData()
         rtData.event = event
         rtData.fastForwardTo = null
         if (event.device == 'time') {
         	rtData.fastForwardTo = event.schedule.i
         }
 		//todo - check restrictions	
-		evaluateStatements(rtData, rtData.piston.s)
+		if (executeStatements(rtData, rtData.piston.s)) {
+        	tracePoint(rtData, "end", 0, 0)
+        }
 		return true
     } catch(all) {
     	error "An error occurred while processing the event: ", rtData, null, all
@@ -401,7 +410,7 @@ private finalizeEvent(rtData, initialMsg, success = true) {
         def t = (next.t - now()) / 1000
         t = (t < 1 ? 1 : t)
         rtData.stats.nextSchedule = next.t
-        info "Setting up scheduled job in ${t}s", rtData
+        debug "Setting up scheduled job in ${t}s", rtData
         runIn(t, timeHandler, [data: next])
     } else {
     	rtData.stats.nextSchedule = 0
@@ -446,9 +455,9 @@ private updateLogs(rtData) {
 
 
 
-private Boolean evaluateStatements(rtData, statements, async = false) {
+private Boolean executeStatements(rtData, statements, async = false) {
 	for(statement in statements) {
-    	if (!evaluateStatement(rtData, statement, !!async)) {
+    	if (!executeStatement(rtData, statement, !!async)) {
         	//stop processing
         	return false
         }
@@ -457,7 +466,9 @@ private Boolean evaluateStatements(rtData, statements, async = false) {
     return true
 }
 
-private Boolean evaluateStatement(rtData, statement, async = false) {
+private Boolean executeStatement(rtData, statement, async = false) {
+	//if rtData.fastForwardTo is a positive, non-zero number, we need to fast forward through all
+    //branches until we find the task with an id equal to that number, then we play nicely after that
 	if (!statement) return false
     def t = now()
     def value = true
@@ -467,53 +478,48 @@ private Boolean evaluateStatement(rtData, statement, async = false) {
         case 'while':
     		//check conditions for if and while
         	def perform = evaluateConditions(rtData, statement, async)
-        	if (perform || rtData.fastForwardTo) {
-	        	if (!evaluateStatements(rtData, statement.s, async)) {
+        	if (perform || !!rtData.fastForwardTo) {
+	        	if (!executeStatements(rtData, statement.s, async)) {
 	            	//stop processing
 	                value = false
-                    break
+                    if (!rtData.fastForwardTo) break
 	            }
                 value = true
-                break
+                if (!rtData.fastForwardTo) break
 	        }
-            if (!perform || rtData.fastForwardTo) {
+            if (!perform || !!rtData.fastForwardTo) {
 	        	if (statement.t == 'if') {
 	            	//look for else-ifs
 	                for (elseIf in statement.ei) {
 	                    perform = evaluateConditions(rtData, elseIf, async)
-	                    if (perform || rtData.fastForwardTo) {
-	                        if (!evaluateStatements(rtData, elseIf.s, async)) {
+	                    if (perform || !!rtData.fastForwardTo) {
+	                        if (!executeStatements(rtData, elseIf.s, async)) {
 	                            //stop processing
 	                            value = false
-                                break
+                                if (!rtData.fastForwardTo) break
 	                        }
                             value = true
-	                        break
+	                        if (!rtData.fastForwardTo) break
 	                    }                	
 	                }
-	                if ((!perform || rtData.fastForwardTo) && !evaluateStatements(rtData, statement.e, async)) {
+	                if ((!perform || !!rtData.fastForwardTo) && !executeStatements(rtData, statement.e, async)) {
 	                	//stop processing
                         value = false
-                        break
+                        if (!rtData.fastForwardTo) break
 	                }
 	            }
     	    }
 			break
 		case 'action':
-        	def result = executeAction(rtData, statement, async)
-            if ((statement.a != '1') && !result) {
-            	//a non-async action requests thread termination
-            	value = false
-                break
-            }
-            if ((statement.a == '1') && (rtData.event.device == 'time')) {
-            	//time event resumed an async operation, exit when the async operation completes
-            	value = false
-                break
-            }
+        	value = executeAction(rtData, statement, async)
         	break
     }
 	if (!rtData.fastForwardTo) tracePoint(rtData, "s:${statement.$}", now() - t, value)
+	if (statement.a == '1') {
+		//when an async action requests the thread termination, we continue to execute the parent
+        //when an async action terminates as a result of a time event, we exit completely
+		value = (rtData.event.device != 'time')
+	}
 	return value || !!rtData.fastForwardTo
 }
 
@@ -542,9 +548,10 @@ private Boolean executeTask(rtData, devices, statement, task, async) {
     if (rtData.fastForwardTo) {
 	    if (task.$ == rtData.fastForwardTo) {
     		//finally found the resuming point, play nicely from hereon
+            tracePoint(rtData, "t:${task.$}", now() - t, null)
     		rtData.fastForwardTo = null
         }
-       	//we're not doing anything, we're fast forwarding...
+       	//we're not doing anything, we're fast forwarding...        
        	return true
     }
     def params = []
@@ -561,7 +568,7 @@ private Boolean executeTask(rtData, devices, statement, task, async) {
             } catch(all) {
 	            device."${task.c}"(params*.v as Object[])
 			}
-            trace msg
+            info msg
         } else {
             if (vcmd) {
 	        	delay = executeVirtualCommand(rtData, vcmd.a ? devices : device, task, params)
@@ -576,14 +583,14 @@ private Boolean executeTask(rtData, devices, statement, task, async) {
     	//get remaining piston time
     	def timeLeft = 20000 + rtData.timestamp - now()
     	//we're aiming at waking up with at least 10s left
-    	if ((timeLeft - delay < 10000) || (delay > 5000) || async) {
+    	if ((timeLeft - delay < 10000) || (delay >= 2000) || async) {
 	        //schedule a wake up
-	        info "Requesting a wake up in ${delay}ms", rtData
+	        debug "Requesting a wake up in ${delay}ms", rtData
             tracePoint(rtData, "t:${task.$}", now() - t, -delay)
             requestWakeUp(rtData, statement, task, delay)
 	        return false
 	    } else {
-	        info "Waiting for ${delay}ms", rtData
+	        debug "Waiting for ${delay}ms", rtData
 	        pause(delay)
 	    }
 	}
@@ -614,7 +621,7 @@ private long executeVirtualCommand(rtData, devices, task, params) {
     long delay = 0
     try {
 	    delay = "vcmd_${task.c}"(devices, params)
-	    trace msg
+	    info msg
     } catch(all) {
     	msg.m = "Error executing virtual command ${devices instanceof List ? "$devices" : "[$devices]"}.${task.c}: $all"
         error msg
@@ -650,8 +657,8 @@ private Boolean evaluateConditions(rtData, conditions, async) {
     def result = not ? !value : !!value
     if (!rtData.fastForwardTo) tracePoint(rtData, "c:${conditions.$}", now() - t, result)
     //true/false actions
-    if ((result || rtData.fastForwardTo) && conditions.ts && conditions.ts.length) evaluateStatements(rtData, conditions.ts, async) 
-    if ((!result || rtData.fastForwardTo) && conditions.fs && conditions.fs.length) evaluateStatements(rtData, conditions.fs, async)
+    if ((result || rtData.fastForwardTo) && conditions.ts && conditions.ts.length) executeStatements(rtData, conditions.ts, async) 
+    if ((!result || rtData.fastForwardTo) && conditions.fs && conditions.fs.length) executeStatements(rtData, conditions.fs, async)
 	return result
 }
 
@@ -676,10 +683,12 @@ private Boolean evaluateCondition(rtData, condition, async) {
                         for(deviceId in operand.d) {
                             values.push(getDeviceAttribute(rtData, deviceId, operand.a))
                         }
-                        if (!(operand.g in ['any', 'all'])) {
+                        if ((values.size() > 1) && !(operand.g in ['any', 'all'])) {
+                        	//if we have multiple values and a grouping other than any or all we need to apply that function
                             try {
                                 values = ["func_${operand.g}"(rtData, values)]
                             } catch(all) {
+                            	error "Error applying grouping method ${operand.g}", rtData
                             }
                         }
                         break;
@@ -711,8 +720,8 @@ private Boolean evaluateCondition(rtData, condition, async) {
         	result = true
         }
         //true/false actions
-        if ((result || rtData.fastForwardTo) && condition.ts && condition.ts.length) evaluateStatements(rtData, condition.ts, async)
-        if ((!result || rtData.fastForwardTo) && condition.fs && condition.fs.length) evaluateStatements(rtData, condition.fs, async)
+        if ((result || rtData.fastForwardTo) && condition.ts && condition.ts.length) executeStatements(rtData, condition.ts, async)
+        if ((!result || rtData.fastForwardTo) && condition.fs && condition.fs.length) executeStatements(rtData, condition.fs, async)
         return result
     }    
     return false
