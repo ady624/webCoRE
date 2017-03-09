@@ -20,7 +20,7 @@
  */
 
 def handle() { return "CoRE (SE)" }
-def version() {	return "v0.0.029.20170309" }
+def version() {	return "v0.0.02a.20170309" }
 /*
  *	03/09/2016 >>> v0.0.02a.20170309 - ALPHA - Fixed parameter issues, added support for expressions in all parameters, added notification virtual tasks
  *	03/09/2016 >>> v0.0.029.20170309 - ALPHA - More execution flow fixes, sticky trace lines fixed
