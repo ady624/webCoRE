@@ -14,8 +14,9 @@
  *
 */
 static String handle() { return "CoRE (SE)" }
-def version() {	return "v0.0.02c.20170310" }
+def version() {	return "v0.0.02d.20170310" }
 /*
+ *	03/10/2016 >>> v0.0.02d.20170310 - ALPHA - Reporting version to JS
  *	03/10/2016 >>> v0.0.02c.20170310 - ALPHA - Various improvements and a new virtual command: Log to console. Powerful.
  *	03/10/2016 >>> v0.0.02b.20170310 - ALPHA - Implemented device versioning to correctly handle multiple browsers accessing the same dashboard after a device selection was performed, enabled security token expiry
  *	03/09/2016 >>> v0.0.02a.20170309 - ALPHA - Fixed parameter issues, added support for expressions in all parameters, added notification virtual tasks
@@ -625,7 +626,7 @@ private long cmd_setLevel(device, params) {
 }
 
 private long executeVirtualCommand(rtData, devices, task, params) {
-   	def msg = timer "Executed virtual command ${devices instanceof List ? "$devices" : "[$devices]"}.${task.c}", rtData
+   	def msg = timer "Executed virtual command ${devices ? (devices instanceof List ? "$devices." : "[$devices].") : ""}${task.c}", rtData
     long delay = 0
     try {
     	if (task.c == 'log') {
@@ -1018,9 +1019,6 @@ private Map getDeviceAttribute(rtData, deviceId, attributeName) {
     if (device) {
         def attribute = rtData.attributes[attributeName]
         if (attribute) {
-        	if (attributeName == 'button') {
-            	log.trace "${device.id} >>> ${rtData.event.device.id} >>>> ${device == rtData.event.device}"
-            }
         	//x = eXclude - if a momentary attribute is looked for and the device does not match the current device, then we must ignore this during comparisons
             return [t: attribute.t, v: device.currentValue(attributeName), d: deviceId, a: attributeName, x: !!attribute.m && ((device?.id != rtData.event.device?.id) || (attributeName != rtData.event.name))]
         } else {

@@ -20,8 +20,9 @@
  */
 
 static String handle() { return "CoRE (SE)" }
-def version() {	return "v0.0.02c.20170310" }
+def version() {	return "v0.0.02d.20170310" }
 /*
+ *	03/10/2016 >>> v0.0.02d.20170310 - ALPHA - Reporting version to JS
  *	03/10/2016 >>> v0.0.02c.20170310 - ALPHA - Various improvements and a new virtual command: Log to console. Powerful.
  *	03/10/2016 >>> v0.0.02b.20170310 - ALPHA - Implemented device versioning to correctly handle multiple browsers accessing the same dashboard after a device selection was performed, enabled security token expiry
  *	03/09/2016 >>> v0.0.02a.20170309 - ALPHA - Fixed parameter issues, added support for expressions in all parameters, added notification virtual tasks
@@ -345,6 +346,7 @@ private api_get_base_result(deviceVersion = 0) {
             name: app.label ?: app.name,
             uri: atomicState.endpoint,
             deviceVersion: currentDeviceVersion,
+            coreVersion: version(),
         ] + (sendDevices ? [devices: listAvailableDevices()] : [:]),
         location: [
             contactBookEnabled: location.getContactBookEnabled(),
