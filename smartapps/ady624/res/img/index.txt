@@ -1,0 +1,3 @@
+app-CoRE.png
+app-CoRE@2x.png
+app-CoRE@3x.png
