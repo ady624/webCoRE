@@ -14,8 +14,9 @@
  *
 */
 static String handle() { return "CoRE (SE)" }
-def version() {	return "v0.0.02d.20170310" }
+def version() {	return "v0.0.02e.20170310" }
 /*
+ *	03/10/2016 >>> v0.0.02e.20170310 - ALPHA - Fixed a problem where long expiration settings prevented logins (integer overflow)
  *	03/10/2016 >>> v0.0.02d.20170310 - ALPHA - Reporting version to JS
  *	03/10/2016 >>> v0.0.02c.20170310 - ALPHA - Various improvements and a new virtual command: Log to console. Powerful.
  *	03/10/2016 >>> v0.0.02b.20170310 - ALPHA - Implemented device versioning to correctly handle multiple browsers accessing the same dashboard after a device selection was performed, enabled security token expiry
