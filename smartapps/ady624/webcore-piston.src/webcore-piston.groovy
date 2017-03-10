@@ -13,9 +13,10 @@
  *  for the specific language governing permissions and limitations under the License.
  *
 */
-
-def version() {	return "v0.0.02b.20170310" }
+static String handle() { return "CoRE (SE)" }
+def version() {	return "v0.0.02c.20170310" }
 /*
+ *	03/10/2016 >>> v0.0.02c.20170310 - ALPHA - Various improvements and a new virtual command: Log to console. Powerful.
  *	03/10/2016 >>> v0.0.02b.20170310 - ALPHA - Implemented device versioning to correctly handle multiple browsers accessing the same dashboard after a device selection was performed, enabled security token expiry
  *	03/09/2016 >>> v0.0.02a.20170309 - ALPHA - Fixed parameter issues, added support for expressions in all parameters, added notification virtual tasks
  *	03/09/2016 >>> v0.0.029.20170309 - ALPHA - More execution flow fixes, sticky trace lines fixed
@@ -69,9 +70,10 @@ def version() {	return "v0.0.02b.20170310" }
     name: "webCoRE Piston",
     namespace: "ady624",
     author: "Adrian Caramaliu",
-    description: "CoRE Piston - Web Edition",
+    description: handle(),
     category: "Convenience",
 	parent: "ady624:webCoRE",
+    /* icons courtesy of @chauger - thank you */
 	iconUrl: "https://cdn.rawgit.com/ady624/webCoRE/master/smartapps/ady624/res/img/app-CoRE.png",
 	iconX2Url: "https://cdn.rawgit.com/ady624/webCoRE/master/smartapps/ady624/res/img/app-CoRE@2x.png",
 	iconX3Url: "https://cdn.rawgit.com/ady624/webCoRE/master/smartapps/ady624/res/img/app-CoRE@3x.png"
@@ -534,18 +536,16 @@ private Boolean executeAction(rtData, statement, async) {
         	devices.push(device)
         }
     }
-    if (devices.size()) {
-        for (task in statement.k) {
-        	def result = executeTask(rtData, devices, statement, task, async)
-            if (!result && !rtData.fastForwardTo) return false
-        }
+    for (task in statement.k) {
+        def result = executeTask(rtData, devices, statement, task, async)
+        if (!result && !rtData.fastForwardTo) return false
     }
     return true
 }
 
 private Boolean executeTask(rtData, devices, statement, task, async) {
-	//def cmd = rtData.commands.physical[task.c]
     //parse parameters
+   	def virtualDevice = devices.size() ? null : location
     def t = now()
     if (rtData.fastForwardTo) {
 	    if (task.$ == rtData.fastForwardTo) {
@@ -568,8 +568,8 @@ private Boolean executeTask(rtData, devices, statement, task, async) {
     }
  	def vcmd = rtData.commands.virtual[task.c]
     long delay = 0
-    for (device in devices) {
-        if (device.hasCommand(task.c)) {
+    for (device in (virtualDevice ? [virtualDevice] : devices)) {
+        if (!virtualDevice && device.hasCommand(task.c)) {
         	def msg = timer "Executed [$device].${task.c}", rtData
         	try {
             	delay = "cmd_${task.c}"(device, params)
@@ -628,7 +628,13 @@ private long executeVirtualCommand(rtData, devices, task, params) {
    	def msg = timer "Executed virtual command ${devices instanceof List ? "$devices" : "[$devices]"}.${task.c}", rtData
     long delay = 0
     try {
-	    delay = "vcmd_${task.c}"(devices, params)
+    	if (task.c == 'log') {
+        	//we don't want to send rtData to all virtual commands
+            //log is the only one that uses it
+            log params[1].v, rtData, null, null, "${params[0].v}".toLowerCase().trim()
+        } else {
+	    	delay = "vcmd_${task.c}"(devices, params)
+        }
 	    info msg
     } catch(all) {
     	msg.m = "Error executing virtual command ${devices instanceof List ? "$devices" : "[$devices]"}.${task.c}: $all"
@@ -654,6 +660,12 @@ private long vcmd_waitRandom(device, params) {
         min = v
     }
 	return min + (int)Math.round((max - min) * Math.random())
+}
+
+private long vcmd_sendNotification(device, params) {
+	def message = params[0].v
+    sendNotificationEvent(message)
+    return 0
 }
 
 private long vcmd_sendPUSHNotification(device, params) {
@@ -774,34 +786,36 @@ private Boolean evaluateComparison(rtData, comparison, lo, ro = null, ro2 = null
         }
         //if multiple left values, go through each
         for(value in lo.values) {
-        	def res
-            try {
-            	if (!ro) {
-                	res = "$fn"(rtData, value)
-                } else {
-                    def rres
-                	res = (ro.operand.g == 'any' ? false : true)
-                    //if multiple right values, go through each
-                	for (rvalue in ro.values) {
-                    	if (!ro2) {
-                    		rres = "$fn"(rtData, value, rvalue)
-                        } else {
-	                        rres = (ro2.operand.g == 'any' ? false : true)
-                            //if multiple right2 values, go through each
-        		        	for (r2value in ro2.values) {
-                    			def r2res = "$fn"(rtData, value, rvalue, r2value)
-                                rres = (ro2.operand.g == 'any' ? rres || r2res : rres && r2res)
-		                        if (((ro2.operand.g == 'any') && rres) || ((ro2.operand.g != 'any') && !rres)) break
-	                        }
+        	def res = false
+            if (!value.x) {
+                try {
+                    if (!ro) {
+                        res = "$fn"(rtData, value)
+                    } else {
+                        def rres
+                        res = (ro.operand.g == 'any' ? false : true)
+                        //if multiple right values, go through each
+                        for (rvalue in ro.values) {
+                            if (!ro2) {
+                                rres = "$fn"(rtData, value, rvalue)
+                            } else {
+                                rres = (ro2.operand.g == 'any' ? false : true)
+                                //if multiple right2 values, go through each
+                                for (r2value in ro2.values) {
+                                    def r2res = "$fn"(rtData, value, rvalue, r2value)
+                                    rres = (ro2.operand.g == 'any' ? rres || r2res : rres && r2res)
+                                    if (((ro2.operand.g == 'any') && rres) || ((ro2.operand.g != 'any') && !rres)) break
+                                }
+                            }
+                            res = (ro.operand.g == 'any' ? res || rres : res && rres)
+                            if (((ro.operand.g == 'any') && res) || ((ro.operand.g != 'any') && !res)) break
                         }
-	                   	res = (ro.operand.g == 'any' ? res || rres : res && rres)
-                        if (((ro.operand.g == 'any') && res) || ((ro.operand.g != 'any') && !res)) break
                     }
-                }
-            } catch(all) {
-                error "Error calling comparison $fn: $all"
-                res = false
-            }            
+                } catch(all) {
+                    error "Error calling comparison $fn: $all"
+                    res = false
+                }            
+            }
             result = (lo.operand.g == 'any' ? result || res : result && res)
             if (options?.matches && value.d) {
             	if (res) {
@@ -1004,9 +1018,14 @@ private Map getDeviceAttribute(rtData, deviceId, attributeName) {
     if (device) {
         def attribute = rtData.attributes[attributeName]
         if (attribute) {
-            return [t: attribute.t, v: device.currentValue(attributeName), d: deviceId, a: attributeName]
+        	if (attributeName == 'button') {
+            	log.trace "${device.id} >>> ${rtData.event.device.id} >>>> ${device == rtData.event.device}"
+            }
+        	//x = eXclude - if a momentary attribute is looked for and the device does not match the current device, then we must ignore this during comparisons
+            return [t: attribute.t, v: device.currentValue(attributeName), d: deviceId, a: attributeName, x: !!attribute.m && ((device?.id != rtData.event.device?.id) || (attributeName != rtData.event.name))]
         } else {
-            return [t: "error", v: "Attribute '${attributeName}' not found"]
+        	//we set eXclude to true, we don't want this to be compared, it's really an error
+            return [t: "error", v: "Attribute '${attributeName}' not found", x: true]
         }
     }
     return [t: "error", v: "Device '${deviceId}' not found"]

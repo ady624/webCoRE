@@ -19,9 +19,10 @@
  *  Version history
  */
 
-def handle() { return "CoRE (SE)" }
-def version() {	return "v0.0.02b.20170310" }
+static String handle() { return "CoRE (SE)" }
+def version() {	return "v0.0.02c.20170310" }
 /*
+ *	03/10/2016 >>> v0.0.02c.20170310 - ALPHA - Various improvements and a new virtual command: Log to console. Powerful.
  *	03/10/2016 >>> v0.0.02b.20170310 - ALPHA - Implemented device versioning to correctly handle multiple browsers accessing the same dashboard after a device selection was performed, enabled security token expiry
  *	03/09/2016 >>> v0.0.02a.20170309 - ALPHA - Fixed parameter issues, added support for expressions in all parameters, added notification virtual tasks
  *	03/09/2016 >>> v0.0.029.20170309 - ALPHA - More execution flow fixes, sticky trace lines fixed
@@ -78,6 +79,7 @@ def version() {	return "v0.0.02b.20170310" }
 	description: handle(),
 	category: "Convenience",
 	singleInstance: false,
+    /* icons courtesy of @chauger - thank you */
 	iconUrl: "https://cdn.rawgit.com/ady624/webCoRE/master/smartapps/ady624/res/img/app-CoRE.png",
 	iconX2Url: "https://cdn.rawgit.com/ady624/webCoRE/master/smartapps/ady624/res/img/app-CoRE@2x.png",
 	iconX3Url: "https://cdn.rawgit.com/ady624/webCoRE/master/smartapps/ady624/res/img/app-CoRE@3x.png"
@@ -680,7 +682,7 @@ private Map listAvailableDevices(raw = false) {
             	if (raw) {
                     devices[devId] = dev
                 } else {
-                	devices[devId] = [n: dev.getDisplayName(), cn: dev.getCapabilities()*.name, a: dev.getSupportedAttributes().collect{[n: it.getName(), t: it.getDataType(), o: it.getValues()]}, c: dev.getSupportedCommands().collect{[n: it.getName(), p: it.getArguments()]}]
+                	devices[devId] = [n: dev.getDisplayName(), cn: dev.getCapabilities()*.name, a: dev.getSupportedAttributes().unique{ it.getName() }.collect{[n: it.getName(), t: it.getDataType(), o: it.getValues()]}, c: dev.getSupportedCommands().collect{[n: it.getName(), p: it.getArguments()]}]
                 }
             }
         }
@@ -1217,8 +1219,10 @@ private virtualCommands() {
 		waitRandom			: [ n: "Wait randomly...",			a: true,	d: "Wait randomly between {0} and {1}",									p: [[n:"At least", t:"duration"],[n:"At most", t:"duration"]],	],
 		toggle				: [ n: "Toggle", r: ["on", "off"], 					],
 		toggleLevel			: [ n: "Toggle level...", 						d: "Toggle level between 0% and {0}%",	r: ["on", "off", "setLevel"],	p: [[n:"Level", t:"level"]],																																	],
+		sendNotification	: [ n: "Send notification...",		a: true,	d: "Send notification \"{0}\"",											p: [[n:"Message", t:"string"]],												],
 		sendPushNotification: [ n: "Send PUSH notification...",	a: true,	d: "Send PUSH notification \"{0}\"{1}",									p: [[n:"Message", t:"string"],[n:"Store in Messages", t:"boolean", d:" and store in Messages"]],	],
 		sendSMSNotification	: [ n: "Send SMS notification...",	a: true,	d: "Send SMS notification \"{0}\" to {1}{2}",							p: [[n:"Message", t:"string"],[n:"Phone number",t:"phone"],[n:"Store in Messages", t:"boolean", d:" and store in Messages"]],	],
+		log					: [ n: "Log to console...",			a: true,	d: "Log {0} \"{1}\"",													p: [[n:"Log type", t:"enum", o:["info","trace","debug","warn","error"]],[n:"Message",t:"string"]],	],
 
 
 /*		[ n: "waitState",											d: "Wait for piston state change",	p: ["Change to:enum[any,false,true]"],															i: true,	l: true,						dd: "Wait for {0} state"],
@@ -1391,6 +1395,7 @@ private static Map functions() {
         dewpoint		: [ t: "decimal",	d: "dewPoint",	],
         fahrenheit		: [ t: "decimal",					],
         celsius			: [ t: "decimal",					],
+        dateAdd			: [ t: "time",		d: "dateAdd",	],
 	]
 }
 
