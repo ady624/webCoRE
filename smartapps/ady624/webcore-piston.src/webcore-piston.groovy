@@ -14,8 +14,9 @@
  *
 */
 
-def version() {	return "v0.0.02a.20170309" }
+def version() {	return "v0.0.02b.20170310" }
 /*
+ *	03/10/2016 >>> v0.0.02b.20170310 - ALPHA - Implemented device versioning to correctly handle multiple browsers accessing the same dashboard after a device selection was performed, enabled security token expiry
  *	03/09/2016 >>> v0.0.02a.20170309 - ALPHA - Fixed parameter issues, added support for expressions in all parameters, added notification virtual tasks
  *	03/09/2016 >>> v0.0.029.20170309 - ALPHA - More execution flow fixes, sticky trace lines fixed
  *	03/08/2016 >>> v0.0.028.20170308 - ALPHA - Scheduler fixes
@@ -71,9 +72,9 @@ def version() {	return "v0.0.02a.20170309" }
     description: "CoRE Piston - Web Edition",
     category: "Convenience",
 	parent: "ady624:webCoRE",
-    iconUrl: "https://cdn.rawgit.com/ady624/CoRE/master/resources/images/app-CoRE.png",
-    iconX2Url: "https://cdn.rawgit.com/ady624/CoRE/master/resources/images/app-CoRE@2x.png",
-    iconX3Url: "https://cdn.rawgit.com/ady624/CoRE/master/resources/images/app-CoRE@2x.png"
+	iconUrl: "https://cdn.rawgit.com/ady624/webCoRE/master/smartapps/ady624/res/img/app-CoRE.png",
+	iconX2Url: "https://cdn.rawgit.com/ady624/webCoRE/master/smartapps/ady624/res/img/app-CoRE@2x.png",
+	iconX3Url: "https://cdn.rawgit.com/ady624/webCoRE/master/smartapps/ady624/res/img/app-CoRE@3x.png"
  )
 
 

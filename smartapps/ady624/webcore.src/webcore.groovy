@@ -20,8 +20,9 @@
  */
 
 def handle() { return "CoRE (SE)" }
-def version() {	return "v0.0.02a.20170309" }
+def version() {	return "v0.0.02b.20170310" }
 /*
+ *	03/10/2016 >>> v0.0.02b.20170310 - ALPHA - Implemented device versioning to correctly handle multiple browsers accessing the same dashboard after a device selection was performed, enabled security token expiry
  *	03/09/2016 >>> v0.0.02a.20170309 - ALPHA - Fixed parameter issues, added support for expressions in all parameters, added notification virtual tasks
  *	03/09/2016 >>> v0.0.029.20170309 - ALPHA - More execution flow fixes, sticky trace lines fixed
  *	03/08/2016 >>> v0.0.028.20170308 - ALPHA - Scheduler fixes
@@ -77,9 +78,9 @@ def version() {	return "v0.0.02a.20170309" }
 	description: handle(),
 	category: "Convenience",
 	singleInstance: false,
-	iconUrl: "https://cdn.rawgit.com/ady624/CoRE/master/resources/images/app-CoRE.png",
-	iconX2Url: "https://cdn.rawgit.com/ady624/CoRE/master/resources/images/app-CoRE@2x.png",
-	iconX3Url: "https://cdn.rawgit.com/ady624/CoRE/master/resources/images/app-CoRE@2x.png"
+	iconUrl: "https://cdn.rawgit.com/ady624/webCoRE/master/smartapps/ady624/res/img/app-CoRE.png",
+	iconX2Url: "https://cdn.rawgit.com/ady624/webCoRE/master/smartapps/ady624/res/img/app-CoRE@2x.png",
+	iconX3Url: "https://cdn.rawgit.com/ady624/webCoRE/master/smartapps/ady624/res/img/app-CoRE@3x.png"
  )
 
 
@@ -125,7 +126,7 @@ def pageMain() {
     def dashboardUrl = ""
 	dynamicPage(name: "pageMain", title: "", install: true, uninstall: false) {
     	section("Engine block") {
-			href "pageEngineBlock", title: "Cast iron", description: app.version(), image: "https://cdn.rawgit.com/ady624/CoRE/master/resources/images/app-CoRE.png", required: false
+			href "pageEngineBlock", title: "Cast iron", description: app.version(), image: "https://cdn.rawgit.com/ady624/webCoRE/master/smartapps/ady624/res/img/app-CoRE.png", required: false
         }
 		section("Dashboard") {
 			if (!state.endpoint) {
@@ -154,15 +155,12 @@ private pageInitializeDashboard() {
 				return
 			}
 		}
-		section() {
-			input "PIN", "password", title: "Choose a security password for your dashboard", required: true
-			input "expiry", "enum", options: ["Every day", "Every week", "Every month", "Every three months", "Never (I clearly don't know what I'm doing)"], defaultValue: "Every month", title: "Choose how often the dashboard login expires", required: true
-		}
+        pageSectionPIN()
 	}
 }
 
 private pageSelectDevices() {
-	atomicState.updateDevices = true
+	state.deviceVersion = now().toString()
 	dynamicPage(name: "pageSelectDevices", title: "", nextPage: state.installed ? null : "pageFinishInstall") {
 		section() {
 			paragraph "${state.installed ? "Select the devices you want ${handle()} to have access to." : "It's now time to allow ${handle()} access to some of your devices."} Only allow ${handle()} access to devices you plan on using with ${handle()} pistons, as they only have access to these selected devices.${state.installed ? "" : " When ready, tap Done to finish installing ${handle()}."}"
@@ -223,18 +221,23 @@ private pageChangePassword() {
 		section() {
 			paragraph "Choose a security password for your dashboard. You will need to enter this password when accessing your dashboard for the first time and possibly from time to time.", required: false			   
 		}
-		section() {
-			input "PIN", "password", title: "Choose a security password for your dashboard", required: true
-			input "expiry", "enum", options: ["Every day", "Every week", "Every month", "Every three months", "Never (I clearly don't know what I'm doing)"], defaultValue: "Every month", title: "Choose how often the dashboard login expires", required: true
-		}
+		pageSectionPIN()
 	}
+}
+
+private pageSectionPIN() {
+    section() {
+        input "PIN", "password", title: "Choose a security password for your dashboard", required: true
+        input "expiry", "enum", options: ["Every hour", "Every day", "Every week", "Every month (recommended)", "Every three months", "Never (not recommended)"], defaultValue: "Every month (recommended)", title: "Choose how often the dashboard login expires", required: true
+    }
+
 }
 
 private pageSavePassword() {
 	initTokens()
     dynamicPage(name: "pageSavePassword", title: "") {
 		section() {
-			paragraph "Congratulations, your password has been changed. Please note you may need to reauthenticate when opening the dashboard.", required: false
+			paragraph "Your password has been changed. Please note you may need to reauthenticate when opening the dashboard.", required: false
 		}
 	}
 }
@@ -290,9 +293,6 @@ private initializeCoREEndpoint() {
 }
 
 
-
-
-
 /******************************************************************************/
 /*** 																		***/
 /*** DASHBOARD MAPPINGS														***/
@@ -329,12 +329,10 @@ private api_get_error_result(error) {
     ]
 }
 
-private api_get_base_result(requireDevices = true) {
+private api_get_base_result(deviceVersion = 0) {
 	def tz = location.getTimeZone()
-	def Boolean sendDevices = (requireDevices =='true') || (requireDevices == true) || !!atomicState.updateDevices
-    if (sendDevices) {
-    	atomicState.updateDevices = null
-    }
+    def currentDeviceVersion = atomicState.deviceVersion
+	def Boolean sendDevices = (deviceVersion != currentDeviceVersion)
 	return [
         name: location.name + ' \\ ' + (app.label ?: app.name),
         instance: [
@@ -343,7 +341,8 @@ private api_get_base_result(requireDevices = true) {
             id: hashId(app.id),
             locationId: hashId(location.id),
             name: app.label ?: app.name,
-            uri: atomicState.endpoint            
+            uri: atomicState.endpoint,
+            deviceVersion: currentDeviceVersion,
         ] + (sendDevices ? [devices: listAvailableDevices()] : [:]),
         location: [
             contactBookEnabled: location.getContactBookEnabled(),
@@ -421,7 +420,7 @@ private api_intf_dashboard_piston_get() {
         def clientDbVersion = params.db
         def requireDb = serverDbVersion != clientDbVersion
         if (pistonId) {
-            result = api_get_base_result(requireDb ?: params.dev)            
+            result = api_get_base_result(requireDb ? 0 : params.dev)            
             def piston = getChildApps().find{ hashId(it.id) == pistonId };
             if (piston) {
             	result.data = piston.get() ?: [:]
@@ -698,15 +697,24 @@ private void initTokens() {
 	atomicState.securityTokens = [:]
 }
 
-private Boolean verifySecurityToken(token) {
+private Boolean verifySecurityToken(tokenId) {
 	def tokens = atomicState.securityTokens
     if (!tokens) return false
-	def t = tokens[token]
-    if (!t) {
+    def threshold = now()
+    def modified = false
+    //remove all expired tokens
+    for (token in tokens.findAll{ it.value < threshold }) {
+    	tokens.remove(token.key)
+        modified = true
+    }
+    if (modified) {
+    	atomicState.securityTokens = tokens
+    }
+	def token = tokens[tokenId]
+    if (!token || token < now()) {
         error "Dashboard: Authentication failed due to an invalid token"
     	return false
     }
-    //check expiry
     return true
 }
 
@@ -714,7 +722,17 @@ private String createSecurityToken() {
     trace "Dashboard: Generating new security token after a successful PIN authentication"
 	def token = UUID.randomUUID().toString()
     def tokens = atomicState.securityTokens ?: [:]
-    tokens[token] = now()
+    def expiry = 0
+    def eo = "$settings.expiry".toLowerCase().replace("every ", "").replace("(recommended)", "").replace("(not recommended)", "").trim()
+    switch (eo) {
+		case "hour": expiry = 3600; break;
+        case "day": expiry = 86400; break;
+        case "week": expiry = 604800; break;
+        case "month": expiry = 2592000; break;
+        case "three months": expiry = 7776000; break;
+        case "never": expiry = 3110400000; break; //never means 100 years, okay?
+	}
+    tokens[token] = now() + expiry * 1000
     atomicState.securityTokens = tokens
     return token
 }
