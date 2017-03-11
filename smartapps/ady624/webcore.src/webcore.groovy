@@ -20,8 +20,9 @@
  */
 
 static String handle() { return "CoRE (SE)" }
-def version() {	return "v0.0.02f.20170310" }
+def version() {	return "v0.0.030.20170310" }
 /*
+ *	03/10/2016 >>> v0.0.030.20170310 - ALPHA - Fixed a bug in scheduler introduced in 02e/02f
  *	03/10/2016 >>> v0.0.02f.20170310 - ALPHA - Various improvements, added toggle and toggleLevel
  *	03/10/2016 >>> v0.0.02e.20170310 - ALPHA - Fixed a problem where long expiration settings prevented logins (integer overflow)
  *	03/10/2016 >>> v0.0.02d.20170310 - ALPHA - Reporting version to JS
@@ -1217,6 +1218,7 @@ private virtualCommands() {
 		sendPushNotification: [ n: "Send PUSH notification...",	a: true,	d: "Send PUSH notification \"{0}\"{1}",									p: [[n:"Message", t:"string"],[n:"Store in Messages", t:"boolean", d:" and store in Messages"]],	],
 		sendSMSNotification	: [ n: "Send SMS notification...",	a: true,	d: "Send SMS notification \"{0}\" to {1}{2}",							p: [[n:"Message", t:"string"],[n:"Phone number",t:"phone"],[n:"Store in Messages", t:"boolean", d:" and store in Messages"]],	],
 		log					: [ n: "Log to console...",			a: true,	d: "Log {0} \"{1}\"",													p: [[n:"Log type", t:"enum", o:["info","trace","debug","warn","error"]],[n:"Message",t:"string"]],	],
+		httpRequest			: [ n: "Make a web request",		a: true, 	d: "Make a {1} request to {0}",									        p: [[n:"URL", t:"string"],[n:"Method", t:"enum", o:["GET","POST","PUT","DELETE","HEAD"]],[n:"Content", t:"enum", o:["JSON","FORM"]],[n:"Send variables", t:"variables", d:" and data {v}"],[n:"Import response data into variables", t:"boolean"],[n:"Variable import name prefix", t:"string"]],	],
 
 
 /*		[ n: "waitState",											d: "Wait for piston state change",	p: ["Change to:enum[any,false,true]"],															i: true,	l: true,						dd: "Wait for {0} state"],

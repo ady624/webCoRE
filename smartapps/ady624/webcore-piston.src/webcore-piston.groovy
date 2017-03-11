@@ -14,8 +14,9 @@
  *
 */
 static String handle() { return "CoRE (SE)" }
-def version() {	return "v0.0.02f.20170310" }
+def version() {	return "v0.0.030.20170310" }
 /*
+ *	03/10/2016 >>> v0.0.030.20170310 - ALPHA - Fixed a bug in scheduler introduced in 02e/02f
  *	03/10/2016 >>> v0.0.02f.20170310 - ALPHA - Various improvements, added toggle and toggleLevel
  *	03/10/2016 >>> v0.0.02e.20170310 - ALPHA - Fixed a problem where long expiration settings prevented logins (integer overflow)
  *	03/10/2016 >>> v0.0.02d.20170310 - ALPHA - Reporting version to JS
@@ -412,7 +413,7 @@ private Boolean executeEvent(rtData, event) {
         setSystemVariableValue(rtData, '$currentEventValue', rtData.currentEvent.value ?: '')
         setSystemVariableValue(rtData, '$currentEventDevicePhysical', !!rtData.currentEvent.physical)
         rtData.fastForwardTo = null
-        if (event.device == 'time') {
+        if (event.name == 'time') {
         	rtData.fastForwardTo = event.schedule.i
         }
 		//todo - check restrictions	
@@ -455,6 +456,7 @@ private finalizeEvent(rtData, initialMsg, success = true) {
     } else {
     	rtData.stats.nextSchedule = 0
     }
+    atomicState.schedules = schedules
 
 	parent.updateRunTimeData(rtData)
 
