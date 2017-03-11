@@ -14,8 +14,9 @@
  *
 */
 static String handle() { return "CoRE (SE)" }
-def version() {	return "v0.0.034.20170311" }
+def version() {	return "v0.0.035.20170311" }
 /*
+ *	03/11/2016 >>> v0.0.035.20170311 - ALPHA - A little error creeped into the conditions, fixed it
  *	03/11/2016 >>> v0.0.034.20170311 - ALPHA - Multiple device selection aggregation now working properly. COUNT(device list's contact) rises above 1 will be true when at least two doors in the list are open :D
  *	03/11/2016 >>> v0.0.033.20170311 - ALPHA - Implemented all conditions except "was..." and all triggers except "stays..."
  *	03/11/2016 >>> v0.0.032.20170311 - ALPHA - Fixed setLevel null params and added version checking
@@ -950,15 +951,15 @@ private Map valueChanged(rtData, comparisonValue) {
 }
 
 //comparison low level functions
-private boolean comp_is								(rtData, lv, rv = null, rv2 = null) { return cast(lv.v.v, 'string') == cast(rv.d.v, 'string') }
-private boolean comp_is_not							(rtData, lv, rv = null, rv2 = null) { return cast(lv.v.v, 'string') != cast(rv.d.v, 'string') }
-private boolean comp_is_equal_to					(rtData, lv, rv = null, rv2 = null) { return cast(lv.v.v, 'decimal') == cast(rv.d.v, 'decimal') }
-private boolean comp_is_not_equal_to				(rtData, lv, rv = null, rv2 = null) { return cast(lv.v.v, 'decimal') != cast(rv.d.v, 'decimal') }
-private boolean comp_is_different_than				(rtData, lv, rv = null, rv2 = null) { return cast(lv.v.v, 'decimal') != cast(rv.d.v, 'decimal') }
-private boolean comp_is_less_than					(rtData, lv, rv = null, rv2 = null) { return cast(lv.v.v, 'decimal') < cast(rv.d.v, 'decimal') }
-private boolean comp_is_less_than_or_equal_to		(rtData, lv, rv = null, rv2 = null) { return cast(lv.v.v, 'decimal') <= cast(rv.d.v, 'decimal') }
-private boolean comp_is_greater_than				(rtData, lv, rv = null, rv2 = null) { return cast(lv.v.v, 'decimal') > cast(rv.d.v, 'decimal') }
-private boolean comp_is_greater_than_or_equal_to	(rtData, lv, rv = null, rv2 = null) { return cast(lv.v.v, 'decimal') >= cast(rv.d.v, 'decimal') }
+private boolean comp_is								(rtData, lv, rv = null, rv2 = null) { return cast(lv.v.v, 'string') == cast(rv.v.v, 'string') }
+private boolean comp_is_not							(rtData, lv, rv = null, rv2 = null) { return cast(lv.v.v, 'string') != cast(rv.v.v, 'string') }
+private boolean comp_is_equal_to					(rtData, lv, rv = null, rv2 = null) { return cast(lv.v.v, 'decimal') == cast(rv.v.v, 'decimal') }
+private boolean comp_is_not_equal_to				(rtData, lv, rv = null, rv2 = null) { return cast(lv.v.v, 'decimal') != cast(rv.v.v, 'decimal') }
+private boolean comp_is_different_than				(rtData, lv, rv = null, rv2 = null) { return cast(lv.v.v, 'decimal') != cast(rv.v.v, 'decimal') }
+private boolean comp_is_less_than					(rtData, lv, rv = null, rv2 = null) { return cast(lv.v.v, 'decimal') < cast(rv.v.v, 'decimal') }
+private boolean comp_is_less_than_or_equal_to		(rtData, lv, rv = null, rv2 = null) { return cast(lv.v.v, 'decimal') <= cast(rv.v.v, 'decimal') }
+private boolean comp_is_greater_than				(rtData, lv, rv = null, rv2 = null) { return cast(lv.v.v, 'decimal') > cast(rv.v.v, 'decimal') }
+private boolean comp_is_greater_than_or_equal_to	(rtData, lv, rv = null, rv2 = null) { return cast(lv.v.v, 'decimal') >= cast(rv.v.v, 'decimal') }
 private boolean comp_is_even						(rtData, lv, rv = null, rv2 = null) { return cast(lv.v.v, 'integer').mod(2) == 0 }
 private boolean comp_is_odd							(rtData, lv, rv = null, rv2 = null) { return cast(lv.v.v, 'integer').mod(2) != 0 }
 private boolean comp_is_true						(rtData, lv, rv = null, rv2 = null) { return !!cast(lv.v.v, 'boolean') }
