@@ -20,8 +20,9 @@
  */
 
 static String handle() { return "CoRE (SE)" }
-def version() {	return "v0.0.030.20170310" }
+def version() {	return "v0.0.031.20170311" }
 /*
+ *	03/11/2016 >>> v0.0.031.20170310 - ALPHA - Various fixes including null optional parameters, conditional groups, first attempt at piston restrictions (statement restrictions not enabled yet), fixed a problem with subscribing device bolt indicators only showing for one instance of each device/attribute pair, fixed sendPushNotification
  *	03/10/2016 >>> v0.0.030.20170310 - ALPHA - Fixed a bug in scheduler introduced in 02e/02f
  *	03/10/2016 >>> v0.0.02f.20170310 - ALPHA - Various improvements, added toggle and toggleLevel
  *	03/10/2016 >>> v0.0.02e.20170310 - ALPHA - Fixed a problem where long expiration settings prevented logins (integer overflow)

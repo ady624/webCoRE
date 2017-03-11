@@ -14,8 +14,9 @@
  *
 */
 static String handle() { return "CoRE (SE)" }
-def version() {	return "v0.0.030.20170310" }
+def version() {	return "v0.0.031.20170311" }
 /*
+ *	03/11/2016 >>> v0.0.031.20170310 - ALPHA - Various fixes including null optional parameters, conditional groups, first attempt at piston restrictions (statement restrictions not enabled yet), fixed a problem with subscribing device bolt indicators only showing for one instance of each device/attribute pair, fixed sendPushNotification
  *	03/10/2016 >>> v0.0.030.20170310 - ALPHA - Fixed a bug in scheduler introduced in 02e/02f
  *	03/10/2016 >>> v0.0.02f.20170310 - ALPHA - Various improvements, added toggle and toggleLevel
  *	03/10/2016 >>> v0.0.02e.20170310 - ALPHA - Fixed a problem where long expiration settings prevented logins (integer overflow)
@@ -361,7 +362,7 @@ def handleEvents(event) {
         atomicState.schedules = schedules
         def delay = event.schedule.t - now()
         if (delay > 0) {
-        	warn "Time event fired early, waiting for ${delay}ms...", rtData
+        	warn "Aligning to schedule timing, waiting for ${delay}ms...", rtData
         	pause(delay)
         }
         success = executeEvent(rtData, event)
@@ -517,46 +518,49 @@ private Boolean executeStatement(rtData, statement, async = false) {
     def t = now()
     def value = true
     async = !!async || (statement.a == "1")
-	switch (statement.t) {
-    	case 'if':
-        case 'while':
-    		//check conditions for if and while
-        	def perform = evaluateConditions(rtData, statement, async)
-        	if (perform || !!rtData.fastForwardTo) {
-	        	if (!executeStatements(rtData, statement.s, async)) {
-	            	//stop processing
-	                value = false
-                    if (!rtData.fastForwardTo) break
-	            }
-                value = true
-                if (!rtData.fastForwardTo) break
-	        }
-            if (!perform || !!rtData.fastForwardTo) {
-	        	if (statement.t == 'if') {
-	            	//look for else-ifs
-	                for (elseIf in statement.ei) {
-	                    perform = evaluateConditions(rtData, elseIf, async)
-	                    if (perform || !!rtData.fastForwardTo) {
-	                        if (!executeStatements(rtData, elseIf.s, async)) {
-	                            //stop processing
-	                            value = false
-                                if (!rtData.fastForwardTo) break
-	                        }
-                            value = true
-	                        if (!rtData.fastForwardTo) break
-	                    }                	
-	                }
-	                if ((!perform || !!rtData.fastForwardTo) && !executeStatements(rtData, statement.e, async)) {
-	                	//stop processing
+    def restricted = !statement.r || !(statement.r.length) || evaluateConditions(rtData, statement, 'r', async, true)
+    if (restricted || !!rtData.fastForwardTo) {
+        switch (statement.t) {
+            case 'if':
+            case 'while':
+                //check conditions for if and while
+                def perform = evaluateConditions(rtData, statement, 'c', async)
+                if (perform || !!rtData.fastForwardTo) {
+                    if (!executeStatements(rtData, statement.s, async)) {
+                        //stop processing
                         value = false
                         if (!rtData.fastForwardTo) break
-	                }
-	            }
-    	    }
-			break
-		case 'action':
-        	value = executeAction(rtData, statement, async)
-        	break
+                    }
+                    value = true
+                    if (!rtData.fastForwardTo) break
+                }
+                if (!perform || !!rtData.fastForwardTo) {
+                    if (statement.t == 'if') {
+                        //look for else-ifs
+                        for (elseIf in statement.ei) {
+                            perform = evaluateConditions(rtData, elseIf, 'c', async)
+                            if (perform || !!rtData.fastForwardTo) {
+                                if (!executeStatements(rtData, elseIf.s, async)) {
+                                    //stop processing
+                                    value = false
+                                    if (!rtData.fastForwardTo) break
+                                }
+                                value = true
+                                if (!rtData.fastForwardTo) break
+                            }                	
+                        }
+                        if ((!perform || !!rtData.fastForwardTo) && !executeStatements(rtData, statement.e, async)) {
+                            //stop processing
+                            value = false
+                            if (!rtData.fastForwardTo) break
+                        }
+                    }
+                }
+                break
+            case 'action':
+                value = executeAction(rtData, statement, async)
+                break
+        }
     }
 	if (!rtData.fastForwardTo) tracePoint(rtData, "s:${statement.$}", now() - t, value)
 	if (statement.a == '1') {
@@ -654,6 +658,7 @@ private requestWakeUp(rtData, statement, task, timeOrDelay) {
 
 
 private long cmd_setLevel(device, params) {
+log.trace params
 	def level = params[0].v
     def state = params.size() > 1 ? params[1].v : ""
     def delay = params.size() > 2 ? params[2].v : 0
@@ -727,7 +732,7 @@ private long vcmd_sendNotification(device, params) {
     return 0
 }
 
-private long vcmd_sendPUSHNotification(device, params) {
+private long vcmd_sendPushNotification(device, params) {
 	def message = params[0].v
     def save = !!params[1].v
 	if (save) {
@@ -754,87 +759,94 @@ private long vcmd_sendSMSNotification(device, params) {
     return 0
 }
 
-private Boolean evaluateConditions(rtData, conditions, async) {
+private Boolean evaluateConditions(rtData, conditions, collection, async) {
 	def t = now()
-	def grouping = conditions.o
-    def not = !!conditions.n
+    def not = (collection == 'c') ? !!conditions.n : !!conditions.rn
+    def grouping = (collection == 'c') ? conditions.o : conditions.ro
     def value = (grouping == 'or' ? false : true)
-	for(condition in conditions.c) {
-    	def res = evaluateCondition(rtData, condition, async)
+	for(condition in conditions[collection]) {
+    	def res = evaluateCondition(rtData, condition, collection, async)
         value = (grouping == 'or') ? value || res : value && res
+        //conditions optimizations go here
         if (!rtData.fastForwardTo && (value == (grouping == 'or') ? true : false)) break
     }
     def result = not ? !value : !!value
     if (!rtData.fastForwardTo) tracePoint(rtData, "c:${conditions.$}", now() - t, result)
     //true/false actions
-    if ((result || rtData.fastForwardTo) && conditions.ts && conditions.ts.length) executeStatements(rtData, conditions.ts, async) 
-    if ((!result || rtData.fastForwardTo) && conditions.fs && conditions.fs.length) executeStatements(rtData, conditions.fs, async)
+    if (collection == 'c') {
+	    if ((result || rtData.fastForwardTo) && conditions.ts && conditions.ts.length) executeStatements(rtData, conditions.ts, async) 
+    	if ((!result || rtData.fastForwardTo) && conditions.fs && conditions.fs.length) executeStatements(rtData, conditions.fs, async)
+    }
 	return result
 }
 
-private Boolean evaluateCondition(rtData, condition, async) {
+private Boolean evaluateCondition(rtData, condition, collection, async) {
 	def t = now()
-    def not = !!condition.n
+    def not = false
     def result = false
-    def comparison = rtData.comparisons.conditions[condition.co] ?: rtData.comparisons.triggers[condition.co]
-    if (rtData.fastForwardTo || comparison) {
-    	if (!rtData.fastForwardTo) {
-            def paramCount = comparison.p ?: 0
-            def lo = null
-            def ro = null
-            def ro2 = null
-            for(int i = 0; i <= paramCount; i++) {
-                def operand = (i == 0 ? condition.lo : (i == 1 ? condition.ro : condition.ro2))
-                //parse the operand
-                def values
-                switch (operand.t) {
-                    case "p": //physical device
-                        values = []
-                        for(deviceId in operand.d) {
-                            values.push(getDeviceAttribute(rtData, deviceId, operand.a))
-                        }
-                        if ((values.size() > 1) && !(operand.g in ['any', 'all'])) {
-                        	//if we have multiple values and a grouping other than any or all we need to apply that function
-                            try {
-                                values = ["func_${operand.g}"(rtData, values)]
-                            } catch(all) {
-                            	error "Error applying grouping method ${operand.g}", rtData
+    if (condition.t == 'group') {
+    	result = evaluateConditions(rtData, condition, collection, async)
+    } else {
+        not = !!condition.n
+        def comparison = rtData.comparisons.conditions[condition.co] ?: rtData.comparisons.triggers[condition.co]
+        if (rtData.fastForwardTo || comparison) {
+            if (!rtData.fastForwardTo) {
+                def paramCount = comparison.p ?: 0
+                def lo = null
+                def ro = null
+                def ro2 = null
+                for(int i = 0; i <= paramCount; i++) {
+                    def operand = (i == 0 ? condition.lo : (i == 1 ? condition.ro : condition.ro2))
+                    //parse the operand
+                    def values
+                    switch (operand.t) {
+                        case "p": //physical device
+                            values = []
+                            for(deviceId in operand.d) {
+                                values.push(getDeviceAttribute(rtData, deviceId, operand.a))
                             }
-                        }
-                        break;
-                    case "x": //constant
-                        values = [getVariable(rtData, operand.x)]
-                    case "c": //constant
-                    case "e": //expression
-                        values = [evaluateExpression(rtData, operand.exp)]
+                            if ((values.size() > 1) && !(operand.g in ['any', 'all'])) {
+                                //if we have multiple values and a grouping other than any or all we need to apply that function
+                                try {
+                                    values = ["func_${operand.g}"(rtData, values)]
+                                } catch(all) {
+                                    error "Error applying grouping method ${operand.g}", rtData
+                                }
+                            }
+                            break;
+                        case "x": //constant
+                            values = [getVariable(rtData, operand.x)]
+                        case "c": //constant
+                        case "e": //expression
+                            values = [evaluateExpression(rtData, operand.exp)]
+                    }
+                    switch (i) {
+                        case 0:
+                            lo = [operand: operand, values: values]
+                            break
+                        case 1:
+                            ro = [operand: operand, values: values]
+                            break
+                        case 2:
+                            ro2 = [operand: operand, values: values]
+                            break
+                    }
                 }
-                switch (i) {
-                    case 0:
-                        lo = [operand: operand, values: values]
-                        break
-                    case 1:
-                        ro = [operand: operand, values: values]
-                        break
-                    case 2:
-                        ro2 = [operand: operand, values: values]
-                        break
-                }
-            }
 
-            //we now have all the operands, their values, and the comparison, let's get to work
-            def options = [smatches: true]
-            result = evaluateComparison(rtData, condition.co, lo, ro, ro2, options)
-            result = not ? !result : !!result
-            if (!rtData.fastForwardTo) tracePoint(rtData, "c:${condition.$}", now() - t, result)
-        } else {
-        	result = true
+                //we now have all the operands, their values, and the comparison, let's get to work
+                def options = [smatches: true]
+                result = evaluateComparison(rtData, condition.co, lo, ro, ro2, options)
+                result = not ? !result : !!result
+                if (!rtData.fastForwardTo) tracePoint(rtData, "c:${condition.$}", now() - t, result)
+            } else {
+                result = true
+            }
         }
-        //true/false actions
-        if ((result || rtData.fastForwardTo) && condition.ts && condition.ts.length) executeStatements(rtData, condition.ts, async)
-        if ((!result || rtData.fastForwardTo) && condition.fs && condition.fs.length) executeStatements(rtData, condition.fs, async)
-        return result
-    }    
-    return false
+    }  
+    //true/false actions
+    if ((result || rtData.fastForwardTo) && condition.ts && condition.ts.length) executeStatements(rtData, condition.ts, async)
+    if ((!result || rtData.fastForwardTo) && condition.fs && condition.fs.length) executeStatements(rtData, condition.fs, async)
+    return result
 }
 
 private Boolean evaluateComparison(rtData, comparison, lo, ro = null, ro2 = null, options = null) {
@@ -949,8 +961,8 @@ private traverseConditions(node, closure, parentNode = null) {
 	    }
         return
 	}
-    //got a statement, pass it on to the closure
-    if (closure instanceof Closure) {
+    //got a condition, pass it on to the closure
+    if ((node.t == 'condition') && (closure instanceof Closure)) {
     	closure(node, parentNode)
     }
     //if the statements has substatements, go through them
@@ -1014,7 +1026,7 @@ private void subscribeAll(rtData) {
                         	case "p": //physical device
                             	for(deviceId in operand.d) {
                                     devices[deviceId] = [c: 1 + (devices[deviceId]?.c ?: 0)]
-                                	subscriptions["$deviceId${operand.a}"] = [d: deviceId, a: operand.a, t: comparisonType, c: condition]
+                                	subscriptions["$deviceId${operand.a}"] = [d: deviceId, a: operand.a, t: comparisonType, c: (subscriptions["$deviceId${operand.a}"] ? subscriptions["$deviceId${operand.a}"].c : []) + [condition]]
                                 }
                                 break;
 							case "c": //constant
@@ -1022,7 +1034,7 @@ private void subscribeAll(rtData) {
                             	traverseExpressions(operand.exp?.i, { expression, parentExpression -> 
                                 	if ((expression.t == 'device') && (expression.id)) {
                                     	devices[expression.id] = [c: 1 + (devices[expression.id]?.c ?: 0)]
-	                                	subscriptions["${expression.id}${expression.a}"] = [d: expression.id, a: expression.a, t: comparisonType, c: condition]
+	                                	subscriptions["${expression.id}${expression.a}"] = [d: expression.id, a: expression.a, t: comparisonType, c: (subscriptions["${expression.id}${expression.a}"] ? subscriptions["${expression.id}${expression.a}"].c : []) + [condition]]
                                     }
                                 })
                                 break
@@ -1037,12 +1049,12 @@ private void subscribeAll(rtData) {
     traverseStatements(rtData.piston.s, statementTraverser)
     //trace subscriptions
     for (subscription in subscriptions) {
-    	subscription.value.c.s = false
+    	for (condition in subscription.value.c) condition.s = false
     	if ((subscription.value.t == "trigger") || (subscription.value.c.sm == "always") || (!hasTriggers && (subscription.value.c.sm != "never"))) {
 	    	def device = getDevice(rtData, subscription.value.d)
     	    if (device) {
         		info "Subscribing to $device.${subscription.value.a}...", rtData
-		    	subscription.value.c.s = true
+		    	for (condition in subscription.value.c) condition.s = true
         		subscribe(device, subscription.value.a, deviceHandler)
             } else {
             	error "Failed subscribing to $device.${subscription.value.a}, device not found", rtData
@@ -1127,6 +1139,7 @@ def proxyEvaluateExpression(rtData, expression, dataType = null) {
 private evaluateExpression(rtData, expression, dataType = null) {
     //if dealing with an expression that has multiple items, let's evaluate each item one by one
     //let's evaluate this expression
+    if (!expression) return [t: 'error', v: 'Null expression']
     def time = now()
     Map result = [:]
     switch (expression.t) {
@@ -1340,7 +1353,7 @@ private evaluateExpression(rtData, expression, dataType = null) {
                 def sz = items.size()
                 items.remove(idx)
             }
-    	    result = [t:items[0].t, v: items[0].v]            
+    	    result = items[0] ? [t:items[0].t, v: items[0].v] : [t: 'dynamic', v: null]
 	        break
         case "enum":
         case "error":
@@ -2094,16 +2107,16 @@ private log(message, rtData = null, shift = null, err = null, cmd = null, force 
 	state.debugLevel = level
 
 	if (rtData && (rtData instanceof Map) && (rtData.logs instanceof List)) {
-    	rtData.logs.push([o: now() - rtData.timestamp, p: prefix2, m: message + (all ? " $all" : ""), c: cmd])
+    	rtData.logs.push([o: now() - rtData.timestamp, p: prefix2, m: message + (!!error ? " $error" : ""), c: cmd])
     }
 	log."$cmd" "$prefix $message", err
 }
 private info(message, rtData = null, shift = null, err = null) { log message, rtData, shift, err, 'info' }
-private trace(message, rtData = null,shift = null, err = null) { log message, rtData, shift, err, 'trace' }
-private debug(message, rtData = null,shift = null, err = null) { log message, rtData, shift, err, 'debug' }
-private warn(message, rtData = null,shift = null, err = null) { log message, rtData, shift, err, 'warn' }
-private error(message, rtData = null,shift = null, err = null) { log message, rtData, shift, err, 'error' }
-private timer(message, rtData = null,shift = null, err = null) { log message, rtData, shift, err, 'timer' }
+private trace(message, rtData = null, shift = null, err = null) { log message, rtData, shift, err, 'trace' }
+private debug(message, rtData = null, shift = null, err = null) { log message, rtData, shift, err, 'debug' }
+private warn(message, rtData = null, shift = null, err = null) { log message, rtData, shift, err, 'warn' }
+private error(message, rtData = null, shift = null, err = null) { log message, rtData, shift, err, 'error' }
+private timer(message, rtData = null, shift = null, err = null) { log message, rtData, shift, err, 'timer' }
 
 private tracePoint(rtData, objectId, duration, value) {
 	if (objectId && rtData && rtData.trace) {
