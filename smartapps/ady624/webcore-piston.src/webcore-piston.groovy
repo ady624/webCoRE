@@ -14,8 +14,9 @@
  *
 */
 static String handle() { return "CoRE (SE)" }
-def version() {	return "v0.0.033.20170311" }
+def version() {	return "v0.0.034.20170311" }
 /*
+ *	03/11/2016 >>> v0.0.034.20170311 - ALPHA - Multiple device selection aggregation now working properly. COUNT(device list's contact) rises above 1 will be true when at least two doors in the list are open :D
  *	03/11/2016 >>> v0.0.033.20170311 - ALPHA - Implemented all conditions except "was..." and all triggers except "stays..."
  *	03/11/2016 >>> v0.0.032.20170311 - ALPHA - Fixed setLevel null params and added version checking
  *	03/11/2016 >>> v0.0.031.20170310 - ALPHA - Various fixes including null optional parameters, conditional groups, first attempt at piston restrictions (statement restrictions not enabled yet), fixed a problem with subscribing device bolt indicators only showing for one instance of each device/attribute pair, fixed sendPushNotification
@@ -506,9 +507,17 @@ private updateLogs(rtData) {
 	//we only save the logs if we got some
 	if (!rtData || !rtData.logs || (rtData.logs.size() < 2)) return
     def logs = (rtData.logs?:[]) + (atomicState.logs?:[])
-    if (logs.size() > 500) {
-    	logs = logs[0..499]
-    	//logs.remove(logs[logs.size() - 1]);
+    def maxLogSize = 500
+    //we attempt to store 500 logs, but if that's too much, we go down in 50 increments
+    while (maxLogSize >= 0) {
+	    if (logs.size() > maxLogSize) {
+    		logs = logs[0..499]
+    	}
+        if ("$logs".size() > 50000) {
+        	maxLogSize -= 50
+        } else {
+        	break
+        }
     }
     atomicState.logs = logs
     state.logs = logs
@@ -827,7 +836,7 @@ private Boolean evaluateCondition(rtData, condition, collection, async) {
                             if ((values.size() > 1) && !(operand.g in ['any', 'all'])) {
                                 //if we have multiple values and a grouping other than any or all we need to apply that function
                                 try {
-                                    values = [i: "${condition.$}:$i:0", v:"func_${operand.g}"(rtData, values)]
+                                    values = [[i: "${condition.$}:$i:0", v:"func_${operand.g}"(rtData, values*.v)]]
                                 } catch(all) {
                                     error "Error applying grouping method ${operand.g}", rtData
                                 }
@@ -857,9 +866,9 @@ private Boolean evaluateCondition(rtData, condition, collection, async) {
                 result = evaluateComparison(rtData, condition.co, lo, ro, ro2, options)
                 result = not ? !result : !!result
                 //save new values to cache
-                if (lv) for (value in lo.values) rtData.cache[value.i] = value.v
-                if (rv) for (value in rv.values) rtData.cache[value.i] = value.v
-                if (rv2) for (value in rv2.values) rtData.cache[value.i] = value.v
+                if (lo) for (value in lo.values) rtData.cache[value.i] = value.v
+                if (ro) for (value in ro.values) rtData.cache[value.i] = value.v
+                if (ro2) for (value in ro2.values) rtData.cache[value.i] = value.v
 
 				if (!rtData.fastForwardTo) tracePoint(rtData, "c:${condition.$}", now() - t, result)
             } else {
@@ -886,6 +895,7 @@ private Boolean evaluateComparison(rtData, comparison, lo, ro = null, ro2 = null
                 try {
                     if (!ro) {
                         res = "$fn"(rtData, value)
+
                     } else {
                         def rres
                         res = (ro.operand.g == 'any' ? false : true)
@@ -898,6 +908,7 @@ private Boolean evaluateComparison(rtData, comparison, lo, ro = null, ro2 = null
                                 //if multiple right2 values, go through each
                                 for (r2value in ro2.values) {
                                     def r2res = "$fn"(rtData, value, rvalue, r2value)
+
                                     rres = (ro2.operand.g == 'any' ? rres || r2res : rres && r2res)
                                     if (((ro2.operand.g == 'any') && rres) || ((ro2.operand.g != 'any') && !rres)) break
                                 }
@@ -931,10 +942,11 @@ private Boolean evaluateComparison(rtData, comparison, lo, ro = null, ro2 = null
         return result
 }
 
-private boolean valueChanged(rtData, comparisonValue) {
+private Map valueChanged(rtData, comparisonValue) {
 	def oldValue = rtData.cache[comparisonValue.i]
     def newValue = comparisonValue.v
-    return (!oldValue || (oldValue.t != newValue.t) || ("${oldValue.v}" != "${newValue.v}")) ? [i: comparisonValue.i, v: oldValue] : null
+    if (!(oldValue instanceof Map)) oldValue = false
+    return (!!oldValue && ((oldValue.t != newValue.t) || ("${oldValue.v}" != "${newValue.v}"))) ? [i: comparisonValue.i, v: oldValue] : null
 }
 
 //comparison low level functions
@@ -1119,7 +1131,7 @@ private void subscribeAll(rtData) {
     for (d in devices.findAll{ it.value.c <= 0 }) {
     	def device = getDevice(rtData, d.key)
         if (device) {
-       		warn "Subscribing to $device...", rtData
+       		debug "Subscribing to $device...", rtData
 			subscribe(device, "", fakeHandler)
         }
     }
@@ -1184,14 +1196,15 @@ def getVariable(rtData, name) {
 /*** 																		***/
 /******************************************************************************/
 
-def proxyEvaluateExpression(rtData, expression, dataType = null) {
+def Map proxyEvaluateExpression(rtData, expression, dataType = null) {
 	resetRandomValues()
 	return evaluateExpression(getRunTimeData(rtData), expression, dataType)
 }
-private evaluateExpression(rtData, expression, dataType = null) {
+private Map evaluateExpression(rtData, expression, dataType = null) {
     //if dealing with an expression that has multiple items, let's evaluate each item one by one
     //let's evaluate this expression
     if (!expression) return [t: 'error', v: 'Null expression']
+    if (expression && expression.v instanceof Map) return evaluateExpression(rtData, expression.v, expression.t)
     def time = now()
     Map result = [:]
     switch (expression.t) {
@@ -1405,7 +1418,7 @@ private evaluateExpression(rtData, expression, dataType = null) {
                 def sz = items.size()
                 items.remove(idx)
             }
-    	    result = items[0] ? [t:items[0].t, v: items[0].v] : [t: 'dynamic', v: null]
+    	    result = items[0] ? evaluateExpression(rtData, items[0]) : [t: 'dynamic', v: null]
 	        break
         case "enum":
         case "error":
@@ -1417,7 +1430,8 @@ private evaluateExpression(rtData, expression, dataType = null) {
             
     }
     //return the value, either directly or via cast, if certain data type is requested
-    return result.t == "error" ? [t: "string", v: "[ERROR: ${result.v}]", d: now() - time] : [t: dataType ?: result.t, v: cast(result.v, dataType?: result.t), d: now() - time] + (result.id ? [id: result.id] : [:])
+    return [t: dataType ?: result.t, v: cast(result.v, dataType?: result.t), d: now() - time] + (result.id ? [id: result.id] : [:])
+//    return result.t == "error" ? [t: "string", v: "[ERROR: ${result.v}]", d: now() - time] : [t: dataType ?: result.t, v: cast(result.v, dataType?: result.t), d: now() - time] + (result.id ? [id: result.id] : [:])
 }
 
 
@@ -2011,11 +2025,10 @@ private cast(value, dataType) {
 			}
 			return result ? result : (float) 0
 		case "boolean":
-        	if (value instanceof String) {
-				if (!value || (value.toLowerCase().trim() in falseStrings))
-					return false
-				return true
-			}
+            if (value) {
+            	if ("$value".toLowerCase().trim() in trueStrings) return true
+	            if ("$value".toLowerCase().trim() in falseStrings) return false
+            }
 			return !!value
 		case "time":
 			return value instanceof String ? utcToLocalDate(value).time : cast(value, "long")
