@@ -20,8 +20,9 @@
  */
 
 static String handle() { return "CoRE (SE)" }
-def version() {	return "v0.0.032.20170311" }
+def version() {	return "v0.0.033.20170311" }
 /*
+ *	03/11/2016 >>> v0.0.033.20170311 - ALPHA - Implemented all conditions except "was..." and all triggers except "stays..."
  *	03/11/2016 >>> v0.0.032.20170311 - ALPHA - Fixed setLevel null params and added version checking
  *	03/11/2016 >>> v0.0.031.20170311 - ALPHA - Various fixes including null optional parameters, conditional groups, first attempt at piston restrictions (statement restrictions not enabled yet), fixed a problem with subscribing device bolt indicators only showing for one instance of each device/attribute pair, fixed sendPushNotification
  *	03/10/2016 >>> v0.0.030.20170310 - ALPHA - Fixed a bug in scheduler introduced in 02e/02f
@@ -1322,10 +1323,10 @@ private static Map comparisons() {
             drops_to_or_below				: [ d: "drops to or below",					dd: "drop to or below",					g:"n",		p: 1,						],
             remains_below					: [ d: "remains below",						dd: "remains below",					g:"n",		p: 1,						],
             remains_below_or_equal_to		: [ d: "remains below or equal to",			dd: "remains below or equal to",		g:"n",		p: 1,						],
-            raises							: [ d: "raises",							dd: "raise",							g:"n",									],
+            rises							: [ d: "rises",								dd: "rise",								g:"n",									],
             does_not_rise					: [ d: "does not rise",						dd: "do not rise",						g:"n",									],
-            raises_above					: [ d: "raises above",						dd: "raise above",						g:"n",		p: 1,						],
-            raises_to_or_above				: [ d: "raises to or above",				dd: "raise to or above",				g:"n",		p: 1,						],
+            rises_above						: [ d: "rises above",						dd: "rise above",						g:"n",		p: 1,						],
+            rises_to_or_above				: [ d: "rises to or above",					dd: "rise to or above",					g:"n",		p: 1,						],
             remains_above					: [ d: "remains above",						dd: "remains above",					g:"n",		p: 1,						],
             remains_above_or_equal_to		: [ d: "remains above or equal to",			dd: "remains above or equal to",		g:"n",		p: 1,						],
             enters_range					: [ d: "enters range",						dd: "enter range",						g:"n",		p: 2,						],
