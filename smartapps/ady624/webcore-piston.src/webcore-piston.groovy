@@ -14,8 +14,9 @@
  *
 */
 static String handle() { return "CoRE (SE)" }
-def version() {	return "v0.0.02e.20170310" }
+def version() {	return "v0.0.02f.20170310" }
 /*
+ *	03/10/2016 >>> v0.0.02f.20170310 - ALPHA - Various improvements, added toggle and toggleLevel
  *	03/10/2016 >>> v0.0.02e.20170310 - ALPHA - Fixed a problem where long expiration settings prevented logins (integer overflow)
  *	03/10/2016 >>> v0.0.02d.20170310 - ALPHA - Reporting version to JS
  *	03/10/2016 >>> v0.0.02c.20170310 - ALPHA - Various improvements and a new virtual command: Log to console. Powerful.
@@ -107,18 +108,6 @@ def pageMain() {
 			paragraph mem(), title: "Memory Usage"
 			href "pageVariables", title: "Local Variables"
 		}
-
-		section("Debugging") {
-			input "debugging", "bool", title: "Enable debugging", defaultValue: false, submitOnChange: true, required: false
-			def debugging = settings.debugging
-			if (debugging) {
-				input "log#info", "bool", title: "Log info messages", defaultValue: true, required: false
-				input "log#trace", "bool", title: "Log trace messages", defaultValue: true, required: false
-				input "log#debug", "bool", title: "Log debug messages", defaultValue: false, required: false
-				input "log#warn", "bool", title: "Log warning messages", defaultValue: true, required: false
-				input "log#error", "bool", title: "Log error messages", defaultValue: true, required: false
-			}        	
-		}
 	}
 }
 
@@ -162,7 +151,8 @@ def get() {
 	    	active: state.active
 		],
         piston: state.piston,
-	    vars: state.vars,
+	    localVars: state.vars,
+        systemVars: getSystemVariables(),
 	    stats: state.stats,
         logs: state.logs,
         trace: state.trace        
@@ -278,11 +268,11 @@ def pause() {
 }
 
 def resume() {
-	def tempRtData = [timestamp: now(), logs:[]]
+	def tempRtData = [timestamp: now(), logs:[], logging: true]
     def msg = timer "Piston successfully started", tempRtData,  -1
 	trace "Starting piston...", tempRtData, 0
     def rtData = getRunTimeData()
-    rtData.logs = rtData.logs + tempRtData.logs
+    rtData.logs = rtData.logs + (rtData.logging ? tempRtData.logs : [])
     msg.d = rtData
 	state.active = true;
     subscribeAll(rtData)
@@ -304,6 +294,7 @@ private getRunTimeData(rtData = null, lightWeight = false) {
     rtData.stats = [:]
     rtData.schedules = []
     rtData.piston = state.piston
+    rtData.locationId = hashId(location.id)
     rtData.localVars = state.vars ?: [:]
     rtData.systemVars = getSystemVariables()
     return rtData
@@ -321,24 +312,26 @@ def fakeHandler(event) {
 }
 
 def deviceHandler(event) {
-	handleEvent(event)
+	handleEvents(event)
 }
 
 def timeHandler(event) {
-	deviceHandler([date: new Date(event.t), device: 'time', name: 'time', value: event.t, schedule: event])
+	handleEvents([date: new Date(event.t), device: 'time', name: 'time', value: event.t, schedule: event])
 }
 
-def handleEvent(event) {
+
+//entry point for all events
+def handleEvents(event) {
 	def startTime = now()
     def eventDelay = startTime - event.date.getTime()
 	def msg = timer "Event processed successfully", null, -1
-    def tempRtData = [timestamp: startTime, logs:[]]
+    def tempRtData = [timestamp: startTime, logs:[], logging: true]
     trace "Received event [${event.device}].${event.name} = ${event.value} with a delay of ${eventDelay}ms", tempRtData, 0
     state.temp = [:]
     //todo start execution
 	def msg2 = timer "Runtime successfully initialized"
     Map rtData = getRunTimeData()
-    rtData.logs = rtData.logs + tempRtData.logs
+    rtData.logs = rtData.logs + (rtData.logging ? tempRtData.logs : [])
     msg.d = rtData
     msg2.d = rtData
     trace msg2
@@ -361,7 +354,7 @@ def handleEvent(event) {
         //anything less than 2 seconds in the future is considered due, we'll do some pause to sync with it
         //we're doing this because many times, the scheduler will run a job early, usually 0-1.5 seconds early...
         if (!schedules || !schedules.size()) break
-        event = [date: event.date, device: 'time', name: 'time', value: now(), schedule: schedules.sort{ it.t }.find{ it.t < now() + 2000 }]        
+        event = [date: event.date, device: location, name: 'time', value: now(), schedule: schedules.sort{ it.t }.find{ it.t < now() + 2000 }]        
         if (!event.schedule) break
         schedules.remove(event.schedule)
         atomicState.schedules = schedules
@@ -381,18 +374,59 @@ def handleEvent(event) {
 private Boolean executeEvent(rtData, event) {
 	try {
     	rtData = rtData ?: getRunTimeData()
-        rtData.event = event
+        //event processing
+		rtData.event = event
+        rtData.previousEvent = state.lastEvent
+        def index = 0
+        if (event.jsonData) {
+            def attribute = rtData.attributes[event.name]
+            if (attribute && attribute.i && event.jsonData[attribute.i]) {
+                index = event.jsonData[attribute.i]
+            }
+            if (!index) index = 1
+        }
+        rtData.currentEvent = [
+            date: event.date.getTime(),
+            delay: rtData.stats.timing.d,
+            device: hashId(event.device.id),
+            name: event.name,
+            value: event.value,
+            physical: !!event.physical,
+            index: index
+        ]
+        state.lastEvent = rtData.currentEvent
+        //previous variables
+        setSystemVariableValue(rtData, '$previousEventDate', rtData.previousEvent?.date ?: now())
+        setSystemVariableValue(rtData, '$previousEventDelay', rtData.previousEvent?.delay ?: 0)
+        setSystemVariableValue(rtData, '$previousEventDevice', rtData.previousEvent?.device)
+        setSystemVariableValue(rtData, '$previousEventDeviceIndex', rtData.previousEvent?.index ?: 0)
+        setSystemVariableValue(rtData, '$previousEventAttribute', rtData.previousEvent?.name ?: '')
+        setSystemVariableValue(rtData, '$previousEventValue', rtData.previousEvent?.value ?: '')
+        setSystemVariableValue(rtData, '$previousEventDevicePhysical', !!rtData.previousEvent?.physical)
+        //current variables
+        setSystemVariableValue(rtData, '$currentEventDate', rtData.currentEvent.date ?: now())
+        setSystemVariableValue(rtData, '$currentEventDelay', rtData.currentEvent.delay ?: 0)
+        setSystemVariableValue(rtData, '$currentEventDevice', rtData.currentEvent?.device)
+        setSystemVariableValue(rtData, '$currentEventDeviceIndex', rtData.currentEvent.index ?: 0)
+        setSystemVariableValue(rtData, '$currentEventAttribute', rtData.currentEvent.name ?: '')
+        setSystemVariableValue(rtData, '$currentEventValue', rtData.currentEvent.value ?: '')
+        setSystemVariableValue(rtData, '$currentEventDevicePhysical', !!rtData.currentEvent.physical)
         rtData.fastForwardTo = null
         if (event.device == 'time') {
         	rtData.fastForwardTo = event.schedule.i
         }
 		//todo - check restrictions	
-		if (executeStatements(rtData, rtData.piston.s)) {
-        	tracePoint(rtData, "end", 0, 0)
+        try {
+			if (executeStatements(rtData, rtData.piston.s)) {
+	        	tracePoint(rtData, "end", 0, 0)
+	        }
+        } catch (all) {
+        	error "An error occurred while executing the event: ", rtData, null, all
         }
+        
 		return true
     } catch(all) {
-    	error "An error occurred while processing the event: ", rtData, null, all
+    	error "An error occurred within executeEvent: ", rtData, null, all
     }
     return false
 }
@@ -421,8 +455,6 @@ private finalizeEvent(rtData, initialMsg, success = true) {
     } else {
     	rtData.stats.nextSchedule = 0
     }
-    //write the remaining schedules to state
-    atomicState.schedules = schedules
 
 	parent.updateRunTimeData(rtData)
 
@@ -441,15 +473,19 @@ private finalizeEvent(rtData, initialMsg, success = true) {
     stats.timing = stats.timing ?: []
     stats.timing.push(rtData.stats.timing)
     if (stats.timing.size() > 500) stats.timing = stats.timing[stats.timing.size() - 500..stats.timing.size() - 1]
-    atomicState.stats = stats
-    state.stats = stats
     rtData.trace.d = now() - rtData.trace.t
+
+	atomicState.stats = stats
+    state.stats = stats
     atomicState.trace = rtData.trace
     state.trace = rtData.trace
+    //beat race conditions
     state.schedules = atomicState.schedules
 }
 
 private updateLogs(rtData) {
+	//we only save the logs if we got some
+	if (!rtData || !rtData.logs || (rtData.logs.size() < 2)) return
     def logs = (rtData.logs?:[]) + (atomicState.logs?:[])
     if (logs.size() > 500) {
     	logs = logs[0..499]
@@ -633,7 +669,7 @@ private long executeVirtualCommand(rtData, devices, task, params) {
     	if (task.c == 'log') {
         	//we don't want to send rtData to all virtual commands
             //log is the only one that uses it
-            log params[1].v, rtData, null, null, "${params[0].v}".toLowerCase().trim()
+            log params[1].v, rtData, null, null, "${params[0].v}".toLowerCase().trim(), true
         } else {
 	    	delay = "vcmd_${task.c}"(devices, params)
         }
@@ -662,6 +698,25 @@ private long vcmd_waitRandom(device, params) {
         min = v
     }
 	return min + (int)Math.round((max - min) * Math.random())
+}
+
+private long vcmd_toggle(device, params) {
+	if (device.currentValue('switch') == 'off') {
+    	device.on()
+    } else {
+    	device.off()
+    }
+    return 0
+}
+
+private long vcmd_toggleLevel(device, params) {
+	def level = params[0].v
+	if (device.currentValue('level') == level) {
+    	device.setLevel(0)
+    } else {
+    	device.setLevel(level)
+    }
+    return 0
 }
 
 private long vcmd_sendNotification(device, params) {
@@ -1011,6 +1066,7 @@ private sanitizeVariableName(name) {
 }
 
 private getDevice(rtData, idOrName) {
+	if (rtData.locationId == idOrName) return location
 	def device = rtData.devices[idOrName] ?: rtData.devices.find{ it.value.name == idOrName }
     return device    
 }
@@ -1033,24 +1089,26 @@ private Map getDeviceAttribute(rtData, deviceId, attributeName) {
 def getVariable(rtData, name) {
 	name = sanitizeVariableName(name)
 	if (!name) return [t: "error", v: "Invalid empty variable name"]
+    def result
 	if (name.startsWith("@")) {
-    	def result = rtData.globalVars[name]
+    	result = rtData.globalVars[name]
         if (!(result instanceof Map)) result = [t: "error", v: "Variable '$name' not found"]
-		return result
 	} else {
 		if (name.startsWith("\$")) {
-			def result = rtData.systemVars[name]
+			result = rtData.systemVars[name]
             if (!(result instanceof Map)) result = [t: "error", v: "Variable '$name' not found"]
             if (result && result.d) {
-            	return [t: result.t, v: getSystemVariableValue(name)]
+            	result = [t: result.t, v: getSystemVariableValue(name)]
             }
-            return result
 		} else {
-			def result = rtData.localVars[name]
+			result = rtData.localVars[name]
             if (!(result instanceof Map)) result = [t: "error", v: "Variable '$name' not found"]
-            return result
 		}
 	}
+    if (result && (result.t == 'device')) {
+    	result = [t: result.t, id: result.v, v: getDevice(rtData, result.v)]
+    }
+    return result
 }
 
 
@@ -1101,10 +1159,16 @@ private evaluateExpression(rtData, expression, dataType = null) {
         case "variable":
         	//get variable as {n: name, t: type, v: value}
         	result = getVariable(rtData, expression.x)
+            //if getting a variable, get it's name
+            if (result && (result.t == 'device')) result = [t: "string", v: "${result.v}"]
         	break
         case "device":
         	//get variable as {n: name, t: type, v: value}
-            def deviceId = expression.id ?: getVariable(rtData, expression.x)?.v
+            def deviceId = expression.id
+            if (!deviceId) {
+            	def var = getVariable(rtData, expression.x)
+                if (var) deviceId = var.id ?: var.v
+            }
             result = getDeviceAttribute(rtData, deviceId, expression.a)
         	break
         case "operand":
@@ -1286,7 +1350,7 @@ private evaluateExpression(rtData, expression, dataType = null) {
             
     }
     //return the value, either directly or via cast, if certain data type is requested
-    return result.t == "error" ? [t: "string", v: "[ERROR: ${result.v}]", d: now() - time] : [t: dataType ?: result.t, v: cast(result.v, dataType?: result.t), d: now() - time]
+    return result.t == "error" ? [t: "string", v: "[ERROR: ${result.v}]", d: now() - time] : [t: dataType ?: result.t, v: cast(result.v, dataType?: result.t), d: now() - time] + (result.id ? [id: result.id] : [:])
 }
 
 
@@ -1976,7 +2040,7 @@ private formatLocalTime(time, format = "EEE, MMM d yyyy @ h:mm a z") {
 /******************************************************************************/
 /*** DEBUG FUNCTIONS														***/
 /******************************************************************************/
-private log(message, rtData = null, shift = null, err = null, cmd = null) {
+private log(message, rtData = null, shift = null, err = null, cmd = null, force = false) {
     if (cmd == "timer") {
     	return [m: message, t: now(), d: rtData, s: shift, e: err]
     }
@@ -1986,14 +2050,10 @@ private log(message, rtData = null, shift = null, err = null, cmd = null) {
         err = message.e
         message = message.m + " (done in ${now() - message.t}ms)"
     }
-	def debugging = settings.debugging
-	if (!debugging && (cmd != "error")) {
-		//return
+	if (!force && rtData && !rtData.logging && (cmd != "error")) {
+		return
 	}
 	cmd = cmd ? cmd : "debug"
-	if (!settings["log#$cmd"]) {
-		//return
-	}
 	//mode is
 	// 0 - initialize level, level set to 1
 	// 1 - start of routine, level up
@@ -2213,6 +2273,13 @@ private getSystemVariableValue(name) {
   		case "\$locationMode": return location.getMode()
 		case "\$shmStatus": return location.getMode()
     }
+}
+
+private setSystemVariableValue(rtData, name, value) {
+	if (!name || !(name.startsWith('$'))) return
+    def var = rtData.systemVars[name]
+    if (!var || var.d) return
+   	rtData.systemVars[name].v = value
 }
 
 private getRandomValue(name) {

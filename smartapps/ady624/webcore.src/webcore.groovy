@@ -20,8 +20,9 @@
  */
 
 static String handle() { return "CoRE (SE)" }
-def version() {	return "v0.0.02e.20170310" }
+def version() {	return "v0.0.02f.20170310" }
 /*
+ *	03/10/2016 >>> v0.0.02f.20170310 - ALPHA - Various improvements, added toggle and toggleLevel
  *	03/10/2016 >>> v0.0.02e.20170310 - ALPHA - Fixed a problem where long expiration settings prevented logins (integer overflow)
  *	03/10/2016 >>> v0.0.02d.20170310 - ALPHA - Reporting version to JS
  *	03/10/2016 >>> v0.0.02c.20170310 - ALPHA - Various improvements and a new virtual command: Log to console. Powerful.
@@ -201,16 +202,8 @@ def pageSettings() {
 			href "pageChangePassword", title: "Security", description: "Tap here to change your dashboard security settings" 
 		}
 		
-		section(title: "Debugging") {
-			input "debugging", "bool", title: "Enable debugging", defaultValue: false, submitOnChange: true, required: false
-			def debugging = settings.debugging
-			if (debugging) {
-				input "log#info", "bool", title: "Log info messages", defaultValue: true, required: false
-				input "log#trace", "bool", title: "Log trace messages", defaultValue: true, required: false
-				input "log#debug", "bool", title: "Log debug messages", defaultValue: false, required: false
-				input "log#warn", "bool", title: "Log warning messages", defaultValue: true, required: false
-				input "log#error", "bool", title: "Log error messages", defaultValue: true, required: false
-			}
+		section(title: "Logging") {
+			input "logging", "bool", title: "Enable logging", description: "Logs will be available in your dashboard if this feature is enabled", defaultValue: false, required: false
 		}
         
 		section("Uninstall") {
@@ -348,6 +341,7 @@ private api_get_base_result(deviceVersion = 0) {
             uri: atomicState.endpoint,
             deviceVersion: currentDeviceVersion,
             coreVersion: version(),
+            logging: !!settings.logging,
         ] + (sendDevices ? [devices: listAvailableDevices()] : [:]),
         location: [
             contactBookEnabled: location.getContactBookEnabled(),
@@ -428,7 +422,7 @@ private api_intf_dashboard_piston_get() {
             result = api_get_base_result(requireDb ? 0 : params.dev)            
             def piston = getChildApps().find{ hashId(it.id) == pistonId };
             if (piston) {
-            	result.data = piston.get() ?: [:]
+            	result.data = piston.get() ?: [:] + [globalVars: listAvailableVariables()]
             }
             if (requireDb) {
                 result.dbVersion = serverDbVersion
@@ -639,7 +633,6 @@ private api_intf_dashboard_piston_evaluate() {
 
 private api_intf_dashboard_piston_activity() {
 	def result
-    debug "Dashboard: Request received to check on a piston activity"
 	if (verifySecurityToken(params.token)) {
 	    def piston = getChildApps().find{ hashId(it.id) == params.id };
 	    if (piston) {
@@ -775,8 +768,9 @@ public String mem(showBytes = true) {
 }
 
 public Map getRunTimeData() {
-	def msg = timer "Generated run time data"
+	//def msg = timer "Generated run time data"
 	Map result = [
+    	logging: settings.logging,
     	attributes: attributes(),
         commands: commands(),
 		commands: [
@@ -787,7 +781,7 @@ public Map getRunTimeData() {
     	devices: listAvailableDevices(true),
         globalVars: listAvailableVariables()
     ]
-    trace msg
+    //trace msg
     return result
 }
 
@@ -858,14 +852,10 @@ private debug(message, shift = null, err = null, cmd = null) {
         err = message.e
         message = message.m + " (${now() - message.t}ms)"
     }
-	def debugging = settings.debugging
-	if (!debugging && (cmd != "error")) {
-		//return
+	if (!settings.logging && (cmd != "error")) {
+		return
 	}
 	cmd = cmd ? cmd : "debug"
-	if (!settings["log#$cmd"]) {
-		//return
-	}
 	//mode is
 	// 0 - initialize level, level set to 1
 	// 1 - start of routine, level up
@@ -1028,7 +1018,7 @@ private Map attributes() {
 		axisY						: [ n: "Y axis",				t: "number",	r: [-1024, 1024],	s: "threeAxis",																	],
 		axisZ						: [ n: "Z axis",				t: "number",	r: [-1024, 1024],	s: "threeAxis",																	],
 		battery						: [ n: "battery", 				t: "number",	r: [0, 100],		u: "%",																			],
-		button						: [ n: "button", 				t: "enum",		o: ["pushed"],										c: "button",					m: true,		],
+		button						: [ n: "button", 				t: "enum",		o: ["pushed", "held"],									c: "button",					m: true, s: "numberOfButtons,numButtons", i: "buttonNumber"		],
 		carbonDioxide				: [ n: "carbon dioxide",		t: "decimal",	r: [0, null],																						],
 		carbonMonoxide				: [ n: "carbon monoxide",		t: "enum",		o: ["clear", "detected", "tested"],																	],
 		color						: [ n: "color",					t: "color",																											],
