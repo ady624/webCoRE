@@ -14,8 +14,9 @@
  *
 */
 static String handle() { return "CoRE (SE)" }
-def version() {	return "v0.0.031.20170311" }
+def version() {	return "v0.0.032.20170311" }
 /*
+ *	03/11/2016 >>> v0.0.032.20170311 - ALPHA - Fixed setLevel null params and added version checking
  *	03/11/2016 >>> v0.0.031.20170310 - ALPHA - Various fixes including null optional parameters, conditional groups, first attempt at piston restrictions (statement restrictions not enabled yet), fixed a problem with subscribing device bolt indicators only showing for one instance of each device/attribute pair, fixed sendPushNotification
  *	03/10/2016 >>> v0.0.030.20170310 - ALPHA - Fixed a bug in scheduler introduced in 02e/02f
  *	03/10/2016 >>> v0.0.02f.20170310 - ALPHA - Various improvements, added toggle and toggleLevel
@@ -258,9 +259,10 @@ def config(data) {
 }
 
 def pause() {
-    def rtData = getRunTimeData(null, true)
+    def rtData = getRunTimeData()
 	def msg = timer "Piston successfully stopped", rtData, -1
     trace "Stopping piston...", rtData, 0
+    checkVersion(rtData)
 	state.active = false;
     state.schedules = []
     state.trace = [:]
@@ -272,9 +274,10 @@ def pause() {
 def resume() {
 	def tempRtData = [timestamp: now(), logs:[], logging: true]
     def msg = timer "Piston successfully started", tempRtData,  -1
-	trace "Starting piston...", tempRtData, 0
+	trace "Starting piston... (${version()})", tempRtData, 0
     def rtData = getRunTimeData()
     rtData.logs = rtData.logs + (rtData.logging ? tempRtData.logs : [])
+    checkVersion(rtData)
     msg.d = rtData
 	state.active = true;
     subscribeAll(rtData)
@@ -300,6 +303,14 @@ private getRunTimeData(rtData = null, lightWeight = false) {
     rtData.localVars = state.vars ?: [:]
     rtData.systemVars = getSystemVariables()
     return rtData
+}
+
+private checkVersion(rtData) {
+	def ver = version()
+    if (ver != rtData.coreVersion) {
+    	//parent and child apps have different versions
+        warn "WARNING: Results may be unreliable because the ${ver > rtData.coreVersion ? "child app's version ($ver) is newer than the parent app's version (${rtData.coreVersion})" : "parent app's version (${rtData.coreVersion}) is newer than the child app's version ($ver)" }. Please consider updating both apps to the same version.", rtData
+    }    
 }
 
 /******************************************************************************/
@@ -331,11 +342,13 @@ def handleEvents(event) {
     trace "Received event [${event.device}].${event.name} = ${event.value} with a delay of ${eventDelay}ms", tempRtData, 0
     state.temp = [:]
     //todo start execution
-	def msg2 = timer "Runtime successfully initialized"
-    Map rtData = getRunTimeData()
+    def ver = version()
+	def msg2 = timer "Runtime successfully initialized ($ver)"
+    Map rtData = getRunTimeData(null)
     rtData.logs = rtData.logs + (rtData.logging ? tempRtData.logs : [])
     msg.d = rtData
     msg2.d = rtData
+    checkVersion(rtData)    
     trace msg2
     rtData.stats.timing = [
     	t: startTime,
@@ -662,7 +675,7 @@ log.trace params
 	def level = params[0].v
     def state = params.size() > 1 ? params[1].v : ""
     def delay = params.size() > 2 ? params[2].v : 0
-    if (state.size() && (device.currentValue('switch') != state)) {
+    if ((state != null) && (device.currentValue('switch') != "$state")) {
         return 0
     }
     device.setLevel(level, [delay: delay ?: 0])
