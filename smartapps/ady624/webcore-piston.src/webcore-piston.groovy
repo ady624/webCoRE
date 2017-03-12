@@ -14,8 +14,9 @@
  *
 */
 static String handle() { return "CoRE (SE)" }
-static String version() {	return "v0.0.036.20170312" }
+static String version() {	return "v0.0.037.20170312" }
 /*
+ *	03/12/2016 >>> v0.0.037.20170312 - ALPHA - Added support for break and exit (partial, piston state is not set on exit) - fixed some comparison data type incompatibilities
  *	03/12/2016 >>> v0.0.036.20170312 - ALPHA - Added TCP = cancel on condition change and TOS = Action - no other values implemented yet, also, WHILE loops are now working, please remember to add a WAIT in it...
  *	03/11/2016 >>> v0.0.035.20170311 - ALPHA - A little error creeped into the conditions, fixed it
  *	03/11/2016 >>> v0.0.034.20170311 - ALPHA - Multiple device selection aggregation now working properly. COUNT(device list's contact) rises above 1 will be true when at least two doors in the list are open :D
@@ -308,6 +309,9 @@ private getRunTimeData(rtData = null, lightWeight = false) {
     rtData.locationId = hashId(location.id)
     rtData.localVars = state.vars ?: [:]
     rtData.systemVars = getSystemVariables()
+    //flow control
+    rtData.fastForwardTo = null
+    rtData.break = false
     return rtData
 }
 
@@ -623,11 +627,28 @@ private Boolean executeStatement(rtData, statement, async = false) {
                 case 'action':
                     value = executeAction(rtData, statement, async)
                     break
+                case 'break':
+                	rtData.break = true
+                    value = false
+                    break
+                case 'exit':
+                    value = false
+                    break
             }
             //break the loop
             if (rtData.fastForwardTo || (statement.t == 'if')) perform = false
             
-            repeat = perform && value &&(statement.t in ['while', 'repeat', 'for'])
+            //is this statement a loop
+            def loop = (statement.t in ['while', 'repeat', 'for'])
+            if (loop && !value && !!rtData.break) {
+            	//someone requested a break from the loop, we're doing it
+            	rtData.break = false
+                //but we're allowing the rest to continue
+                value = true
+                perform = false
+            }
+            //do we repeat the loop?
+            repeat = perform && value && loop && !rtData.fastForwardTo
         }
     }
 	if (!rtData.fastForwardTo) tracePoint(rtData, "s:${statement.$}", now() - t, value)
