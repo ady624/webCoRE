@@ -20,8 +20,9 @@
  */
 
 static String handle() { return "CoRE (SE)" }
-def version() {	return "v0.0.035.20170311" }
+static String version() {	return "v0.0.036.20170312" }
 /*
+ *	03/12/2016 >>> v0.0.036.20170312 - ALPHA - Added TCP = cancel on condition change and TOS = Action - no other values implemented yet, also, WHILE loops are now working, please remember to add a WAIT in it...
  *	03/11/2016 >>> v0.0.035.20170311 - ALPHA - A little error creeped into the conditions, fixed it
  *	03/11/2016 >>> v0.0.034.20170311 - ALPHA - Multiple device selection aggregation now working properly. COUNT(device list's contact) rises above 1 will be true when at least two doors in the list are open :D
  *	03/11/2016 >>> v0.0.033.20170311 - ALPHA - Implemented all conditions except "was..." and all triggers except "stays..."

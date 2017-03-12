@@ -14,8 +14,9 @@
  *
 */
 static String handle() { return "CoRE (SE)" }
-def version() {	return "v0.0.035.20170311" }
+static String version() {	return "v0.0.036.20170312" }
 /*
+ *	03/12/2016 >>> v0.0.036.20170312 - ALPHA - Added TCP = cancel on condition change and TOS = Action - no other values implemented yet, also, WHILE loops are now working, please remember to add a WAIT in it...
  *	03/11/2016 >>> v0.0.035.20170311 - ALPHA - A little error creeped into the conditions, fixed it
  *	03/11/2016 >>> v0.0.034.20170311 - ALPHA - Multiple device selection aggregation now working properly. COUNT(device list's contact) rises above 1 will be true when at least two doors in the list are open :D
  *	03/11/2016 >>> v0.0.033.20170311 - ALPHA - Implemented all conditions except "was..." and all triggers except "stays..."
@@ -302,6 +303,7 @@ private getRunTimeData(rtData = null, lightWeight = false) {
     rtData.stats = [:]
     rtData.cache = state.cache ?: [:]
     rtData.schedules = []
+    rtData.cancelations = [statements:[], conditions:[]]
     rtData.piston = state.piston
     rtData.locationId = hashId(location.id)
     rtData.localVars = state.vars ?: [:]
@@ -339,6 +341,8 @@ def timeHandler(event) {
 
 //entry point for all events
 def handleEvents(event) {
+	//cancel all pending jobs, we'll handle them later
+	unschedule(timeHandler)
 	def startTime = now()
     def eventDelay = startTime - event.date.getTime()
 	def msg = timer "Event processed successfully", null, -1
@@ -434,7 +438,8 @@ private Boolean executeEvent(rtData, event) {
         if (event.name == 'time') {
         	rtData.fastForwardTo = event.schedule.i
         }
-		//todo - check restrictions	
+		//todo - check restrictions
+        rtData.stack = [c: 0, s: 0, cs:[], ss:[]]
         try {
 			if (executeStatements(rtData, rtData.piston.s)) {
 	        	tracePoint(rtData, "end", 0, 0)
@@ -454,12 +459,19 @@ private finalizeEvent(rtData, initialMsg, success = true) {
 	def startTime = now()
     //reschedule stuff
     //todo, override tasks, if any
-    def schedules = (atomicState.schedules ?: []) + (rtData.schedules ?: [])
+    def schedules = (atomicState.schedules ?: [])
+    //cancel statements
+    schedules.removeAll{ it.s in rtData.cancelations.statements }
+    //cancel on conditions
+	for(cid in rtData.cancelations.conditions) {
+    	schedules.removeAll{ cid in it.cs }
+    }
+    rtData.cancelations = []
+    schedules = (schedules + (rtData.schedules ?: [])).sort{ it.t }
     //add traces for all remaining schedules
-    for (schedule in schedules.sort{ it.t }) {
+    for (schedule in schedules) {
     	def t = now() - schedule.t
         if ((t < 0) && !rtData.trace.points["t:${schedule.i}"]) {
-        	//warn "fake trace point for t = $t, $schedule"
             //we enter a fake trace point to show it on the trace view
     		tracePoint(rtData, "t:${schedule.i}", 0, t)
         }
@@ -541,17 +553,25 @@ private Boolean executeStatement(rtData, statement, async = false) {
 	//if rtData.fastForwardTo is a positive, non-zero number, we need to fast forward through all
     //branches until we find the task with an id equal to that number, then we play nicely after that
 	if (!statement) return false
+    rtData.stack.ss.push(rtData.stack.s)
+    rtData.stack.s = statement.$
     def t = now()
     def value = true
+    def c = rtData.stack.c
+    def stacked = (true /* cancelable on condition change */)
+    if (stacked) {
+    	rtData.stack.cs.push(c)
+    }
     async = !!async || (statement.a == "1")
+    def perform = false
+    def repeat = true
     def restricted = !statement.r || !(statement.r.length) || evaluateConditions(rtData, statement, 'r', async, true)
     if (restricted || !!rtData.fastForwardTo) {
-        switch (statement.t) {
-            case 'if':
-            case 'while':
-                //check conditions for if and while
-                def perform = evaluateConditions(rtData, statement, 'c', async)
-                if (perform || !!rtData.fastForwardTo) {
+    	while (repeat) {
+            switch (statement.t) {
+                case 'repeat':
+                	//we override current condition so that child statements can cancel on it
+	                rtData.stack.c = statement.$
                     if (!executeStatements(rtData, statement.s, async)) {
                         //stop processing
                         value = false
@@ -559,33 +579,55 @@ private Boolean executeStatement(rtData, statement, async = false) {
                     }
                     value = true
                     if (!rtData.fastForwardTo) break
-                }
-                if (!perform || !!rtData.fastForwardTo) {
-                    if (statement.t == 'if') {
-                        //look for else-ifs
-                        for (elseIf in statement.ei) {
-                            perform = evaluateConditions(rtData, elseIf, 'c', async)
-                            if (perform || !!rtData.fastForwardTo) {
-                                if (!executeStatements(rtData, elseIf.s, async)) {
-                                    //stop processing
-                                    value = false
-                                    if (!rtData.fastForwardTo) break
-                                }
-                                value = true
+                    //repeat falls back on if and while
+                case 'if':
+                case 'while':
+                    //check conditions for if and while
+                    perform = evaluateConditions(rtData, statement, 'c', async)
+                	//we override current condition so that child statements can cancel on it
+	                rtData.stack.c = statement.$
+                    if (perform || !!rtData.fastForwardTo) {
+                        if (statement.t in ['if', 'while']) {
+                            if (!executeStatements(rtData, statement.s, async)) {
+                                //stop processing
+                                value = false
                                 if (!rtData.fastForwardTo) break
-                            }                	
-                        }
-                        if ((!perform || !!rtData.fastForwardTo) && !executeStatements(rtData, statement.e, async)) {
-                            //stop processing
-                            value = false
+                            }
+                            value = true
                             if (!rtData.fastForwardTo) break
                         }
                     }
-                }
-                break
-            case 'action':
-                value = executeAction(rtData, statement, async)
-                break
+                    if (!perform || !!rtData.fastForwardTo) {
+                        if (statement.t == 'if') {
+                            //look for else-ifs
+                            for (elseIf in statement.ei) {
+                                perform = evaluateConditions(rtData, elseIf, 'c', async)
+                                if (perform || !!rtData.fastForwardTo) {
+                                    if (!executeStatements(rtData, elseIf.s, async)) {
+                                        //stop processing
+                                        value = false
+                                        if (!rtData.fastForwardTo) break
+                                    }
+                                    value = true
+                                    if (!rtData.fastForwardTo) break
+                                }                	
+                            }
+                            if ((!perform || !!rtData.fastForwardTo) && !executeStatements(rtData, statement.e, async)) {
+                                //stop processing
+                                value = false
+                                if (!rtData.fastForwardTo) break
+                            }
+                        }
+                    }
+                    break
+                case 'action':
+                    value = executeAction(rtData, statement, async)
+                    break
+            }
+            //break the loop
+            if (rtData.fastForwardTo || (statement.t == 'if')) perform = false
+            
+            repeat = perform && value &&(statement.t in ['while', 'repeat', 'for'])
         }
     }
 	if (!rtData.fastForwardTo) tracePoint(rtData, "s:${statement.$}", now() - t, value)
@@ -594,12 +636,21 @@ private Boolean executeStatement(rtData, statement, async = false) {
         //when an async action terminates as a result of a time event, we exit completely
 		value = (rtData.event.device != 'time')
 	}
+    //restore current condition
+    rtData.stack.c = c
+    if (stacked) {
+        rtData.stack.cs.pop()        
+    }    
+    rtData.stack.s = rtData.stack.ss.pop()
 	return value || !!rtData.fastForwardTo
 }
 
 
 private Boolean executeAction(rtData, statement, async) {
 	def devices = []
+    //if override
+    cancelStatementSchedules(rtData, statement.$)
+    def result = true
     for (d in statement.d) {
     	def device = getDevice(rtData, d)
         if (device) {
@@ -607,10 +658,12 @@ private Boolean executeAction(rtData, statement, async) {
         }
     }
     for (task in statement.k) {
-        def result = executeTask(rtData, devices, statement, task, async)
-        if (!result && !rtData.fastForwardTo) return false
+        result = executeTask(rtData, devices, statement, task, async)
+        if (!result && !rtData.fastForwardTo) {
+        	break
+        }
     }
-    return true
+    return result
 }
 
 private Boolean executeTask(rtData, devices, statement, task, async) {
@@ -679,7 +732,10 @@ private Boolean executeTask(rtData, devices, statement, task, async) {
 
 private requestWakeUp(rtData, statement, task, timeOrDelay) {
 	def time = timeOrDelay > 9999999999 ? timeOrDelay : now() + timeOrDelay
-    rtData.schedules.push(t: time, a: statement.$, i: task.$)
+    def cs = [] + rtData.stack.cs
+    cs.removeAll{ it == 0 }
+    def schedule = [t: time, s: statement.$, i: task.$, cs: cs]
+    rtData.schedules.push(schedule)
 }
 
 
@@ -788,6 +844,9 @@ private long vcmd_sendSMSNotification(device, params) {
 
 private Boolean evaluateConditions(rtData, conditions, collection, async) {
 	def t = now()
+    //override condition id
+    def c = rtData.stack.c    
+    rtData.stack.c = conditions.$
     def not = (collection == 'c') ? !!conditions.n : !!conditions.rn
     def grouping = (collection == 'c') ? conditions.o : conditions.ro
     def value = (grouping == 'or' ? false : true)
@@ -799,16 +858,26 @@ private Boolean evaluateConditions(rtData, conditions, collection, async) {
     }
     def result = not ? !value : !!value
     if (!rtData.fastForwardTo) tracePoint(rtData, "c:${conditions.$}", now() - t, result)
+    if (rtData.cache["c:${conditions.$}"] != result) {
+    	//condition change
+        cancelConditionSchedules(rtData, conditions.$)
+    }
+    rtData.cache["c:${conditions.$}"] = result    
     //true/false actions
     if (collection == 'c') {
 	    if ((result || rtData.fastForwardTo) && conditions.ts && conditions.ts.length) executeStatements(rtData, conditions.ts, async) 
     	if ((!result || rtData.fastForwardTo) && conditions.fs && conditions.fs.length) executeStatements(rtData, conditions.fs, async)
     }
+    //restore condition id
+    rtData.stack.c = c
 	return result
 }
 
 private Boolean evaluateCondition(rtData, condition, collection, async) {
 	def t = now()
+    //override condition id
+    def c = rtData.stack.c    
+    rtData.stack.c = condition.$
     def not = false
     def result = false
     if (condition.t == 'group') {
@@ -867,19 +936,27 @@ private Boolean evaluateCondition(rtData, condition, collection, async) {
                 result = evaluateComparison(rtData, condition.co, lo, ro, ro2, options)
                 result = not ? !result : !!result
                 //save new values to cache
-                if (lo) for (value in lo.values) rtData.cache[value.i] = value.v
-                if (ro) for (value in ro.values) rtData.cache[value.i] = value.v
-                if (ro2) for (value in ro2.values) rtData.cache[value.i] = value.v
+                def since = now()
+                if (lo) for (value in lo.values) rtData.cache[value.i] = value.v + [s: since]
+                if (ro) for (value in ro.values) rtData.cache[value.i] = value.v + [s: since]
+                if (ro2) for (value in ro2.values) rtData.cache[value.i] = value.v + [s: since]
 
 				if (!rtData.fastForwardTo) tracePoint(rtData, "c:${condition.$}", now() - t, result)
             } else {
                 result = true
             }
         }
-    }  
+    }
+    if (rtData.cache["c:${condition.$}"] != result) {
+    	//condition change
+        cancelConditionSchedules(rtData, condition.$)
+    }
+    rtData.cache["c:${condition.$}"] = result
     //true/false actions
     if ((result || rtData.fastForwardTo) && condition.ts && condition.ts.length) executeStatements(rtData, condition.ts, async)
     if ((!result || rtData.fastForwardTo) && condition.fs && condition.fs.length) executeStatements(rtData, condition.fs, async)
+    //restore condition id
+    rtData.stack.c = c
     return result
 }
 
@@ -942,6 +1019,21 @@ private Boolean evaluateComparison(rtData, comparison, lo, ro = null, ro2 = null
         }
         return result
 }
+
+private cancelStatementSchedules(rtData, statementId) {
+	//cancel all schedules that are pending for statement statementId
+    if (!(statementId in rtData.cancelations.statements)) {
+    	rtData.cancelations.statements.push(statementId)
+    }
+}
+
+private cancelConditionSchedules(rtData, conditionId) {
+	//cancel all schedules that are pending for condition conditionId
+    if (!(conditionId in rtData.cancelations.conditions)) {
+    	rtData.cancelations.conditions.push(conditionId)
+    }
+}
+
 
 private Map valueChanged(rtData, comparisonValue) {
 	def oldValue = rtData.cache[comparisonValue.i]
