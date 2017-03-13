@@ -14,8 +14,9 @@
  *
 */
 static String handle() { return "CoRE (SE)" }
-static String version() {	return "v0.0.037.20170312" }
+static String version() {	return "v0.0.038.20170312" }
 /*
+ *	03/12/2016 >>> v0.0.038.20170312 - ALPHA - Traversing else ifs and else statements in search for devices to subscribe to
  *	03/12/2016 >>> v0.0.037.20170312 - ALPHA - Added support for break and exit (partial, piston state is not set on exit) - fixed some comparison data type incompatibilities
  *	03/12/2016 >>> v0.0.036.20170312 - ALPHA - Added TCP = cancel on condition change and TOS = Action - no other values implemented yet, also, WHILE loops are now working, please remember to add a WAIT in it...
  *	03/11/2016 >>> v0.0.035.20170311 - ALPHA - A little error creeped into the conditions, fixed it
@@ -1187,7 +1188,7 @@ private void subscribeAll(rtData) {
         	devices[deviceId] = devices[deviceId] ?: [c: 0]
         }
         if (node.t in ['if', 'switch', 'while', 'repeat']) {
-            traverseConditions(node.c?:[] + node.ei?:[], { condition, parentCondition ->
+            traverseConditions(node.c?:[] + node.ei?node.ei*.c:[], { condition, parentCondition ->
                 def comparison = rtData.comparisons.conditions[condition.co]
                 def comparisonType = 'condition'
                 if (!comparison) {
@@ -1220,9 +1221,13 @@ private void subscribeAll(rtData) {
                     }
                 }
                 if (condition.ts instanceof List) traverseStatements(condition.ts, statementTraverser)
-                if (condition.fs instanceof List) traverseStatements(condition.fs, statementTraverser)
+                if (condition.fs instanceof List) traverseStatements(condition.fs, statementTraverser)                
             })
         }
+        if (node.e) traverseStatements(node.e, statementTraverser)
+        if (node.ei) traverseStatements(node.ei*.s, statementTraverser)
+        //todo do cases too
+        
     }
     traverseStatements(rtData.piston.s, statementTraverser)
     //trace subscriptions
