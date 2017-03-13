@@ -14,8 +14,9 @@
  *
 */
 static String handle() { return "CoRE (SE)" }
-static String version() {	return "v0.0.038.20170312" }
+static String version() {	return "v0.0.039.20170313" }
 /*
+ *	03/13/2016 >>> v0.0.039.20170313 - ALPHA - The Switch statement should now be functional - UI validation not fully done
  *	03/12/2016 >>> v0.0.038.20170312 - ALPHA - Traversing else ifs and else statements in search for devices to subscribe to
  *	03/12/2016 >>> v0.0.037.20170312 - ALPHA - Added support for break and exit (partial, piston state is not set on exit) - fixed some comparison data type incompatibilities
  *	03/12/2016 >>> v0.0.036.20170312 - ALPHA - Added TCP = cancel on condition change and TOS = Action - no other values implemented yet, also, WHILE loops are now working, please remember to add a WAIT in it...
@@ -218,6 +219,17 @@ private int setIds(node, maxId = 0, existingIds = [:], requiringIds = [], level 
 		        id = elseIf['$']
                 if (!id || existingIds[id]) {               
                     requiringIds.push(elseIf)
+                } else {
+                    maxId = (maxId < id) ? id : maxId
+                    existingIds[id] = id
+                }
+            }
+        }
+        if ((node.t == 'switch') && (node.cs)) {
+			for (_case in node.cs) {
+		        id = _case['$']
+                if (!id || existingIds[id]) {               
+                    requiringIds.push(_case)
                 } else {
                     maxId = (maxId < id) ? id : maxId
                     existingIds[id] = id
@@ -529,7 +541,12 @@ private updateLogs(rtData) {
     //we attempt to store 500 logs, but if that's too much, we go down in 50 increments
     while (maxLogSize >= 0) {
 	    if (logs.size() > maxLogSize) {
-    		logs = logs[0..499]
+        	def maxSz = maxLogSize < logs.size() ? maxLogSize : logs.size()
+            if (maxSz) {
+    			logs = logs[0..499]
+            } else {
+            	logs = []
+            }
     	}
         if ("$logs".size() > 50000) {
         	maxLogSize -= 50
@@ -625,6 +642,53 @@ private Boolean executeStatement(rtData, statement, async = false) {
                         }
                     }
                     break
+                case 'switch':
+                    def values = evaluateOperand(rtData, statement, statement.lo)
+                	def lo = [operand: statement.lo, values: evaluateOperand(rtData, statement, statement.lo)]
+                    //go through all cases
+                    def found = false
+                    def implicitBreaks = (statement.ctp == 'i')
+                    def fallThrough = !implicitBreaks
+                    perform = false
+                    for (_case in statement.cs) {
+                    	def ro = [operand: _case.ro, values: evaluateOperand(rtData, _case, _case.ro)]
+                        def ro2 = (_case.t == 'r') ? [operand: _case.ro2, values: evaluateOperand(rtData, _case, _case.ro2)] : null
+                        perform = perform || evaluateComparison(rtData, (_case.t == 'r' ? 'is_inside_of_range' : 'is'), lo, ro, ro2)
+                        found = found || perform
+                        if (perform || !!rtData.fastForwardTo) {
+                        	if (!executeStatements(rtData, _case.s, async)) {
+ 								//stop processing
+                                value = false
+                                if (!!rtData.break) {
+                                	//we reached a break, so we really want to continue execution outside of the switch
+                                	value = true
+                                    fallThrough = false
+                                    rtData.break = null
+                                }
+                                if (!rtData.fastForwardTo) break
+							}
+                            value = true
+                            //if implicit breaks
+                            if (implicitBreaks || !!rtData.fastForwardTo) {
+                                fallThrough = false
+                            	break
+                            }
+                        }
+                    }
+                    if (statement.e && statement.e.length && (!found || fallThrough || !!rtData.fastForwardTo)) {
+                    	//no case found, let's do the default
+						if (!executeStatements(rtData, statement.e, async)) {
+                            //stop processing
+                            value = false
+                            if (!!rtData.break) {
+                                //we reached a break, so we really want to continue execution outside of the switch
+                                value = true
+                                rtData.break = null
+                            }
+                            if (!rtData.fastForwardTo) break
+						}
+                    }
+                	break
                 case 'action':
                     value = executeAction(rtData, statement, async)
                     break
@@ -895,6 +959,35 @@ private Boolean evaluateConditions(rtData, conditions, collection, async) {
 	return result
 }
 
+private List evaluateOperand(rtData, node, operand) {
+	def values = []
+    switch (operand.t) {
+        case "p": //physical device
+        	def j = 0;
+        	for(deviceId in operand.d) {
+	            values.push([i: "${node.$}:$i:$j", v:getDeviceAttribute(rtData, deviceId, operand.a)])
+	            j++
+	                }
+	        if ((values.size() > 1) && !(operand.g in ['any', 'all'])) {
+	            //if we have multiple values and a grouping other than any or all we need to apply that function
+	            try {
+	                values = [[i: "${condition.$}:$i:0", v:"func_${operand.g}"(rtData, values*.v)]]
+	            } catch(all) {
+	                error "Error applying grouping method ${operand.g}", rtData
+	            }
+	        }
+	        break;
+        case "x": //constant
+	        values = [[i: "${node.$}:$i:0", v:getVariable(rtData, operand.x)]]
+            break
+        case "c": //constant
+        case "e": //expression
+	        values = [[i: "${node.$}:$i:0", v: evaluateExpression(rtData, operand.exp)]]
+            break
+    }
+    return values
+}
+
 private Boolean evaluateCondition(rtData, condition, collection, async) {
 	def t = now()
     //override condition id
@@ -916,30 +1009,7 @@ private Boolean evaluateCondition(rtData, condition, collection, async) {
                 for(int i = 0; i <= paramCount; i++) {
                     def operand = (i == 0 ? condition.lo : (i == 1 ? condition.ro : condition.ro2))
                     //parse the operand
-                    def values
-                    switch (operand.t) {
-                        case "p": //physical device
-                            values = []
-                            def j = 0;
-                            for(deviceId in operand.d) {
-                                values.push([i: "${condition.$}:$i:$j", v:getDeviceAttribute(rtData, deviceId, operand.a)])
-                                j++
-                            }
-                            if ((values.size() > 1) && !(operand.g in ['any', 'all'])) {
-                                //if we have multiple values and a grouping other than any or all we need to apply that function
-                                try {
-                                    values = [[i: "${condition.$}:$i:0", v:"func_${operand.g}"(rtData, values*.v)]]
-                                } catch(all) {
-                                    error "Error applying grouping method ${operand.g}", rtData
-                                }
-                            }
-                            break;
-                        case "x": //constant
-                            values = [getVariable(rtData, operand.x)]
-                        case "c": //constant
-                        case "e": //expression
-                            values = [[i: "${condition.$}:$i:0", v: evaluateExpression(rtData, operand.exp)]]
-                    }
+                    def values = evaluateOperand(rtData, condition, operand)                    
                     switch (i) {
                         case 0:
                             lo = [operand: operand, values: values]
@@ -1078,8 +1148,8 @@ private boolean comp_is_even						(rtData, lv, rv = null, rv2 = null) { return c
 private boolean comp_is_odd							(rtData, lv, rv = null, rv2 = null) { return cast(lv.v.v, 'integer').mod(2) != 0 }
 private boolean comp_is_true						(rtData, lv, rv = null, rv2 = null) { return !!cast(lv.v.v, 'boolean') }
 private boolean comp_is_false						(rtData, lv, rv = null, rv2 = null) { return !cast(lv.v.v, 'boolean') }
-private boolean comp_is_inside_range				(rtData, lv, rv = null, rv2 = null) { def v = cast(lv.v.v, 'decimal'); def v1 = cast(rv.v.v, 'decimal'); def v2 = cast(rv2.v.v, 'decimal'); return (v1 < v2) ? ((v >= v1) && (v <= v2)) : ((v >= v2) && (v <= v1)); }
-private boolean comp_is_outside_range				(rtData, lv, rv = null, rv2 = null) { return !comp_is_inside_range(rtData, lv, rv, rv2) }
+private boolean comp_is_inside_of_range				(rtData, lv, rv = null, rv2 = null) { def v = cast(lv.v.v, 'decimal'); def v1 = cast(rv.v.v, 'decimal'); def v2 = cast(rv2.v.v, 'decimal'); return (v1 < v2) ? ((v >= v1) && (v <= v2)) : ((v >= v2) && (v <= v1)); }
+private boolean comp_is_outside_of_range			(rtData, lv, rv = null, rv2 = null) { return !comp_is_inside_of_range(rtData, lv, rv, rv2) }
 private boolean comp_changed						(rtData, lv, rv = null, rv2 = null) { return valueChanged(rtData, lv); }
 private boolean comp_did_not_change					(rtData, lv, rv = null, rv2 = null) { return !valueChanged(rtData, lv); }
 
@@ -1126,8 +1196,8 @@ private traverseStatements(node, closure, parentNode = null) {
     if (node.s instanceof List) {
     	traverseStatements(node.s, closure, node)
     }
-    if (node.es instanceof List) {
-    	traverseStatements(node.es, closure, node)
+    if (node.e instanceof List) {
+    	traverseStatements(node.e, closure, node)
     }
 }
 
@@ -1150,22 +1220,22 @@ private traverseConditions(node, closure, parentNode = null) {
     }
 }
 
-private traverseExpressions(node, closure, parentNode = null) {
+private traverseExpressions(node, closure, param, parentNode = null) {
     if (!node) return
 	//if a statements element, go through each item
 	if (node instanceof List) {
     	for(item in node) {
-	    	traverseExpressions(item, closure, parentNode)
+	    	traverseExpressions(item, closure, param, parentNode)
 	    }
         return
 	}
     //got a statement, pass it on to the closure
     if (closure instanceof Closure) {
-    	closure(node, parentNode)
+    	closure(node, parentNode, param)
     }
     //if the statements has substatements, go through them
     if (node.i instanceof List) {
-    	traverseExpressions(node.i, closure, node)
+    	traverseExpressions(node.i, closure, param, node)
     }
 }
 
@@ -1183,12 +1253,41 @@ private void subscribeAll(rtData) {
     def hasTriggers = false
     //traverse all statements
     def statementTraverser
+    def expressionTraverser
+    def operandTraverser
+    operandTraverser = { node, operand, comparisonType ->
+        switch (operand.t) {
+            case "p": //physical device
+            	for(deviceId in operand.d) {
+	                devices[deviceId] = [c: (comparisonType ? 1 : 0) + (devices[deviceId]?.c ?: 0)]
+                    //if we have any trigger, it takes precedence over anything else
+                    def ct = subscriptions["$deviceId${operand.a}"]?.t ?: null
+                    if ((ct == 'trigger') || (comparisonType == 'trigger')) {
+                    	ct = 'trigger'                       
+                    } else {
+                    	ct = ct ?: comparisonType
+                    }
+	                subscriptions["$deviceId${operand.a}"] = [d: deviceId, a: operand.a, t: ct , c: (subscriptions["$deviceId${operand.a}"] ? subscriptions["$deviceId${operand.a}"].c : []) + (comparisonType?[node]:[])]
+	            }
+	            break;
+            case "c": //constant
+            case "e": //expression
+    	        traverseExpressions(operand.exp?.i, expressionTraverser, comparisonType)
+        	    break
+        }
+    }
+    expressionTraverser = { expression, parentExpression, comparisonType -> 
+        if ((expression.t == 'device') && (expression.id)) {
+            devices[expression.id] = [c: (comparisonType ? 1 : 0) + (devices[expression.id]?.c ?: 0)]
+            subscriptions["${expression.id}${expression.a}"] = [d: expression.id, a: expression.a, t: comparisonType, c: (subscriptions["${expression.id}${expression.a}"] ? subscriptions["${expression.id}${expression.a}"].c : []) + [condition]]
+        }
+    }
     statementTraverser = { node, parentNode ->
     	for(deviceId in node.d) {
         	devices[deviceId] = devices[deviceId] ?: [c: 0]
         }
-        if (node.t in ['if', 'switch', 'while', 'repeat']) {
-            traverseConditions(node.c?:[] + node.ei?node.ei*.c:[], { condition, parentCondition ->
+        if (node.t in ['if', 'while', 'repeat']) {
+            traverseConditions((node.c?:[]) + (node.ei?node.ei*.c:[]), { condition, parentCondition ->
                 def comparison = rtData.comparisons.conditions[condition.co]
                 def comparisonType = 'condition'
                 if (!comparison) {
@@ -1201,39 +1300,32 @@ private void subscribeAll(rtData) {
                     for(int i = 0; i <= paramCount; i++) {
                     	//get the operand to parse
                     	def operand = (i == 0 ? condition.lo : (i == 1 ? condition.ro : condition.ro2))
-                        switch (operand.t) {
-                        	case "p": //physical device
-                            	for(deviceId in operand.d) {
-                                    devices[deviceId] = [c: 1 + (devices[deviceId]?.c ?: 0)]
-                                	subscriptions["$deviceId${operand.a}"] = [d: deviceId, a: operand.a, t: comparisonType, c: (subscriptions["$deviceId${operand.a}"] ? subscriptions["$deviceId${operand.a}"].c : []) + [condition]]
-                                }
-                                break;
-							case "c": //constant
-                            case "e": //expression
-                            	traverseExpressions(operand.exp?.i, { expression, parentExpression -> 
-                                	if ((expression.t == 'device') && (expression.id)) {
-                                    	devices[expression.id] = [c: 1 + (devices[expression.id]?.c ?: 0)]
-	                                	subscriptions["${expression.id}${expression.a}"] = [d: expression.id, a: expression.a, t: comparisonType, c: (subscriptions["${expression.id}${expression.a}"] ? subscriptions["${expression.id}${expression.a}"].c : []) + [condition]]
-                                    }
-                                })
-                                break
-                        }
+						operandTraverser(condition, operand, comparisonType)
                     }
                 }
                 if (condition.ts instanceof List) traverseStatements(condition.ts, statementTraverser)
                 if (condition.fs instanceof List) traverseStatements(condition.fs, statementTraverser)                
             })
         }
-        if (node.e) traverseStatements(node.e, statementTraverser)
-        if (node.ei) traverseStatements(node.ei*.s, statementTraverser)
-        //todo do cases too
+        if (node.t == 'switch') {
+        	operandTraverser(node, node.lo, 'condition')
+        	for (c in node.cs) {
+            	operandTraverser(c, c.ro, null)
+                if (c.t == 'r') operandTraverser(c, c.ro2, null)
+                if (c.s instanceof List) {
+                	traverseStatements(c.s, statementTraverser)
+                }
+            }
+        }
+        if (node.t == 'if') {
+        	if (node.ei) traverseStatements(node.ei*.s, statementTraverser)
+        }
         
     }
     traverseStatements(rtData.piston.s, statementTraverser)
-    //trace subscriptions
     for (subscription in subscriptions) {
     	for (condition in subscription.value.c) condition.s = false
-    	if ((subscription.value.t == "trigger") || (subscription.value.c.sm == "always") || (!hasTriggers && (subscription.value.c.sm != "never"))) {
+    	if (subscription.value.t && ((subscription.value.t == "trigger") || (subscription.value.c.sm == "always") || (!hasTriggers && (subscription.value.c.sm != "never")))) {
 	    	def device = getDevice(rtData, subscription.value.d)
     	    if (device) {
         		info "Subscribing to $device.${subscription.value.a}...", rtData
@@ -2415,7 +2507,7 @@ private static Map getSystemVariables() {
 		"\$previousEventDevice": [t: "device", v: null],
 		"\$previousEventDeviceIndex": [t: "integer", v: null],
 		"\$previousEventDevicePhysical": [t: "boolean", v: null],
-		"\$previousEventExecutionTime": 0,
+		"\$previousEventExecutionTime": [t: "integer", v: null],
 		"\$previousEventReceived": [t: "time", v: null],
 		"\$previousEventValue": [t: "string", v: null],
 		"\$previousState": [t: "string", v: null],
@@ -2442,7 +2534,7 @@ private getSystemVariableValue(name) {
 		case "\$utc": return (long) now()
 		case "\$localNow": return (long) localTime()
 		case "\$hour": def h = localDate().hours; return (h == 0 ? 12 : (h > 12 ? h - 12 : h)) 
-		case "\$hour24": return localDate.hours
+		case "\$hour24": return localDate().hours
 		case "\$minute": return localDate().minutes 
 		case "\$second": return localDate().seconds 
 		case "\$meridian": def h = localDate().hours; return ( h < 12 ? "AM" : "PM") 

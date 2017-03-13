@@ -20,8 +20,9 @@
  */
 
 static String handle() { return "CoRE (SE)" }
-static String version() {	return "v0.0.038.20170312" }
+static String version() {	return "v0.0.039.20170313" }
 /*
+ *	03/13/2016 >>> v0.0.039.20170313 - ALPHA - The Switch statement should now be functional - UI validation not fully done
  *	03/12/2016 >>> v0.0.038.20170312 - ALPHA - Traversing else ifs and else statements in search for devices to subscribe to
  *	03/12/2016 >>> v0.0.037.20170312 - ALPHA - Added support for break and exit (partial, piston state is not set on exit) - fixed some comparison data type incompatibilities
  *	03/12/2016 >>> v0.0.036.20170312 - ALPHA - Added TCP = cancel on condition change and TOS = Action - no other values implemented yet, also, WHILE loops are now working, please remember to add a WAIT in it...
@@ -1297,8 +1298,8 @@ private static Map comparisons() {
     		is_less_to_or_equal_than		: [ d: "is less to or equal than",			dd: "are less to or equal than",		g:"di",		p: 1						],
     		is_greater_than					: [ d: "is greater than",					dd: "are greater than",					g:"di",		p: 1						],
     		is_greater_to_or_equal_than		: [ d: "is greater to or equal than",		dd: "are greater to or equal than",		g:"di",		p: 1						],
-    		is_inside_range					: [ d: "is inside range",					dd: "are inside range",					g:"di",		p: 2						],
-    		is_outside_range				: [ d: "is outside range",					dd: "are outside range",				g:"di",		p: 2						],
+    		is_inside_of_range				: [ d: "is inside of range",				dd: "are inside of range",				g:"di",		p: 2						],
+    		is_outside_of_range				: [ d: "is outside of range",				dd: "are outside of range",				g:"di",		p: 2						],
 			is_even							: [ d: "is even",							dd: "are even",							g:"di",									],
 			is_odd							: [ d: "is odd",							dd: "are odd",							g:"di",									],
     		was 							: [ d: "was",								dd: "were",								g:"bdis",	p: 1,				t: 2,	],
@@ -1311,8 +1312,8 @@ private static Map comparisons() {
 			was_less_than_or_equal_to 		: [ d: "was less than or equal to",			dd: "were less than or equal to",		g:"di",		p: 1,				t: 2,	],
 			was_greater_than 				: [ d: "was greater than",					dd: "were greater than",				g:"di",		p: 1,				t: 2,	],
 			was_greater_than_or_equal_to 	: [ d: "was greater than or equal to",		dd: "were greater than or equal to",	g:"di",		p: 1,				t: 2,	],
-			was_inside_range 				: [ d: "was inside range",					dd: "were inside range",				g:"di",		p: 2,				t: 2,	],
-			was_outside_range 				: [ d: "was outside range",					dd: "were outside range",				g:"di",		p: 2,				t: 2,	],
+			was_inside_of_range 			: [ d: "was inside of range",				dd: "were inside of range",				g:"di",		p: 2,				t: 2,	],
+			was_outside_of_range 			: [ d: "was outside of range",				dd: "were outside of range",			g:"di",		p: 2,				t: 2,	],
     		was_even						: [ d: "was even",							dd: "were even",						g:"di",							t: 2,	],
     		was_odd							: [ d: "was odd",							dd: "were odd",							g:"di",							t: 2,	],
     	],
@@ -1353,8 +1354,8 @@ private static Map comparisons() {
 			stays_less_than_or_equal_to 	: [ d: "stays less than or equal to",		dd: "stay less than or equal to",		g:"di",		p: 1,				t: 2,	],
 			stays_greater_than 				: [ d: "stays greater than",				dd: "stay greater than",				g:"di",		p: 1,				t: 2,	],
 			stays_greater_than_or_equal_to 	: [ d: "stays greater than or equal to",	dd: "stay greater than or equal to",	g:"di",		p: 1,				t: 2,	],
-			stays_inside_range 				: [ d: "stays inside range",				dd: "stay inside range",				g:"di",		p: 2,				t: 2,	],
-			stays_outside_range 			: [ d: "stays outside range",				dd: "stay outside range",				g:"di",		p: 2,				t: 2,	],
+			stays_inside_of_range 			: [ d: "stays inside of range",				dd: "stay inside of range",				g:"di",		p: 2,				t: 2,	],
+			stays_outside_of_range 			: [ d: "stays outside of range",			dd: "stay outside of range",			g:"di",		p: 2,				t: 2,	],
 			stays_even						: [ d: "stays even",						dd: "stay even",						g:"di",							t: 2,	],
 			stays_odd						: [ d: "stays odd",							dd: "stay odd",							g:"di",							t: 2,	],
         ]
