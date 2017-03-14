@@ -14,8 +14,9 @@
  *
 */
 static String handle() { return "CoRE (SE)" }
-static String version() {	return "v0.0.03a.20170314a" }
+static String version() {	return "v0.0.03b.20170314" }
 /*
+ *	03/14/2016 >>> v0.0.03b.20170314 - ALPHA - For statement finally getting some love
  *	03/14/2016 >>> v0.0.03a.20170314 - ALPHA - Added more functions (age, previousAge, newer, older, previousValue) and fixed a bug where operand caching stopped working after earlier code refactorings
  *	03/13/2016 >>> v0.0.039.20170313 - ALPHA - The Switch statement should now be functional - UI validation not fully done
  *	03/12/2016 >>> v0.0.038.20170312 - ALPHA - Traversing else ifs and else statements in search for devices to subscribe to
@@ -88,9 +89,9 @@ static String version() {	return "v0.0.03a.20170314a" }
     category: "Convenience",
 	parent: "ady624:webCoRE",
     /* icons courtesy of @chauger - thank you */
-	iconUrl: "https://cdn.rawgit.com/ady624/webCoRE/master/smartapps/ady624/res/img/app-CoRE.png",
-	iconX2Url: "https://cdn.rawgit.com/ady624/webCoRE/master/smartapps/ady624/res/img/app-CoRE@2x.png",
-	iconX3Url: "https://cdn.rawgit.com/ady624/webCoRE/master/smartapps/ady624/res/img/app-CoRE@3x.png"
+	iconUrl: "https://cdn.rawgit.com/ady624/webCoRE/master/resources/icons/app-CoRE.png",
+	iconX2Url: "https://cdn.rawgit.com/ady624/webCoRE/master/resources/icons/app-CoRE@2x.png",
+	iconX3Url: "https://cdn.rawgit.com/ady624/webCoRE/master/resources/icons/app-CoRE@3x.png"
  )
 
 
@@ -181,6 +182,7 @@ def activity(lastLogTimestamp) {
         vars: state.vars
     ]    
 }
+
 
 def set(data) {
 	if (!data) return false
@@ -588,6 +590,7 @@ private Boolean executeStatement(rtData, statement, async = false) {
     async = !!async || (statement.a == "1")
     def perform = false
     def repeat = true
+    def index = null
     def restricted = !statement.r || !(statement.r.length) || evaluateConditions(rtData, statement, 'r', async, true)
     if (restricted || !!rtData.fastForwardTo) {
     	while (repeat) {
@@ -643,6 +646,43 @@ private Boolean executeStatement(rtData, statement, async = false) {
                         }
                     }
                     break
+                case 'for':
+                    float startValue = evaluateScalarOperand(rtData, statement, statement.lo, null, 'decimal').v
+                    float endValue = evaluateScalarOperand(rtData, statement, statement.lo2, null, 'decimal').v
+                    float stepValue = evaluateScalarOperand(rtData, statement, statement.lo3, null, 'decimal').v ?: 1.0
+                    String counterVariable = getVariable(rtData, statement.x).t != 'error' ? statement.x : null
+                    if (((startValue <= endValue) && (stepValue > 0)) || ((startValue >= endValue) && (stepValue < 0)) || !!rtData.fastForwardTo) {
+                    	//initialize the for loop
+                        if (rtData.fastForwardTo) index = cast(rtData.cache["f:${statement.$}"], 'decimal')
+                    	if (index == null) {
+                        	index = cast(startValue, 'decimal')
+	                        rtData.cache["f:${statement.$}"] = index                            
+                        }
+                        setSystemVariableValue(rtData, '$index', index)
+                        if (counterVariable && !rtData.fastForward) setVariable(rtData, counterVariable, index)
+                        //do the loop
+                        perform = executeStatements(rtData, statement.s, async)                        
+                        if (!perform) {
+                            //stop processing
+                            value = false
+                            if (!!rtData.break) {
+                                //we reached a break, so we really want to continue execution outside of the switch
+                                value = true
+                                rtData.break = null
+                                perform = false
+                            }
+                            break
+                        }
+                        //don't do the rest if we're fast forwarding
+                        if (!!rtData.fastForwardTo) break
+                        index = index + stepValue
+                        rtData.cache["f:${statement.$}"] = index
+                        if (((stepValue > 0 ) && (index > endValue)) || ((stepValue < 0 ) && (index < endValue))) {
+                        	perform = false
+                            break
+                        }                    
+                    }
+                	break                    
                 case 'switch':
                     def values = evaluateOperand(rtData, statement, statement.lo)
                 	def lo = [operand: statement.lo, values: evaluateOperand(rtData, statement, statement.lo)]
@@ -983,10 +1023,15 @@ private List evaluateOperand(rtData, node, operand, index, trigger = false) {
             break
         case "c": //constant
         case "e": //expression
-	        values = [[i: "${node.$}:$index:0", v: evaluateExpression(rtData, operand.exp, null, trigger)]]
+	        values = [[i: "${node.$}:$index:0", v: evaluateExpression(rtData, operand.exp, null)]]
             break
     }
     return values
+}
+
+private evaluateScalarOperand(rtData, node, operand, index, dataType = 'string') {
+	def values = evaluateOperand(rtData, node, operand, index)
+    return [t: dataType, v: cast(((values && values.length) ? values[0].v.v : ''), dataType)]
 }
 
 private Boolean evaluateCondition(rtData, condition, collection, async) {
@@ -1134,7 +1179,6 @@ private Map valueChanged(rtData, comparisonValue) {
 	def oldValue = rtData.cache[comparisonValue.i]
     def newValue = comparisonValue.v
     if (!(oldValue instanceof Map)) oldValue = false
-	warn "$comparisonValue >>> $oldValue", rtData
     return (!!oldValue && ((oldValue.t != newValue.t) || ("${oldValue.v}" != "${newValue.v}"))) ? [i: comparisonValue.i, v: oldValue] : null
 }
 
@@ -1158,8 +1202,7 @@ private boolean comp_changed						(rtData, lv, rv = null, rv2 = null) { return v
 private boolean comp_did_not_change					(rtData, lv, rv = null, rv2 = null) { return !valueChanged(rtData, lv); }
 
 /*triggers*/
-private boolean comp_t_is							(rtData, lv, rv = null, rv2 = null) { return cast(lv.v.v, 'string') == cast(rv.v.v, 'string') }
-private boolean comp_t_is_not						(rtData, lv, rv = null, rv2 = null) { return cast(lv.v.v, 'string') != cast(rv.v.v, 'string') }
+private boolean comp_gets							(rtData, lv, rv = null, rv2 = null) { return cast(lv.v.v, 'string') == cast(rv.v.v, 'string') }
 private boolean comp_changes						(rtData, lv, rv = null, rv2 = null) { return valueChanged(rtData, lv); }
 private boolean comp_changes_to						(rtData, lv, rv = null, rv2 = null) { return valueChanged(rtData, lv) && ("${lv.v.v}" == "${rv.v.v}"); }
 private boolean comp_changes_away_from				(rtData, lv, rv = null, rv2 = null) { def oldValue = valueChanged(rtData, lv); return oldValue && ("${oldValue.v.v}" == "${rv.v.v}"); }
@@ -1408,6 +1451,30 @@ def getVariable(rtData, name) {
     return result
 }
 
+def setVariable(rtData, name, value) {
+	name = sanitizeVariableName(name)
+	if (!name) return [t: "error", v: "Invalid empty variable name"]
+	if (name.startsWith("@")) {
+    	def variable = rtData.globalVars[name]
+        if (variable instanceof Map) {
+        	//set global var
+            return variable
+        }
+	} else {
+		def variable = rtData.localVars[name]
+        if (variable instanceof Map) {
+        	if (variable.t != 'dynamic') {
+            	value = cast(value, variable.t)
+            }
+            //set value
+            variable.v = value
+            variable.c = true
+            return variable
+		}
+	}
+   	result = [t: 'error', v: 'Invalid variable']
+}
+
 
 /******************************************************************************/
 /*** 																		***/
@@ -1419,7 +1486,7 @@ def Map proxyEvaluateExpression(rtData, expression, dataType = null) {
 	resetRandomValues()
 	return evaluateExpression(getRunTimeData(rtData), expression, dataType)
 }
-private Map evaluateExpression(rtData, expression, dataType = null, trigger = false) {
+private Map evaluateExpression(rtData, expression, dataType = null) {
     //if dealing with an expression that has multiple items, let's evaluate each item one by one
     //let's evaluate this expression
     if (!expression) return [t: 'error', v: 'Null expression']
@@ -1468,7 +1535,7 @@ private Map evaluateExpression(rtData, expression, dataType = null, trigger = fa
             	def var = getVariable(rtData, expression.x)
                 if (var) deviceId = var.id ?: var.v
             }
-            result = getDeviceAttribute(rtData, deviceId, expression.a, trigger)
+            result = getDeviceAttribute(rtData, deviceId, expression.a)
         	break
         case "operand":
         	result = [t: "string", v: cast(expression.v, "string")]
@@ -2338,6 +2405,8 @@ private cast(value, dataType) {
 			if (value instanceof String) {
 				if (value.isInteger())
 					return value.toInteger()
+				if (value.isLong())
+					return (long) value.toLong()
 				if (value.isFloat())
 					return (int) Math.floor(value.toFloat())
 				if (value in trueStrings)
@@ -2359,6 +2428,8 @@ private cast(value, dataType) {
 			if (value instanceof String) {
 				if (value.isInteger())
 					return (long) value.toInteger()
+				if (value.isLong())
+					return (long) value.toLong()
 				if (value.isFloat())
 					return (long) Math.round(value.toFloat())
 				if (value in trueStrings)
@@ -2658,7 +2729,7 @@ private static Map getSystemVariables() {
 		"\$nextSunset": [t: "time", d: true],
 		"\$time": [t: "string", d: true],
 		"\$time24": [t: "string", d: true],
-		"\$index": [t: "integer", v: null],
+		"\$index": [t: "decimal", v: null],
 		"\$previousEventAttribute": [t: "string", v: null],
 		"\$previousEventDate": [t: "time", v: null],
 		"\$previousEventDelay": [t: "integer", v: null],

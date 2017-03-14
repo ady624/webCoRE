@@ -20,8 +20,9 @@
  */
 
 static String handle() { return "CoRE (SE)" }
-static String version() {	return "v0.0.03a.20170314a" }
+static String version() {	return "v0.0.03b.20170314" }
 /*
+ *	03/14/2016 >>> v0.0.03b.20170314 - ALPHA - For statement finally getting some love
  *	03/14/2016 >>> v0.0.03a.20170314 - ALPHA - Added more functions (age, previousAge, newer, older, previousValue) and fixed a bug where operand caching stopped working after earlier code refactorings
  *	03/13/2016 >>> v0.0.039.20170313 - ALPHA - The Switch statement should now be functional - UI validation not fully done
  *	03/12/2016 >>> v0.0.038.20170312 - ALPHA - Traversing else ifs and else statements in search for devices to subscribe to
@@ -94,9 +95,9 @@ static String version() {	return "v0.0.03a.20170314a" }
 	category: "Convenience",
 	singleInstance: false,
     /* icons courtesy of @chauger - thank you */
-	iconUrl: "https://cdn.rawgit.com/ady624/webCoRE/master/smartapps/ady624/res/img/app-CoRE.png",
-	iconX2Url: "https://cdn.rawgit.com/ady624/webCoRE/master/smartapps/ady624/res/img/app-CoRE@2x.png",
-	iconX3Url: "https://cdn.rawgit.com/ady624/webCoRE/master/smartapps/ady624/res/img/app-CoRE@3x.png"
+	iconUrl: "https://cdn.rawgit.com/ady624/webCoRE/master/resources/icons/app-CoRE.png",
+	iconX2Url: "https://cdn.rawgit.com/ady624/webCoRE/master/resources/icons/app-CoRE@2x.png",
+	iconX3Url: "https://cdn.rawgit.com/ady624/webCoRE/master/resources/icons/app-CoRE@3x.png"
  )
 
 
@@ -142,7 +143,7 @@ def pageMain() {
     def dashboardUrl = ""
 	dynamicPage(name: "pageMain", title: "", install: true, uninstall: false) {
     	section("Engine block") {
-			href "pageEngineBlock", title: "Cast iron", description: app.version(), image: "https://cdn.rawgit.com/ady624/webCoRE/master/smartapps/ady624/res/img/app-CoRE.png", required: false
+			href "pageEngineBlock", title: "Cast iron", description: app.version(), image: "https://cdn.rawgit.com/ady624/webCoRE/master/resources/icons/app-CoRE.png", required: false
         }
 		section("Dashboard") {
 			if (!state.endpoint) {
@@ -1117,8 +1118,8 @@ private static Map commands() {
 		lock						: [ n: "Lock",																			a: "lock",							v: "locked",																																		],
 		mute						: [ n: "Mute",																			a: "mute",							v: "muted",																																			],
 		nextTrack					: [ n: "Next track",																																																															],
-		off							: [ n: "Turn off",																		a: "switch|alarm|thermostatMode",	v: "off",																																			],
-		on							: [ n: "Turn on",																		a: "switch",						v: "on",																																			],
+		off							: [ n: "Turn off",						i: "circle-o-notch",							a: "switch|alarm|thermostatMode",	v: "off",																																			],
+		on							: [ n: "Turn on",						i: "power-off",									a: "switch",						v: "on",																																			],
 		open						: [ n: "Open",																			a: "door|valve|windowShade",		v: "open",																																			],
 		pause						: [ n: "Pause",																																																																	],
 		play						: [ n: "Play",																																																																	],
@@ -1221,15 +1222,15 @@ private virtualCommands() {
     //t = type
 	return [
 		noop				: [	n: "No operation",				a: true,	d: "No operation",																										],
-		wait				: [	n: "Wait...", 					a: true,	d: "Wait {0}",															p: [[n:"Duration", t:"duration"]],				],
-		waitRandom			: [ n: "Wait randomly...",			a: true,	d: "Wait randomly between {0} and {1}",									p: [[n:"At least", t:"duration"],[n:"At most", t:"duration"]],	],
-		toggle				: [ n: "Toggle", r: ["on", "off"], 					],
-		toggleLevel			: [ n: "Toggle level...", 						d: "Toggle level between 0% and {0}%",	r: ["on", "off", "setLevel"],	p: [[n:"Level", t:"level"]],																																	],
-		sendNotification	: [ n: "Send notification...",		a: true,	d: "Send notification \"{0}\"",											p: [[n:"Message", t:"string"]],												],
-		sendPushNotification: [ n: "Send PUSH notification...",	a: true,	d: "Send PUSH notification \"{0}\"{1}",									p: [[n:"Message", t:"string"],[n:"Store in Messages", t:"boolean", d:" and store in Messages"]],	],
-		sendSMSNotification	: [ n: "Send SMS notification...",	a: true,	d: "Send SMS notification \"{0}\" to {1}{2}",							p: [[n:"Message", t:"string"],[n:"Phone number",t:"phone"],[n:"Store in Messages", t:"boolean", d:" and store in Messages"]],	],
-		log					: [ n: "Log to console...",			a: true,	d: "Log {0} \"{1}\"",													p: [[n:"Log type", t:"enum", o:["info","trace","debug","warn","error"]],[n:"Message",t:"string"]],	],
-		httpRequest			: [ n: "Make a web request",		a: true, 	d: "Make a {1} request to {0}",									        p: [[n:"URL", t:"string"],[n:"Method", t:"enum", o:["GET","POST","PUT","DELETE","HEAD"]],[n:"Content", t:"enum", o:["JSON","FORM"]],[n:"Send variables", t:"variables", d:" and data {v}"],[n:"Import response data into variables", t:"boolean"],[n:"Variable import name prefix", t:"string"]],	],
+		wait				: [	n: "Wait...", 					a: true,	i: "clock-o",				d: "Wait {0}",															p: [[n:"Duration", t:"duration"]],				],
+		waitRandom			: [ n: "Wait randomly...",			a: true,	i: "clock-o",				d: "Wait randomly between {0} and {1}",									p: [[n:"At least", t:"duration"],[n:"At most", t:"duration"]],	],
+		toggle				: [ n: "Toggle", r: ["on", "off"], 				i: "toggle-on"																				],
+		toggleLevel			: [ n: "Toggle level...", 						i: "toggle-off",			d: "Toggle level between 0% and {0}%",	r: ["on", "off", "setLevel"],	p: [[n:"Level", t:"level"]],																																	],
+		sendNotification	: [ n: "Send notification...",		a: true,	i: "commenting-o",			d: "Send notification \"{0}\"",											p: [[n:"Message", t:"string"]],												],
+		sendPushNotification: [ n: "Send PUSH notification...",	a: true,	i: "commenting-o",			d: "Send PUSH notification \"{0}\"{1}",									p: [[n:"Message", t:"string"],[n:"Store in Messages", t:"boolean", d:" and store in Messages"]],	],
+		sendSMSNotification	: [ n: "Send SMS notification...",	a: true,	i: "commenting-o",			d: "Send SMS notification \"{0}\" to {1}{2}",							p: [[n:"Message", t:"string"],[n:"Phone number",t:"phone"],[n:"Store in Messages", t:"boolean", d:" and store in Messages"]],	],
+		log					: [ n: "Log to console...",			a: true,	i: "bug",					d: "Log {0} \"{1}\"",													p: [[n:"Log type", t:"enum", o:["info","trace","debug","warn","error"]],[n:"Message",t:"string"]],	],
+		httpRequest			: [ n: "Make a web request",		a: true, 	i: "anchor",				d: "Make a {1} request to {0}",									        p: [[n:"URL", t:"string"],[n:"Method", t:"enum", o:["GET","POST","PUT","DELETE","HEAD"]],[n:"Content", t:"enum", o:["JSON","FORM"]],[n:"Send variables", t:"variables", d:" and data {v}"],[n:"Import response data into variables", t:"boolean"],[n:"Variable import name prefix", t:"string"]],	],
 
 
 /*		[ n: "waitState",											d: "Wait for piston state change",	p: ["Change to:enum[any,false,true]"],															i: true,	l: true,						dd: "Wait for {0} state"],
@@ -1319,8 +1320,7 @@ private static Map comparisons() {
     		was_odd							: [ d: "was odd",							dd: "were odd",							g:"di",							t: 2,	],
     	],
         triggers: [
-    		t_is							: [ d: "is",																		g:"m",		p: 1						],
-    		t_is_not						: [ d: "is_not",																	g:"m",		p: 1						],
+    		gets							: [ d: "gets",																		g:"m",		p: 1						],
     		changes 						: [ d: "changes",							dd: "change",							g:"bdis",								],
     		changes_to 						: [ d: "changes to",						dd: "change to",						g:"bdis",	p: 1,						],
     		changes_away_from 				: [ d: "changes away from",					dd: "change away from",					g:"bdis",	p: 1,						],
