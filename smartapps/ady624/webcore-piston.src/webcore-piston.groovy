@@ -14,8 +14,9 @@
  *
 */
 static String handle() { return "CoRE (SE)" }
-static String version() {	return "v0.0.039.20170313" }
+static String version() {	return "v0.0.03a.20170314a" }
 /*
+ *	03/14/2016 >>> v0.0.03a.20170314 - ALPHA - Added more functions (age, previousAge, newer, older, previousValue) and fixed a bug where operand caching stopped working after earlier code refactorings
  *	03/13/2016 >>> v0.0.039.20170313 - ALPHA - The Switch statement should now be functional - UI validation not fully done
  *	03/12/2016 >>> v0.0.038.20170312 - ALPHA - Traversing else ifs and else statements in search for devices to subscribe to
  *	03/12/2016 >>> v0.0.037.20170312 - ALPHA - Added support for break and exit (partial, piston state is not set on exit) - fixed some comparison data type incompatibilities
@@ -959,30 +960,30 @@ private Boolean evaluateConditions(rtData, conditions, collection, async) {
 	return result
 }
 
-private List evaluateOperand(rtData, node, operand) {
+private List evaluateOperand(rtData, node, operand, index, trigger = false) {
 	def values = []
     switch (operand.t) {
         case "p": //physical device
         	def j = 0;
         	for(deviceId in operand.d) {
-	            values.push([i: "${node.$}:$i:$j", v:getDeviceAttribute(rtData, deviceId, operand.a)])
+	            values.push([i: "${node.$}:$index:$j", v:getDeviceAttribute(rtData, deviceId, operand.a, trigger)])
 	            j++
-	                }
+			}
 	        if ((values.size() > 1) && !(operand.g in ['any', 'all'])) {
 	            //if we have multiple values and a grouping other than any or all we need to apply that function
 	            try {
-	                values = [[i: "${condition.$}:$i:0", v:"func_${operand.g}"(rtData, values*.v)]]
+	                values = [[i: "${condition.$}:$index:0", v:"func_${operand.g}"(rtData, values*.v)]]
 	            } catch(all) {
 	                error "Error applying grouping method ${operand.g}", rtData
 	            }
 	        }
 	        break;
         case "x": //constant
-	        values = [[i: "${node.$}:$i:0", v:getVariable(rtData, operand.x)]]
+	        values = [[i: "${node.$}:$index:0", v:getVariable(rtData, operand.x)]]
             break
         case "c": //constant
         case "e": //expression
-	        values = [[i: "${node.$}:$i:0", v: evaluateExpression(rtData, operand.exp)]]
+	        values = [[i: "${node.$}:$index:0", v: evaluateExpression(rtData, operand.exp, null, trigger)]]
             break
     }
     return values
@@ -999,7 +1000,9 @@ private Boolean evaluateCondition(rtData, condition, collection, async) {
     	result = evaluateConditions(rtData, condition, collection, async)
     } else {
         not = !!condition.n
-        def comparison = rtData.comparisons.conditions[condition.co] ?: rtData.comparisons.triggers[condition.co]
+        def comparison = rtData.comparisons.triggers[condition.co]
+        def trigger = !!comparison
+        if (!comparison) comparison = rtData.comparisons.conditions[condition.co]
         if (rtData.fastForwardTo || comparison) {
             if (!rtData.fastForwardTo) {
                 def paramCount = comparison.p ?: 0
@@ -1009,7 +1012,7 @@ private Boolean evaluateCondition(rtData, condition, collection, async) {
                 for(int i = 0; i <= paramCount; i++) {
                     def operand = (i == 0 ? condition.lo : (i == 1 ? condition.ro : condition.ro2))
                     //parse the operand
-                    def values = evaluateOperand(rtData, condition, operand)                    
+                    def values = evaluateOperand(rtData, condition, operand, i, trigger)                    
                     switch (i) {
                         case 0:
                             lo = [operand: operand, values: values]
@@ -1053,7 +1056,7 @@ private Boolean evaluateCondition(rtData, condition, collection, async) {
 }
 
 private Boolean evaluateComparison(rtData, comparison, lo, ro = null, ro2 = null, options = null) {
-        def fn = "comp_${comparison}"
+		def fn = "comp_${comparison}"
         def result = (lo.operand.g == 'any' ? false : true)
         if (options?.matches) {
         	options.devices = [matched: [], unmatched: []]
@@ -1131,6 +1134,7 @@ private Map valueChanged(rtData, comparisonValue) {
 	def oldValue = rtData.cache[comparisonValue.i]
     def newValue = comparisonValue.v
     if (!(oldValue instanceof Map)) oldValue = false
+	warn "$comparisonValue >>> $oldValue", rtData
     return (!!oldValue && ((oldValue.t != newValue.t) || ("${oldValue.v}" != "${newValue.v}"))) ? [i: comparisonValue.i, v: oldValue] : null
 }
 
@@ -1154,6 +1158,8 @@ private boolean comp_changed						(rtData, lv, rv = null, rv2 = null) { return v
 private boolean comp_did_not_change					(rtData, lv, rv = null, rv2 = null) { return !valueChanged(rtData, lv); }
 
 /*triggers*/
+private boolean comp_t_is							(rtData, lv, rv = null, rv2 = null) { return cast(lv.v.v, 'string') == cast(rv.v.v, 'string') }
+private boolean comp_t_is_not						(rtData, lv, rv = null, rv2 = null) { return cast(lv.v.v, 'string') != cast(rv.v.v, 'string') }
 private boolean comp_changes						(rtData, lv, rv = null, rv2 = null) { return valueChanged(rtData, lv); }
 private boolean comp_changes_to						(rtData, lv, rv = null, rv2 = null) { return valueChanged(rtData, lv) && ("${lv.v.v}" == "${rv.v.v}"); }
 private boolean comp_changes_away_from				(rtData, lv, rv = null, rv2 = null) { def oldValue = valueChanged(rtData, lv); return oldValue && ("${oldValue.v.v}" == "${rv.v.v}"); }
@@ -1296,6 +1302,8 @@ private void subscribeAll(rtData) {
                 	comparison = rtData.comparisons.triggers[condition.co]                	
                 }
                 if (comparison) {
+                	log.trace "${comparisonType.take(1)}"
+                	condition.ct = comparisonType.take(1)
 	                def paramCount = comparison.p ?: 0
                     for(int i = 0; i <= paramCount; i++) {
                     	//get the operand to parse
@@ -1324,12 +1332,12 @@ private void subscribeAll(rtData) {
     }
     traverseStatements(rtData.piston.s, statementTraverser)
     for (subscription in subscriptions) {
-    	for (condition in subscription.value.c) condition.s = false
+    	for (condition in subscription.value.c) if (condition) { condition.s = false }
     	if (subscription.value.t && ((subscription.value.t == "trigger") || (subscription.value.c.sm == "always") || (!hasTriggers && (subscription.value.c.sm != "never")))) {
 	    	def device = getDevice(rtData, subscription.value.d)
     	    if (device) {
         		info "Subscribing to $device.${subscription.value.a}...", rtData
-		    	for (condition in subscription.value.c) condition.s = true
+		    	for (condition in subscription.value.c) if (condition) { condition.s = (condition.ct == 't') || (condition.cm == 'always') || (!hasTriggers) }
         		subscribe(device, subscription.value.a, deviceHandler)
             } else {
             	error "Failed subscribing to $device.${subscription.value.a}, device not found", rtData
@@ -1360,13 +1368,13 @@ private getDevice(rtData, idOrName) {
     return device    
 }
 
-private Map getDeviceAttribute(rtData, deviceId, attributeName) {
+private Map getDeviceAttribute(rtData, deviceId, attributeName, trigger = false) {
 	def device = getDevice(rtData, deviceId)
     if (device) {
         def attribute = rtData.attributes[attributeName]
         if (attribute) {
         	//x = eXclude - if a momentary attribute is looked for and the device does not match the current device, then we must ignore this during comparisons
-            return [t: attribute.t, v: device.currentValue(attributeName), d: deviceId, a: attributeName, x: !!attribute.m && ((device?.id != rtData.event.device?.id) || (attributeName != rtData.event.name))]
+            return [t: attribute.t, v: device.currentValue(attributeName), d: deviceId, a: attributeName, x: (!!attribute.m || !!trigger) && ((device?.id != rtData.event.device?.id) || (attributeName != rtData.event.name))]
         } else {
         	//we set eXclude to true, we don't want this to be compared, it's really an error
             return [t: "error", v: "Attribute '${attributeName}' not found", x: true]
@@ -1411,7 +1419,7 @@ def Map proxyEvaluateExpression(rtData, expression, dataType = null) {
 	resetRandomValues()
 	return evaluateExpression(getRunTimeData(rtData), expression, dataType)
 }
-private Map evaluateExpression(rtData, expression, dataType = null) {
+private Map evaluateExpression(rtData, expression, dataType = null, trigger = false) {
     //if dealing with an expression that has multiple items, let's evaluate each item one by one
     //let's evaluate this expression
     if (!expression) return [t: 'error', v: 'Null expression']
@@ -1460,7 +1468,7 @@ private Map evaluateExpression(rtData, expression, dataType = null) {
             	def var = getVariable(rtData, expression.x)
                 if (var) deviceId = var.id ?: var.v
             }
-            result = getDeviceAttribute(rtData, deviceId, expression.a)
+            result = getDeviceAttribute(rtData, deviceId, expression.a, trigger)
         	break
         case "operand":
         	result = [t: "string", v: cast(expression.v, "string")]
@@ -2122,6 +2130,156 @@ private func_count(rtData, params) {
     }
     return [t: "integer", v: count]
 }
+
+/******************************************************************************/
+/*** age returns the number of milliseconds an attribute had the current value*/
+/*** Usage: age([device:attribute])											***/
+/******************************************************************************/
+private func_age(rtData, params) {
+	if (!params || !(params instanceof List) || (params.size() != 1)) {
+    	return [t: "error", v: "Invalid parameters. Expecting age([device:attribute])"];
+    }
+    def param = params[0];
+    if ((param.t == 'expression') && param.i && (param.i.size() == 1)) {
+    	//it may be inside an expression, get it out of there
+        param = param.i[0]
+    }
+    if ((param.t == 'device') && (param.a)) {
+    	def deviceId = param.id
+		if (!deviceId) {
+			def var = getVariable(rtData, param.x)
+			if (var) deviceId = var.id ?: var.v
+		}
+		def device = getDevice(rtData, deviceId)
+        if (device) {
+        	def state = device.currentState(param.a)
+            if (state) {
+            	long result = now() - state.getDate().getTime()
+                return [t: "long", v: result]
+            }
+        }
+    }
+    return [t: "error", v: "Invalid device"]
+}
+
+/******************************************************************************/
+/*** previousAge returns the number of milliseconds an attribute had the 	***/
+/*** previous value															***/
+/*** Usage: previousAge([device:attribute])									***/
+/******************************************************************************/
+private func_previousage(rtData, params) {
+	if (!params || !(params instanceof List) || (params.size() != 1)) {
+    	return [t: "error", v: "Invalid parameters. Expecting previousAge([device:attribute])"];
+    }
+    def param = params[0];
+    if ((param.t == 'expression') && param.i && (param.i.size() == 1)) {
+    	//it may be inside an expression, get it out of there
+        param = param.i[0]
+    }
+    if ((param.t == 'device') && (param.a)) {
+    	def deviceId = param.id
+		if (!deviceId) {
+			def var = getVariable(rtData, param.x)
+			if (var) deviceId = var.id ?: var.v
+		}
+		def device = getDevice(rtData, deviceId)
+        if (device) {
+        	def states = device.statesSince(param.a, new Date(now() - 604500000), [max: 5])
+            if (states.size() > 1) {
+            	def newValue = states[0].getValue()
+                //some events get duplicated, so we really want to look for the last "different valued" state
+                for(int i = 1; i < states.size(); i++) {
+                	if (states[i].getValue() != newValue) {
+            			long result = now() - states[i].getDate().getTime()
+                		return [t: "long", v: result]
+                    }
+                }
+            }
+            //we're saying 7 days, though it may be wrong - but we have no data
+             return [t: "long", v: 604800000]
+        }
+    }
+    return [t: "error", v: "Invalid device"]
+}
+
+/******************************************************************************/
+/*** previousValue returns the previous value of the attribute				***/
+/*** Usage: previousValue([device:attribute])								***/
+/******************************************************************************/
+private func_previousvalue(rtData, params) {
+	if (!params || !(params instanceof List) || (params.size() != 1)) {
+    	return [t: "error", v: "Invalid parameters. Expecting previousValue([device:attribute])"];
+    }
+    def param = params[0];
+    if ((param.t == 'expression') && param.i && (param.i.size() == 1)) {
+    	//it may be inside an expression, get it out of there
+        param = param.i[0]
+    }
+    if ((param.t == 'device') && (param.a)) {
+    	def attribute = rtData.attributes[param.a]
+        if (attribute) {
+            def deviceId = param.id
+            if (!deviceId) {
+                def var = getVariable(rtData, param.x)
+                if (var) deviceId = var.id ?: var.v
+            }
+            def device = getDevice(rtData, deviceId)
+            if (device) {
+                def states = device.statesSince(param.a, new Date(now() - 604500000), [max: 5])
+                if (states.size() > 1) {
+                    def newValue = states[0].getValue()
+                    //some events get duplicated, so we really want to look for the last "different valued" state
+                    for(int i = 1; i < states.size(); i++) {
+                        def result = states[i].getValue()
+                        if (result != newValue) {
+                            return [t: attribute.t, v: cast(result, attribute.t)]
+                        }
+                    }                    
+                }
+                //we're saying 7 days, though it may be wrong - but we have no data
+                return [t: 'string', v: '']
+            }
+        }
+    }
+    return [t: "error", v: "Invalid device"]
+}
+
+/******************************************************************************/
+/*** newer returns the number of devices whose attribute had the current    ***/
+/*** value for less than the specified number of milliseconds			    ***/
+/*** Usage: newer([device:attribute] [,.., [device:attribute]], threshold)	***/
+/******************************************************************************/
+private func_newer(rtData, params) {
+	if (!params || !(params instanceof List) || (params.size() < 2)) {
+    	return [t: "error", v: "Invalid parameters. Expecting newer([device:attribute] [,.., [device:attribute]], threshold)"];
+    }
+    def threshold = evaluateExpression(rtData, params[params.size() - 1], 'integer').v
+    int result = 0
+    for (def i = 0; i < params.size() - 1; i++) {
+    	def age = func_age(rtData, [params[i]])
+        if ((age.t != 'error') && (age.v < threshold)) result++
+    }
+    return [t: "integer", v: result]
+}
+
+/******************************************************************************/
+/*** older returns the number of devices whose attribute had the current    ***/
+/*** value for more than the specified number of milliseconds			    ***/
+/*** Usage: older([device:attribute] [,.., [device:attribute]], threshold)	***/
+/******************************************************************************/
+private func_older(rtData, params) {
+	if (!params || !(params instanceof List) || (params.size() < 2)) {
+    	return [t: "error", v: "Invalid parameters. Expecting older([device:attribute] [,.., [device:attribute]], threshold)"];
+    }
+    def threshold = evaluateExpression(rtData, params[params.size() - 1], 'integer').v
+    int result = 0
+    for (def i = 0; i < params.size() - 1; i++) {
+    	def age = func_age(rtData, [params[i]])
+        if ((age.t != 'error') && (age.v >= threshold)) result++
+    }
+    return [t: "integer", v: result]
+}
+
 
 /******************************************************************************/
 /*** 																		***/
