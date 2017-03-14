@@ -14,8 +14,9 @@
  *
 */
 static String handle() { return "CoRE (SE)" }
-static String version() {	return "v0.0.03b.20170314" }
+static String version() {	return "v0.0.03c.20170314" }
 /*
+ *	03/14/2016 >>> v0.0.03c.20170314 - ALPHA - Fixed a bug with switches
  *	03/14/2016 >>> v0.0.03b.20170314 - ALPHA - For statement finally getting some love
  *	03/14/2016 >>> v0.0.03a.20170314 - ALPHA - Added more functions (age, previousAge, newer, older, previousValue) and fixed a bug where operand caching stopped working after earlier code refactorings
  *	03/13/2016 >>> v0.0.039.20170313 - ALPHA - The Switch statement should now be functional - UI validation not fully done
@@ -676,6 +677,7 @@ private Boolean executeStatement(rtData, statement, async = false) {
                         //don't do the rest if we're fast forwarding
                         if (!!rtData.fastForwardTo) break
                         index = index + stepValue
+                        setSystemVariableValue(rtData, '$index', index)
                         rtData.cache["f:${statement.$}"] = index
                         if (((stepValue > 0 ) && (index > endValue)) || ((stepValue < 0 ) && (index < endValue))) {
                         	perform = false
@@ -1000,7 +1002,7 @@ private Boolean evaluateConditions(rtData, conditions, collection, async) {
 	return result
 }
 
-private List evaluateOperand(rtData, node, operand, index, trigger = false) {
+private List evaluateOperand(rtData, node, operand, index = null, trigger = false) {
 	def values = []
     switch (operand.t) {
         case "p": //physical device
@@ -1029,7 +1031,7 @@ private List evaluateOperand(rtData, node, operand, index, trigger = false) {
     return values
 }
 
-private evaluateScalarOperand(rtData, node, operand, index, dataType = 'string') {
+private evaluateScalarOperand(rtData, node, operand, index = null, dataType = 'string') {
 	def values = evaluateOperand(rtData, node, operand, index)
     return [t: dataType, v: cast(((values && values.length) ? values[0].v.v : ''), dataType)]
 }

@@ -20,8 +20,9 @@
  */
 
 static String handle() { return "CoRE (SE)" }
-static String version() {	return "v0.0.03b.20170314" }
+static String version() {	return "v0.0.03c.20170314" }
 /*
+ *	03/14/2016 >>> v0.0.03c.20170314 - ALPHA - Fixed a bug with switches
  *	03/14/2016 >>> v0.0.03b.20170314 - ALPHA - For statement finally getting some love
  *	03/14/2016 >>> v0.0.03a.20170314 - ALPHA - Added more functions (age, previousAge, newer, older, previousValue) and fixed a bug where operand caching stopped working after earlier code refactorings
  *	03/13/2016 >>> v0.0.039.20170313 - ALPHA - The Switch statement should now be functional - UI validation not fully done
@@ -342,6 +343,8 @@ private api_get_base_result(deviceVersion = 0) {
 	def tz = location.getTimeZone()
     def currentDeviceVersion = atomicState.deviceVersion
 	def Boolean sendDevices = (deviceVersion != currentDeviceVersion)
+    def virtualDevices = virtualDevices()
+    atomicState.virtualDevices = virtualDevices
 	return [
         name: location.name + ' \\ ' + (app.label ?: app.name),
         instance: [
@@ -354,6 +357,7 @@ private api_get_base_result(deviceVersion = 0) {
             deviceVersion: currentDeviceVersion,
             coreVersion: version(),
             logging: !!settings.logging,
+            virtualDevices: virtualDevices,
         ] + (sendDevices ? [devices: listAvailableDevices()] : [:]),
         location: [
             contactBookEnabled: location.getContactBookEnabled(),
@@ -792,6 +796,7 @@ public Map getRunTimeData() {
         comparisons: comparisons(),
         coreVersion: version(),
     	devices: listAvailableDevices(true),
+        virtualDevices: atomicState.virtualDevices ?: virtualDevices(),
         globalVars: listAvailableVariables()
     ]
     //trace msg
@@ -1427,16 +1432,43 @@ def getLifxToken() {
 	return (module && module.connected ? module.token : null)
 }
 
-private getLocationModeOptions() {
-	def result = []
+private Map getLocationModeOptions() {
+	def result = [:]
 	for (mode in location.modes) {
-		if (mode) result.push([id: mode.id, n: mode.name])
+		if (mode) result[hashId(mode.id)] = mode.name;
 	}
 	return result
 }
-private getAlarmSystemStatusOptions() {
-	return [[id: "off", n:"Disarmed"], [id: "stay", n: "Armed/Stay"], [id: "away", n: "Armed/Away"]]
+private static Map getSHMStateOptions() {
+	return [
+    	off:	"Disarmed",
+        stay: 	"Armed/Stay",
+        away:	"Armed/Away"
+    ]
 }
 
+private Map getRoutineOptions() {
+	def routines = location.helloHome?.getPhrases()
+    def result = [:]
+    for(routine in routines) {
+    	if (routine.label) 
+    		result[hashId(routine.id)] = routine.label
+    }
+    return result
+}
+
+
+private virtualDevices() {
+	return [
+    	date:			[ n: 'Date'],
+    	time:			[ n: 'Time',],
+    	dateTime:		[ n: 'Date & Time',],        
+    	locationMode:	[ n: 'Location mode',				o: getLocationModeOptions()	, x: true],
+    	shmState:		[ n: 'Smart Home Monitor state',	o: getSHMStateOptions()		, x: true],
+        routine:		[ n: 'Routine',						o: getRoutineOptions(),						m: true],
+        askAlexa:		[ n: 'Ask Alexa',					o: [opt1: 'Option 1', opt2: 'Option 2'],	m: true	],
+        ifttt:			[ n: 'IFTTT',						o: [opt1: 'Option 1', opt2: 'Option 2'],	m: true	],
+    ]
+}
 
 //debug
