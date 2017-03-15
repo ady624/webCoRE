@@ -20,8 +20,9 @@
  */
 
 static String handle() { return "CoRE (SE)" }
-static String version() {	return "v0.0.03d.20170314" }
+static String version() {	return "v0.0.03e.20170315" }
 /*
+ *	03/15/2016 >>> v0.0.03e.20170315 - ALPHA - Various improvements
  *	03/14/2016 >>> v0.0.03d.20170314 - ALPHA - Fixed a bug with caching operands for triggers
  *	03/14/2016 >>> v0.0.03c.20170314 - ALPHA - Fixed a bug with switches
  *	03/14/2016 >>> v0.0.03b.20170314 - ALPHA - For statement finally getting some love
@@ -350,7 +351,7 @@ private api_get_base_result(deviceVersion = 0) {
         name: location.name + ' \\ ' + (app.label ?: app.name),
         instance: [
 	    	account: [id: hashId(app.getAccountId())],
-        	pistons: getChildApps().sort{ it.label }.collect{ [ id: hashId(it.id), 'name': it.label ] },
+        	pistons: getChildApps().sort{ it.label }.collect{ [ id: hashId(it.id), 'name': it.label, 'meta': state[hashId(it.id)] ] },
             id: hashId(app.id),
             locationId: hashId(location.id),
             name: app.label ?: app.name,
@@ -820,6 +821,15 @@ public void updateRunTimeData(data) {
     if (modified) {
     	atomicState.vars = vars
     }
+    def id = data.id
+    Map piston = [
+    	a: data.active,
+        t: now(), //last run
+        n: data.stats.nextSchedule,
+        z: data.piston.z, //description
+        s: data.state, //state
+    ]
+    atomicState[id] = piston
     //broadcast variable change events
     //todo
 }
@@ -1296,10 +1306,10 @@ private static Map comparisons() {
     	conditions: [
         	changed							: [ d: "changed",																	g:"bdis",						t: 1,	],
         	did_not_change					: [ d: "did not change",															g:"bdis",						t: 1,	],
-    		is 								: [ d: "is",								dd: "are",								g:"bdis",	p: 1						],
-    		is_not	 						: [ d: "is not",							dd: "are not",							g:"bdis",	p: 1						],
-    		is_any_of 						: [ d: "is any of",							dd: "are any of",						g:"dis",	p: 1,	m: true,			],
-    		is_not_any_of 					: [ d: "is not any of",						dd: "are not any of",					g:"dis",	p: 1,	m: true,			],
+    		is 								: [ d: "is",								dd: "are",								g:"bs",		p: 1						],
+    		is_not	 						: [ d: "is not",							dd: "are not",							g:"bs",		p: 1						],
+    		is_any_of 						: [ d: "is any of",							dd: "are any of",						g:"s",		p: 1,	m: true,			],
+    		is_not_any_of 					: [ d: "is not any of",						dd: "are not any of",					g:"s",		p: 1,	m: true,			],
     		is_equal_to						: [ d: "is equal to",						dd: "are equal to",						g:"bdi",	p: 1						],
     		is_different_than				: [ d: "is different than",					dd: "are different than",				g:"bdi",	p: 1						],
     		is_less_than					: [ d: "is less than",						dd: "are less than",					g:"di",		p: 1						],
@@ -1310,10 +1320,10 @@ private static Map comparisons() {
     		is_outside_of_range				: [ d: "is outside of range",				dd: "are outside of range",				g:"di",		p: 2						],
 			is_even							: [ d: "is even",							dd: "are even",							g:"di",									],
 			is_odd							: [ d: "is odd",							dd: "are odd",							g:"di",									],
-    		was 							: [ d: "was",								dd: "were",								g:"bdis",	p: 1,				t: 2,	],
-    		was_not 						: [ d: "was not",							dd: "were not",							g:"bdis",	p: 1,				t: 2,	],
-    		was_any_of 						: [ d: "was any of",						dd: "were any of",						g:"bdis",	p: 1,	m: true,	t: 2,	],
-    		was_not_any_of 					: [ d: "was not any of",					dd: "were not any of",					g:"bdis",	p: 1,	m: true,	t: 2,	],
+    		was 							: [ d: "was",								dd: "were",								g:"bs",		p: 1,				t: 2,	],
+    		was_not 						: [ d: "was not",							dd: "were not",							g:"bs",		p: 1,				t: 2,	],
+    		was_any_of 						: [ d: "was any of",						dd: "were any of",						g:"bs",		p: 1,	m: true,	t: 2,	],
+    		was_not_any_of 					: [ d: "was not any of",					dd: "were not any of",					g:"bs",		p: 1,	m: true,	t: 2,	],
 			was_equal_to 					: [ d: "was equal to",						dd: "were equal to",					g:"di",		p: 1,				t: 2,	],
 			was_different_than 				: [ d: "was different than",				dd: "were different than",				g:"di",		p: 1,				t: 2,	],
 			was_less_than 					: [ d: "was less than",						dd: "were less than",					g:"di",		p: 1,				t: 2,	],

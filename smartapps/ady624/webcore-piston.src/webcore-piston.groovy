@@ -14,8 +14,9 @@
  *
 */
 static String handle() { return "CoRE (SE)" }
-static String version() {	return "v0.0.03d.20170314" }
+static String version() {	return "v0.0.03e.20170315" }
 /*
+ *	03/15/2016 >>> v0.0.03e.20170315 - ALPHA - Various improvements
  *	03/14/2016 >>> v0.0.03d.20170314 - ALPHA - Fixed a bug with caching operands for triggers
  *	03/14/2016 >>> v0.0.03c.20170314 - ALPHA - Fixed a bug with switches
  *	03/14/2016 >>> v0.0.03b.20170314 - ALPHA - For statement finally getting some love
@@ -282,19 +283,22 @@ def config(data) {
 }
 
 def pause() {
+	state.active = false
     def rtData = getRunTimeData()
 	def msg = timer "Piston successfully stopped", rtData, -1
     trace "Stopping piston...", rtData, 0
     checkVersion(rtData)
-	state.active = false;
     state.schedules = []
+    rtData.stats.nextSchedule = 0
     state.trace = [:]
     unsubscribe()
-    trace msg
-    updateLogs(rtData) 
+    parent.updateRunTimeData(rtData)
+    trace msg   
+    updateLogs(rtData)
 }
 
 def resume() {
+	state.active = true;
 	def tempRtData = [timestamp: now(), logs:[], logging: true]
     def msg = timer "Piston successfully started", tempRtData,  -1
 	trace "Starting piston... (${version()})", tempRtData, 0
@@ -302,8 +306,8 @@ def resume() {
     rtData.logs = rtData.logs + (rtData.logging ? tempRtData.logs : [])
     checkVersion(rtData)
     msg.d = rtData
-	state.active = true;
     subscribeAll(rtData)
+    parent.updateRunTimeData(rtData)
     trace msg
     updateLogs(rtData)
 }
@@ -319,7 +323,11 @@ private getRunTimeData(rtData = null, lightWeight = false) {
     rtData.logs = [[t: timestamp]]
     rtData.trace = [t: timestamp, points: [:]]
     if (lightWeight) return rtData
-    rtData.stats = [:]
+    
+    rtData.id = hashId(app.id)
+	rtData.active = state.active;
+    rtData.state = state.state || '';
+    rtData.stats = [nextSchedule: 0]
     rtData.cache = state.cache ?: [:]
     rtData.newCache = [:]
     rtData.schedules = []
@@ -836,7 +844,7 @@ private Boolean executeTask(rtData, devices, statement, task, async) {
         } else {
             if (vcmd) {
 	        	delay = executeVirtualCommand(rtData, vcmd.a ? devices : device, task, params)
-                if (!result || vcmd.a) {
+                if (delay || vcmd.a) {
                		break
                 }
             }
@@ -1187,8 +1195,6 @@ private Map valueChanged(rtData, comparisonValue) {
 	def oldValue = rtData.cache[comparisonValue.i]
     def newValue = comparisonValue.v
     if (!(oldValue instanceof Map)) oldValue = false
-        warn "Comparing $oldValue >>> $comparisonValue", rtData
-
     return (!!oldValue && ((oldValue.t != newValue.t) || ("${oldValue.v}" != "${newValue.v}"))) ? [i: comparisonValue.i, v: oldValue] : null
 }
 
@@ -1355,7 +1361,6 @@ private void subscribeAll(rtData) {
                 	comparison = rtData.comparisons.triggers[condition.co]                	
                 }
                 if (comparison) {
-                	log.trace "${comparisonType.take(1)}"
                 	condition.ct = comparisonType.take(1)
 	                def paramCount = comparison.p ?: 0
                     for(int i = 0; i <= paramCount; i++) {
