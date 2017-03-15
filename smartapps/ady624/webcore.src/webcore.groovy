@@ -20,8 +20,9 @@
  */
 
 static String handle() { return "CoRE (SE)" }
-static String version() {	return "v0.0.03c.20170314" }
+static String version() {	return "v0.0.03d.20170314" }
 /*
+ *	03/14/2016 >>> v0.0.03d.20170314 - ALPHA - Fixed a bug with caching operands for triggers
  *	03/14/2016 >>> v0.0.03c.20170314 - ALPHA - Fixed a bug with switches
  *	03/14/2016 >>> v0.0.03b.20170314 - ALPHA - For statement finally getting some love
  *	03/14/2016 >>> v0.0.03a.20170314 - ALPHA - Added more functions (age, previousAge, newer, older, previousValue) and fixed a bug where operand caching stopped working after earlier code refactorings

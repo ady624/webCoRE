@@ -14,8 +14,9 @@
  *
 */
 static String handle() { return "CoRE (SE)" }
-static String version() {	return "v0.0.03c.20170314" }
+static String version() {	return "v0.0.03d.20170314" }
 /*
+ *	03/14/2016 >>> v0.0.03d.20170314 - ALPHA - Fixed a bug with caching operands for triggers
  *	03/14/2016 >>> v0.0.03c.20170314 - ALPHA - Fixed a bug with switches
  *	03/14/2016 >>> v0.0.03b.20170314 - ALPHA - For statement finally getting some love
  *	03/14/2016 >>> v0.0.03a.20170314 - ALPHA - Added more functions (age, previousAge, newer, older, previousValue) and fixed a bug where operand caching stopped working after earlier code refactorings
@@ -320,6 +321,7 @@ private getRunTimeData(rtData = null, lightWeight = false) {
     if (lightWeight) return rtData
     rtData.stats = [:]
     rtData.cache = state.cache ?: [:]
+    rtData.newCache = [:]
     rtData.schedules = []
     rtData.cancelations = [statements:[], conditions:[]]
     rtData.piston = state.piston
@@ -532,6 +534,8 @@ private finalizeEvent(rtData, initialMsg, success = true) {
     state.stats = stats
     //atomicState.trace = rtData.trace
     state.trace = rtData.trace
+    //flush the new cache value
+    for(item in rtData.newCache) rtData.cache[item.key] = item.value
     //beat race conditions
     state.cache = rtData.cache
     state.schedules = atomicState.schedules
@@ -1008,7 +1012,9 @@ private List evaluateOperand(rtData, node, operand, index = null, trigger = fals
         case "p": //physical device
         	def j = 0;
         	for(deviceId in operand.d) {
-	            values.push([i: "${node.$}:$index:$j", v:getDeviceAttribute(rtData, deviceId, operand.a, trigger)])
+            	def value = [i: "${deviceId}:${operand.a}", v:getDeviceAttribute(rtData, deviceId, operand.a, trigger)]
+            	rtData.newCache[value.i] = value.v + [s: since]
+	            values.push(value)
 	            j++
 			}
 	        if ((values.size() > 1) && !(operand.g in ['any', 'all'])) {
@@ -1079,9 +1085,9 @@ private Boolean evaluateCondition(rtData, condition, collection, async) {
                 result = not ? !result : !!result
                 //save new values to cache
                 def since = now()
-                if (lo) for (value in lo.values) rtData.cache[value.i] = value.v + [s: since]
-                if (ro) for (value in ro.values) rtData.cache[value.i] = value.v + [s: since]
-                if (ro2) for (value in ro2.values) rtData.cache[value.i] = value.v + [s: since]
+                if (lo) for (value in lo.values) rtData.newCache[value.i] = value.v + [s: since]
+                if (ro) for (value in ro.values) rtData.newCache[value.i] = value.v + [s: since]
+                if (ro2) for (value in ro2.values) rtData.newCache[value.i] = value.v + [s: since]
 
 				if (!rtData.fastForwardTo) tracePoint(rtData, "c:${condition.$}", now() - t, result)
             } else {
@@ -1181,6 +1187,8 @@ private Map valueChanged(rtData, comparisonValue) {
 	def oldValue = rtData.cache[comparisonValue.i]
     def newValue = comparisonValue.v
     if (!(oldValue instanceof Map)) oldValue = false
+        warn "Comparing $oldValue >>> $comparisonValue", rtData
+
     return (!!oldValue && ((oldValue.t != newValue.t) || ("${oldValue.v}" != "${newValue.v}"))) ? [i: comparisonValue.i, v: oldValue] : null
 }
 
