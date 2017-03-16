@@ -20,8 +20,9 @@
  */
 
 static String handle() { return "CoRE (SE)" }
-static String version() {	return "v0.0.03e.20170315" }
+static String version() {	return "v0.0.03f.20170316" }
 /*
+ *	03/16/2016 >>> v0.0.03f.20170316 - ALPHA - Completely refactored task parameters and enabled variables. Dynamicly assigned variables act as functions - it can be defined as an expression and reuse it in lieu of that expression
  *	03/15/2016 >>> v0.0.03e.20170315 - ALPHA - Various improvements
  *	03/14/2016 >>> v0.0.03d.20170314 - ALPHA - Fixed a bug with caching operands for triggers
  *	03/14/2016 >>> v0.0.03c.20170314 - ALPHA - Fixed a bug with switches
@@ -1152,15 +1153,15 @@ private static Map commands() {
 		refresh						: [ n: "Refresh",																																																																],
 		restoreTrack				: [ n: "Restore track...",				d: "Restore track <uri>{0}</uri>",																			p: [[n:"Track URL",t:"url"]],  																								],
 		resumeTrack					: [ n: "Resume track...",				d: "Resume track <uri>{0}</uri>",																			p: [[n:"Track URL",t:"url"]],  																								],
-		setColor					: [ n: "Set color...",					d: "Set color to {0}{1}",						a: "color",													p: [[n:"Color",t:"color"], [n:"Only if already", t:"enum",o:["on","off"], d:" if already {v}"]],  							],
-		setColorTemperature			: [ n: "Set color temperature...",		d: "Set color temperature to {0}°K{1}",			a: "colorTemperature",										p: [[n:"Color Temperature", t:"colorTemperature"], [n:"Only if already", t:"enum",o:["on","off"], d:" if already {v}"]],	],
+		setColor					: [ n: "Set color...",					d: "Set color to {0}{1}",						a: "color",													p: [[n:"Color",t:"color"], [n:"Only if switch is same as", t:"enum",o:["on","off"], d:" if already {v}"]],  							],
+		setColorTemperature			: [ n: "Set color temperature...",		d: "Set color temperature to {0}°K{1}",			a: "colorTemperature",										p: [[n:"Color Temperature", t:"colorTemperature"], [n:"Only if switch is same as", t:"enum",o:["on","off"], d:" if already {v}"]],	],
 		setConsumableStatus			: [ n: "Set consumable status...",		d: "Set consumable status to {0}",																			p: [[n:"Status", t:"consumable"]],																							],
 		setCoolingSetpoint			: [ n: "Set cooling point...",			d: "Set cooling point at {0}{T}",				a: "thermostatCoolingSetpoint",								p: [[n:"Desired temperature", t:"thermostatSetpoint"]], 																	],
 		setHeatingSetpoint			: [ n: "Set heating point...",			d: "Set heating point at {0}{T}",				a: "thermostatHeatingSetpoint",								p: [[n:"Desired temperature", t:"thermostatSetpoint"]], 																	],
-		setHue						: [ n: "Set hue...",					d: "Set hue to {0}°{1}",						a: "hue",													p: [[n:"Hue", t:"hue"], [n:"Only if already", t:"enum",o:["on","off"], d:" if already {v}"]], 								],
-		setInfraredLevel			: [ n: "Set infrared level...",			d: "Set infrared level to {0}%{1}",				a: "infraredLevel",											p: [[n:"Level",t:"infraredLevel"], [n:"Only if already", t:"enum",o:["on","off"], d:" if already {v}"]], 					],
-		setLevel					: [ n: "Set level...",					d: "Set level to {0}%{1}",						a: "level",													p: [[n:"Level",t:"level"], [n:"Only if already", t:"enum",o:["on","off"], d:" if already {v}"]], 							],
-		setSaturation				: [ n: "Set saturation...",				d: "Set saturation to {0}{1}",					a: "saturation",											p: [[n:"Saturation", t:"saturation"], [n:"Only if already", t:"enum",o:["on","off"], d:" if already {v}"]],					],
+		setHue						: [ n: "Set hue...",					d: "Set hue to {0}°{1}",						a: "hue",													p: [[n:"Hue", t:"hue"], [n:"Only if switch is same as", t:"enum",o:["on","off"], d:" if already {v}"]], 								],
+		setInfraredLevel			: [ n: "Set infrared level...",			d: "Set infrared level to {0}%{1}",				a: "infraredLevel",											p: [[n:"Level",t:"infraredLevel"], [n:"Only if switch is same as", t:"enum",o:["on","off"], d:" if already {v}"]], 					],
+		setLevel					: [ n: "Set level...",					d: "Set level to {0}%{1}",						a: "level",													p: [[n:"Level",t:"level"], [n:"Only if switch is same as", t:"enum",o:["on","off"], d:" if already {v}"]], 							],
+		setSaturation				: [ n: "Set saturation...",				d: "Set saturation to {0}{1}",					a: "saturation",											p: [[n:"Saturation", t:"saturation"], [n:"Only if switch is same as", t:"enum",o:["on","off"], d:" if already {v}"]],					],
 		setSchedule					: [ n: "Set thermostat schedule...",	d: "Set schedule to {0}",						a: "schedule",												p: [[n:"Schedule", t:"object"]],																							],
 		setThermostatFanMode		: [ n: "Set fan mode...",				d: "Set fan mode to {0}",						a: "thermostatFanMode",										p: [[n:"Fan mode", t:"thermostatFanMode"]],																					],
 		setThermostatMode			: [ n: "Set thermostat mode...",		d: "Set thermostate mode to {0}",				a: "thermostatMode",										p: [[n:"Thermostat mode",t:"thermostatMode"]],																				],
@@ -1243,10 +1244,11 @@ private virtualCommands() {
 		toggle				: [ n: "Toggle", r: ["on", "off"], 				i: "toggle-on"																				],
 		toggleLevel			: [ n: "Toggle level...", 						i: "toggle-off",			d: "Toggle level between 0% and {0}%",	r: ["on", "off", "setLevel"],	p: [[n:"Level", t:"level"]],																																	],
 		sendNotification	: [ n: "Send notification...",		a: true,	i: "commenting-o",			d: "Send notification \"{0}\"",											p: [[n:"Message", t:"string"]],												],
-		sendPushNotification: [ n: "Send PUSH notification...",	a: true,	i: "commenting-o",			d: "Send PUSH notification \"{0}\"{1}",									p: [[n:"Message", t:"string"],[n:"Store in Messages", t:"boolean", d:" and store in Messages"]],	],
-		sendSMSNotification	: [ n: "Send SMS notification...",	a: true,	i: "commenting-o",			d: "Send SMS notification \"{0}\" to {1}{2}",							p: [[n:"Message", t:"string"],[n:"Phone number",t:"phone"],[n:"Store in Messages", t:"boolean", d:" and store in Messages"]],	],
+		sendPushNotification: [ n: "Send PUSH notification...",	a: true,	i: "commenting-o",			d: "Send PUSH notification \"{0}\"{1}",									p: [[n:"Message", t:"string"],[n:"Store in Messages", t:"boolean", d:" and store in Messages", s:1]],	],
+		sendSMSNotification	: [ n: "Send SMS notification...",	a: true,	i: "commenting-o",			d: "Send SMS notification \"{0}\" to {1}{2}",							p: [[n:"Message", t:"string"],[n:"Phone number",t:"phone"],[n:"Store in Messages", t:"boolean", d:" and store in Messages", s:1]],	],
 		log					: [ n: "Log to console...",			a: true,	i: "bug",					d: "Log {0} \"{1}\"",													p: [[n:"Log type", t:"enum", o:["info","trace","debug","warn","error"]],[n:"Message",t:"string"]],	],
 		httpRequest			: [ n: "Make a web request",		a: true, 	i: "anchor",				d: "Make a {1} request to {0}",									        p: [[n:"URL", t:"string"],[n:"Method", t:"enum", o:["GET","POST","PUT","DELETE","HEAD"]],[n:"Content", t:"enum", o:["JSON","FORM"]],[n:"Send variables", t:"variables", d:" and data {v}"],[n:"Import response data into variables", t:"boolean"],[n:"Variable import name prefix", t:"string"]],	],
+        setVariable			: [ n: "Set variable...",			a: true,	i: "superscript",			d: "Set variable {0} = {1}",											p: [[n:"Variable",t:"variable"],[n:"Value", t:"dynamic"]],	],
 
 
 /*		[ n: "waitState",											d: "Wait for piston state change",	p: ["Change to:enum[any,false,true]"],															i: true,	l: true,						dd: "Wait for {0} state"],

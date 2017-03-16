@@ -14,8 +14,9 @@
  *
 */
 static String handle() { return "CoRE (SE)" }
-static String version() {	return "v0.0.03e.20170315" }
+static String version() {	return "v0.0.03f.20170316" }
 /*
+ *	03/16/2016 >>> v0.0.03f.20170316 - ALPHA - Completely refactored task parameters and enabled variables. Dynamicly assigned variables act as functions - it can be defined as an expression and reuse it in lieu of that expression
  *	03/15/2016 >>> v0.0.03e.20170315 - ALPHA - Various improvements
  *	03/14/2016 >>> v0.0.03d.20170314 - ALPHA - Fixed a bug with caching operands for triggers
  *	03/14/2016 >>> v0.0.03c.20170314 - ALPHA - Fixed a bug with switches
@@ -137,6 +138,7 @@ def installed() {
     state.modified = now()
     state.build = 0
     state.piston = [:]
+    state.vars = state.vars?: [:];
 	initialize()
 	return true
 }
@@ -166,12 +168,13 @@ def get() {
 	    	active: state.active
 		],
         piston: state.piston,
-	    localVars: state.vars,
+        localVars: state.vars,
         systemVars: getSystemVariables(),
 	    stats: state.stats,
         logs: state.logs,
         trace: state.trace        
     ]
+	
 }
 
 def activity(lastLogTimestamp) {
@@ -182,7 +185,7 @@ def activity(lastLogTimestamp) {
 	return [
     	logs: index ? logs[0..index-1] : [],
     	trace: state.trace,
-        vars: state.vars
+        localVars: state.vars,       
     ]    
 }
 
@@ -202,8 +205,9 @@ def set(data) {
     setIds(piston)
     state.piston = piston
     state.trace = [:]
+    state.vars = [:]
+    state.vars = state.vars ?: [:];
     //todo replace this
-    state.vars = piston ? (piston.v ?: [:]) : [:]
     if ((state.build == 1) || (!!state.active)) {
     	resume()
     }
@@ -334,8 +338,8 @@ private getRunTimeData(rtData = null, lightWeight = false) {
     rtData.cancelations = [statements:[], conditions:[]]
     rtData.piston = state.piston
     rtData.locationId = hashId(location.id)
-    rtData.localVars = state.vars ?: [:]
     rtData.systemVars = getSystemVariables()
+    rtData.localVars = getLocalVariables(rtData, state.piston.v)
     //flow control
     rtData.fastForwardTo = null
     rtData.break = false
@@ -822,12 +826,8 @@ private Boolean executeTask(rtData, devices, statement, task, async) {
     }
     def params = []
     for (param in task.p) {
-    	def p = evaluateExpression(rtData, param.v, param.t)
+    	def p = (param.vt == 'variable') ? param.x : cast(evaluateOperand(rtData, null, param).v, param.vt)
         //ensure value type is successfuly passed through
-        if (param.vt) p.vt = param.vt
-        if (p.t == 'duration') {
-        	p = evaluateExpression(rtData, p)
-		}        
 		params.push p
     }
  	def vcmd = rtData.commands.virtual[task.c]
@@ -838,7 +838,7 @@ private Boolean executeTask(rtData, devices, statement, task, async) {
         	try {
             	delay = "cmd_${task.c}"(device, params)
             } catch(all) {
-	            device."${task.c}"(params*.v as Object[])
+	            device."${task.c}"(params as Object[])
 			}
             info msg
         } else {
@@ -855,7 +855,7 @@ private Boolean executeTask(rtData, devices, statement, task, async) {
     	//get remaining piston time
     	def timeLeft = 20000 + rtData.timestamp - now()
     	//we're aiming at waking up with at least 10s left
-    	if ((timeLeft - delay < 10000) || (delay >= 2000) || async) {
+    	if ((timeLeft - delay < 10000) || (delay >= 5000) || async) {
 	        //schedule a wake up
 	        debug "Requesting a wake up in ${delay}ms", rtData
             tracePoint(rtData, "t:${task.$}", now() - t, -delay)
@@ -881,10 +881,9 @@ private requestWakeUp(rtData, statement, task, timeOrDelay) {
 
 
 private long cmd_setLevel(device, params) {
-log.trace params
-	def level = params[0].v
-    def state = params.size() > 1 ? params[1].v : ""
-    def delay = params.size() > 2 ? params[2].v : 0
+	def level = params[0]
+    def state = params.size() > 1 ? params[1] : ""
+    def delay = params.size() > 2 ? params[2] : 0
     if ((state != null) && (device.currentValue('switch') != "$state")) {
         return 0
     }
@@ -896,13 +895,7 @@ private long executeVirtualCommand(rtData, devices, task, params) {
    	def msg = timer "Executed virtual command ${devices ? (devices instanceof List ? "$devices." : "[$devices].") : ""}${task.c}", rtData
     long delay = 0
     try {
-    	if (task.c == 'log') {
-        	//we don't want to send rtData to all virtual commands
-            //log is the only one that uses it
-            log params[1].v, rtData, null, null, "${params[0].v}".toLowerCase().trim(), true
-        } else {
-	    	delay = "vcmd_${task.c}"(devices, params)
-        }
+		delay = "vcmd_${task.c}"(rtData, devices, params)
 	    info msg
     } catch(all) {
     	msg.m = "Error executing virtual command ${devices instanceof List ? "$devices" : "[$devices]"}.${task.c}:"
@@ -912,17 +905,24 @@ private long executeVirtualCommand(rtData, devices, task, params) {
     return delay
 }
 
-private long vcmd_noop(device, params) {
+private long vcmd_log(rtData, device, params) {
+	def command = params[0]
+	def message = params[1]
+	log message, rtData, null, null, "${command}".toLowerCase().trim(), true
+    return 0
+}
+
+private long vcmd_noop(rtData, device, params) {
 	return 0
 }
 
-private long vcmd_wait(device, params) {
-	return params[0].v
+private long vcmd_wait(rtData, device, params) {
+	return cast(params[0], 'long')
 }
 
-private long vcmd_waitRandom(device, params) {
-	def min = params[0].v
-    def max = params[1].v
+private long vcmd_waitRandom(rtData, device, params) {
+	def min = params[0]
+    def max = params[1]
     if (max < min) {
     	def v = max
         max = min
@@ -931,7 +931,7 @@ private long vcmd_waitRandom(device, params) {
 	return min + (int)Math.round((max - min) * Math.random())
 }
 
-private long vcmd_toggle(device, params) {
+private long vcmd_toggle(rtData, device, params) {
 	if (device.currentValue('switch') == 'off') {
     	device.on()
     } else {
@@ -940,8 +940,8 @@ private long vcmd_toggle(device, params) {
     return 0
 }
 
-private long vcmd_toggleLevel(device, params) {
-	def level = params[0].v
+private long vcmd_toggleLevel(rtData, device, params) {
+	def level = params[0]
 	if (device.currentValue('level') == level) {
     	device.setLevel(0)
     } else {
@@ -950,15 +950,15 @@ private long vcmd_toggleLevel(device, params) {
     return 0
 }
 
-private long vcmd_sendNotification(device, params) {
-	def message = params[0].v
+private long vcmd_sendNotification(rtData, device, params) {
+	def message = params[0]
     sendNotificationEvent(message)
     return 0
 }
 
-private long vcmd_sendPushNotification(device, params) {
-	def message = params[0].v
-    def save = !!params[1].v
+private long vcmd_sendPushNotification(rtData, device, params) {
+	def message = params[0]
+    def save = !!params[1]
 	if (save) {
 		sendPush(message)
 	} else {
@@ -967,10 +967,10 @@ private long vcmd_sendPushNotification(device, params) {
     return 0
 }
 
-private long vcmd_sendSMSNotification(device, params) {
-	def message = params[0].v
-	def phones = "${params[1].v}".replace(" ", "").replace("-", "").replace("(", "").replace(")", "").tokenize(",;*|").unique()
-	def save = !!params[2].v
+private long vcmd_sendSMSNotification(rtData, device, params) {
+	def message = params[0]
+	def phones = "${params[1]}".replace(" ", "").replace("-", "").replace("(", "").replace(")", "").tokenize(",;*|").unique()
+	def save = !!params[2]
 	for(def phone in phones) {
 		if (save) {
 			sendSms(phone, message)
@@ -982,6 +982,14 @@ private long vcmd_sendSMSNotification(device, params) {
 	}
     return 0
 }
+
+private long vcmd_setVariable(rtData, device, params) {
+	def name = params[0]
+    def value = params[1]
+	setVariable(rtData, name, value)
+    return 0
+}
+
 
 private Boolean evaluateConditions(rtData, conditions, collection, async) {
 	def t = now()
@@ -1014,7 +1022,7 @@ private Boolean evaluateConditions(rtData, conditions, collection, async) {
 	return result
 }
 
-private List evaluateOperand(rtData, node, operand, index = null, trigger = false) {
+private evaluateOperand(rtData, node, operand, index = null, trigger = false) {
 	def values = []
     switch (operand.t) {
         case "p": //physical device
@@ -1035,19 +1043,23 @@ private List evaluateOperand(rtData, node, operand, index = null, trigger = fals
 	        }
 	        break;
         case "x": //constant
-	        values = [[i: "${node.$}:$index:0", v:getVariable(rtData, operand.x)]]
+	        values = [[i: "${node?.$}:$index:0", v:getVariable(rtData, operand.x)]]
             break
         case "c": //constant
         case "e": //expression
-	        values = [[i: "${node.$}:$index:0", v: evaluateExpression(rtData, operand.exp, null)]]
+	        values = [[i: "${node?.$}:$index:0", v: evaluateExpression(rtData, operand.exp, null)]]
             break
+    }
+    if (!node) {
+    	if (values.length) return values[0].v
+        return [t: 'error', v: 'Invalid operand']
     }
     return values
 }
 
 private evaluateScalarOperand(rtData, node, operand, index = null, dataType = 'string') {
-	def values = evaluateOperand(rtData, node, operand, index)
-    return [t: dataType, v: cast(((values && values.length) ? values[0].v.v : ''), dataType)]
+	def value = evaluateOperand(rtData, null, operand, index)
+    return [t: dataType, v: cast((value ? value.v: ''), dataType)]
 }
 
 private Boolean evaluateCondition(rtData, condition, collection, async) {
@@ -1463,6 +1475,10 @@ def getVariable(rtData, name) {
     if (result && (result.t == 'device')) {
     	result = [t: result.t, id: result.v, v: getDevice(rtData, result.v)]
     }
+    if (result.v instanceof Map) {
+    	//we're dealing with an operand, let's parse it
+        result = [t: result.t, v: evaluateOperand(rtData, null, result.v).v]
+    }
     return result
 }
 
@@ -1473,18 +1489,21 @@ def setVariable(rtData, name, value) {
     	def variable = rtData.globalVars[name]
         if (variable instanceof Map) {
         	//set global var
+            variable.v = cast(value, variable.t)
             return variable
         }
 	} else {
 		def variable = rtData.localVars[name]
         if (variable instanceof Map) {
-        	if (variable.t != 'dynamic') {
-            	value = cast(value, variable.t)
-            }
             //set value
-            variable.v = value
-            variable.c = true
+            variable.v = cast(value, variable.t)
+            if (!variable.f) {
+            	def vars = atomicState.vars
+                vars[name] = variable.v
+                atomicState.vars = vars
+            }
             return variable
+            
 		}
 	}
    	result = [t: 'error', v: 'Invalid variable']
@@ -2491,6 +2510,14 @@ private cast(value, dataType) {
 			return value instanceof String ? utcToLocalDate(value).time : cast(value, "long")
 		case "orientation":
 			return getThreeAxisOrientation(value)
+        case 'ms': return cast(value, 'decimal')
+        case 's': return cast(value, 'decimal') * 1000
+        case 'm': return cast(value, 'decimal') * 60000
+        case 'h': return cast(value, 'decimal') * 3600000
+        case 'd': return cast(value, 'decimal') * 86400000
+        case 'w': return cast(value, 'decimal') * 604800000
+        case 'n': return cast(value, 'decimal') * 2592000000
+        case 'y': return cast(value, 'decimal') * 31536000000           
 	}
 	//anything else...
 	return value
@@ -2702,7 +2729,17 @@ private getSunset() {
 
 
 
-
+private Map getLocalVariables(rtData, vars) {
+	Map result = [:]
+	for (var in vars) {
+    	def variable = [t: var.t, v: var.v ?: cast(state.vars[var.n], var.t), f: !!var.v] //f means fixed value - we won't save this to the state
+        if (rtData && var.v && (var.a == 's')) {
+        	variable.v = cast(evaluateOperand(rtData, null, var.v).v, var.t)
+        }
+        result[var.n] = variable
+    }
+    return result    
+}
 
 
 private static Map getSystemVariables() {
