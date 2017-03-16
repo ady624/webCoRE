@@ -14,9 +14,10 @@
  *
 */
 static String handle() { return "CoRE (SE)" }
-static String version() {	return "v0.0.03f.20170316" }
+static String version() {	return "v0.0.040.20170316" }
 /*
- *	03/16/2016 >>> v0.0.03f.20170316 - ALPHA - Completely refactored task parameters and enabled variables. Dynamicly assigned variables act as functions - it can be defined as an expression and reuse it in lieu of that expression
+ *	03/16/2016 >>> v0.0.040.20170316 - ALPHA - Fixed a bug where optional parameters were not correctly interpreted, leading to setLevel not working, added functions startsWith, endsWith, contains, eq, le, lt, ge, gt
+ *	03/16/2016 >>> v0.0.03f.20170316 - ALPHA - Completely refactored task parameters and enabled variables. Dynamically assigned variables act as functions - it can be defined as an expression and reuse it in lieu of that expression
  *	03/15/2016 >>> v0.0.03e.20170315 - ALPHA - Various improvements
  *	03/14/2016 >>> v0.0.03d.20170314 - ALPHA - Fixed a bug with caching operands for triggers
  *	03/14/2016 >>> v0.0.03c.20170314 - ALPHA - Fixed a bug with switches
@@ -200,7 +201,7 @@ def set(data) {
 		ro: data.ro ?: 'and',
 		s: data.s ?: [],
         v: data.v ?: [],
-        z: data.z ?: []
+        z: data.z ?: ''
     ]
     setIds(piston)
     state.piston = piston
@@ -449,6 +450,7 @@ private Boolean executeEvent(rtData, event) {
             device: hashId(event.device.id),
             name: event.name,
             value: event.value,
+            unit: event.unit,
             physical: !!event.physical,
             index: index
         ]
@@ -460,6 +462,7 @@ private Boolean executeEvent(rtData, event) {
         setSystemVariableValue(rtData, '$previousEventDeviceIndex', rtData.previousEvent?.index ?: 0)
         setSystemVariableValue(rtData, '$previousEventAttribute', rtData.previousEvent?.name ?: '')
         setSystemVariableValue(rtData, '$previousEventValue', rtData.previousEvent?.value ?: '')
+        setSystemVariableValue(rtData, '$previousEventUnit', rtData.previousEvent?.unit ?: '')
         setSystemVariableValue(rtData, '$previousEventDevicePhysical', !!rtData.previousEvent?.physical)
         //current variables
         setSystemVariableValue(rtData, '$currentEventDate', rtData.currentEvent.date ?: now())
@@ -468,6 +471,7 @@ private Boolean executeEvent(rtData, event) {
         setSystemVariableValue(rtData, '$currentEventDeviceIndex', rtData.currentEvent.index ?: 0)
         setSystemVariableValue(rtData, '$currentEventAttribute', rtData.currentEvent.name ?: '')
         setSystemVariableValue(rtData, '$currentEventValue', rtData.currentEvent.value ?: '')
+        setSystemVariableValue(rtData, '$currentEventUnit', rtData.currentEvent.unit ?: '')
         setSystemVariableValue(rtData, '$currentEventDevicePhysical', !!rtData.currentEvent.physical)
         rtData.fastForwardTo = null
         if (event.name == 'time') {
@@ -836,7 +840,7 @@ private Boolean executeTask(rtData, devices, statement, task, async) {
         if (!virtualDevice && device.hasCommand(task.c)) {
         	def msg = timer "Executed [$device].${task.c}", rtData
         	try {
-            	delay = "cmd_${task.c}"(device, params)
+            	delay = "cmd_${task.c}"(rtData, device, params)
             } catch(all) {
 	            device."${task.c}"(params as Object[])
 			}
@@ -880,7 +884,7 @@ private requestWakeUp(rtData, statement, task, timeOrDelay) {
 }
 
 
-private long cmd_setLevel(device, params) {
+private long cmd_setLevel(rtData, device, params) {
 	def level = params[0]
     def state = params.size() > 1 ? params[1] : ""
     def delay = params.size() > 2 ? params[2] : 0
@@ -1052,7 +1056,7 @@ private evaluateOperand(rtData, node, operand, index = null, trigger = false) {
     }
     if (!node) {
     	if (values.length) return values[0].v
-        return [t: 'error', v: 'Invalid operand']
+        return [t: 'dynamic', v: null]
     }
     return values
 }
@@ -2381,6 +2385,150 @@ private func_older(rtData, params) {
     return [t: "integer", v: result]
 }
 
+/******************************************************************************/
+/*** startsWith returns true if a string starts with a substring			***/
+/*** Usage: startsWith(string, substring)									***/
+/******************************************************************************/
+private func_startswith(rtData, params) {
+	if (!params || !(params instanceof List) || (params.size() != 2)) {
+    	return [t: "error", v: "Invalid parameters. Expecting startsWith(string, substring)"];
+    }
+    def string = evaluateExpression(rtData, params[0], 'string').v
+    def substring = evaluateExpression(rtData, params[1], 'string').v
+    return [t: "boolean", v: string.startsWith(substring)]
+}
+
+/******************************************************************************/
+/*** endsWith returns true if a string ends with a substring				***/
+/*** Usage: endsWith(string, substring)										***/
+/******************************************************************************/
+private func_endswith(rtData, params) {
+	if (!params || !(params instanceof List) || (params.size() != 2)) {
+    	return [t: "error", v: "Invalid parameters. Expecting endsWith(string, substring)"];
+    }
+    def string = evaluateExpression(rtData, params[0], 'string').v
+    def substring = evaluateExpression(rtData, params[1], 'string').v
+    return [t: "boolean", v: string.endsWith(substring)]
+}
+
+/******************************************************************************/
+/*** contains returns true if a string contains a substring					***/
+/*** Usage: contains(string, substring)										***/
+/******************************************************************************/
+private func_contains(rtData, params) {
+	if (!params || !(params instanceof List) || (params.size() != 2)) {
+    	return [t: "error", v: "Invalid parameters. Expecting contains(string, substring)"];
+    }
+    def string = evaluateExpression(rtData, params[0], 'string').v
+    def substring = evaluateExpression(rtData, params[1], 'string').v
+    return [t: "boolean", v: string.contains(substring)]
+}
+
+/******************************************************************************/
+/*** eq returns true if two values are equal								***/
+/*** Usage: eq(value1, value2)												***/
+/******************************************************************************/
+private func_eq(rtData, params) {
+	if (!params || !(params instanceof List) || (params.size() != 2)) {
+    	return [t: "error", v: "Invalid parameters. Expecting eq(value1, value2)"];
+    }
+    def value1 = evaluateExpression(rtData, params[0]).v
+    def type = 'string'
+    if (value1 instanceof float) type = 'float'
+    if (value1 instanceof boolean) type = 'boolean'
+    if (value1 instanceof long) type = 'long'
+    if (value1 instanceof int) type = 'int'
+    value1 = cast(value1, type)
+    def value2 = evaluateExpression(rtData, params[0], type).v
+    return [t: "boolean", v: value1 == value2]
+}
+
+/******************************************************************************/
+/*** lt returns true if value1 < value2										***/
+/*** Usage: lt(value1, value2)												***/
+/******************************************************************************/
+private func_lt(rtData, params) {
+	if (!params || !(params instanceof List) || (params.size() != 2)) {
+    	return [t: "error", v: "Invalid parameters. Expecting lt(value1, value2)"];
+    }
+    def value1 = evaluateExpression(rtData, params[0]).v
+    def type = 'string'
+    if (value1 instanceof float) type = 'float'
+    if (value1 instanceof boolean) type = 'int'
+    if (value1 instanceof long) type = 'long'
+    if (value1 instanceof int) type = 'int'
+    value1 = cast(value1, type)
+    def value2 = evaluateExpression(rtData, params[0], type).v
+    return [t: "boolean", v: value1 < value2]
+}
+
+/******************************************************************************/
+/*** le returns true if value1 <= value2									***/
+/*** Usage: le(value1, value2)												***/
+/******************************************************************************/
+private func_le(rtData, params) {
+	if (!params || !(params instanceof List) || (params.size() != 2)) {
+    	return [t: "error", v: "Invalid parameters. Expecting le(value1, value2)"];
+    }
+    def value1 = evaluateExpression(rtData, params[0]).v
+    def type = 'string'
+    if (value1 instanceof float) type = 'float'
+    if (value1 instanceof boolean) type = 'int'
+    if (value1 instanceof long) type = 'long'
+    if (value1 instanceof int) type = 'int'
+    value1 = cast(value1, type)
+    def value2 = evaluateExpression(rtData, params[0], type).v
+    return [t: "boolean", v: value1 <= value2]
+}
+
+/******************************************************************************/
+/*** gt returns true if value1 > value2									***/
+/*** Usage: gt(value1, value2)												***/
+/******************************************************************************/
+private func_gt(rtData, params) {
+	if (!params || !(params instanceof List) || (params.size() != 2)) {
+    	return [t: "error", v: "Invalid parameters. Expecting gt(value1, value2)"];
+    }
+    def value1 = evaluateExpression(rtData, params[0]).v
+    def type = 'string'
+    if (value1 instanceof float) type = 'float'
+    if (value1 instanceof boolean) type = 'int'
+    if (value1 instanceof long) type = 'long'
+    if (value1 instanceof int) type = 'int'
+    value1 = cast(value1, type)
+    def value2 = evaluateExpression(rtData, params[0], type).v
+    return [t: "boolean", v: value1 > value2]
+}
+
+/******************************************************************************/
+/*** ge returns true if value1 >= value2									***/
+/*** Usage: ge(value1, value2)												***/
+/******************************************************************************/
+private func_ge(rtData, params) {
+	if (!params || !(params instanceof List) || (params.size() != 2)) {
+    	return [t: "error", v: "Invalid parameters. Expecting ge(value1, value2)"];
+    }
+    def value1 = evaluateExpression(rtData, params[0]).v
+    def type = 'string'
+    if (value1 instanceof float) type = 'float'
+    if (value1 instanceof boolean) type = 'int'
+    if (value1 instanceof long) type = 'long'
+    if (value1 instanceof int) type = 'int'
+    value1 = cast(value1, type)
+    def value2 = evaluateExpression(rtData, params[0], type).v
+    return [t: "boolean", v: value1 >= value2]
+}
+
+
+
+
+
+
+
+
+
+
+
 
 /******************************************************************************/
 /*** 																		***/
@@ -2437,6 +2585,7 @@ private cast(value, dataType) {
 		case "number":
 			if (value == null) return (int) 0
 			if (value instanceof String) {
+            	value = value.replaceAll(/[^\d.-]/, '')
 				if (value.isInteger())
 					return value.toInteger()
 				if (value.isLong())
@@ -2460,6 +2609,7 @@ private cast(value, dataType) {
 		case "long":
 			if (value == null) return (long) 0
 			if (value instanceof String) {
+            	value = value.replaceAll(/[^\d.-]/, '')
 				if (value.isInteger())
 					return (long) value.toInteger()
 				if (value.isLong())
@@ -2482,6 +2632,7 @@ private cast(value, dataType) {
 		case "decimal":
 			if (value == null) return (float) 0
 			if (value instanceof String) {
+            	value = value.replaceAll(/[^\d.-]/, '')
 				if (value.isFloat())
 					return (float) value.toFloat()
 				if (value.isInteger())
@@ -2751,7 +2902,8 @@ private static Map getSystemVariables() {
 		"\$currentEventDeviceIndex": [t: "integer", v: null],
 		"\$currentEventDevicePhysical": [t: "boolean", v: null],
 		"\$currentEventReceived": [t: "time", v: null],
-		"\$currentEventValue": [t: "string", v: null],
+		"\$currentEventValue": [t: "dynamic", v: null],
+		"\$currentEventUnit": [t: "string", v: null],
 		"\$currentState": [t: "string", v: null],
 		"\$currentStateDuration": [t: "string", v: null],
 		"\$currentStateSince": [t: "time", v: null],
@@ -2790,7 +2942,8 @@ private static Map getSystemVariables() {
 		"\$previousEventDevicePhysical": [t: "boolean", v: null],
 		"\$previousEventExecutionTime": [t: "integer", v: null],
 		"\$previousEventReceived": [t: "time", v: null],
-		"\$previousEventValue": [t: "string", v: null],
+		"\$previousEventValue": [t: "dynamic", v: null],
+		"\$previousEventUnit": [t: "string", v: null],
 		"\$previousState": [t: "string", v: null],
 		"\$previousStateDuration": [t: "string", v: null],
 		"\$previousStateSince": [t: "time", v: null],

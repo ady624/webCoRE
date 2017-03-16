@@ -20,9 +20,10 @@
  */
 
 static String handle() { return "CoRE (SE)" }
-static String version() {	return "v0.0.03f.20170316" }
+static String version() {	return "v0.0.040.20170316" }
 /*
- *	03/16/2016 >>> v0.0.03f.20170316 - ALPHA - Completely refactored task parameters and enabled variables. Dynamicly assigned variables act as functions - it can be defined as an expression and reuse it in lieu of that expression
+ *	03/16/2016 >>> v0.0.040.20170316 - ALPHA - Fixed a bug where optional parameters were not correctly interpreted, leading to setLevel not working, added functions startsWith, endsWith, contains, eq, le, lt, ge, gt
+ *	03/16/2016 >>> v0.0.03f.20170316 - ALPHA - Completely refactored task parameters and enabled variables. Dynamically assigned variables act as functions - it can be defined as an expression and reuse it in lieu of that expression
  *	03/15/2016 >>> v0.0.03e.20170315 - ALPHA - Various improvements
  *	03/14/2016 >>> v0.0.03d.20170314 - ALPHA - Fixed a bug with caching operands for triggers
  *	03/14/2016 >>> v0.0.03c.20170314 - ALPHA - Fixed a bug with switches
@@ -1428,6 +1429,15 @@ private static Map functions() {
         fahrenheit		: [ t: "decimal",						],
         celsius			: [ t: "decimal",						],
         dateAdd			: [ t: "time",		d: "dateAdd",		],
+        startswith		: [ t: "boolean",	d: "startsWith",	],
+        endswith		: [ t: "boolean",	d: "endsWith",		],
+        contains		: [ t: "boolean",						],
+        eq				: [ t: "boolean",						],
+        lt				: [ t: "boolean",						],
+        le				: [ t: "boolean",						],
+        gt				: [ t: "boolean",						],
+        ge				: [ t: "boolean",						],
+        
 	]
 }
 
