@@ -14,8 +14,9 @@
  *
 */
 static String handle() { return "CoRE (SE)" }
-static String version() {	return "v0.0.040.20170316" }
+static String version() {	return "v0.0.041.20170316" }
 /*
+ *	03/16/2016 >>> v0.0.041.20170316 - ALPHA - Various fixes
  *	03/16/2016 >>> v0.0.040.20170316 - ALPHA - Fixed a bug where optional parameters were not correctly interpreted, leading to setLevel not working, added functions startsWith, endsWith, contains, eq, le, lt, ge, gt
  *	03/16/2016 >>> v0.0.03f.20170316 - ALPHA - Completely refactored task parameters and enabled variables. Dynamically assigned variables act as functions - it can be defined as an expression and reuse it in lieu of that expression
  *	03/15/2016 >>> v0.0.03e.20170315 - ALPHA - Various improvements
@@ -567,7 +568,7 @@ private updateLogs(rtData) {
 	    if (logs.size() > maxLogSize) {
         	def maxSz = maxLogSize < logs.size() ? maxLogSize : logs.size()
             if (maxSz) {
-    			logs = logs[0..499]
+    			logs = logs[0..maxSz]
             } else {
             	logs = []
             }

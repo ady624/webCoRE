@@ -20,8 +20,9 @@
  */
 
 static String handle() { return "CoRE (SE)" }
-static String version() {	return "v0.0.040.20170316" }
+static String version() {	return "v0.0.041.20170316" }
 /*
+ *	03/16/2016 >>> v0.0.041.20170316 - ALPHA - Various fixes
  *	03/16/2016 >>> v0.0.040.20170316 - ALPHA - Fixed a bug where optional parameters were not correctly interpreted, leading to setLevel not working, added functions startsWith, endsWith, contains, eq, le, lt, ge, gt
  *	03/16/2016 >>> v0.0.03f.20170316 - ALPHA - Completely refactored task parameters and enabled variables. Dynamically assigned variables act as functions - it can be defined as an expression and reuse it in lieu of that expression
  *	03/15/2016 >>> v0.0.03e.20170315 - ALPHA - Various improvements
@@ -1120,8 +1121,8 @@ private static Map commands() {
 		both						: [ n: "Strobe and Siren",																a: "alarm",							v: "both",																																			],
 		cancel						: [ n: "Cancel",																																																																],
 		close						: [ n: "Close",																			a: "door|valve|windowShade",		v: "close",																																			],
-		configure					: [ n: "Configure",																																																																],
-		cool						: [ n: "Set to Cool",																	a: "thermostatMode",				v: "cool",																																			],
+		configure					: [ n: "Configure",						i: 'gear',																																																										],
+		cool						: [ n: "Set to Cool",					i: 'asterisk',									a: "thermostatMode",				v: "cool",																																			],
 		deviceNotification			: [ n: "Send device notification...",	d: "Send device notification \"{0}\"",																		p: [[n:"Message",t:"string"]],  																							],
 		emergencyHeat				: [ n: "Set to Emergency Heat",															a: "thermostatMode",				v: "emergencyHeat",																																	],
 		fanAuto						: [ n: "Set fan to Auto",																a: "thermostatFanMode",				v: "auto",																																			],
@@ -1129,12 +1130,12 @@ private static Map commands() {
 		fanOn						: [ n: "Set fan to On",																	a: "thermostatFanMode",				v: "on",																																			],
 		getAllActivities			: [ n: "Get all activities",																																																													],
 		getCurrentActivity			: [ n: "Get current activity",																																																													],
-		heat						: [ n: "Set to Heat",																	a: "thermostatMode",				v: "heat",																																			],
+		heat						: [ n: "Set to Heat",					i: 'fire',										a: "thermostatMode",				v: "heat",																																			],
 		indicatorNever				: [ n: "Disable indicator",																																																														],
 		indicatorWhenOff			: [ n: "Enable indicator when off",																																																												],
 		indicatorWhenOn				: [ n: "Enable indicator when on",																																																												],
-		lock						: [ n: "Lock",																			a: "lock",							v: "locked",																																		],
-		mute						: [ n: "Mute",																			a: "mute",							v: "muted",																																			],
+		lock						: [ n: "Lock",							i: "lock",										a: "lock",							v: "locked",																																		],
+		mute						: [ n: "Mute",							i: 'volume-off',								a: "mute",							v: "muted",																																			],
 		nextTrack					: [ n: "Next track",																																																															],
 		off							: [ n: "Turn off",						i: "circle-o-notch",							a: "switch|alarm|thermostatMode",	v: "off",																																			],
 		on							: [ n: "Turn on",						i: "power-off",									a: "switch",						v: "on",																																			],
@@ -1147,11 +1148,11 @@ private static Map commands() {
 		playTrack					: [ n: "Play track...",					d: "Play track <uri>{0}</uri>{1}",																			p: [[n:"Track URL",t:"url"], [n:"Volume", t:"level", d:" at volume {v}"]],  												],
 		playTrackAndRestore			: [ n: "Play track...",					d: "Play track <uri>{0}</uri>{1} and restore",																p: [[n:"Track URL",t:"url"], [n:"Volume", t:"level", d:" at volume {v}"]],  												],
 		playTrackAndResume			: [ n: "Play track...",					d: "Play track <uri>{0}</uri>{1} and resume",																p: [[n:"Track URL",t:"url"], [n:"Volume", t:"level", d:" at volume {v}"]],  												],
-		poll						: [ n: "Poll",																																																																	],
+		poll						: [ n: "Poll",						i: 'question',																																																											],
 		presetPosition				: [ n: "Move to preset position",														a: "windowShade",					v: "partially open",																																],
 		previousTrack				: [ n: "Previous track",																																																														],
 		push						: [ n: "Push",																																																																	],
-		refresh						: [ n: "Refresh",																																																																],
+		refresh						: [ n: "Refresh",					i: 'refresh',																																																											],
 		restoreTrack				: [ n: "Restore track...",				d: "Restore track <uri>{0}</uri>",																			p: [[n:"Track URL",t:"url"]],  																								],
 		resumeTrack					: [ n: "Resume track...",				d: "Resume track <uri>{0}</uri>",																			p: [[n:"Track URL",t:"url"]],  																								],
 		setColor					: [ n: "Set color...",					d: "Set color to {0}{1}",						a: "color",													p: [[n:"Color",t:"color"], [n:"Only if switch is same as", t:"enum",o:["on","off"], d:" if already {v}"]],  							],
@@ -1159,9 +1160,9 @@ private static Map commands() {
 		setConsumableStatus			: [ n: "Set consumable status...",		d: "Set consumable status to {0}",																			p: [[n:"Status", t:"consumable"]],																							],
 		setCoolingSetpoint			: [ n: "Set cooling point...",			d: "Set cooling point at {0}{T}",				a: "thermostatCoolingSetpoint",								p: [[n:"Desired temperature", t:"thermostatSetpoint"]], 																	],
 		setHeatingSetpoint			: [ n: "Set heating point...",			d: "Set heating point at {0}{T}",				a: "thermostatHeatingSetpoint",								p: [[n:"Desired temperature", t:"thermostatSetpoint"]], 																	],
-		setHue						: [ n: "Set hue...",					d: "Set hue to {0}°{1}",						a: "hue",													p: [[n:"Hue", t:"hue"], [n:"Only if switch is same as", t:"enum",o:["on","off"], d:" if already {v}"]], 								],
-		setInfraredLevel			: [ n: "Set infrared level...",			d: "Set infrared level to {0}%{1}",				a: "infraredLevel",											p: [[n:"Level",t:"infraredLevel"], [n:"Only if switch is same as", t:"enum",o:["on","off"], d:" if already {v}"]], 					],
-		setLevel					: [ n: "Set level...",					d: "Set level to {0}%{1}",						a: "level",													p: [[n:"Level",t:"level"], [n:"Only if switch is same as", t:"enum",o:["on","off"], d:" if already {v}"]], 							],
+		setHue						: [ n: "Set hue...",				i: 'barcode',	d: "Set hue to {0}°{1}",			a: "hue",													p: [[n:"Hue", t:"hue"], [n:"Only if switch is same as", t:"enum",o:["on","off"], d:" if already {v}"]], 								],
+		setInfraredLevel			: [ n: "Set infrared level...",		i: 'signal',	d: "Set infrared level to {0}%{1}",	a: "infraredLevel",											p: [[n:"Level",t:"infraredLevel"], [n:"Only if switch is same as", t:"enum",o:["on","off"], d:" if already {v}"]], 					],
+		setLevel					: [ n: "Set level...",				i: 'signal',	d: "Set level to {0}%{1}",			a: "level",													p: [[n:"Level",t:"level"], [n:"Only if switch is same as", t:"enum",o:["on","off"], d:" if already {v}"]], 							],
 		setSaturation				: [ n: "Set saturation...",				d: "Set saturation to {0}{1}",					a: "saturation",											p: [[n:"Saturation", t:"saturation"], [n:"Only if switch is same as", t:"enum",o:["on","off"], d:" if already {v}"]],					],
 		setSchedule					: [ n: "Set thermostat schedule...",	d: "Set schedule to {0}",						a: "schedule",												p: [[n:"Schedule", t:"object"]],																							],
 		setThermostatFanMode		: [ n: "Set fan mode...",				d: "Set fan mode to {0}",						a: "thermostatFanMode",										p: [[n:"Fan mode", t:"thermostatFanMode"]],																					],
@@ -1175,8 +1176,8 @@ private static Map commands() {
 		stop						: [ n: "Stop",																																																																	],
 		strobe						: [ n: "Strobe",																		a: "alarm",							v: "strobe",																																		],
 		take						: [ n: "Take a picture",																																																														],
-		unlock						: [ n: "Unlock",																		a: "lock",							v: "unlocked",																																		],
-		unmute						: [ n: "Unmute",																		a: "mute",							v: "unmuted",																																		],
+		unlock						: [ n: "Unlock",					i: 'unlock-alt',									a: "lock",							v: "unlocked",																																		],
+		unmute						: [ n: "Unmute",					i: 'volume-up',										a: "mute",							v: "unmuted",																																		],
 		/* predfined commands below */
 		//general
 		quickSetCool				: [ n: "Quick set cooling point...",	d: "Set quick cooling point at {0}{T}",																		p: [[n:"Desired temperature",t:"thermostatSetpoint"]],																		],
@@ -1239,7 +1240,7 @@ private virtualCommands() {
 	//n = name
     //t = type
 	return [
-		noop				: [	n: "No operation",				a: true,	d: "No operation",																										],
+		noop				: [	n: "No operation",				a: true,	i: 'circle',				d: "No operation",																										],
 		wait				: [	n: "Wait...", 					a: true,	i: "clock-o",				d: "Wait {0}",															p: [[n:"Duration", t:"duration"]],				],
 		waitRandom			: [ n: "Wait randomly...",			a: true,	i: "clock-o",				d: "Wait randomly between {0} and {1}",									p: [[n:"At least", t:"duration"],[n:"At most", t:"duration"]],	],
 		toggle				: [ n: "Toggle", r: ["on", "off"], 				i: "toggle-on"																				],
@@ -1474,7 +1475,7 @@ private Map getRoutineOptions() {
 	def routines = location.helloHome?.getPhrases()
     def result = [:]
     for(routine in routines) {
-    	if (routine.label) 
+    	if (routine && routine?.label) 
     		result[hashId(routine.id)] = routine.label
     }
     return result
