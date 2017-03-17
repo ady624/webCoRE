@@ -995,4 +995,4 @@ if (document.selection) {
      document.execCommand("Copy");
 }}
 
-version = function() { return 'v0.0.043.20170317'; }
+version = function() { return 'v0.0.044.20170317'; }
