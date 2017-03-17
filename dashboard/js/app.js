@@ -552,7 +552,7 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 		if (!inst) { inst = dataService.getInstance() };
 		si = store ? store[inst.id] : null;
 		var data = utoa(angular.toJson(piston));
-		var maxChunkSize = 1800;
+		var maxChunkSize = 4000;
 		if (piston && binId) {
 			dataService.saveToBin(binId, piston);
 		}

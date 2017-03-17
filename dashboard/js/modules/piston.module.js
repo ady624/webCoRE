@@ -116,12 +116,6 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 			$scope.systemVars = response.data.systemVars;
 			$scope.systemVarNames = []; //fix for angular ignoring keys that start with $
 			for(name in $scope.systemVars) $scope.systemVarNames.push(name);
-			$scope.piston.r = $scope.piston.r ? $scope.piston.r : [];
-			$scope.piston.s = $scope.piston.s ? $scope.piston.s : [];
-			$scope.piston.ro = $scope.piston.ro ? $scope.piston.ro : 'and';
-			$scope.piston.rn = !!$scope.piston.rn;
-			$scope.piston.v = $scope.piston.v ? $scope.piston.v : [];
-			$scope.piston.z = $scope.piston.z || '';
 			$scope.meta.build = $scope.meta.build ? 1 * $scope.meta.build : 0;
 			if ($scope.piston && ($scope.meta.build == 0)) {
 				$scope.piston.z = $scope.params && $scope.params.description ? $scope.params.description : '';
@@ -134,6 +128,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 								dataService.getPiston($scope.params.piston).success(function (response) {
 									$scope.loading = false;
 									if (response && response.data && response.data.piston) {
+										$scope.piston.o = response.data.piston.o ? response.data.piston.o : {};
 										$scope.piston.r = response.data.piston.r ? response.data.piston.r : [];
 										$scope.piston.rn = !!response.data.piston.rn;
 										$scope.piston.ro = response.data.piston.ro ? response.data.piston.ro : 'and';
@@ -152,6 +147,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 								dataService.loadFromBin($scope.params.bin).success(function (piston) {
 									$scope.loading = false;
 									if (piston) {
+										$scope.piston.o = piston.o ? piston.o : {};
 										$scope.piston.r = piston.r ? piston.r : [];
 										$scope.piston.rn = !!piston.rn;
 										$scope.piston.ro = piston.ro ? piston.ro : 'and';
@@ -173,6 +169,15 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 			} else {
 				$scope.updateActivity(true);
 			}
+
+			$scope.piston.o = $scope.piston.o ? $scope.piston.o : {cto: 0, ced: 0};
+			$scope.piston.r = $scope.piston.r ? $scope.piston.r : [];
+			$scope.piston.s = $scope.piston.s ? $scope.piston.s : [];
+			$scope.piston.ro = $scope.piston.ro ? $scope.piston.ro : 'and';
+			$scope.piston.rn = !!$scope.piston.rn;
+			$scope.piston.v = $scope.piston.v ? $scope.piston.v : [];
+			$scope.piston.z = $scope.piston.z || '';
+
 			$scope.initialized = true;
 			$scope.loading = false;
 			$scope.render();
@@ -328,12 +333,14 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		$scope.loading = true;
 		var piston = {
 			id: $scope.pistonId,
+			o: $scope.piston.o,
 			s: $scope.piston.s,
 			v: $scope.piston.v,
 			r: $scope.piston.r,
 			ro: $scope.piston.ro,
 			rn: $scope.piston.rn,
-			z: $scope.piston.z
+			z: $scope.piston.z,
+			n: $scope.meta.name
 		}
 		dataService.setPiston(piston, $scope.meta.bin).then(function(response) {
 			$scope.loading = false;
@@ -454,6 +461,57 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 			$scope.closeDialog();
 		}
 	}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	$scope.editSettings = function() {
+		if ($scope.mode != 'edit') return;
+		$scope.designer = {
+			name: $scope.meta.name,
+			conditionOptimizations: $scope.piston.o.cto ? '1' : '0',
+			commandDelay: $scope.piston.o.ced ? $scope.piston.o.ced : 0
+		};
+		window.designer = $scope.designer;
+		$scope.designer.dialog = ngDialog.open({
+			template: 'dialog-edit-settings',
+			className: 'ngdialog-theme-default ngdialog-large',
+			closeByDocument: false,
+			disableAnimation: true,
+			scope: $scope
+		});
+	};
+
+	$scope.updateSettings = function() {
+		$scope.meta.name = $scope.designer.name;
+		$scope.piston.o.cto = $scope.designer.conditionOptimizations == '1' ? 1 : 0;
+		$scope.piston.o.ced = isNaN($scope.designer.commandDelay) ? 0 : parseInt($scope.designer.commandDelay);
+		$scope.closeDialog();
+	}
+
+
+
+
+
+
 
 	/* statements */
 

@@ -188,7 +188,7 @@
 	<content>
 		<line com ng-if="piston.loading">loading piston "{{meta.name}}"...</line>
 		<line com ng-if-start="!piston.loading">/**************************************************************/</line>
-		<line com>{{padComment(meta.name, 64)}}</line>
+		<line com ng-click="editSettings();">{{padComment(meta.name, 64)}}</line>
 		<line com>/**************************************************************/</line>
 		<line com>{{padComment('Author   : ' + (meta.author ? meta.author : '(unknown)'), 64)}}</line>
 		<line com>{{padComment('Created  : ' + utcToString(meta.created), 64)}}</line>
@@ -201,12 +201,10 @@
 		<line com>{{padComment('', 64)}}</line>
 		<line com ng-if-end>/**************************************************************/</line>
 		<line>&nbsp;</line>
-		<line kwd ng-if-start="view.settings">settings</line>
+		<line kwd ng-if-start="((mode == 'edit') && view.settings) || piston.o.cto || piston.o.ced" ng-click="editSettings();">settings</line>
 		<container>
-			<line kwd>name<span lit>'{{meta.name}}'</span><span pun>;</span>
-			</line>
-			<line kwd>disable command optimizations<span pun>;</span>
-			</line>
+			<line kwd ng-if="piston.o.cto">disable condition traversal optimizations<span pun>;</span></line>
+			<line kwd ng-if="piston.o.ced">set command execution delay to {{piston.o.ced}}ms<span pun>;</span></line>
 		</container>
 		<line kwd>end settings;</line>
 		<line ng-if-end>&nbsp;</line>
@@ -217,7 +215,7 @@
 		<variables>
 			<div ng-repeat="variable in piston.v">
 				<line com ng-if="variable.z">/* {{variable.z}} */</line>
-				<line ng-click="editVariable(variable);"><span pun ng-if="variable.a == 's'">static&nbsp;</span><span typ>{{variable.t}}&nbsp;</span><span var>{{variable.n}}</span><span ng-if-start="variable.v" pun>&nbsp;=&nbsp;</span><span ng-if-end ng-bind-html="renderOperand(variable.v)"></span><span pun>;</span><span ng-if="!variable.v" com>&nbsp;/* {{getVariableValue(variable.n, variable.t)}} */</span></line>
+				<line ng-click="editVariable(variable);"><span pun ng-if="(variable.a == 's') && (variable.v)">static&nbsp;</span><span typ>{{variable.t}}&nbsp;</span><span var>{{variable.n}}</span><span ng-if-start="variable.v" pun>&nbsp;=&nbsp;</span><span ng-if-end ng-bind-html="renderOperand(variable.v)"></span><span pun>;</span><span ng-if="!variable.v" com>&nbsp;/* {{getVariableValue(variable.n, variable.t)}} */</span></line>
 			</div>
 			<line new data-ng-click="addVariable()">+ add a new variable</line>
 		</variables>
@@ -1427,6 +1425,39 @@
 		<footer>
 			<button type="button" class="btn btn-default pull-right" ng-click="closeDialog();">Cancel</button>
 			<button type="button" class="btn btn-danger" ng-click="delete();">Delete</button>
+		</footer>
+	</designer>
+</script>
+
+
+<script type="text/ng-template" id="dialog-edit-settings">
+	<designer>
+		<header>
+			<label>Piston settings</label>
+		</header>
+		<form>
+			<div class="form-group">
+				<label>Piston name</label>
+				<input type="text" class="form-control" ng-model="designer.name" />
+			</div>
+			<div class="form-group">
+				<label class="col-lg-12 no-padding">Condition traversal optimizations</label>
+				<select id="type" selectpicker class="selectpicker show-tick input-addon" data-width="100%" data-style="btn-info" ng-model="designer.conditionOptimizations" data-mobile="{{mobile}}">
+					<option value="1">Disabled</option>
+					<option value="0">Enabled (default)</option>
+				</select>
+			</div>
+			<div class="form-group">
+				<label class="col-lg-12 no-padding">Command execution delay</label>
+				<div class="input-group">
+					<input type="number" class="form-control" ng-model="designer.commandDelay" min="0" max="5000"/>
+					<span class="input-group-addon">ms</span>
+				</div>
+			</div>
+		</form>
+		<footer>
+			<button type="button" class="btn btn-info pull-right" ng-disabled="!designer.name" ng-click="updateSettings();">Save</button>
+			<button type="button" class="btn btn-default" ng-click="closeDialog();">Cancel</button>
 		</footer>
 	</designer>
 </script>
