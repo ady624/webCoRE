@@ -13,9 +13,9 @@
  *  for the specific language governing permissions and limitations under the License.
  *
 */
-static String handle() { return "CoRE (SE)" }
-static String version() {	return "v0.0.042.20170317" }
+public static String version() { return "v0.0.043.20170317" }
 /*
+ *	03/17/2016 >>> v0.0.043.20170317 - ALPHA - Added "View piston in dashboard" to child app UI
  *	03/17/2016 >>> v0.0.042.20170317 - ALPHA - Various fixes and enabled restrictions - UI for conditions and restrictions needs refactoring to use the new operand editor
  *	03/16/2016 >>> v0.0.041.20170316 - ALPHA - Various fixes
  *	03/16/2016 >>> v0.0.040.20170316 - ALPHA - Fixed a bug where optional parameters were not correctly interpreted, leading to setLevel not working, added functions startsWith, endsWith, contains, eq, le, lt, ge, gt
@@ -87,8 +87,8 @@ static String version() {	return "v0.0.042.20170317" }
 /******************************************************************************/
 /*** webCoRE DEFINITION														***/
 /******************************************************************************/
-
- definition(
+private static String handle() { return "CoRE (SE)" }
+definition(
     name: "webCoRE Piston",
     namespace: "ady624",
     author: "Adrian Caramaliu",
@@ -99,7 +99,7 @@ static String version() {	return "v0.0.042.20170317" }
 	iconUrl: "https://cdn.rawgit.com/ady624/webCoRE/master/resources/icons/app-CoRE.png",
 	iconX2Url: "https://cdn.rawgit.com/ady624/webCoRE/master/resources/icons/app-CoRE@2x.png",
 	iconX3Url: "https://cdn.rawgit.com/ady624/webCoRE/master/resources/icons/app-CoRE@3x.png"
- )
+)
 
 
 preferences {
@@ -119,13 +119,22 @@ def pageMain() {
         
         section ("General") {
 			label name: "name", title: "Name", required: true, state: (name ? "complete" : null), defaultValue: parent.generatePistonName()
-			input "description", "string", title: "Description", required: false, state: (description ? "complete" : null), capitalization: "sentences"
+        }
+        
+		section("Dashboard") {        
+			def dashboardUrl = parent.getDashboardUrl()
+        	if (dashboardUrl) {
+            	dashboardUrl = "${dashboardUrl}piston/${hashId(app.id)}"
+                log.trace dashboardUrl
+				href "", title: "View piston in dashboard", style: "external", url: dashboardUrl, image: "https://cdn.rawgit.com/ady624/CoRE/master/resources/images/icons/dashboard.png", required: false
+			} else {
+                paragraph "Sorry, your dashboard does not seem to be enabled, please go to the parent app and enable the dashboard."
+            }
         }
         
 		section(title:"Application Info") {
 			paragraph version(), title: "Version"
 			paragraph mem(), title: "Memory Usage"
-			href "pageVariables", title: "Local Variables"
 		}
 	}
 }
@@ -164,7 +173,7 @@ def get() {
     	meta: [
 			id: hashId(app.id),
     		author: state.author,
-    		name: app.label ?: app.name,
+    		name: app.label,
     		created: state.created,
 	    	modified: state.modified,
 	    	build: state.build,
@@ -191,6 +200,7 @@ def activity(lastLogTimestamp) {
     def index = llt ? logs.findIndexOf{ it.t == llt } : 0
     index = index > 0 ? index : 0
 	return [
+    	name: app.label,
     	logs: index ? logs[0..index-1] : [],
     	trace: state.trace,
         localVars: state.vars,

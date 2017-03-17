@@ -19,9 +19,9 @@
  *  Version history
  */
 
-static String handle() { return "CoRE (SE)" }
-static String version() {	return "v0.0.042.20170317" }
+public static String version() { return "v0.0.043.20170317" }
 /*
+ *	03/17/2016 >>> v0.0.043.20170317 - ALPHA - Added "View piston in dashboard" to child app UI
  *	03/17/2016 >>> v0.0.042.20170317 - ALPHA - Various fixes and enabled restrictions - UI for conditions and restrictions needs refactoring to use the new operand editor
  *	03/16/2016 >>> v0.0.041.20170316 - ALPHA - Various fixes
  *	03/16/2016 >>> v0.0.040.20170316 - ALPHA - Fixed a bug where optional parameters were not correctly interpreted, leading to setLevel not working, added functions startsWith, endsWith, contains, eq, le, lt, ge, gt
@@ -89,12 +89,13 @@ static String version() {	return "v0.0.042.20170317" }
  *	12/02/2016 >>> v0.0.002.20161202 - ALPHA - Small progress, Add new piston now points to the piston editor UI
  *	10/28/2016 >>> v0.0.001.20161028 - ALPHA - Initial release
  */
- 
+
 /******************************************************************************/
 /*** CoRE (SE) DEFINITION													***/
 /******************************************************************************/
-
- definition(
+private static String handle() { return "CoRE (SE)" }
+private static String domain() { return "core.homecloudhub.com" }
+definition(
 	name: "webCoRE",
 	namespace: "ady624",
 	author: "Adrian Caramaliu",
@@ -105,7 +106,7 @@ static String version() {	return "v0.0.042.20170317" }
 	iconUrl: "https://cdn.rawgit.com/ady624/webCoRE/master/resources/icons/app-CoRE.png",
 	iconX2Url: "https://cdn.rawgit.com/ady624/webCoRE/master/resources/icons/app-CoRE@2x.png",
 	iconX3Url: "https://cdn.rawgit.com/ady624/webCoRE/master/resources/icons/app-CoRE@3x.png"
- )
+)
 
 
 preferences {
@@ -146,8 +147,6 @@ def pageMain() {
         }
 	}
 	//CoRE main page
-    def dashboardDomain = "core.homecloudhub.com"
-    def dashboardUrl = ""
 	dynamicPage(name: "pageMain", title: "", install: true, uninstall: false) {
     	section("Engine block") {
 			href "pageEngineBlock", title: "Cast iron", description: app.version(), image: "https://cdn.rawgit.com/ady624/webCoRE/master/resources/icons/app-CoRE.png", required: false
@@ -156,7 +155,7 @@ def pageMain() {
 			if (!state.endpoint) {
 				href "pageInitializeDashboard", title: "${handle()} Dashboard", description: "Tap here to initialize the ${handle()} dashboard", image: "https://cdn.rawgit.com/ady624/CoRE/master/resources/images/icons/dashboard.png", required: false
 			} else {
-            	dashboardUrl = "https://${dashboardDomain}/dashboard/init/" + (apiServerUrl("").replace("https://", '').replace(".api.smartthings.com", "").replace(":443", "").replace("/", "") + (state.accessToken + app.id).replace("-", "")).bytes.encodeBase64()
+            	def dashboardUrl = getDashboardInitUrl()
 				trace "*** DO NOT SHARE THIS LINK WITH ANYONE *** Dashboard URL: ${dashboardUrl}"
 				href "", title: "${handle()} Dashboard", style: "external", url: dashboardUrl, image: "https://cdn.rawgit.com/ady624/CoRE/master/resources/images/icons/dashboard.png", required: false
 			}
@@ -589,7 +588,6 @@ private api_intf_dashboard_piston_set_end() {
     render contentType: "application/javascript;charset=utf-8", data: "${params.callback}(${result.encodeAsJSON()})"
 }
 
-
 private api_intf_dashboard_piston_pause() {
 	def result
     debug "Dashboard: Request received to pause a piston"
@@ -698,6 +696,12 @@ private api_intf_dashboard_piston_activity() {
 /*** 																		***/
 /******************************************************************************/
 
+private String getDashboardInitUrl() {
+	def url = getDashboardUrl()
+    if (!url) return null
+    return url + "init/" + (apiServerUrl("").replace("https://", '').replace(".api.smartthings.com", "").replace(":443", "").replace("/", "") + (state.accessToken + app.id).replace("-", "")).bytes.encodeBase64()
+}
+
 private Map listAvailableDevices(raw = false) {
     def devices = [:]
     for (devs in settings.findAll{ it.key.startsWith("dev:") }) {
@@ -790,6 +794,11 @@ private String generatePistonName() {
 /*** PUBLIC METHODS															***/
 /*** 																		***/
 /******************************************************************************/
+
+public String getDashboardUrl() {
+	if (!state.endpoint) return null
+	return "https://${domain()}/dashboard/"
+}
 
 public String mem(showBytes = true) {
 	def bytes = atomicState.toString().length()
