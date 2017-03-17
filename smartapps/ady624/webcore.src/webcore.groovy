@@ -19,8 +19,9 @@
  *  Version history
  */
 
-public static String version() { return "v0.0.043.20170317" }
+public static String version() { return "v0.0.044.20170317" }
 /*
+ *	03/17/2016 >>> v0.0.044.20170317 - ALPHA - Cleanup ghost else-ifs on piston save
  *	03/17/2016 >>> v0.0.043.20170317 - ALPHA - Added "View piston in dashboard" to child app UI
  *	03/17/2016 >>> v0.0.042.20170317 - ALPHA - Various fixes and enabled restrictions - UI for conditions and restrictions needs refactoring to use the new operand editor
  *	03/16/2016 >>> v0.0.041.20170316 - ALPHA - Various fixes
@@ -474,12 +475,9 @@ private api_intf_dashboard_piston_get() {
 
 
 private api_intf_dashboard_piston_set_save(id, data) {
-	log.trace "Finding child app"
     def piston = getChildApps().find{ hashId(it.id) == id };
     if (piston) {
-    	log.trace "parsing text with size ${data.size()}"
 		def p = new groovy.json.JsonSlurper().parseText(new String(data.decodeBase64(), "UTF-8"))
-        log.trace "got here too"
 		return piston.set(p);
     }
     return false;
@@ -553,7 +551,6 @@ private api_intf_dashboard_piston_set_end() {
             def data = ""
             def i = 0;
             def count = chunks.count;
-            log.trace "GOT $count chunks"
             while(i<count) {
             	def s = chunks["chunk:$i"]
             	if (s) {
@@ -565,12 +562,9 @@ private api_intf_dashboard_piston_set_end() {
                 }
                 i++
             }
-            log.trace "OK is $ok"
             if (ok) {
                 //save the piston here
-                log.trace "Saving..."
                 def saved = api_intf_dashboard_piston_set_save(chunks.id, data)
-                log.trace "Saved..."
                 if (saved) {
 	        		result = [status: "ST_SUCCESS"] + saved
                 } else {

@@ -13,8 +13,9 @@
  *  for the specific language governing permissions and limitations under the License.
  *
 */
-public static String version() { return "v0.0.043.20170317" }
+public static String version() { return "v0.0.044.20170317" }
 /*
+ *	03/17/2016 >>> v0.0.044.20170317 - ALPHA - Cleanup ghost else-ifs on piston save
  *	03/17/2016 >>> v0.0.043.20170317 - ALPHA - Added "View piston in dashboard" to child app UI
  *	03/17/2016 >>> v0.0.042.20170317 - ALPHA - Various fixes and enabled restrictions - UI for conditions and restrictions needs refactoring to use the new operand editor
  *	03/16/2016 >>> v0.0.041.20170316 - ALPHA - Various fixes
@@ -201,7 +202,7 @@ def activity(lastLogTimestamp) {
     index = index > 0 ? index : 0
 	return [
     	name: app.label,
-    	logs: index ? logs[0..index-1] : [],
+    	logs: index ? logs[0..index-1] : [],		
     	trace: state.trace,
         localVars: state.vars,
         memory: mem(),
@@ -216,6 +217,7 @@ def set(data) {
 	state.modified = now()
     state.build = (int)(state.build ? (int)state.build + 1 : 1)
     def piston = [
+    	o: data.o ?: {},
     	r: data.r ?: [],
     	rn: !!data.rn,
 		ro: data.ro ?: 'and',
@@ -223,6 +225,7 @@ def set(data) {
         v: data.v ?: [],
         z: data.z ?: ''
     ]
+    if (data.n) app.updateLabel(data.n)
     setIds(piston)
     state.piston = piston
     state.trace = [:]
@@ -245,6 +248,8 @@ private int setIds(node, maxId = 0, existingIds = [:], requiringIds = [], level 
             existingIds[id] = id
         }
         if ((node.t == 'if') && (node.ei)) {
+        log.trace node.ei
+        	node.ei.removeAll{ !it.c && !it.s }
 			for (elseIf in node.ei) {
 		        id = elseIf['$']
                 if (!id || existingIds[id]) {               
@@ -318,7 +323,7 @@ def pause() {
     state.subscriptions = [:]
     unsubscribe()
     parent.updateRunTimeData(rtData)
-    trace msg   
+    trace msg
     updateLogs(rtData)
 }
 
@@ -501,15 +506,18 @@ private Boolean executeEvent(rtData, event) {
         }
 		//todo - check restrictions
         rtData.stack = [c: 0, s: 0, cs:[], ss:[]]
+        def ended = false
         try {
 		    def allowed = !rtData.piston.r || !(rtData.piston.r.length) || evaluateConditions(rtData, rtData.piston, 'r', true)
     		if (allowed || !!rtData.fastForwardTo) {        
 				if (executeStatements(rtData, rtData.piston.s)) {
-		        	tracePoint(rtData, "end", 0, 0)
+                	ended = true
+		        	tracePoint(rtData, 'end', 0, 0)
 		        }
             } else {
             	warn "Piston execution aborted due to restrictions in effect", rtData
             }
+            if (!ended) tracePoint(rtData, 'break', 0, 0)
         } catch (all) {
         	error "An error occurred while executing the event: ", rtData, null, all
         }
@@ -870,7 +878,7 @@ private Boolean executeTask(rtData, devices, statement, task, async) {
         	try {
             	delay = "cmd_${task.c}"(rtData, device, params)
             } catch(all) {
-	            device."${task.c}"(params as Object[])
+	            executePhysicalCommand(rtData, device, task.c, params)
 			}
             info msg
         } else {
@@ -902,6 +910,29 @@ private Boolean executeTask(rtData, devices, statement, task, async) {
     return true
 }
 
+private executePhysicalCommand(rtData, device, command, params, delay = null) {
+	try {
+    	if (params && params.length) {
+        	if (delay) {
+				device."$command"(params as Object[], [delay: delay])
+            } else {
+				device."$command"(params as Object[])
+            }
+        } else {
+        	if (delay) {
+				device."$command"([delay: delay])
+			} else {
+				device."$command"()
+            }
+        }
+	} catch(all) {
+    	error "Error while executing physical command $device.$command($params):", rtData, null, all
+    }
+    if (rtData.piston.o.ced) {
+        pause(rtData.piston.o.ced)
+    	debug "Injected a ${rtData.piston.o.ced}ms delay after [$device].$command(${params ? "$params" : ''})", rtData
+    }
+}
 
 private requestWakeUp(rtData, statement, task, timeOrDelay) {
 	def time = timeOrDelay > 9999999999 ? timeOrDelay : now() + timeOrDelay
@@ -919,7 +950,7 @@ private long cmd_setLevel(rtData, device, params) {
     if ((state != null) && (device.currentValue('switch') != "$state")) {
         return 0
     }
-    device.setLevel(level, [delay: delay ?: 0])
+    executePhysicalCommand(rtData, device, 'setLevel', [level], [delay: delay ?: 0])
     return 0
 }
 
@@ -965,9 +996,9 @@ private long vcmd_waitRandom(rtData, device, params) {
 
 private long vcmd_toggle(rtData, device, params) {
 	if (device.currentValue('switch') == 'off') {
-    	device.on()
+	    executePhysicalCommand(rtData, device, 'on')
     } else {
-    	device.off()
+	    executePhysicalCommand(rtData, device, 'on')
     }
     return 0
 }
@@ -975,9 +1006,9 @@ private long vcmd_toggle(rtData, device, params) {
 private long vcmd_toggleLevel(rtData, device, params) {
 	def level = params[0]
 	if (device.currentValue('level') == level) {
-    	device.setLevel(0)
+	    executePhysicalCommand(rtData, device, 'setLevel', [0])
     } else {
-    	device.setLevel(level)
+	    executePhysicalCommand(rtData, device, 'setLevel', [level])
     }
     return 0
 }
@@ -1035,7 +1066,7 @@ private Boolean evaluateConditions(rtData, conditions, collection, async) {
     	def res = evaluateCondition(rtData, condition, collection, async)
         value = (grouping == 'or') ? value || res : value && res
         //conditions optimizations go here
-        if (!rtData.fastForwardTo && (value == (grouping == 'or') ? true : false)) break
+        if (!rtData.fastForwardTo && (!rtData.piston.o?.cto) && (value == (grouping == 'or') ? true : false)) break
     }
     def result = not ? !value : !!value
     if (!rtData.fastForwardTo) tracePoint(rtData, "c:${conditions.$}", now() - t, result)
@@ -1325,10 +1356,30 @@ private traverseConditions(node, closure, parentNode = null) {
     }
     //if the statements has substatements, go through them
     if (node.c instanceof List) {
+    	if (closure instanceof Closure) closure(node, parentNode)
     	traverseConditions(node.c, closure, node)
     }
 }
 
+private traverseRestrictions(node, closure, parentNode = null) {
+    if (!node) return
+	//if a statements element, go through each item
+	if (node instanceof List) {
+    	for(item in node) {
+	    	traverseRestrictions(item, closure, parentNode)
+	    }
+        return
+	}
+    //got a restriction, pass it on to the closure
+    if ((node.t == 'restriction') && (closure instanceof Closure)) {
+    	closure(node, parentNode)
+    }
+    //if the statements has substatements, go through them
+    if (node.r instanceof List) {
+    	if (closure instanceof Closure) closure(node, parentNode)
+    	traverseRestrictions(node.r, closure, node)
+    }
+}
 private traverseExpressions(node, closure, param, parentNode = null) {
     if (!node) return
 	//if a statements element, go through each item
@@ -1366,10 +1417,16 @@ private void subscribeAll(rtData) {
     def count = 0
     def hasTriggers = false
     //traverse all statements
-    def statementTraverser
-    def expressionTraverser
-    def operandTraverser
-    operandTraverser = { node, operand, comparisonType ->
+    //def statementTraverser
+    //def expressionTraverser
+    //def operandTraverser
+    def expressionTraverser = { expression, parentExpression, comparisonType -> 
+        if ((expression.t == 'device') && (expression.id)) {
+            devices[expression.id] = [c: (comparisonType ? 1 : 0) + (devices[expression.id]?.c ?: 0)]
+            subscriptions["${expression.id}${expression.a}"] = [d: expression.id, a: expression.a, t: comparisonType, c: (subscriptions["${expression.id}${expression.a}"] ? subscriptions["${expression.id}${expression.a}"].c : []) + [condition]]
+        }
+    }    
+    def operandTraverser = { node, operand, comparisonType ->
         switch (operand.t) {
             case "p": //physical device
             	for(deviceId in operand.d) {
@@ -1390,37 +1447,54 @@ private void subscribeAll(rtData) {
         	    break
         }
     }
-    expressionTraverser = { expression, parentExpression, comparisonType -> 
-        if ((expression.t == 'device') && (expression.id)) {
-            devices[expression.id] = [c: (comparisonType ? 1 : 0) + (devices[expression.id]?.c ?: 0)]
-            subscriptions["${expression.id}${expression.a}"] = [d: expression.id, a: expression.a, t: comparisonType, c: (subscriptions["${expression.id}${expression.a}"] ? subscriptions["${expression.id}${expression.a}"].c : []) + [condition]]
+    def conditionTraverser = { condition, parentCondition ->
+    	if (condition.co) {
+            def comparison = rtData.comparisons.conditions[condition.co]
+            def comparisonType = 'condition'
+            if (!comparison) {
+                hasTriggers = true
+                comparisonType = 'trigger'
+                comparison = rtData.comparisons.triggers[condition.co]                	
+            }
+            if (comparison) {
+                condition.ct = comparisonType.take(1)
+                def paramCount = comparison.p ?: 0
+                for(int i = 0; i <= paramCount; i++) {
+                    //get the operand to parse
+                    def operand = (i == 0 ? condition.lo : (i == 1 ? condition.ro : condition.ro2))
+                    operandTraverser(condition, operand, comparisonType)
+                }
+            }
         }
+        if (condition.ts instanceof List) traverseStatements(condition.ts, statementTraverser)
+        if (condition.fs instanceof List) traverseStatements(condition.fs, statementTraverser)                
     }
-    statementTraverser = { node, parentNode ->
+    def restrictionTraverser = { restriction, parentRestriction ->
+    	if (restriction.co) {
+            def comparison = rtData.comparisons.conditions[restriction.co]
+            def comparisonType = 'condition'
+            if (!comparison) {
+                hasTriggers = true
+                comparisonType = 'trigger'
+                comparison = rtData.comparisons.triggers[restriction.co]                	
+            }
+            if (comparison) {
+                def paramCount = comparison.p ?: 0
+                for(int i = 0; i <= paramCount; i++) {
+                    //get the operand to parse
+                    def operand = (i == 0 ? restriction.lo : (i == 1 ? restriction.ro : restriction.ro2))
+                    operandTraverser(restriction, operand, null)
+                }
+            }
+        }
+    }    
+    def statementTraverser = { node, parentNode ->
+    	if (node.r) traverseRestrictions(node.r, restrictionTraverser)
     	for(deviceId in node.d) {
         	devices[deviceId] = devices[deviceId] ?: [c: 0]
         }
         if (node.t in ['if', 'while', 'repeat']) {
-            traverseConditions((node.c?:[]) + (node.ei?node.ei*.c:[]), { condition, parentCondition ->
-                def comparison = rtData.comparisons.conditions[condition.co]
-                def comparisonType = 'condition'
-                if (!comparison) {
-                    hasTriggers = true
-                	comparisonType = 'trigger'
-                	comparison = rtData.comparisons.triggers[condition.co]                	
-                }
-                if (comparison) {
-                	condition.ct = comparisonType.take(1)
-	                def paramCount = comparison.p ?: 0
-                    for(int i = 0; i <= paramCount; i++) {
-                    	//get the operand to parse
-                    	def operand = (i == 0 ? condition.lo : (i == 1 ? condition.ro : condition.ro2))
-						operandTraverser(condition, operand, comparisonType)
-                    }
-                }
-                if (condition.ts instanceof List) traverseStatements(condition.ts, statementTraverser)
-                if (condition.fs instanceof List) traverseStatements(condition.fs, statementTraverser)                
-            })
+            traverseConditions((node.c?:[]) + (node.ei?node.ei*.c:[]), conditionTraverser)
         }
         if (node.t == 'switch') {
         	operandTraverser(node, node.lo, 'condition')
@@ -1437,7 +1511,8 @@ private void subscribeAll(rtData) {
         }
         
     }
-    traverseStatements(rtData.piston.s, statementTraverser)
+    if (rtData.piston.r) traverseRestrictions(rtData.piston.r, restrictionTraverser)
+    if (rtData.piston.s) traverseStatements(rtData.piston.s, statementTraverser)
     def dds = [:]
     for (subscription in subscriptions) {
     	for (condition in subscription.value.c) if (condition) { condition.s = false }
@@ -2610,7 +2685,7 @@ def String hashId(id) {
 }
 
 private cast(value, dataType) {
-	def trueStrings = ["1", "on", "open", "locked", "active", "wet", "detected", "present", "occupied", "muted", "sleeping"]
+	def trueStrings = ["1", "true", "on", "open", "locked", "active", "wet", "detected", "present", "occupied", "muted", "sleeping"]
 	def falseStrings = ["0", "false", "off", "closed", "unlocked", "inactive", "dry", "clear", "not detected", "not present", "not occupied", "unmuted", "not sleeping"]
     if (value instanceof GString) {
     	value = value.toString()
