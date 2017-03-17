@@ -1,7 +1,9 @@
 <html>
 <html lang="en" ng-app="CoRE">
     <head>
-		<base href="https://core.homecloudhub.com/dashboard/">
+		<script type="text/javascript">
+			document.write('<base href="' + window.location.pathname.split('dashboard').splice(0,1) + 'dashboard/" />');
+		</script>
         <meta charset="UTF-8">
 		<meta http-equiv="Cache-control" content="no-cache">
 		<meta http-equiv="Expires" content="-1">

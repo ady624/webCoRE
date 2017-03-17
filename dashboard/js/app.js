@@ -1,5 +1,6 @@
 var app = angular.module('CoRE', ['ng', 'ngRoute', 'ngAnimate', 'ngSanitize', 'ngResource', 'ngDialog', 'angular-loading-bar', 'angular-svg-round-progressbar', 'angular-bootstrap-select', 'aCKolor', 'dndLists', 'ui.toggle', 'chart.js', 'smartArea']);
-var cdn = 'https://core.homecloudhub.com/dashboard/';
+//var cdn = 'https://core.homecloudhub.com/dashboard/';
+var cdn = '';
 var theme = '';
 
 
@@ -994,4 +995,4 @@ if (document.selection) {
      document.execCommand("Copy");
 }}
 
-version = function() { return 'v0.0.042.20170317'; }
+version = function() { return 'v0.0.043.20170317'; }
