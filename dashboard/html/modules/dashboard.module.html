@@ -1,0 +1,273 @@
+<status ng-if="status" ng-animate ng-bind-html="status" ng-click="setStatus()"></status>
+<loader ng-if="loading" ng-animate>
+	<ul>
+		<li></li>
+		<li></li>
+		<li></li>
+		<li></li>
+	</ul>
+</loader>
+	<nav ng-if="initialized" class="navbar navbar-default navbar-fixed-topw">
+      <div class="container-fluid">
+        <div class="navbar-header">
+          <button id="navbar-btn" type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand">{{location.name}} \ {{instance ? instance.name + ' (' + instance.coreVersion.split('.').splice(0,3).join('.') + ')' : 'loading...'}}</a>
+        </div>
+        <div id="navbar" class="navbar-collapse collapse">
+          	<ul class="nav navbar-nav navbar-left" ng-init="locations = listLocations()">
+               	<li class="dropdown">
+                    <a class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">{{location.name}} \ {{instance ? instance.name + ' (' + instance.coreVersion.split('.').splice(0,3).join('.') + ')' : 'loading...'}}<span class="caret"></span></a>
+                   	<ul class="dropdown-menu btn btn-default">
+                        <li role="separator" class="dropdown-header" ng-repeat-start="l in locations" ng-init="instances = listInstances(l.id)">{{l.name}}</li>
+                    	<li instance ng-repeat="i in instances" ng-repeat-end class="{{i.id == instance.id ? 'active-tick' : ''}}" ng-click="switchInstance(i.id);"><a>{{i.name}} ({{i.coreVersion.split('.').splice(0,3).join('.')}})</a></li>
+	            	</ul>
+            	</li>
+			</ul>
+                <ul class="nav navbar-nav navbar-right">
+                    <li class="dropdown">
+                        <a id="options" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false"><i class="fa fa-cog" aria-hidden="true"></i> Options<span class="caret"></span></a>
+                        <ul class="dropdown-menu btn btn-default">
+                            <li class="{{piston.view.variables ? 'active-tick' : ''}}" ng-click="toggleView('variables');"><a>Show variables</a>
+                            </li>
+                            <li class="{{piston.view.elseIfs ? 'active-tick' : ''}}" ng-click="toggleView('elseIfs');"><a>Show complex IFs</a>
+                            </li>
+                            <li class="{{piston.view.restrictions ? 'active-tick' : ''}}" ng-click="toggleView('restrictions');"><a>Show restrictions</a>
+                            </li>
+                            <li role="separator" class="divider"></li>
+                            <li ng-click="logOut();"><a>Log out</a></li>
+                        </ul>
+                    </li>
+                </ul>
+        </div>
+      </div>
+    </nav>
+<viewer class="dashboard" ng-if="initialized" ng-animate class="no-animate">
+    <div class="body container-fluid">
+      <div class="row">
+        <div class="col-sm-1 sidebar">
+          <ul class="nav nav-sidebar">
+            <li><a href="" ng-click="newPiston();">Add a new piston</a></li>
+          </ul>
+        </div>
+        <div class="col-sm-11 col-sm-offset-1 main">
+
+          <!--<div class="row placeholders">
+            <div class="col-xs-6 col-sm-3 placeholder">
+              <img src="data:image/gif;base64,R0lGODlhAQABAIAAAHd3dwAAACH5BAAAAAAALAAAAAABAAEAAAICRAEAOw==" width="200" height="200" class="img-responsive" alt="Generic placeholder thumbnail">
+              <h4>Label</h4>
+              <span class="text-muted">Something else</span>
+            </div>
+            <div class="col-xs-6 col-sm-3 placeholder">
+              <img src="data:image/gif;base64,R0lGODlhAQABAIAAAHd3dwAAACH5BAAAAAAALAAAAAABAAEAAAICRAEAOw==" width="200" height="200" class="img-responsive" alt="Generic placeholder thumbnail">
+              <h4>Label</h4>
+              <span class="text-muted">Something else</span>
+            </div>
+            <div class="col-xs-6 col-sm-3 placeholder">
+              <img src="data:image/gif;base64,R0lGODlhAQABAIAAAHd3dwAAACH5BAAAAAAALAAAAAABAAEAAAICRAEAOw==" width="200" height="200" class="img-responsive" alt="Generic placeholder thumbnail">
+              <h4>Label</h4>
+              <span class="text-muted">Something else</span>
+            </div>
+            <div class="col-xs-6 col-sm-3 placeholder">
+              <img src="data:image/gif;base64,R0lGODlhAQABAIAAAHd3dwAAACH5BAAAAAAALAAAAAABAAEAAAICRAEAOw==" width="200" height="200" class="img-responsive" alt="Generic placeholder thumbnail">
+              <h4>Label</h4>
+              <span class="text-muted">Something else</span>
+            </div>
+          </div>-->
+
+          <div new class="table-responsive no-animate" ng-if="instance">
+            <table class="table table-striped">
+              <tbody>
+                <tr ng-click="newPiston();"">
+                  <td new>+ add new piston</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="table-responsive no-animate" ng-if="instance && activePistons">
+			<label>Active pistons ({{activePistons}})</label>
+            <table class="table table-striped">
+              <tbody>
+                <tr ng-repeat="piston in instance.pistons" ng-click="openPiston(piston.id);" active="true" ng-if="piston.meta && piston.meta.a" title="{{piston.meta.t ? 'Executed ' + timeSince(piston.meta.t) : 'Never executed'}}">
+                  <td><i star class="fa fa-gears" style="opacity: {{getOpacity(piston.meta ? piston.meta.t : 0)}}" aria-hidden="true"></i>{{piston.name}}</td>
+				  <td class="col-md-1 text-right">{{piston.meta.n ? timeCounter(piston.meta.n) : ''}}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="table-responsive no-animate" ng-if="instance && pausedPistons">
+			<label>Paused pistons ({{pausedPistons}})</label>
+            <table class="table table-striped">
+              <tbody>
+                <tr ng-repeat="piston in instance.pistons" ng-click="openPiston(piston.id);" active="false" ng-if="!piston.meta || !piston.meta.a" title="{{piston.meta.t ? 'Paused on ' + utcToString(piston.meta.t) : ''}}">
+                  <td>{{piston.name}}</td>
+				  <td class="col-md-1 text-right">{{piston.meta.n ? timeCounter(piston.meta.n) : ''}}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+</viewer>
+
+
+
+
+<script type="text/ng-template" id="dialog-auth">
+	<designer>
+	    <header>
+         <label>Authentication Required</label>
+     </header>
+     <form>
+         <div class="form-group">
+             <label for="pin">Please enter the password for <b>{{designer.sender}}</b></label>
+             <input type="password" class="form-control" ng-model="designer.password" />
+         </div>
+     </form>
+
+        <footer>
+            <button type="button" class="btn btn-info pull-right" ng-disabled="!designer.password" ng-click="authenticate();">Authenticate</button>
+            <button type="button" class="btn btn-default" ng-click="closeDialog();">Cancel</button>
+        </footer>
+    </designer>
+
+</script>
+
+
+
+<script type="text/ng-template" id="dialog-del-instance">
+	<designer>
+	    <header>
+         <label>Unresponsive CoRE instance</label>
+     </header>
+     <form>
+         <div class="form-group">
+             <label for="pin">The instance you are trying to access is unresponsive. This might be a temporary issue, or it might have been deleted from your account. If you did remove it, please press the Delete button below.</label>
+         </div>
+     </form>
+
+        <footer>
+            <button type="button" class="btn btn-danger pull-right" ng-click="deleteInstance();">Delete</button>
+            <button type="button" class="btn btn-default" ng-click="closeDialog();">Cancel</button>
+        </footer>
+    </designer>
+
+</script>
+
+
+<script type="text/ng-template" id="dialog-add-piston">
+	<designer ng-if="designer.page==0">
+        <header>
+            <label>Create a new piston</label>
+            <span>Please select one of the methods below</span>
+        </header>
+        <items>
+            <item ng-repeat="item in designer.items" type="{{item.type}}" class="fa fa-{{item.icon}} {{item.class}}" title="{{item.name}}" ng-click="setDesignerType(item.type)"></item>
+        </items>
+	</designer>
+	<designer ng-if="designer.page==1">
+        <header ng-if="designer.type=='blank'">
+            <label>Create a new blank piston</label>
+            <span>You are about to create a new piston from scratch. Yey! Click Create to get started.</span>
+        </header>
+        <header ng-if="designer.type=='duplicate'">
+            <label>Create a duplicate piston</label>
+            <span>You are about to create a duplicate piston. Select the source piston below and click Create to get started.</span>
+        </header>
+        <header ng-if="designer.type=='template'">
+            <label>Create new piston from a template</label>
+            <span>You wanted to create a new piston from a template. The bad news is, there are no templates yet :( But the good news is, you can start one from scratch. Yey! Click Next to get started.</span>
+        </header>
+        <header ng-if="designer.type=='restore'">
+            <label>Restore a piston</label>
+            <span>Please enter the backup bin code below and click Create to get started.</span>
+            <p><b>NOTE:</b> Only backup bin codes created by your account are supported. All others will generate an empty piston.</p>
+        </header>
+        <header ng-if="designer.type=='import'">
+            <label>Import a new piston</label>
+            <span>You wanted to import a new piston. The bad news is, there is no way yet :( But the good news is, you can start one from scratch. Yey! Click Next to get started.</span>
+        </header>
+        <form>
+            <div class="form-group">
+                <div class="form-table input-group">
+		            <label for="author">Author</label>
+                    <input class="form-control"  id="author" ng-model="designer.author" type="text" />
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="form-table input-group">
+		            <label for="name">Piston name</label>
+                    <input class="form-control"  id="name" ng-model="designer.name" type="text" />
+                </div>
+            </div>
+			<div class="form-group" ng-if="designer.type=='duplicate'">
+				<label for="piston">Select the piston you want to duplicate</label>
+				<select id="piston" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-default" ng-model="designer.piston" data-mobile="{{mobile}}" ng-init="instances = listAllInstances()">
+					<optgroup ng-repeat="i in instances" label="{{i.name}}">
+	                	<option ng-repeat="p in i.pistons" value="{{p.id}}">{{p.name}}</option>
+					</optgroup>
+					<option style="display:none" value="">Nothing selected...</option>
+				</select>
+			</div>
+
+
+			<div class="form-group" ng-if="designer.type=='restore'">
+            	<label for="pin">Please enter the backup bin code to restore from</label>
+             	<input type="text" class="form-control" ng-model="designer.bin" max-length="8"/>
+			</div>
+
+            <div class="divider disclaimer {{designer.disclaimer ? '' : 'collapsed'}}" data-toggle="collapse" data-target="#disclaimer" collapsed-title="Disclaimer (click here to show)" expanded-title="Disclaimer" aria-expanded="{{designer.disclaimer}}"></div>
+            <div id="disclaimer" class="form-group collapse {{designer.disclaimer ? '' : 'collapsed'}}">
+                <p>By using the automatic backup feature, you understand that CoRE uses <a href="http://www.myjson.com" target="_blank">myjson.com</a> as a data store.</p>
+				<p>While CoRE is making all efforts to ensure your data's safety, you need to be aware that all data stored on myjson.com is PUBLIC and can be read by anyone. To protect your privacy, your backup data is encrypted using AES with a 256 key generated from an account-level secret before being sent to myjson.com. These backups are only decryptable by any of your account's CoRE instances, they cannot be decrypted by someone else's CoRE instance.</p>
+				<p>The author of CoRE is not responsible for the data you store with myjson.com and cannot guarantee this data can never be decrypted by anyone else. Steps have been made, however, to minimize the information that is stored in such backups:</p>
+				<div>
+					<label>WHAT IS NOT INCLUDED IN THE DATA:</label>
+					<ul>
+						<li>Any SmartThings GUIDs - these are identifiers used by SmartThings to reference your devices, modes, contacts, etc. CoRE hashes them into unique codes that are only understandable by CoRE.</li>
+						<li>Any security access tokens used by CoRE to communicate with SmartThings</li>
+					</ul>
+				</div>
+				<div class="danger">
+					<label>WHAT IS INCLUDED IN THE DATA:</label>
+					<ul>
+						<li>Any URLs you manually enter into HTTP requests used by the piston to communicate with outside services.</li>
+						<li>Any phone numbers you manually enter into SMS notifications.</li>
+						<li>Any parameter data you manually enter into fields.</li>
+						<li>Any and all descriptions you enter while editing the piston. Make sure you do not store sensitive information in these descriptions.</li>
+					</ul>
+				</div>
+				<p>By enabling the automatic backup feature below, you agree that you understand the above and will use this service sensibly.</p>
+            </div>
+            <div class="form-group input-group">
+                <span for="backup" class="form-control btn-default left">Automatic backup</span>
+				<toggle id="backup" ng-model="designer.backup" class="btn btn-default input-group-addon" on="yes" off="no"></toggle>
+            </div>
+            <div class="divider" data-toggle="collapse" data-target="#advopt" collapsed-title="Show Advanced Options" expanded-title="Hide Advanced Options" aria-expanded="false"></div>
+            <div id="advopt" class="form-group collapse">
+                <label for="descriptionInput">Description (optional)</label>
+                <textarea type="text" id="descriptionInput" class="form-control" placeholder="Description for this statement" ng-model="designer.description"></textarea>
+            </div>
+        </form>
+
+        <footer>
+            <button type="button" class="btn btn-info pull-right" ng-disabled="!designer.type || !designer.author || !designer.name || ((designer.type == 'duplicate') && !designer.piston) || ((designer.type == 'restore') && !designer.bin)" ng-click="createPiston();">Create</button>
+            <button type="button" class="btn btn-default" ng-click="prevPage();">Back</button>
+        </footer>
+    </designer>
+</script>
+
+
+<script type="text/ng-template" id="dialog-captured-image">
+	<dnd-nodrag>
+	    <br/>
+	    <center>Please tap and hold the picture below to save it to your Photo Gallery</center>
+	    <img id="capturedImage" src="{{capturedImage}}"/>
+	</dnd-nodrag>
+</script>

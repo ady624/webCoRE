@@ -1,0 +1,215 @@
+viewer,
+ng-view {
+	display: block;
+}
+
+/*
+ * Base structure
+ */
+
+/* Move down content because we have a fixed navbar that is 50px tall */
+viewer {
+	top: 50px;
+	overflow-y: auto;
+	padding: 16px;
+}
+
+/*
+ * Global add-ons
+ */
+
+.sub-header {
+  padding-bottom: 10px;
+  border-bottom: 1px solid #eee;
+}
+
+/*
+ * Top navigation
+ * Hide default border to remove 1px line.
+ */
+.navbar-fixed-top {
+  border: 0;
+}
+
+/*
+ * Sidebar
+ */
+
+/* Hide for mobile, show later */
+.sidebar {
+  display: none;
+}
+.navbar-brand {
+	font-size: 12px;
+}
+
+
+li[instance] {
+	padding-left: 16px;
+	min-width: 178px;
+}
+
+@media (min-width: 768px) {
+}
+
+/* Sidebar navigation */
+.nav-sidebar {
+  margin-right: -21px; /* 20px padding + 1px border */
+  margin-bottom: 20px;
+  margin-left: -20px;
+}
+.nav-sidebar > li > a {
+  padding-right: 20px;
+  padding-left: 20px;
+}
+.nav-sidebar > .active > a,
+.nav-sidebar > .active > a:hover,
+.nav-sidebar > .active > a:focus {
+  color: #fff;
+  background-color: #428bca;
+}
+
+
+/*
+ * Main content
+ */
+
+.main .page-header {
+  margin-top: 0;
+}
+
+
+/*
+ * Placeholder dashboard ideas
+ */
+
+.placeholders {
+  margin-bottom: 30px;
+  text-align: center;
+}
+.placeholders h4 {
+  margin-bottom: 0;
+}
+.placeholder {
+  margin-bottom: 20px;
+}
+.placeholder img {
+  display: inline-block;
+  border-radius: 50%;
+}
+
+
+
+
+.table-striped>tbody>tr:nth-of-type(odd) {
+    background-color: #ffffff;
+}
+
+.table-striped>tbody>tr:nth-of-type(even) {
+    background-color: #f9f9f9;
+}
+
+.table>tbody>tr>td, .table>tbody>tr>th, .table>tfoot>tr>td, .table>tfoot>tr>th, .table>thead>tr>td, .table>thead>tr>th {
+    border-bottom: 1px solid #ddd;
+}
+
+
+.table-responsive tr:hover {
+	cursor: pointer;
+	background-color: rgba(128, 192, 255, 0.1) !important;
+}
+
+tr[active=false] {
+	color: #ccc;
+}
+
+.table-responsive label {
+	width: 100%;
+	margin: 0px;
+	color: #369;
+}
+
+
+td i[star] {
+	margin-left: -4px;
+	margin-right: 4px;
+	color: #369;
+}
+
+
+
+
+@media (min-width: 768px) {
+	.main {
+		padding-right: 8px;
+		padding-left: 8px;
+	}
+
+	div.container-fluid {
+		padding: 0px;
+	}
+	
+	#navbar {
+		padding-left: 0px;
+	}
+
+	div[new] {
+		display: none;
+	}
+
+  .navbar-brand {
+	display: none;
+  }
+
+  .sidebar {
+    position: fixed;
+    top: 51px;
+    bottom: 0;
+    left: 0;
+    z-index: 2;
+    display: block;
+    padding: 20px;
+    overflow-x: hidden;
+    overflow-y: auto; /* Scrollable contents if viewport is shorter than content. */
+    background-color: #f5f5f5;
+    border-right: 1px solid #eee;
+  }
+
+}
+
+@media (max-width: 767px) {
+
+	div.main {
+		padding: 0px;
+	}
+
+	.table-responsive {
+    	width: 100%;
+    	overflow-y: hidden;
+    	-ms-overflow-style: -ms-autohiding-scrollbar;
+		border: 0 !important;
+    	line-height: 44px;
+	}
+
+	.table-responsive td {
+		line-height: 44px !important;
+	}
+
+	.navbar-collapse {
+		min-height: 1280px;
+	}
+
+	viewer {
+		padding: 0px;
+	}
+
+	div.table-responsive {
+		margin: 0px;
+		text-align: center;
+	}
+
+	.table-responsive label {
+		background: rgba(0, 0, 0, 0.05);
+	}
+	
+}

@@ -1,0 +1,732 @@
+viewer,
+ng-view {
+	display: block;
+}
+
+viewer[mode=view] {
+	overflow-y: auto;
+}
+
+
+piston {
+	position: relative;
+	counter-reset: line;
+    display: block;
+    background: #fffcf0;
+    margin: 0px;
+    color: #444;
+    font-family: monospace;
+    overflow: hidden;
+	padding: 0px;
+	z-index: 1;
+	overflow: hidden;
+	cursor: default;
+	border: solid 1px #ccc;
+}
+
+piston > gutter {
+    position: absolute;
+    left: 0px;
+    top: 0px;
+    bottom: 0px;
+    width: 48px;
+    border-right: solid 1px #ccc;
+    z-index: 0;
+    background: #f8f8f8;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.15),0 1px 5px rgba(0,0,0,.075);
+}
+
+piston > gutter::after {
+	content: "";
+	display: block;
+	position: absolute;
+	right: 0px;
+	top: 0px;
+	bottom: 0px;
+	height: 100%;
+	width: 12px;
+	background: #e7e7e7;
+	border-left: solid 1px #ccc;
+}
+
+piston tracer {
+    position: absolute;
+    left: 48px;
+    top: 0px;
+    bottom: 0px;
+    width: 0px;
+    background: #444;
+    color: #fff;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.15),0 1px 5px rgba(0,0,0,.075);
+}
+
+
+piston[trace=true] tracer {
+    width: 96px;
+    border-right: solid 1px #ccc;
+    z-index: 0;
+}
+
+piston content {
+	display: block;
+	overflow: hidden;
+	overflow-y: auto;
+	position: absolute;
+	padding: 4px 4px 4px 52px;
+	left: 0px;
+	top: 0px;
+	bottom: 0px;
+	right: 0px;
+}
+
+piston[trace=true] content {
+	padding-left: 148px;
+}
+
+piston[movable=true] > gutter {
+	width: 64px;
+}
+
+piston[movable=true] > gutter::after {
+	width: 28px;	
+}
+
+piston[movable=true] content {
+	padding-left: 68px;
+}
+
+piston[mode=edit] {
+    position: absolute;
+	left: 0px;
+	top: 0px;
+	right: 0px;
+	bottom: 0px;
+	border: 0px;
+	margin: 0px;
+	width: auto;
+	height: auto;
+}
+
+piston[printing] {
+    position: fixed !important;
+	left: 0px !important;
+	top: 0px !important;
+	right: 0px !important;
+	bottom: 0px !important;
+	border: 0px !important;
+	margin: 0px !important;
+	width: auto !important;
+	height: auto !important;
+}
+
+piston[printing]:not([anonymized]) content::before,
+piston[printing]:not([anonymized]) content::after {
+	content: "DO NOT SHARE WITH ANYONE";
+	display: block;
+	height: 32px;
+	background: red;
+	color: white;
+	font-size: 2em;
+	text-align: center;
+	box-shadow: 0px 0px 5px black;
+}
+
+piston[printing] tracer,
+piston[printing] trace {
+	display: none !important;
+}
+
+
+piston[printing] content {
+	padding-left: 52px;
+}
+
+viewer[mode=view] piston content {
+	position: relative;
+	height: auto;
+}
+
+
+.navbar {
+	margin: 0px;
+	z-index: 2;
+}
+
+nav~piston {
+	top: 52px;
+}
+
+
+piston[mode=edit] *[ng-click],
+piston[mode=edit] *[data-ng-click] {
+	cursor: pointer;
+}
+
+piston[mode=edit] *[ng-click]:hover,
+piston[mode=edit] *[data-ng-click]:hover,
+piston[mode=edit] *[ng-click]:hover *,
+piston[mode=edit] *[data-ng-click]:hover * {
+	text-decoration: underline;
+}
+
+container,
+variables,
+devices,
+statements,
+conditions,
+restrictions,
+tasks {
+    display: block;
+    width: 100%;
+    height: auto;
+    padding-left: 7px;
+	border-left: solid 8px rgba(0, 0, 0, 0.05);
+	margin: 0px;
+}
+
+piston[trace=true] statements[exec=true] {
+	border-color: rgba(0, 128, 255, 0.5);
+}
+
+piston[trace=true] conditions[eval=true] {
+	border-color: rgba(0, 192, 0, 0.5);
+}
+
+piston[trace=true] conditions[eval=false] {
+	border-color: rgba(255, 0, 0, 0.5);
+}
+
+
+piston div,
+piston dnd-nodrag {
+	width: 100%;
+}
+
+
+line {
+    display: block;
+    width: 100%;
+    height: auto;
+	margin: 0px;
+    line-height: 17px !important;
+	min-height: 17px !important;
+	cursor: default;
+	padding-right: 32px;
+}
+
+line * {
+    display: inline-block;
+    line-height: 17px !important;
+	min-height: 17px !important;
+	position: relative;
+}
+
+line[cond] > span {
+	ssdisplay: block;
+}
+
+line handle {
+	color: #999;
+	display: none !important;
+	padding: 0px 4px 0px 0px;
+}
+
+piston[movable=true] line handle {
+	position: absolute;
+	left: 52px;
+	margin-top: 1px;
+    display: block !important;
+}
+
+line,
+line[pun],
+line[operator],
+span[pun],
+span.hl.pun {
+	color: #000000;
+}
+
+line[kwd],
+span[kwd],
+span.hl.kwd {
+    color: #0000ff;
+}
+
+line[dev],
+span[dev],
+span.hl.dev {
+    color: blueviolet;
+}
+
+line[vdev],
+span[vdev],
+span.hl.vdev {
+    color: blueviolet;
+}
+
+line[attr],
+span[attr],
+span.hl.attr {
+    color: 15a3a3;
+    font-style: italic;
+}
+
+line[lit],
+span[lit],
+span.hl.lit {
+	color: #a31515;
+}
+
+line[num],
+span[num],
+span.hl.num {
+	color: #1515ff;
+}
+
+line[exp],
+span[exp],
+span.hl.exp {
+	color: #15a315;
+}
+
+line[com],
+span[com],
+span.hl.com {
+	color: #008000;
+	white-space: pre;
+}
+
+line[com][exportBin]::after {
+	position: absolute;
+	content: attr(exportBin);
+	left: 64px;
+	width: 384px;
+	text-align: center;
+	font-size: 36px;
+	color: #444;
+}
+
+
+line[typ],
+span[typ],
+span.hl.typ {
+	color: #2b91af;
+}
+
+line[var],
+span[var],
+span.hl.var {
+	color: #af2b91;
+}
+
+span[kwd] + task {
+	margin-left: 4px;
+}
+
+span.hl.err,
+span.hl.err * {
+	background: #fcc !important;
+	color: #f00 !important;	
+}
+
+label[group] {
+    margin-left: -4px;
+    color: blue;
+}
+
+label span.error {
+	color: red;
+	float: right;
+}
+
+line[new] {
+    color: rgba(0, 0, 0, 0.2);
+}
+
+span.vartype {
+	float:left;
+	width: 60px;	
+	color: #2b91af;
+	text-align: right;
+	font-size: 0.75em;
+	line-height: 20px;;
+	vertical-alignment: middle;
+	padding: 0px 8px;
+}
+
+span.varval {
+	float:right;
+	width: 60px;	
+	color: #2b91af;
+	text-align: right;
+	font-size: 0.75em;
+	line-height: 20px;;
+	vertical-alignment: middle;
+	padding: 0px 8px;
+}
+
+
+
+span[tsk][single=true] {
+	margin-left: 8px;
+}
+
+
+piston[anonymized] span[dev] {
+	color: transparent !important;
+}
+
+piston[anonymized] span[dev]::before {
+	box-sizing: border-box;
+	position: absolute;
+    content: "";
+    left: 0px;
+    top: -5px;
+    display: block;
+    height: 50%;
+    width: 100%;
+    border-bottom: solid 10px black;
+}
+
+piston[mode=view] line[new] {
+    display: none;
+}
+
+nav .title {
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    display: block;
+    margin-right: -32px;
+	text-align: left;
+}
+
+statement,
+condition,
+restriction {
+    width: 100%;
+    height: auto;
+}
+
+dnd-nodrag {
+	display: flex;
+}
+
+piston dnd-nodrag > bar {
+    float: left;
+    display: inline-block;
+    border-top: solid 1px;
+    border-left: solid 1px;
+    border-bottom: solid 1px;
+    border-color: #07d;
+    margin-right: 4px;
+    margin-top: 8px;
+    margin-bottom: 7px;
+    width: 4px;
+}
+
+piston dnd-nodrag > bar[asynch=true] {
+    border-color: #d7d;
+}
+
+piston content[invalid=true] {
+    color: red !important;
+}
+
+operand[device] {
+    color: blueviolet;
+}
+operand[enum] {
+    color: darkcyan;
+}
+operand[variable] {
+    color: dodgerblue;
+}
+operator {
+    color: #d70;
+}
+
+line device {
+    color: blueviolet;
+}
+
+statement task > content::before {
+    color: #ccc;
+    content: "";
+    padding-right: 4px;
+    font-size: 10px;
+}
+
+conditions > conditions,
+restrictions > restrictions {
+    margin-left: -0px;
+}
+
+conditions > dnd-nodrag > div > line[operator]:nth-last-child(2),
+conditions > dnd-nodrag > div > container > line[operator]:nth-last-child(2),
+restrictions > dnd-nodrag > div > line[operator]:nth-last-child(2),
+restrictions > dnd-nodrag > div > container > line[operator]:nth-last-child(2) {
+    display: none;
+}
+
+condition subscription {
+	position: absolute;
+	left: 39px;
+	margin-top: 3px;
+	color: #f96;
+	line-height: 100%;
+}
+
+statement async {
+	position: absolute;
+	left: 39px;
+	margin-top: 3px;
+	color: #d7d;
+	line-height: 100%;
+}
+
+
+
+piston drag-handle {
+    position: absolute;
+    display: inline-block;
+    left: 12px;
+    top: 6px;
+    width: 8px;
+    overflow: hidden;
+    margin-left: -20px;
+    color: #ccc;
+    cursor: move;
+}
+
+piston line::before,
+piston .dndPlaceholder::before {
+	position: absolute;
+	counter-increment: line;
+	left: 0px;
+    color: #aaa;
+    width: 35px;
+    text-align: right;
+	content: counter(line);
+	padding-right: 2px;
+}
+
+line:hover::before,
+line:hover {
+	background:rgb(192, 224, 255);
+	ecolor: #fff;
+}
+
+
+piston trace {
+	display: none;
+	color: #999;
+	text-align: right;
+	font-size: 10px;
+	line-height: 17px;
+	white-space: nowrap;
+}
+
+piston trace > span {
+	display: inline-block;
+	width: 44px;
+	padding: 0;
+	margin: 0;
+	height: 16px;
+}
+
+piston trace > span[dur] {
+	color: #fff;
+	background: #666;
+	border-radius: 12px;
+	padding: 0px 2px;
+	text-align: center;
+}
+
+piston trace > span[eval=true] {
+	background: #696;
+}
+
+piston trace > span[eval=false] {
+	background: #966;
+}
+
+piston trace > span[timer] {
+	color: #fff;
+	background: #3399cc;
+	border-radius: 12px;
+	padding: 0px 2px;
+	text-align: center;
+}
+
+piston trace > span[ok=false] {
+	background: #f66;
+}
+
+piston[trace=true] trace {
+	position: absolute;
+	display: block;
+	left: 52px;
+	width: 40px;
+}
+
+conditions,
+restrictions {
+	display: flex !important;
+}
+
+
+piston .dndPlaceholder::before {
+	background: #07d;
+	color: white;
+}
+
+
+parameter[optional=true] label.control-label::after {
+	content: '(optional)';
+	color: #ccc;
+	margin-left: 6px;
+}
+
+
+@media (hover:hover) {
+	piston[mode=edit] statement:hover,
+	piston[mode=edit] conditions:hover,
+	piston[mode=edit] restrictions:hover {
+	    background: rgba(0, 0, 0, 0.05);
+	}
+
+	piston[mode=edit] line[new]:hover {
+	    color: rgba(0, 0, 0, 0.5);
+	}
+
+	designer > item:hover {
+	    background: #ffddaa;
+	}
+
+}
+
+
+
+@media only screen 
+  and (min-device-width: 320px) 
+  and (max-device-width: 568px)
+  and (-webkit-min-device-pixel-ratio: 2) {
+
+	piston line,
+	piston line * {
+		line-height: 44px !important;
+		min-height: 44px !important;
+		font-size: 16px;
+	}
+
+	piston line::after {
+		display: block;
+		content: "";
+		margin-left: -100px;
+		height: 1px;
+		border-top: solid 1px #eee;
+	}
+
+	condition subscription,
+	statement async {
+		margin-top: 16px;
+	}
+}
+
+
+.nav.navbar-nav.btn-group {
+    margin: 7.5px 3px;
+}
+
+
+
+textarea[expression] {
+	font-size: 14px;
+}
+
+div.sa-fakeArea {
+	border-top-left-radius: 0px;
+	border-top-right-radius: 0px;
+	border-top: 0px;
+}
+
+div[type=e] .btn,
+div[type=e] .form-control {
+	border-bottom-left-radius: 0px;
+    border-bottom-right-radius: 0px;
+}
+
+p.logs {
+	max-height: 80%;
+	overflow: hidden;
+	overflow-y: auto;
+}
+
+table.logs {
+	font-family: monospace;
+	font-size: 12px;
+}
+
+table.logs td {
+	padding: 0px 4px !important;
+	height: 1em;
+}
+
+table.logs td:first-child {
+	width: 1%;
+	white-space: nowrap;
+	text-align: right;
+}
+
+table.logs tr td.hdr {
+	text-align: left;
+	font-weight: bold;
+	padding-top: 12px !important;;
+}
+
+table.logs span {
+	margin-left: 4px;
+}
+
+table.logs tr[log=debug] span {
+	color: #337ab7;
+}
+
+table.logs tr[log=trace] span {
+	color: #777777;
+}
+
+table.logs tr[log=info] span {
+	color: #5bc0de;
+}
+
+table.logs tr[log=warn] span {
+	color: #f0ad4e;
+}
+
+table.logs tr[log=error] span {
+	color: #d9534f;
+}
+
+
+task[preview] {
+	display: block;
+	opacity: 0.5;
+	margin: 8px 0px;
+	cursor: pointer;
+	border: solid rgba(0, 0, 0, 0.5) 1px;
+	border-left: solid rgba(0, 0, 0, 0.5) 8px;
+	background: rgba(0, 0, 0, 0.1);
+	padding: 4px;
+}
+
+task[preview]:hover {
+	opacity: 1;
+}
+
+div[taskedit] {
+	padding-left:4px;
+	border-left: solid rgba(0, 0, 0, 0.5) 8px;
+}
+
