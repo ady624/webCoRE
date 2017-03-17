@@ -360,7 +360,7 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 			if (mobileCheck()) {
 				msg = '<p>Oops, you are not logged in!</p>Please open the SmartThings CoRE app and open the dashboard by tapping on the "CoRE Dashboard" link at the top.';
 			} else {
-				msg = '<p>Oops, you are not logged in!</p>Please open the SmartThings IDE, go to Live Logging, then open the SmartThings CoRE app and look for the dashboard URL in the Live Logging page. You will need to open that link for the first time.';
+				msg = '<p>Oops, you are not logged in!</p>Please open the SmartThings IDE, go to Live Logging, then open the SmartThings CoRE app, go to Settings and enable Logging, then tap Done and look for the dashboard URL in the Live Logging page. You will need to open that link for the first time.';
 			}
 			var error = document.createElement('error');
 			error.id = 'error';

@@ -44,7 +44,8 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		}
 	}
 
-	$scope.updateActivity = function(init = false) {		
+	$scope.updateActivity = function(init = false) {	
+		if ($scope.$$destroyed) return;	
 		if ($scope.mode != 'view') return;
 		if (tmrActivity) $timeout.cancel(tmrActivity);
 		if (init) {
@@ -52,6 +53,11 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 			return;
 		}
 		dataService.getActivity($scope.pistonId, ($scope.logs && $scope.logs.length && $scope.logs[0].t ? $scope.logs[0].t : 0)).success(function (response) {
+			if (response.error == 'ERR_INVALID_ID') {
+				//the app has been deleted
+				$scope.home();
+				return;
+			}
 			if (response && response.activity) {
 				//we got data
 				if (response.activity.logs && response.activity.logs.length) $scope.logs = response.activity.logs.concat($scope.logs);
@@ -60,12 +66,15 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 				if (response.activity.memory) $scope.memory = response.activity.memory;
 				if (response.activity.lastExecuted) $scope.lastExecuted = response.activity.lastExecuted;
 				if (response.activity.nextSchedule) $scope.nextSchedule = response.activity.nextSchedule;
+				if (response.activity.name) $scope.meta.name = response.activity.name;
+
 			}
 			tmrActivity = $timeout($scope.updateActivity, 3000);
 		});
 	}
 
 	$scope.init = function() {
+		if ($scope.$$destroyed) return;	
 		dataService.setStatusCallback($scope.setStatus);
 		$scope.loading = true;
 		if ($scope.piston) $scope.loading = true;

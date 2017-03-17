@@ -14,6 +14,9 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 	$scope.pausedPistons = 0;
 
 	$scope.init = function(instance, uri, pin) {
+		if ($scope.$$destroyed) return;
+        if (tmrActivity) $timeout.cancel(tmrActivity);
+		tmrActivity = null;
 		$scope.requestId++;
 		var currentRequestId = 0 + $scope.requestId;
 		$scope.loading = !$scope.initialized || !$scope.instance;
@@ -59,10 +62,11 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 	};
 
     $scope.render = function() {
+		if ($scope.$$destroyed) return;
 		if (!$scope.initialized) return;
         //do nothing, but rerenders
 		if (!tmrClock) tmrClock = $interval(function() {}, 1000);
-		if (!tmrActivity) tmrActivity = $interval($scope.init, 5000);
+		if (!tmrActivity) tmrActivity = $timeout($scope.init, 5000);
     }
 
     $scope.setStatus = function(status) {
@@ -99,7 +103,7 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 			var instance = dataService.getInstance(instanceId);
 			if (instance) {
 				$scope.instance = null;
-		        if (tmrActivity) $interval.cancel(tmrActivity);
+		        if (tmrActivity) $timeout.cancel(tmrActivity);
 				tmrActivity = null;
 				$scope.init(instance);
 				$scope.closeNavBar();
@@ -110,7 +114,7 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
     $scope.$on('$destroy', function() {
         if (tmrStatus) $timeout.cancel(tmrStatus);
         if (tmrClock) $interval.cancel(tmrClock);
-        if (tmrActivity) $interval.cancel(tmrActivity);
+        if (tmrActivity) $timeout.cancel(tmrActivity);
     });
 
     $scope.openPiston = function(id) {
@@ -165,7 +169,7 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
     };
 
 	$scope.dialogLogIn = function(sender, uri) {
-		if (tmrActivity) $interval.cancel(tmrActivity);
+		if (tmrActivity) $timeout.cancel(tmrActivity);
 		tmrActivity = null;
 		$scope.loading = false;
 		$scope.initialized = false;
