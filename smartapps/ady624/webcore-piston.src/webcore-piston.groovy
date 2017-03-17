@@ -14,8 +14,9 @@
  *
 */
 static String handle() { return "CoRE (SE)" }
-static String version() {	return "v0.0.041.20170316" }
+static String version() {	return "v0.0.042.20170317" }
 /*
+ *	03/17/2016 >>> v0.0.042.20170317 - ALPHA - Various fixes and enabled restrictions - UI for conditions and restrictions needs refactoring to use the new operand editor
  *	03/16/2016 >>> v0.0.041.20170316 - ALPHA - Various fixes
  *	03/16/2016 >>> v0.0.040.20170316 - ALPHA - Fixed a bug where optional parameters were not correctly interpreted, leading to setLevel not working, added functions startsWith, endsWith, contains, eq, le, lt, ge, gt
  *	03/16/2016 >>> v0.0.03f.20170316 - ALPHA - Completely refactored task parameters and enabled variables. Dynamically assigned variables act as functions - it can be defined as an expression and reuse it in lieu of that expression
@@ -140,7 +141,8 @@ def installed() {
     state.modified = now()
     state.build = 0
     state.piston = [:]
-    state.vars = state.vars?: [:];
+    state.vars = state.vars?: [:]
+    state.subscriptions = state.subscriptions ?: [:]
 	initialize()
 	return true
 }
@@ -170,11 +172,15 @@ def get() {
 	    	active: state.active
 		],
         piston: state.piston,
-        localVars: state.vars,
         systemVars: getSystemVariables(),
+        subscriptions: state.subscriptions,
 	    stats: state.stats,
         logs: state.logs,
-        trace: state.trace        
+        trace: state.trace,
+        localVars: state.vars,
+        memory: mem(),
+        lastExecuted: state.lastExecuted,
+        nextSchedule: state.nextSchedule,
     ]
 	
 }
@@ -187,7 +193,10 @@ def activity(lastLogTimestamp) {
 	return [
     	logs: index ? logs[0..index-1] : [],
     	trace: state.trace,
-        localVars: state.vars,       
+        localVars: state.vars,
+        memory: mem(),
+        lastExecuted: state.lastExecuted,
+        nextSchedule: state.nextSchedule,
     ]    
 }
 
@@ -207,7 +216,6 @@ def set(data) {
     setIds(piston)
     state.piston = piston
     state.trace = [:]
-    state.vars = [:]
     state.vars = state.vars ?: [:];
     //todo replace this
     if ((state.build == 1) || (!!state.active)) {
@@ -290,13 +298,14 @@ def config(data) {
 
 def pause() {
 	state.active = false
-    def rtData = getRunTimeData()
+    def rtData = getRunTimeData(null, true)
 	def msg = timer "Piston successfully stopped", rtData, -1
     trace "Stopping piston...", rtData, 0
     checkVersion(rtData)
     state.schedules = []
     rtData.stats.nextSchedule = 0
     state.trace = [:]
+    state.subscriptions = [:]
     unsubscribe()
     parent.updateRunTimeData(rtData)
     trace msg   
@@ -308,7 +317,7 @@ def resume() {
 	def tempRtData = [timestamp: now(), logs:[], logging: true]
     def msg = timer "Piston successfully started", tempRtData,  -1
 	trace "Starting piston... (${version()})", tempRtData, 0
-    def rtData = getRunTimeData()
+    def rtData = getRunTimeData(null, true)
     rtData.logs = rtData.logs + (rtData.logging ? tempRtData.logs : [])
     checkVersion(rtData)
     msg.d = rtData
@@ -316,35 +325,36 @@ def resume() {
     parent.updateRunTimeData(rtData)
     trace msg
     updateLogs(rtData)
+    return [active: true, subscriptions: state.subscriptions]
 }
 
 def execute() {
 
 }
 
-private getRunTimeData(rtData = null, lightWeight = false) {
+private getRunTimeData(rtData = null, noVars = false) {
 	def timestamp = rtData?.timestamp ?: now()
-	rtData = rtData ?: (lightWeight ? [:] : parent.getRunTimeData())
+	rtData = rtData ?: parent.getRunTimeData()
     rtData.timestamp = timestamp
     rtData.logs = [[t: timestamp]]
     rtData.trace = [t: timestamp, points: [:]]
-    if (lightWeight) return rtData
-    
     rtData.id = hashId(app.id)
 	rtData.active = state.active;
     rtData.state = state.state || '';
-    rtData.stats = [nextSchedule: 0]
+    rtData.stats = [nextScheduled: 0]
     rtData.cache = state.cache ?: [:]
     rtData.newCache = [:]
     rtData.schedules = []
     rtData.cancelations = [statements:[], conditions:[]]
     rtData.piston = state.piston
     rtData.locationId = hashId(location.id)
-    rtData.systemVars = getSystemVariables()
-    rtData.localVars = getLocalVariables(rtData, state.piston.v)
     //flow control
     rtData.fastForwardTo = null
     rtData.break = false
+
+	if (noVars) return rtData   
+    rtData.systemVars = getSystemVariables()
+    rtData.localVars = getLocalVariables(rtData, state.piston.v)
     return rtData
 }
 
@@ -381,6 +391,7 @@ def handleEvents(event) {
 	//cancel all pending jobs, we'll handle them later
 	unschedule(timeHandler)
 	def startTime = now()
+    atomicState.lastExecuted = startTime
     def eventDelay = startTime - event.date.getTime()
 	def msg = timer "Event processed successfully", null, -1
     def tempRtData = [timestamp: startTime, logs:[], logging: true]
@@ -481,9 +492,14 @@ private Boolean executeEvent(rtData, event) {
 		//todo - check restrictions
         rtData.stack = [c: 0, s: 0, cs:[], ss:[]]
         try {
-			if (executeStatements(rtData, rtData.piston.s)) {
-	        	tracePoint(rtData, "end", 0, 0)
-	        }
+		    def allowed = !rtData.piston.r || !(rtData.piston.r.length) || evaluateConditions(rtData, rtData.piston, 'r', true)
+    		if (allowed || !!rtData.fastForwardTo) {        
+				if (executeStatements(rtData, rtData.piston.s)) {
+		        	tracePoint(rtData, "end", 0, 0)
+		        }
+            } else {
+            	warn "Piston execution aborted due to restrictions in effect", rtData
+            }
         } catch (all) {
         	error "An error occurred while executing the event: ", rtData, null, all
         }
@@ -527,6 +543,7 @@ private finalizeEvent(rtData, initialMsg, success = true) {
     	rtData.stats.nextSchedule = 0
     }
     atomicState.schedules = schedules
+    atomicState.nextSchedule = rtData.stats.nextSchedule
 
 	parent.updateRunTimeData(rtData)
 
@@ -573,7 +590,7 @@ private updateLogs(rtData) {
             	logs = []
             }
     	}
-        if ("$logs".size() > 50000) {
+        if ("$state".size() > 75000) {
         	maxLogSize -= 50
         } else {
         	break
@@ -613,8 +630,8 @@ private Boolean executeStatement(rtData, statement, async = false) {
     def perform = false
     def repeat = true
     def index = null
-    def restricted = !statement.r || !(statement.r.length) || evaluateConditions(rtData, statement, 'r', async, true)
-    if (restricted || !!rtData.fastForwardTo) {
+    def allowed = !statement.r || !(statement.r.length) || evaluateConditions(rtData, statement, 'r', async)
+    if (allowed || !!rtData.fastForwardTo) {
     	while (repeat) {
             switch (statement.t) {
                 case 'repeat':
@@ -1323,6 +1340,11 @@ private traverseExpressions(node, closure, param, parentNode = null) {
 
 private void subscribeAll(rtData) {
 	rtData = rtData ?: getRunTimeData()
+    def ss = [
+    	events: 0,
+        controls: 0,
+        devices: 0,
+    ]
 	def x = {
     }
 	def msg = timer "Finished subscribing", rtData, -1
@@ -1406,6 +1428,7 @@ private void subscribeAll(rtData) {
         
     }
     traverseStatements(rtData.piston.s, statementTraverser)
+    def dds = [:]
     for (subscription in subscriptions) {
     	for (condition in subscription.value.c) if (condition) { condition.s = false }
     	if (subscription.value.t && ((subscription.value.t == "trigger") || (subscription.value.c.sm == "always") || (!hasTriggers && (subscription.value.c.sm != "never")))) {
@@ -1414,6 +1437,11 @@ private void subscribeAll(rtData) {
         		info "Subscribing to $device.${subscription.value.a}...", rtData
 		    	for (condition in subscription.value.c) if (condition) { condition.s = (condition.ct == 't') || (condition.cm == 'always') || (!hasTriggers) }
         		subscribe(device, subscription.value.a, deviceHandler)
+                ss.events = ss.events + 1
+                if (!dds[device.id]) {
+                	ss.devices = ss.devices + 1
+                	dds[device.id] = 1
+                }
             } else {
             	error "Failed subscribing to $device.${subscription.value.a}, device not found", rtData
             }
@@ -1427,8 +1455,14 @@ private void subscribeAll(rtData) {
         if (device) {
        		debug "Subscribing to $device...", rtData
 			subscribe(device, "", fakeHandler)
+            ss.controls = ss.controls + 1
+            if (!dds[device.id]) {
+                ss.devices = ss.devices + 1
+                dds[device.id] = 1
+            }
         }
     }
+    state.subscriptions = ss
     trace msg
 }
 
@@ -1492,7 +1526,7 @@ def setVariable(rtData, name, value) {
 	if (!name) return [t: "error", v: "Invalid empty variable name"]
 	if (name.startsWith("@")) {
     	def variable = rtData.globalVars[name]
-        if (variable instanceof Map) {
+    	if (variable instanceof Map) {
         	//set global var
             variable.v = cast(value, variable.t)
             return variable
@@ -2571,6 +2605,7 @@ private cast(value, dataType) {
     if (value instanceof GString) {
     	value = value.toString()
     }
+    if (value == null) value = '';
 	switch (dataType) {
 		case "string":
 		case "text":

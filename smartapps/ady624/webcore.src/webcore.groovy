@@ -20,8 +20,9 @@
  */
 
 static String handle() { return "CoRE (SE)" }
-static String version() {	return "v0.0.041.20170316" }
+static String version() {	return "v0.0.042.20170317" }
 /*
+ *	03/17/2016 >>> v0.0.042.20170317 - ALPHA - Various fixes and enabled restrictions - UI for conditions and restrictions needs refactoring to use the new operand editor
  *	03/16/2016 >>> v0.0.041.20170316 - ALPHA - Various fixes
  *	03/16/2016 >>> v0.0.040.20170316 - ALPHA - Fixed a bug where optional parameters were not correctly interpreted, leading to setLevel not working, added functions startsWith, endsWith, contains, eq, le, lt, ge, gt
  *	03/16/2016 >>> v0.0.03f.20170316 - ALPHA - Completely refactored task parameters and enabled variables. Dynamically assigned variables act as functions - it can be defined as an expression and reuse it in lieu of that expression
@@ -474,9 +475,12 @@ private api_intf_dashboard_piston_get() {
 
 
 private api_intf_dashboard_piston_set_save(id, data) {
+	log.trace "Finding child app"
     def piston = getChildApps().find{ hashId(it.id) == id };
     if (piston) {
+    	log.trace "parsing text with size ${data.size()}"
 		def p = new groovy.json.JsonSlurper().parseText(new String(data.decodeBase64(), "UTF-8"))
+        log.trace "got here too"
 		return piston.set(p);
     }
     return false;
@@ -550,6 +554,7 @@ private api_intf_dashboard_piston_set_end() {
             def data = ""
             def i = 0;
             def count = chunks.count;
+            log.trace "GOT $count chunks"
             while(i<count) {
             	def s = chunks["chunk:$i"]
             	if (s) {
@@ -561,9 +566,12 @@ private api_intf_dashboard_piston_set_end() {
                 }
                 i++
             }
+            log.trace "OK is $ok"
             if (ok) {
                 //save the piston here
+                log.trace "Saving..."
                 def saved = api_intf_dashboard_piston_set_save(chunks.id, data)
+                log.trace "Saved..."
                 if (saved) {
 	        		result = [status: "ST_SUCCESS"] + saved
                 } else {
@@ -605,8 +613,8 @@ private api_intf_dashboard_piston_resume() {
 	if (verifySecurityToken(params.token)) {
 	    def piston = getChildApps().find{ hashId(it.id) == params.id };
 	    if (piston) {
-        	piston.resume()
-			result = [status: "ST_SUCCESS", active: true]
+        	result = piston.resume()
+			result.status = "ST_SUCCESS"
         } else {
 	    	result = api_get_error_result("ERR_INVALID_ID")
         }
