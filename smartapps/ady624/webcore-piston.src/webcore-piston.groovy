@@ -13,8 +13,9 @@
  *  for the specific language governing permissions and limitations under the License.
  *
 */
-public static String version() { return "v0.0.048.20170318" }
+public static String version() { return "v0.0.049.20170318" }
 /*
+ *	03/18/2016 >>> v0.0.049.20170318 - ALPHA - Third attempt to fix switch
  *	03/18/2016 >>> v0.0.048.20170318 - ALPHA - Second attempt to fix switch fallbacks with wait breaks, wait in secondary cases were not working
  *	03/18/2016 >>> v0.0.047.20170318 - ALPHA - Attempt to fix switch fallbacks with wait breaks
  *	03/18/2016 >>> v0.0.046.20170318 - ALPHA - Various critical fixes - including issues with setLevel without a required state
@@ -756,19 +757,25 @@ private Boolean executeStatement(rtData, statement, async = false) {
                         def ro2 = (_case.t == 'r') ? [operand: _case.ro2, values: evaluateOperand(rtData, _case, _case.ro2)] : null
                         perform = perform || evaluateComparison(rtData, (_case.t == 'r' ? 'is_inside_of_range' : 'is'), lo, ro, ro2)
                         found = found || perform
-                        if (perform || !!rtData.fastForwardTo) {
+                        if (perform || (found && fallThrough) || !!rtData.fastForwardTo) {
+	                        def fastForwardTo = rtData.fastForwardTo
                         	if (!executeStatements(rtData, _case.s, async)) {
  								//stop processing
                                 value = false
                                 if (!!rtData.break) {
                                 	//we reached a break, so we really want to continue execution outside of the switch
                                 	value = true
+                                    found = true
                                     fallThrough = false
                                     rtData.break = null
                                 }
-                                if (!rtData.fastForwardTo) break
+                                if (!rtData.fastForwardTo) {
+                                	break
+                                }
 							}
-                            value = true
+                            //if we determine that the fast forwarding ended during this execution, we assume found is true
+                            found = found || (fastForwardTo != rtData.fastForwardTo)
+                            value = true                            
                             //if implicit breaks
                             if (implicitBreaks && !rtData.fastForwardTo) {
                                 fallThrough = false
