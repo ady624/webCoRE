@@ -13,8 +13,9 @@
  *  for the specific language governing permissions and limitations under the License.
  *
 */
-public static String version() { return "v0.0.049.20170318" }
+public static String version() { return "v0.0.04a.20170318" }
 /*
+ *	03/18/2016 >>> v0.0.04a.20170318 - ALPHA - Enabled manual piston status and added the set piston status task as well as the exit statement
  *	03/18/2016 >>> v0.0.049.20170318 - ALPHA - Third attempt to fix switch
  *	03/18/2016 >>> v0.0.048.20170318 - ALPHA - Second attempt to fix switch fallbacks with wait breaks, wait in secondary cases were not working
  *	03/18/2016 >>> v0.0.047.20170318 - ALPHA - Attempt to fix switch fallbacks with wait breaks
@@ -187,8 +188,9 @@ def get() {
 		],
         piston: state.piston,
         systemVars: getSystemVariables(),
-        subscriptions: state.subscriptions,
+        subscriptions: state.subscriptions,     
 	    stats: state.stats,
+        state: state.state,
         logs: state.logs,
         trace: state.trace,
         localVars: state.vars,
@@ -206,6 +208,7 @@ def activity(lastLogTimestamp) {
     index = index > 0 ? index : 0
 	return [
     	name: app.label,
+        state: state.state,
     	logs: index ? logs[0..index-1] : [],		
     	trace: state.trace,
         localVars: state.vars,
@@ -358,7 +361,6 @@ private getRunTimeData(rtData = null, noVars = false) {
     rtData.trace = [t: timestamp, points: [:]]
     rtData.id = hashId(app.id)
 	rtData.active = state.active;
-    rtData.state = state.state || '';
     rtData.stats = [nextScheduled: 0]
     rtData.cache = state.cache ?: [:]
     rtData.newCache = [:]
@@ -367,6 +369,8 @@ private getRunTimeData(rtData = null, noVars = false) {
     rtData.piston = state.piston
     rtData.locationId = hashId(location.id)
     //flow control
+    rtData.state = [old: state.state || '', new: state.piston.o?.mps ? state.state || '' : 'true'];
+    rtData.statementLevel = 0;
     rtData.fastForwardTo = null
     rtData.break = false
 
@@ -400,7 +404,7 @@ def deviceHandler(event) {
 }
 
 def timeHandler(event) {
-	handleEvents([date: new Date(event.t), device: 'time', name: 'time', value: event.t, schedule: event])
+	handleEvents([date: new Date(event.t), device: location, name: 'time', value: event.t, schedule: event])
 }
 
 
@@ -433,7 +437,7 @@ def handleEvents(event) {
 	msg2 = timer "Execution stage complete.", rtData, -1
     trace "Execution stage started", rtData, 1
     def success = true
-    if (event.device != 'time') {
+    if (event.name != 'time') {
     	success = executeEvent(rtData, event)
     }
     //process all time schedules in order
@@ -549,7 +553,7 @@ private finalizeEvent(rtData, initialMsg, success = true) {
     for (schedule in schedules) {
     	def t = now() - schedule.t
         if ((t < 0) && !rtData.trace.points["t:${schedule.i}"]) {
-            //we enter a fake trace point to show it on the trace view
+            //we enter a fake trace point to show it on the trace viewfstate
     		tracePoint(rtData, "t:${schedule.i}", 0, t)
         }
     }
@@ -585,6 +589,7 @@ private finalizeEvent(rtData, initialMsg, success = true) {
     if (stats.timing.size() > 500) stats.timing = stats.timing[stats.timing.size() - 500..stats.timing.size() - 1]
     rtData.trace.d = now() - rtData.trace.t
 
+	state.state = rtData.state.new
 	//atomicState.stats = stats
     state.stats = stats
     //atomicState.trace = rtData.trace
@@ -624,13 +629,16 @@ private updateLogs(rtData) {
 
 
 private Boolean executeStatements(rtData, statements, async = false) {
+	rtData.statementLevel = rtData.statementLevel + 1
 	for(statement in statements) {
     	if (!executeStatement(rtData, statement, !!async)) {
         	//stop processing
+			rtData.statementLevel = rtData.statementLevel - 1
         	return false
         }
     }
     //continue processing
+	rtData.statementLevel = rtData.statementLevel - 1
     return true
 }
 
@@ -647,6 +655,7 @@ private Boolean executeStatement(rtData, statement, async = false) {
     if (stacked) {
     	rtData.stack.cs.push(c)
     }
+    def parentAsync = async
     async = !!async || (statement.a == "1")
     def perform = false
     def repeat = true
@@ -697,6 +706,10 @@ private Boolean executeStatement(rtData, statement, async = false) {
                                     value = true
                                     if (!rtData.fastForwardTo) break
                                 }                	
+                            }
+                            if (state.piston.o?.mps && !perform && !rtData.fastForwardTo && (rtData.statementLevel == 1)) {
+                            	//automatic piston state
+                                rtData.state.new = 'false';
                             }
                             if ((!perform || !!rtData.fastForwardTo) && !executeStatements(rtData, statement.e, async)) {
                                 //stop processing
@@ -805,6 +818,7 @@ private Boolean executeStatement(rtData, statement, async = false) {
                     value = false
                     break
                 case 'exit':
+                	vcmd_setState(rtData, null, [cast(evaluateOperand(rtData, null, statement.lo).v, 'string')])
                     value = false
                     break
             }
@@ -828,7 +842,7 @@ private Boolean executeStatement(rtData, statement, async = false) {
 	if (statement.a == '1') {
 		//when an async action requests the thread termination, we continue to execute the parent
         //when an async action terminates as a result of a time event, we exit completely
-		value = (rtData.event.device != 'time')
+		value = (rtData.event.name != 'time')
 	}
     //restore current condition
     rtData.stack.c = c
@@ -982,6 +996,16 @@ private long vcmd_log(rtData, device, params) {
 	def command = params[0]
 	def message = params[1]
 	log message, rtData, null, null, "${command}".toLowerCase().trim(), true
+    return 0
+}
+
+private long vcmd_setState(rtData, device, params) {
+	def value = params[0]
+    if (rtData.piston.o?.mps) {
+    	rtData.state.new = value
+    } else {
+	    error "Cannot set the piston state while in automatic mode. Please edit the piston settings to disable the automatic piston state if you want to manually control the state.", rtData
+    }
     return 0
 }
 

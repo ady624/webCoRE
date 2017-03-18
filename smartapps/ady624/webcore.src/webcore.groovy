@@ -19,8 +19,9 @@
  *  Version history
  */
 
-public static String version() { return "v0.0.049.20170318" }
+public static String version() { return "v0.0.04a.20170318" }
 /*
+ *	03/18/2016 >>> v0.0.04a.20170318 - ALPHA - Enabled manual piston status and added the set piston status task as well as the exit statement
  *	03/18/2016 >>> v0.0.049.20170318 - ALPHA - Third attempt to fix switch
  *	03/18/2016 >>> v0.0.048.20170318 - ALPHA - Second attempt to fix switch fallbacks with wait breaks, wait in secondary cases were not working
  *	03/18/2016 >>> v0.0.047.20170318 - ALPHA - Attempt to fix switch fallbacks with wait breaks
@@ -1267,6 +1268,7 @@ private virtualCommands() {
 		log					: [ n: "Log to console...",			a: true,	i: "bug",					d: "Log {0} \"{1}\"",													p: [[n:"Log type", t:"enum", o:["info","trace","debug","warn","error"]],[n:"Message",t:"string"]],	],
 		httpRequest			: [ n: "Make a web request",		a: true, 	i: "anchor",				d: "Make a {1} request to {0}",									        p: [[n:"URL", t:"string"],[n:"Method", t:"enum", o:["GET","POST","PUT","DELETE","HEAD"]],[n:"Content", t:"enum", o:["JSON","FORM"]],[n:"Send variables", t:"variables", d:" and data {v}"],[n:"Import response data into variables", t:"boolean"],[n:"Variable import name prefix", t:"string"]],	],
         setVariable			: [ n: "Set variable...",			a: true,	i: "superscript",			d: "Set variable {0} = {1}",											p: [[n:"Variable",t:"variable"],[n:"Value", t:"dynamic"]],	],
+        setState			: [ n: "Set piston state...",		a: true,	i: "superscript",			d: "Set piston state to \"{0}\"",										p: [[n:"State",t:"string"]],	],
 
 
 /*		[ n: "waitState",											d: "Wait for piston state change",	p: ["Change to:enum[any,false,true]"],															i: true,	l: true,						dd: "Wait for {0} state"],
