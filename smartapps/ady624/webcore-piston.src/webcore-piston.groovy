@@ -13,8 +13,9 @@
  *  for the specific language governing permissions and limitations under the License.
  *
 */
-public static String version() { return "v0.0.044.20170317" }
+public static String version() { return "v0.0.045.20170318" }
 /*
+ *	03/18/2016 >>> v0.0.045.20170318 - ALPHA - Fixed a newly introduced bug for Toggle (missing parameters)
  *	03/17/2016 >>> v0.0.044.20170317 - ALPHA - Cleanup ghost else-ifs on piston save
  *	03/17/2016 >>> v0.0.043.20170317 - ALPHA - Added "View piston in dashboard" to child app UI
  *	03/17/2016 >>> v0.0.042.20170317 - ALPHA - Various fixes and enabled restrictions - UI for conditions and restrictions needs refactoring to use the new operand editor
@@ -88,7 +89,7 @@ public static String version() { return "v0.0.044.20170317" }
 /******************************************************************************/
 /*** webCoRE DEFINITION														***/
 /******************************************************************************/
-private static String handle() { return "CoRE (SE)" }
+private static String handle() { return "webCoRE" }
 definition(
     name: "webCoRE Piston",
     namespace: "ady624",
@@ -910,7 +911,7 @@ private Boolean executeTask(rtData, devices, statement, task, async) {
     return true
 }
 
-private executePhysicalCommand(rtData, device, command, params, delay = null) {
+private executePhysicalCommand(rtData, device, command, params = [], delay = null) {
 	try {
     	if (params && params.length) {
         	if (delay) {

@@ -19,8 +19,9 @@
  *  Version history
  */
 
-public static String version() { return "v0.0.044.20170317" }
+public static String version() { return "v0.0.045.20170318" }
 /*
+ *	03/18/2016 >>> v0.0.045.20170318 - ALPHA - Fixed a newly introduced bug for Toggle (missing parameters)
  *	03/17/2016 >>> v0.0.044.20170317 - ALPHA - Cleanup ghost else-ifs on piston save
  *	03/17/2016 >>> v0.0.043.20170317 - ALPHA - Added "View piston in dashboard" to child app UI
  *	03/17/2016 >>> v0.0.042.20170317 - ALPHA - Various fixes and enabled restrictions - UI for conditions and restrictions needs refactoring to use the new operand editor
@@ -94,7 +95,7 @@ public static String version() { return "v0.0.044.20170317" }
 /******************************************************************************/
 /*** CoRE (SE) DEFINITION													***/
 /******************************************************************************/
-private static String handle() { return "CoRE (SE)" }
+private static String handle() { return "webCoRE" }
 private static String domain() { return "core.homecloudhub.com" }
 definition(
 	name: "webCoRE",
@@ -1328,9 +1329,9 @@ private static Map comparisons() {
     		is_equal_to						: [ d: "is equal to",						dd: "are equal to",						g:"bdi",	p: 1						],
     		is_different_than				: [ d: "is different than",					dd: "are different than",				g:"bdi",	p: 1						],
     		is_less_than					: [ d: "is less than",						dd: "are less than",					g:"di",		p: 1						],
-    		is_less_to_or_equal_than		: [ d: "is less to or equal than",			dd: "are less to or equal than",		g:"di",		p: 1						],
+    		is_less_than_or_equal_to		: [ d: "is less than or equal to",			dd: "are less than or equal to",		g:"di",		p: 1						],
     		is_greater_than					: [ d: "is greater than",					dd: "are greater than",					g:"di",		p: 1						],
-    		is_greater_to_or_equal_than		: [ d: "is greater to or equal than",		dd: "are greater to or equal than",		g:"di",		p: 1						],
+    		is_greater_than_or_equal_to		: [ d: "is greater than or equal to",		dd: "are greater than or equal to",		g:"di",		p: 1						],
     		is_inside_of_range				: [ d: "is inside of range",				dd: "are inside of range",				g:"di",		p: 2						],
     		is_outside_of_range				: [ d: "is outside of range",				dd: "are outside of range",				g:"di",		p: 2						],
 			is_even							: [ d: "is even",							dd: "are even",							g:"di",									],
