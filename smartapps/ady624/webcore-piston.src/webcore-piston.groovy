@@ -13,8 +13,9 @@
  *  for the specific language governing permissions and limitations under the License.
  *
 */
-public static String version() { return "v0.0.04a.20170318" }
+public static String version() { return "v0.0.04b.20170318" }
 /*
+ *	03/18/2016 >>> v0.0.04b.20170318 - ALPHA - Various fixes
  *	03/18/2016 >>> v0.0.04a.20170318 - ALPHA - Enabled manual piston status and added the set piston status task as well as the exit statement
  *	03/18/2016 >>> v0.0.049.20170318 - ALPHA - Third attempt to fix switch
  *	03/18/2016 >>> v0.0.048.20170318 - ALPHA - Second attempt to fix switch fallbacks with wait breaks, wait in secondary cases were not working
@@ -369,7 +370,7 @@ private getRunTimeData(rtData = null, noVars = false) {
     rtData.piston = state.piston
     rtData.locationId = hashId(location.id)
     //flow control
-    rtData.state = [old: state.state || '', new: state.piston.o?.mps ? state.state || '' : 'true'];
+    rtData.state = [old: (state.state ?: ''), new: state.piston.o?.mps ? (state.state ?: '') : 'true'];
     rtData.statementLevel = 0;
     rtData.fastForwardTo = null
     rtData.break = false
@@ -490,6 +491,7 @@ private Boolean executeEvent(rtData, event) {
         ]
         state.lastEvent = rtData.currentEvent
         //previous variables
+        setSystemVariableValue(rtData, '$state', rtData.state.new)
         setSystemVariableValue(rtData, '$previousEventDate', rtData.previousEvent?.date ?: now())
         setSystemVariableValue(rtData, '$previousEventDelay', rtData.previousEvent?.delay ?: 0)
         setSystemVariableValue(rtData, '$previousEventDevice', rtData.previousEvent?.device)
@@ -681,6 +683,11 @@ private Boolean executeStatement(rtData, statement, async = false) {
                     perform = evaluateConditions(rtData, statement, 'c', async)
                 	//we override current condition so that child statements can cancel on it
 	                rtData.stack.c = statement.$
+                    if (!rtData.fastForwardTo && (!rtData.piston.o?.mps) && (statement.t == 'if') && (rtData.statementLevel == 1)) {
+                        //automatic piston state
+                        rtData.state.new = 'true';
+                    }
+                    
                     if (perform || !!rtData.fastForwardTo) {
                         if (statement.t in ['if', 'while']) {
                             if (!executeStatements(rtData, statement.s, async)) {
@@ -707,7 +714,7 @@ private Boolean executeStatement(rtData, statement, async = false) {
                                     if (!rtData.fastForwardTo) break
                                 }                	
                             }
-                            if (state.piston.o?.mps && !perform && !rtData.fastForwardTo && (rtData.statementLevel == 1)) {
+                            if (!rtData.fastForwardTo && (!rtData.piston.o?.mps) && (rtData.statementLevel == 1)) {
                             	//automatic piston state
                                 rtData.state.new = 'false';
                             }
@@ -1003,6 +1010,7 @@ private long vcmd_setState(rtData, device, params) {
 	def value = params[0]
     if (rtData.piston.o?.mps) {
     	rtData.state.new = value
+        setSystemVariableValue(rtData, '$state', rtData.state.new)        
     } else {
 	    error "Cannot set the piston state while in automatic mode. Please edit the piston settings to disable the automatic piston state if you want to manually control the state.", rtData
     }
@@ -3039,6 +3047,7 @@ private static Map getSystemVariables() {
 		"\$currentStateSince": [t: "time", v: null],
 		"\$nextScheduledTime": [t: "time", v: null],
 		"\$name": [t: "string", d: true],
+		"\$state": [t: "string", v: ''],
 		"\$now": [t: "time", d: true],
 		"\$utc": [t: "time", d: true],
 		"\$localNow": [t: "time", d: true],
