@@ -19,8 +19,9 @@
  *  Version history
  */
 
-public static String version() { return "v0.0.046.20170318" }
+public static String version() { return "v0.0.047.20170318" }
 /*
+ *	03/18/2016 >>> v0.0.047.20170318 - ALPHA - Attempt to fix switch fallbacks with wait breaks
  *	03/18/2016 >>> v0.0.046.20170318 - ALPHA - Various critical fixes - including issues with setLevel without a required state
  *	03/18/2016 >>> v0.0.045.20170318 - ALPHA - Fixed a newly introduced bug for Toggle (missing parameters)
  *	03/17/2016 >>> v0.0.044.20170317 - ALPHA - Cleanup ghost else-ifs on piston save
@@ -707,7 +708,7 @@ private Map listAvailableDevices(raw = false) {
             	if (raw) {
                     devices[devId] = dev
                 } else {
-                	devices[devId] = [n: dev.getDisplayName(), cn: dev.getCapabilities()*.name, a: dev.getSupportedAttributes().unique{ it.getName() }.collect{[n: it.getName(), t: it.getDataType(), o: it.getValues()]}, c: dev.getSupportedCommands().collect{[n: it.getName(), p: it.getArguments()]}]
+                	devices[devId] = [n: dev.getDisplayName(), cn: dev.getCapabilities()*.name, a: dev.getSupportedAttributes().unique{ it.getName() }.collect{[n: it.getName(), t: it.getDataType(), o: it.getValues()]}, c: dev.getSupportedCommands().unique{ it.getName() }.collect{[n: it.getName(), p: it.getArguments()]}]
                 }
             }
         }
@@ -1155,9 +1156,9 @@ private static Map commands() {
 		open						: [ n: "Open",																			a: "door|valve|windowShade",		v: "open",																																			],
 		pause						: [ n: "Pause",																																																																	],
 		play						: [ n: "Play",																																																																	],
-		playText					: [ n: "Speak text...",					d: "Speak text \"{0}\"{1}",																					p: [[n:"Text",t:"string"], [n:"Volume", t:"level", d:" at volume {v}"]],  													],
-		playTextAndRestore			: [ n: "Speak text...",					d: "Speak text \"{0}\"{1} and restore",																		p: [[n:"Text",t:"string"], [n:"Volume", t:"level", d:" at volume {v}"]],  													],
-		playTextAndResume			: [ n: "Speak text...",					d: "Speak text \"{0}\"{1} and resume",																		p: [[n:"Text",t:"string"], [n:"Volume", t:"level", d:" at volume {v}"]],  													],
+		playText					: [ n: "Speak text...",					d: "Speak text \"{0}\"",																					p: [[n:"Text",t:"string"]],  													],
+		playTextAndRestore			: [ n: "Speak text and restore...",		d: "Speak text \"{0}\" and restore",																		p: [[n:"Text",t:"string"]],  													],
+		playTextAndResume			: [ n: "Speak text and resume...",		d: "Speak text \"{0}\" and resume",																		p: [[n:"Text",t:"string"]],  													],
 		playTrack					: [ n: "Play track...",					d: "Play track <uri>{0}</uri>{1}",																			p: [[n:"Track URL",t:"url"], [n:"Volume", t:"level", d:" at volume {v}"]],  												],
 		playTrackAndRestore			: [ n: "Play track...",					d: "Play track <uri>{0}</uri>{1} and restore",																p: [[n:"Track URL",t:"url"], [n:"Volume", t:"level", d:" at volume {v}"]],  												],
 		playTrackAndResume			: [ n: "Play track...",					d: "Play track <uri>{0}</uri>{1} and resume",																p: [[n:"Track URL",t:"url"], [n:"Volume", t:"level", d:" at volume {v}"]],  												],

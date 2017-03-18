@@ -13,8 +13,9 @@
  *  for the specific language governing permissions and limitations under the License.
  *
 */
-public static String version() { return "v0.0.046.20170318" }
+public static String version() { return "v0.0.047.20170318" }
 /*
+ *	03/18/2016 >>> v0.0.047.20170318 - ALPHA - Attempt to fix switch fallbacks with wait breaks
  *	03/18/2016 >>> v0.0.046.20170318 - ALPHA - Various critical fixes - including issues with setLevel without a required state
  *	03/18/2016 >>> v0.0.045.20170318 - ALPHA - Fixed a newly introduced bug for Toggle (missing parameters)
  *	03/17/2016 >>> v0.0.044.20170317 - ALPHA - Cleanup ghost else-ifs on piston save
@@ -445,10 +446,10 @@ def handleEvents(event) {
         schedules.remove(event.schedule)
         atomicState.schedules = schedules
         def delay = event.schedule.t - now()
-        if (delay > 0) {
-        	warn "Aligning to schedule timing, waiting for ${delay}ms...", rtData
-        	pause(delay)
-        }
+//        if (delay > 0) {
+//        	warn "Aligning to schedule timing, waiting for ${delay}ms...", rtData
+//        	pause(delay)
+//        }
         success = executeEvent(rtData, event)
     }
 	rtData.stats.timing.e = now() - startTime
@@ -774,7 +775,7 @@ private Boolean executeStatement(rtData, statement, async = false) {
                             }
                         }
                     }
-                    if (statement.e && statement.e.length && (!found || fallThrough || !!rtData.fastForwardTo)) {
+                    if (statement.e && statement.e.length && (value || !!rtData.fastForwardTo) && (!found || fallThrough || !!rtData.fastForwardTo)) {
                     	//no case found, let's do the default
 						if (!executeStatements(rtData, statement.e, async)) {
                             //stop processing
@@ -1071,11 +1072,12 @@ private Boolean evaluateConditions(rtData, conditions, collection, async) {
     }
     def result = not ? !value : !!value
     if (!rtData.fastForwardTo) tracePoint(rtData, "c:${conditions.$}", now() - t, result)
-    if (rtData.cache["c:${conditions.$}"] != result) {
+    def oldResult = !!rtData.cache["c:${conditions.$}"];
+    if (oldResult != result) {  
     	//condition change
         cancelConditionSchedules(rtData, conditions.$)
     }
-    rtData.cache["c:${conditions.$}"] = result    
+    rtData.cache["c:${conditions.$}"] = result
     //true/false actions
     if (collection == 'c') {
 	    if ((result || rtData.fastForwardTo) && conditions.ts && conditions.ts.length) executeStatements(rtData, conditions.ts, async) 
@@ -1271,6 +1273,7 @@ private Map valueChanged(rtData, comparisonValue) {
 	def oldValue = rtData.cache[comparisonValue.i]
     def newValue = comparisonValue.v
     if (!(oldValue instanceof Map)) oldValue = false
+//    warn "value changed? $oldValue >>> $newValue", rtData
     return (!!oldValue && ((oldValue.t != newValue.t) || ("${oldValue.v}" != "${newValue.v}"))) ? [i: comparisonValue.i, v: oldValue] : null
 }
 
