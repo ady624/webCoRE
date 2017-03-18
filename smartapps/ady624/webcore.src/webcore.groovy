@@ -19,8 +19,9 @@
  *  Version history
  */
 
-public static String version() { return "v0.0.045.20170318" }
+public static String version() { return "v0.0.046.20170318" }
 /*
+ *	03/18/2016 >>> v0.0.046.20170318 - ALPHA - Various critical fixes - including issues with setLevel without a required state
  *	03/18/2016 >>> v0.0.045.20170318 - ALPHA - Fixed a newly introduced bug for Toggle (missing parameters)
  *	03/17/2016 >>> v0.0.044.20170317 - ALPHA - Cleanup ghost else-ifs on piston save
  *	03/17/2016 >>> v0.0.043.20170317 - ALPHA - Added "View piston in dashboard" to child app UI

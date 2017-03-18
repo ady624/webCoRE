@@ -13,8 +13,9 @@
  *  for the specific language governing permissions and limitations under the License.
  *
 */
-public static String version() { return "v0.0.045.20170318" }
+public static String version() { return "v0.0.046.20170318" }
 /*
+ *	03/18/2016 >>> v0.0.046.20170318 - ALPHA - Various critical fixes - including issues with setLevel without a required state
  *	03/18/2016 >>> v0.0.045.20170318 - ALPHA - Fixed a newly introduced bug for Toggle (missing parameters)
  *	03/17/2016 >>> v0.0.044.20170317 - ALPHA - Cleanup ghost else-ifs on piston save
  *	03/17/2016 >>> v0.0.043.20170317 - ALPHA - Added "View piston in dashboard" to child app UI
@@ -127,7 +128,6 @@ def pageMain() {
 			def dashboardUrl = parent.getDashboardUrl()
         	if (dashboardUrl) {
             	dashboardUrl = "${dashboardUrl}piston/${hashId(app.id)}"
-                log.trace dashboardUrl
 				href "", title: "View piston in dashboard", style: "external", url: dashboardUrl, image: "https://cdn.rawgit.com/ady624/CoRE/master/resources/images/icons/dashboard.png", required: false
 			} else {
                 paragraph "Sorry, your dashboard does not seem to be enabled, please go to the parent app and enable the dashboard."
@@ -249,7 +249,6 @@ private int setIds(node, maxId = 0, existingIds = [:], requiringIds = [], level 
             existingIds[id] = id
         }
         if ((node.t == 'if') && (node.ei)) {
-        log.trace node.ei
         	node.ei.removeAll{ !it.c && !it.s }
 			for (elseIf in node.ei) {
 		        id = elseIf['$']
@@ -913,7 +912,8 @@ private Boolean executeTask(rtData, devices, statement, task, async) {
 
 private executePhysicalCommand(rtData, device, command, params = [], delay = null) {
 	try {
-    	if (params && params.length) {
+    	params = (params instanceof List) ? params : (params ? [params] : [])
+    	if (params.size()) {
         	if (delay) {
 				device."$command"(params as Object[], [delay: delay])
             } else {
@@ -929,7 +929,7 @@ private executePhysicalCommand(rtData, device, command, params = [], delay = nul
 	} catch(all) {
     	error "Error while executing physical command $device.$command($params):", rtData, null, all
     }
-    if (rtData.piston.o.ced) {
+    if (rtData.piston.o?.ced) {
         pause(rtData.piston.o.ced)
     	debug "Injected a ${rtData.piston.o.ced}ms delay after [$device].$command(${params ? "$params" : ''})", rtData
     }
@@ -948,10 +948,10 @@ private long cmd_setLevel(rtData, device, params) {
 	def level = params[0]
     def state = params.size() > 1 ? params[1] : ""
     def delay = params.size() > 2 ? params[2] : 0
-    if ((state != null) && (device.currentValue('switch') != "$state")) {
+    if (state && (device.currentValue('switch') != "$state")) {
         return 0
     }
-    executePhysicalCommand(rtData, device, 'setLevel', [level], [delay: delay ?: 0])
+    executePhysicalCommand(rtData, device, 'setLevel', level, delay)
     return 0
 }
 
@@ -1007,9 +1007,9 @@ private long vcmd_toggle(rtData, device, params) {
 private long vcmd_toggleLevel(rtData, device, params) {
 	def level = params[0]
 	if (device.currentValue('level') == level) {
-	    executePhysicalCommand(rtData, device, 'setLevel', [0])
+	    executePhysicalCommand(rtData, device, 'setLevel', 0)
     } else {
-	    executePhysicalCommand(rtData, device, 'setLevel', [level])
+	    executePhysicalCommand(rtData, device, 'setLevel', level)
     }
     return 0
 }
@@ -1111,7 +1111,7 @@ private evaluateOperand(rtData, node, operand, index = null, trigger = false) {
             break
         case "c": //constant
         case "e": //expression
-	        values = [[i: "${node?.$}:$index:0", v: evaluateExpression(rtData, operand.exp, null)]]
+	        values = [[i: "${node?.$}:$index:0", v: evaluateExpression(rtData, operand.exp)]]
             break
     }
     if (!node) {
@@ -1655,6 +1655,9 @@ private Map evaluateExpression(rtData, expression, dataType = null) {
     switch (expression.t) {
         case "string":
         case "integer":
+        case "int32":
+        case "int64":
+        case "long":
         case "decimal":
         case "boolean":
         case "time":
@@ -2416,7 +2419,7 @@ private func_previousage(rtData, params) {
                 //some events get duplicated, so we really want to look for the last "different valued" state
                 for(int i = 1; i < states.size(); i++) {
                 	if (states[i].getValue() != newValue) {
-            			long result = now() - states[i].getDate().getTime()
+            			def result = now() - states[i].getDate().getTime()
                 		return [t: "long", v: result]
                     }
                 }
@@ -2553,15 +2556,9 @@ private func_eq(rtData, params) {
 	if (!params || !(params instanceof List) || (params.size() != 2)) {
     	return [t: "error", v: "Invalid parameters. Expecting eq(value1, value2)"];
     }
-    def value1 = evaluateExpression(rtData, params[0]).v
-    def type = 'string'
-    if (value1 instanceof float) type = 'float'
-    if (value1 instanceof boolean) type = 'boolean'
-    if (value1 instanceof long) type = 'long'
-    if (value1 instanceof int) type = 'int'
-    value1 = cast(value1, type)
-    def value2 = evaluateExpression(rtData, params[0], type).v
-    return [t: "boolean", v: value1 == value2]
+    def value1 = evaluateExpression(rtData, params[0])
+    def value2 = evaluateExpression(rtData, params[1], value1.t)
+    return [t: "boolean", v: value1.v == value2.v]
 }
 
 /******************************************************************************/
@@ -2572,15 +2569,9 @@ private func_lt(rtData, params) {
 	if (!params || !(params instanceof List) || (params.size() != 2)) {
     	return [t: "error", v: "Invalid parameters. Expecting lt(value1, value2)"];
     }
-    def value1 = evaluateExpression(rtData, params[0]).v
-    def type = 'string'
-    if (value1 instanceof float) type = 'float'
-    if (value1 instanceof boolean) type = 'int'
-    if (value1 instanceof long) type = 'long'
-    if (value1 instanceof int) type = 'int'
-    value1 = cast(value1, type)
-    def value2 = evaluateExpression(rtData, params[0], type).v
-    return [t: "boolean", v: value1 < value2]
+    def value1 = evaluateExpression(rtData, params[0])
+    def value2 = evaluateExpression(rtData, params[1], value1.t)
+    return [t: "boolean", v: value1.v < value2.v]
 }
 
 /******************************************************************************/
@@ -2591,15 +2582,9 @@ private func_le(rtData, params) {
 	if (!params || !(params instanceof List) || (params.size() != 2)) {
     	return [t: "error", v: "Invalid parameters. Expecting le(value1, value2)"];
     }
-    def value1 = evaluateExpression(rtData, params[0]).v
-    def type = 'string'
-    if (value1 instanceof float) type = 'float'
-    if (value1 instanceof boolean) type = 'int'
-    if (value1 instanceof long) type = 'long'
-    if (value1 instanceof int) type = 'int'
-    value1 = cast(value1, type)
-    def value2 = evaluateExpression(rtData, params[0], type).v
-    return [t: "boolean", v: value1 <= value2]
+    def value1 = evaluateExpression(rtData, params[0])
+    def value2 = evaluateExpression(rtData, params[1], value1.t)
+    return [t: "boolean", v: value1.v <= value2.v]
 }
 
 /******************************************************************************/
@@ -2610,15 +2595,9 @@ private func_gt(rtData, params) {
 	if (!params || !(params instanceof List) || (params.size() != 2)) {
     	return [t: "error", v: "Invalid parameters. Expecting gt(value1, value2)"];
     }
-    def value1 = evaluateExpression(rtData, params[0]).v
-    def type = 'string'
-    if (value1 instanceof float) type = 'float'
-    if (value1 instanceof boolean) type = 'int'
-    if (value1 instanceof long) type = 'long'
-    if (value1 instanceof int) type = 'int'
-    value1 = cast(value1, type)
-    def value2 = evaluateExpression(rtData, params[0], type).v
-    return [t: "boolean", v: value1 > value2]
+    def value1 = evaluateExpression(rtData, params[0])
+    def value2 = evaluateExpression(rtData, params[1], value1.t)
+    return [t: "boolean", v: value1.v > value2.v]
 }
 
 /******************************************************************************/
@@ -2629,15 +2608,9 @@ private func_ge(rtData, params) {
 	if (!params || !(params instanceof List) || (params.size() != 2)) {
     	return [t: "error", v: "Invalid parameters. Expecting ge(value1, value2)"];
     }
-    def value1 = evaluateExpression(rtData, params[0]).v
-    def type = 'string'
-    if (value1 instanceof float) type = 'float'
-    if (value1 instanceof boolean) type = 'int'
-    if (value1 instanceof long) type = 'long'
-    if (value1 instanceof int) type = 'int'
-    value1 = cast(value1, type)
-    def value2 = evaluateExpression(rtData, params[0], type).v
-    return [t: "boolean", v: value1 >= value2]
+    def value1 = evaluateExpression(rtData, params[0])
+    def value2 = evaluateExpression(rtData, params[1], value1.t)
+    return [t: "boolean", v: value1.v >= value2.v]
 }
 
 
@@ -3030,6 +3003,7 @@ private static Map getSystemVariables() {
 		"\$currentStateDuration": [t: "string", v: null],
 		"\$currentStateSince": [t: "time", v: null],
 		"\$nextScheduledTime": [t: "time", v: null],
+		"\$name": [t: "string", d: true],
 		"\$now": [t: "time", d: true],
 		"\$utc": [t: "time", d: true],
 		"\$localNow": [t: "time", d: true],
@@ -3086,6 +3060,7 @@ private static Map getSystemVariables() {
 
 private getSystemVariableValue(name) {
 	switch (name) {
+		case "\$name": return app.label
 		case "\$now": return (long) now()
 		case "\$utc": return (long) now()
 		case "\$localNow": return (long) localTime()
