@@ -19,8 +19,9 @@
  *  Version history
  */
 
-public static String version() { return "v0.0.04b.20170318" }
+public static String version() { return "v0.0.04c.20170319" }
 /*
+ *	03/19/2016 >>> v0.0.04c.20170319 - ALPHA - Device typed variables now enabled - not yet possible to use them in conditions or in actions, but getting there
  *	03/18/2016 >>> v0.0.04b.20170318 - ALPHA - Various fixes
  *	03/18/2016 >>> v0.0.04a.20170318 - ALPHA - Enabled manual piston status and added the set piston status task as well as the exit statement
  *	03/18/2016 >>> v0.0.049.20170318 - ALPHA - Third attempt to fix switch

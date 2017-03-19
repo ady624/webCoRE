@@ -13,8 +13,9 @@
  *  for the specific language governing permissions and limitations under the License.
  *
 */
-public static String version() { return "v0.0.04b.20170318" }
+public static String version() { return "v0.0.04c.20170319" }
 /*
+ *	03/19/2016 >>> v0.0.04c.20170319 - ALPHA - Device typed variables now enabled - not yet possible to use them in conditions or in actions, but getting there
  *	03/18/2016 >>> v0.0.04b.20170318 - ALPHA - Various fixes
  *	03/18/2016 >>> v0.0.04a.20170318 - ALPHA - Enabled manual piston status and added the set piston status task as well as the exit statement
  *	03/18/2016 >>> v0.0.049.20170318 - ALPHA - Third attempt to fix switch
@@ -658,6 +659,7 @@ private Boolean executeStatement(rtData, statement, async = false) {
     	rtData.stack.cs.push(c)
     }
     def parentAsync = async
+    def parentIndex = getVariable(rtData, '$index').v
     async = !!async || (statement.a == "1")
     def perform = false
     def repeat = true
@@ -857,11 +859,14 @@ private Boolean executeStatement(rtData, statement, async = false) {
         rtData.stack.cs.pop()        
     }    
     rtData.stack.s = rtData.stack.ss.pop()
+    setSystemVariableValue(rtData, '$index', parentIndex)
 	return value || !!rtData.fastForwardTo
 }
 
 
 private Boolean executeAction(rtData, statement, async) {
+	def parentDevicesVar = rtData.systemVars['$devices'].v
+    rtData.systemVars['$devices'].v = statement.d
 	def devices = []
     //if override
     cancelStatementSchedules(rtData, statement.$)
@@ -878,6 +883,7 @@ private Boolean executeAction(rtData, statement, async) {
         	break
         }
     }
+    rtData.systemVars['$devices'].v = parentDevicesVar
     return result
 }
 
@@ -1148,7 +1154,7 @@ private evaluateOperand(rtData, node, operand, index = null, trigger = false) {
 	            }
 	        }
 	        break;
-        case "x": //constant
+        case "x": //variable
 	        values = [[i: "${node?.$}:$index:0", v:getVariable(rtData, operand.x)]]
             break
         case "c": //constant
@@ -1557,6 +1563,12 @@ private void subscribeAll(rtData) {
     }
     if (rtData.piston.r) traverseRestrictions(rtData.piston.r, restrictionTraverser)
     if (rtData.piston.s) traverseStatements(rtData.piston.s, statementTraverser)
+    //device variables
+	for(variable in rtData.piston.v.findAll{ it.t == 'device' }) {
+    	for (deviceId in variable.v) {
+			devices[deviceId] = [c: 0 + (devices[deviceId]?.c ?: 0)]
+        }
+    }
     def dds = [:]
     for (subscription in subscriptions) {
     	for (condition in subscription.value.c) if (condition) { condition.s = false }
@@ -1612,11 +1624,12 @@ private Map getDeviceAttribute(rtData, deviceId, attributeName, trigger = false)
         def attribute = rtData.attributes[attributeName]
         if (attribute) {
         	//x = eXclude - if a momentary attribute is looked for and the device does not match the current device, then we must ignore this during comparisons
-            return [t: attribute.t, v: device.currentValue(attributeName), d: deviceId, a: attributeName, x: (!!attribute.m || !!trigger) && ((device?.id != rtData.event.device?.id) || (attributeName != rtData.event.name))]
         } else {
         	//we set eXclude to true, we don't want this to be compared, it's really an error
-            return [t: "error", v: "Attribute '${attributeName}' not found", x: true]
+            //return [t: "error", v: "Attribute '${attributeName}' not found", x: true]
+            attribute = [t: 'string']
         }
+            return [t: attribute.t, v: device.currentValue(attributeName), d: deviceId, a: attributeName, x: (!!attribute.m || !!trigger) && ((device?.id != rtData.event.device?.id) || (attributeName != rtData.event.name))]
     }
     return [t: "error", v: "Device '${deviceId}' not found"]
 }
@@ -1641,7 +1654,13 @@ def getVariable(rtData, name) {
 		}
 	}
     if (result && (result.t == 'device')) {
-    	result = [t: result.t, id: result.v, v: getDevice(rtData, result.v)]
+    	if (result.v instanceof List) {
+	    	def ds = []
+            for(d in result.v) ds.push([t: result.t, id: d, v: getDevice(rtData, d)])
+            result = ds
+        } else {
+	    	result = [t: result.t, id: result.v, v: getDevice(rtData, result.v)]
+        }
     }
     if (result.v instanceof Map) {
     	//we're dealing with an operand, let's parse it
@@ -1692,9 +1711,10 @@ private Map evaluateExpression(rtData, expression, dataType = null) {
     //if dealing with an expression that has multiple items, let's evaluate each item one by one
     //let's evaluate this expression
     if (!expression) return [t: 'error', v: 'Null expression']
+    //not sure what it was needed for - need to comment more
     if (expression && expression.v instanceof Map) return evaluateExpression(rtData, expression.v, expression.t)
     def time = now()
-    Map result = [:]
+    def result = [:]    
     switch (expression.t) {
         case "string":
         case "integer":
@@ -1704,6 +1724,8 @@ private Map evaluateExpression(rtData, expression, dataType = null) {
         case "decimal":
         case "boolean":
         case "time":
+        case "date":
+        case "datetime":
         	result = [t: expression.t, v: cast(expression.v, expression.t)]
         	break
         case "bool":
@@ -1729,18 +1751,42 @@ private Map evaluateExpression(rtData, expression, dataType = null) {
         	break
         case "variable":
         	//get variable as {n: name, t: type, v: value}
-        	result = getVariable(rtData, expression.x)
-            //if getting a variable, get it's name
-            if (result && (result.t == 'device')) result = [t: "string", v: "${result.v}"]
+           	result = [t: 'error', v: 'Invalid variable']
+        	def data = getVariable(rtData, expression.x)
+            //list of devices
+            if (data instanceof List) {
+    	        if (data.length && (data[0].t == 'device')) result = [t: "string", v: buildList(data*.v)]            	
+            } else {
+	            //if getting a variable, get it's name
+                result = data
+    	        if (result && (result.t == 'device')) result = [t: "string", v: buildList(result.v)]
+            }
         	break
         case "device":
         	//get variable as {n: name, t: type, v: value}
             def deviceId = expression.id
+            def deviceIds = []
             if (!deviceId) {
             	def var = getVariable(rtData, expression.x)
-                if (var) deviceId = var.id ?: var.v
+                if (var) {
+                	if (var instanceof List) {
+	                	deviceIds = var.collect{ it.id ?: it.v }
+                    } else {
+                    	deviceIds = var.id ? [var.id] : [var.v]
+                    }
+                }
+            } else {
+            	deviceIds = [deviceId]
             }
-            result = getDeviceAttribute(rtData, deviceId, expression.a)
+            def data = []
+            for(devId in deviceIds) {
+	            data.push(getDeviceAttribute(rtData, devId, expression.a))
+            }
+            if (data.size() == 1) {
+            	result = data[0]
+           	} else {
+            	result = data
+            }
         	break
         case "operand":
         	result = [t: "string", v: cast(expression.v, "string")]
@@ -1748,7 +1794,18 @@ private Map evaluateExpression(rtData, expression, dataType = null) {
         case "function":
             def fn = "func_${expression.n}"
             try {
-				result = "$fn"(rtData, expression.i)
+				def params = []
+                if (expression.i && expression.i.length) {
+                    for (i in expression.i) {
+                    	if (i && (i.t == 'expression') && i.i && (i.i.size() > 1) && (i.i.findAll{ it.t == 'device'}.size() == i.i.size())) {
+                        	//all devices                            
+                            params = params + i.i
+                        } else {
+                        	params.push(i)
+                        }
+                    }
+                }            
+				result = "$fn"(rtData, params)
 			} catch (all) {
 				//log error
                 result = [t: "error", v: all]
@@ -1925,6 +1982,17 @@ private Map evaluateExpression(rtData, expression, dataType = null) {
 //    return result.t == "error" ? [t: "string", v: "[ERROR: ${result.v}]", d: now() - time] : [t: dataType ?: result.t, v: cast(result.v, dataType?: result.t), d: now() - time] + (result.id ? [id: result.id] : [:])
 }
 
+private buildList(list, suffix = 'and') {
+    if (!list) return ''
+    if (!(list instanceof List)) list = [list]
+	def cnt = 1
+	def result = ""
+	for (item in list) {
+		result += "$item" + (cnt < list.size() ? (cnt == list.size() - 1 ? " $suffix " : ", ") : "")
+		cnt++
+	}
+	return result;
+}
 
 /******************************************************************************/
 /*** dewPoint returns the calculated dew point temperature					***/
@@ -2493,7 +2561,7 @@ private func_previousvalue(rtData, params) {
             def deviceId = param.id
             if (!deviceId) {
                 def var = getVariable(rtData, param.x)
-                if (var) deviceId = var.id ?: var.v
+				if (var) deviceId = var.id ?: var.v
             }
             def device = getDevice(rtData, deviceId)
             if (device) {
@@ -2707,6 +2775,44 @@ private cast(value, dataType) {
     if (value instanceof GString) {
     	value = value.toString()
     }
+    if (value instanceof List) {
+    	switch (value.size()) {
+        	case 0:
+            	value = '';
+                break;
+            case 1:
+            	value = value[0]
+                breal
+            default:
+                //we have an array of values, we convert that based on data type
+                def dt = dataType
+                if (value[0] instanceof Float) dt = 'decimal'
+                if (value[0] instanceof BigDecimal) dt = 'decimal'
+                if (value[0] instanceof Long) dt = 'decimal'
+                if (value[0] instanceof Integer) dt = 'decimal'
+                if (value[0] instanceof Boolean) dt = 'boolean'
+                switch (dt) {
+                    case 'integer':
+                    case 'int32':
+                    case 'number':
+                    case 'int64':
+                    case 'long':
+                    case 'float':
+                    case 'decimal':
+                        value = func_avg(rtData, value.collect{ [v: it] }).v
+                        break;
+                    case 'bool':
+                    case 'boolean':
+                        def v = true;
+                        for (i in value) v = v && cast(i, 'boolean')
+                        value = v
+                        break;
+                    default:
+                        value = buildList(value)
+                        break;
+                }
+        }
+    }
     if (value == null) value = '';
 	switch (dataType) {
 		case "string":
@@ -2794,6 +2900,11 @@ private cast(value, dataType) {
             }
 			return !!value
 		case "time":
+			return value instanceof String ? utcToLocalDate(value).time : cast(value, "long") % 86400000
+		case "date":
+			def d = value instanceof String ? utcToLocalDate(value).time : cast(value, "long")
+            return d - (d % 864000000)
+		case "datetime":
 			return value instanceof String ? utcToLocalDate(value).time : cast(value, "long")
 		case "vector3":
 			return value instanceof String ? utcToLocalDate(value).time : cast(value, "long")
@@ -3034,23 +3145,25 @@ private Map getLocalVariables(rtData, vars) {
 private static Map getSystemVariables() {
 	return [
 		"\$currentEventAttribute": [t: "string", v: null],
-		"\$currentEventDate": [t: "time", v: null],
+		"\$currentEventDate": [t: "datetime", v: null],
 		"\$currentEventDelay": [t: "integer", v: null],
 		"\$currentEventDevice": [t: "device", v: null],
 		"\$currentEventDeviceIndex": [t: "integer", v: null],
 		"\$currentEventDevicePhysical": [t: "boolean", v: null],
-		"\$currentEventReceived": [t: "time", v: null],
+		"\$currentEventReceived": [t: "datetime", v: null],
 		"\$currentEventValue": [t: "dynamic", v: null],
 		"\$currentEventUnit": [t: "string", v: null],
 		"\$currentState": [t: "string", v: null],
 		"\$currentStateDuration": [t: "string", v: null],
-		"\$currentStateSince": [t: "time", v: null],
-		"\$nextScheduledTime": [t: "time", v: null],
+		"\$currentStateSince": [t: "datetime", v: null],
+		"\$nextScheduledTime": [t: "datetime", v: null],
 		"\$name": [t: "string", d: true],
 		"\$state": [t: "string", v: ''],
-		"\$now": [t: "time", d: true],
-		"\$utc": [t: "time", d: true],
-		"\$localNow": [t: "time", d: true],
+		"\$now": [t: "datetime", d: true],
+        '$devices': [t: 'device', v: null],
+        '$location': [t: 'device', v: null],
+		"\$utc": [t: "datetime", d: true],
+		"\$localNow": [t: "datetime", d: true],
 		"\$hour": [t: "integer", d: true],
 		"\$hour24": [t: "integer", d: true],
 		"\$minute": [t: "integer", d: true],
@@ -3063,30 +3176,30 @@ private static Map getSystemVariables() {
 		"\$month": [t: "integer", d: true],
 		"\$monthName": [t: "string", d: true],
 		"\$year": [t: "integer", d: true],
-		"\$midnight": [t: "time", d: true],
-		"\$noon": [t: "time", d: true],
-		"\$sunrise": [t: "time", d: true],
-		"\$sunset": [t: "time", d: true],
-		"\$nextMidnight": [t: "time", d: true],
-		"\$nextNoon": [t: "time", d: true],
-		"\$nextSunrise": [t: "time", d: true],
-		"\$nextSunset": [t: "time", d: true],
+		"\$midnight": [t: "datetime", d: true],
+		"\$noon": [t: "datetime", d: true],
+		"\$sunrise": [t: "datetime", d: true],
+		"\$sunset": [t: "datetime", d: true],
+		"\$nextMidnight": [t: "datetime", d: true],
+		"\$nextNoon": [t: "datetime", d: true],
+		"\$nextSunrise": [t: "datetime", d: true],
+		"\$nextSunset": [t: "datetime", d: true],
 		"\$time": [t: "string", d: true],
 		"\$time24": [t: "string", d: true],
 		"\$index": [t: "decimal", v: null],
 		"\$previousEventAttribute": [t: "string", v: null],
-		"\$previousEventDate": [t: "time", v: null],
+		"\$previousEventDate": [t: "datetime", v: null],
 		"\$previousEventDelay": [t: "integer", v: null],
 		"\$previousEventDevice": [t: "device", v: null],
 		"\$previousEventDeviceIndex": [t: "integer", v: null],
 		"\$previousEventDevicePhysical": [t: "boolean", v: null],
 		"\$previousEventExecutionTime": [t: "integer", v: null],
-		"\$previousEventReceived": [t: "time", v: null],
+		"\$previousEventReceived": [t: "datetime", v: null],
 		"\$previousEventValue": [t: "dynamic", v: null],
 		"\$previousEventUnit": [t: "string", v: null],
 		"\$previousState": [t: "string", v: null],
 		"\$previousStateDuration": [t: "string", v: null],
-		"\$previousStateSince": [t: "time", v: null],
+		"\$previousStateSince": [t: "datetime", v: null],
 		"\$random": [t: "decimal", d: true],
 		"\$randomColor": [t: "string", d: true],
 		"\$randomColorName": [t: "string", d: true],
