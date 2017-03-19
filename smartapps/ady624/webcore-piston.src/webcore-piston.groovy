@@ -13,8 +13,9 @@
  *  for the specific language governing permissions and limitations under the License.
  *
 */
-public static String version() { return "v0.0.04c.20170319" }
+public static String version() { return "v0.0.04d.20170319" }
 /*
+ *	03/19/2016 >>> v0.0.04d.20170319 - ALPHA - Fixes for functions and device typed variables
  *	03/19/2016 >>> v0.0.04c.20170319 - ALPHA - Device typed variables now enabled - not yet possible to use them in conditions or in actions, but getting there
  *	03/18/2016 >>> v0.0.04b.20170318 - ALPHA - Various fixes
  *	03/18/2016 >>> v0.0.04a.20170318 - ALPHA - Enabled manual piston status and added the set piston status task as well as the exit statement
@@ -1793,13 +1794,27 @@ private Map evaluateExpression(rtData, expression, dataType = null) {
         	break
         case "function":
             def fn = "func_${expression.n}"
+            //in a function, we look for device parameters, they may be lists - we need to reformat all parameters to send them to the function properly
             try {
 				def params = []
-                if (expression.i && expression.i.length) {
+                if (expression.i && expression.i.size()) {
                     for (i in expression.i) {
-                    	if (i && (i.t == 'expression') && i.i && (i.i.size() > 1) && (i.i.findAll{ it.t == 'device'}.size() == i.i.size())) {
-                        	//all devices                            
-                            params = params + i.i
+                    	if (i && (i.t == 'expression') && i.i && (i.i.findAll{ it.t == 'device'}.size() == i.i.size())) {
+                        	for (item in i.i) {
+                            	if (item.id) {
+                                	params.push(item)
+                                } else if (item.x) {                                
+                                	def dev = getVariable(rtData, item.x)
+                                    //inherit the attribute, if any
+                                    if (dev) {
+                                    	if (dev instanceof List) {
+	                                    	params = params + dev.collect{ it + [a: item.a] }
+                                    	} else {
+                                    		params.push(dev + [a: item.a])
+                                        }
+                                   	}
+    							}                            
+                            }
                         } else {
                         	params.push(i)
                         }
@@ -2352,7 +2367,7 @@ private func_least(rtData, params) {
     	def value = evaluateExpression(rtData, param)
     	data[value.v] = [t: value.t, v: value.v, c: (data[value.v]?.c ?: 0) + 1]
     }
-    def value = data.sort{ it.c }[0]
+    def value = data.sort{ it.value.c }.collect{ it.value }[0]
     return [t: value.t, v: value.v]
 }
 
@@ -2369,7 +2384,7 @@ private func_most(rtData, params) {
     	def value = evaluateExpression(rtData, param)
     	data[value.v] = [t: value.t, v: value.v, c: (data[value.v]?.c ?: 0) + 1]
     }
-    def value = data.sort{ - it.c }[0]
+    def value = data.sort{ - it.value.c }.collect{ it.value }[0]
     return [t: value.t, v: value.v]
 }
 
@@ -3142,7 +3157,7 @@ private Map getLocalVariables(rtData, vars) {
 }
 
 
-private static Map getSystemVariables() {
+private Map getSystemVariables() {
 	return [
 		"\$currentEventAttribute": [t: "string", v: null],
 		"\$currentEventDate": [t: "datetime", v: null],

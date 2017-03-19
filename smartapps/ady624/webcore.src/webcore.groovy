@@ -19,8 +19,9 @@
  *  Version history
  */
 
-public static String version() { return "v0.0.04c.20170319" }
+public static String version() { return "v0.0.04d.20170319" }
 /*
+ *	03/19/2016 >>> v0.0.04d.20170319 - ALPHA - Fixes for functions and device typed variables
  *	03/19/2016 >>> v0.0.04c.20170319 - ALPHA - Device typed variables now enabled - not yet possible to use them in conditions or in actions, but getting there
  *	03/18/2016 >>> v0.0.04b.20170318 - ALPHA - Various fixes
  *	03/18/2016 >>> v0.0.04a.20170318 - ALPHA - Enabled manual piston status and added the set piston status task as well as the exit statement
@@ -1412,6 +1413,8 @@ private static Map functions() {
       	previousvalue	: [ t: "dynamic",	d: "previousValue",	],
       	newer			: [ t: "integer",						],
       	older			: [ t: "integer",						],
+      	least			: [ t: "dynamic",						],
+      	most			: [ t: "dynamic",						],
       	avg				: [ t: "decimal",						],
       	variance		: [ t: "decimal",						],
       	stdev			: [ t: "decimal",						],
