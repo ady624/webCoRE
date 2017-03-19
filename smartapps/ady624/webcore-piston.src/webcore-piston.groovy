@@ -1046,7 +1046,7 @@ private long vcmd_toggle(rtData, device, params) {
 	if (device.currentValue('switch') == 'off') {
 	    executePhysicalCommand(rtData, device, 'on')
     } else {
-	    executePhysicalCommand(rtData, device, 'on')
+	    executePhysicalCommand(rtData, device, 'off')
     }
     return 0
 }
