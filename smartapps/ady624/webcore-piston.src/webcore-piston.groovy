@@ -13,8 +13,9 @@
  *  for the specific language governing permissions and limitations under the License.
  *
 */
-public static String version() { return "v0.0.04d.20170319" }
+public static String version() { return "v0.0.04e.20170320" }
 /*
+ *	03/20/2016 >>> v0.0.04e.20170320 - ALPHA - Major operand/expression/cast refactoring to allow for arrays of devices - may break things. Also introduced for each loops and actions on device typed variables
  *	03/19/2016 >>> v0.0.04d.20170319 - ALPHA - Fixes for functions and device typed variables
  *	03/19/2016 >>> v0.0.04c.20170319 - ALPHA - Device typed variables now enabled - not yet possible to use them in conditions or in actions, but getting there
  *	03/18/2016 >>> v0.0.04b.20170318 - ALPHA - Various fixes
@@ -249,7 +250,7 @@ def set(data) {
 
 
 private int setIds(node, maxId = 0, existingIds = [:], requiringIds = [], level = 0) {
-    if (node?.t in ['if', 'while', 'repeat', 'for', 'switch', 'action', 'condition', 'restriction', 'group']) {
+    if (node?.t in ['if', 'while', 'repeat', 'for', 'each', 'switch', 'action', 'condition', 'restriction', 'group']) {
         def id = node['$']
         if (!id || existingIds[id]) {
             requiringIds.push(node)
@@ -455,10 +456,6 @@ def handleEvents(event) {
         schedules.remove(event.schedule)
         atomicState.schedules = schedules
         def delay = event.schedule.t - now()
-//        if (delay > 0) {
-//        	warn "Aligning to schedule timing, waiting for ${delay}ms...", rtData
-//        	pause(delay)
-//        }
         success = executeEvent(rtData, event)
     }
 	rtData.stats.timing.e = now() - startTime
@@ -661,6 +658,7 @@ private Boolean executeStatement(rtData, statement, async = false) {
     }
     def parentAsync = async
     def parentIndex = getVariable(rtData, '$index').v
+    def parentDevice = getVariable(rtData, '$device').v
     async = !!async || (statement.a == "1")
     def perform = false
     def repeat = true
@@ -730,19 +728,30 @@ private Boolean executeStatement(rtData, statement, async = false) {
                     }
                     break
                 case 'for':
-                    float startValue = evaluateScalarOperand(rtData, statement, statement.lo, null, 'decimal').v
-                    float endValue = evaluateScalarOperand(rtData, statement, statement.lo2, null, 'decimal').v
-                    float stepValue = evaluateScalarOperand(rtData, statement, statement.lo3, null, 'decimal').v ?: 1.0
+                case 'each':
+                    def devices = []
+                    float startValue = 0
+                    float endValue = 0
+                    float stepValue = 1
+                    if (statement.t == 'each') {
+                    	devices = evaluateOperand(rtData, null, statement.lo).v ?: []
+                        endValue = devices.size() - 1
+                    } else {
+                    	startValue = evaluateScalarOperand(rtData, statement, statement.lo, null, 'decimal').v
+                    	endValue = evaluateScalarOperand(rtData, statement, statement.lo2, null, 'decimal').v
+                    	stepValue = evaluateScalarOperand(rtData, statement, statement.lo3, null, 'decimal').v ?: 1.0
+                    }
                     String counterVariable = getVariable(rtData, statement.x).t != 'error' ? statement.x : null
                     if (((startValue <= endValue) && (stepValue > 0)) || ((startValue >= endValue) && (stepValue < 0)) || !!rtData.fastForwardTo) {
                     	//initialize the for loop
-                        if (rtData.fastForwardTo) index = cast(rtData.cache["f:${statement.$}"], 'decimal')
+                        if (rtData.fastForwardTo) index = cast(rtData, rtData.cache["f:${statement.$}"], 'decimal')
                     	if (index == null) {
-                        	index = cast(startValue, 'decimal')
+                        	index = cast(rtData, startValue, 'decimal')
 	                        rtData.cache["f:${statement.$}"] = index                            
                         }
                         setSystemVariableValue(rtData, '$index', index)
-                        if (counterVariable && !rtData.fastForward) setVariable(rtData, counterVariable, index)
+						if ((statement.t == 'each') && !rtData.fastForward) setSystemVariableValue(rtData, '$device', (index < devices.size() ? [devices[(int) index]] : []))
+                        if (counterVariable && !rtData.fastForward) setVariable(rtData, counterVariable, (statement.t == 'each') ? [t: 'device', v:(index < devices.size() ? [devices[(int) index]] : [])] : index)
                         //do the loop
                         perform = executeStatements(rtData, statement.s, async)                        
                         if (!perform) {
@@ -760,14 +769,16 @@ private Boolean executeStatement(rtData, statement, async = false) {
                         if (!!rtData.fastForwardTo) break
                         index = index + stepValue
                         setSystemVariableValue(rtData, '$index', index)
+						if ((statement.t == 'each') && !rtData.fastForward) setSystemVariableValue(rtData, '$device', (index < devices.size() ? [devices[(int) index]] : []))
+                        if (counterVariable && !rtData.fastForward) setVariable(rtData, counterVariable, (statement.t == 'each') ? [t: 'device', v:(index < devices.size() ? [devices[(int) index]] : [])] : index)
                         rtData.cache["f:${statement.$}"] = index
                         if (((stepValue > 0 ) && (index > endValue)) || ((stepValue < 0 ) && (index < endValue))) {
                         	perform = false
                             break
                         }                    
                     }
-                	break                    
-                case 'switch':
+                	break
+				case 'switch':
                     def values = evaluateOperand(rtData, statement, statement.lo)
                 	def lo = [operand: statement.lo, values: evaluateOperand(rtData, statement, statement.lo)]
                     //go through all cases
@@ -828,7 +839,7 @@ private Boolean executeStatement(rtData, statement, async = false) {
                     value = false
                     break
                 case 'exit':
-                	vcmd_setState(rtData, null, [cast(evaluateOperand(rtData, null, statement.lo).v, 'string')])
+                	vcmd_setState(rtData, null, [cast(rtData, evaluateOperand(rtData, null, statement.lo).v, 'string')])
                     value = false
                     break
             }
@@ -836,7 +847,7 @@ private Boolean executeStatement(rtData, statement, async = false) {
             if (rtData.fastForwardTo || (statement.t == 'if')) perform = false
             
             //is this statement a loop
-            def loop = (statement.t in ['while', 'repeat', 'for'])
+            def loop = (statement.t in ['while', 'repeat', 'for', 'each'])
             if (loop && !value && !!rtData.break) {
             	//someone requested a break from the loop, we're doing it
             	rtData.break = false
@@ -861,25 +872,42 @@ private Boolean executeStatement(rtData, statement, async = false) {
     }    
     rtData.stack.s = rtData.stack.ss.pop()
     setSystemVariableValue(rtData, '$index', parentIndex)
+    setSystemVariableValue(rtData, '$device', parentDevice)
 	return value || !!rtData.fastForwardTo
 }
 
 
 private Boolean executeAction(rtData, statement, async) {
-	def parentDevicesVar = rtData.systemVars['$devices'].v
-    rtData.systemVars['$devices'].v = statement.d
+	def parentDevicesVar = rtData.systemVars['$devices'].v    
 	def devices = []
+    def deviceIds = []
     //if override
     cancelStatementSchedules(rtData, statement.$)
     def result = true
     for (d in statement.d) {
-    	def device = getDevice(rtData, d)
-        if (device) {
-        	devices.push(device)
+    	if (d.startsWith(':')) {
+    		def device = getDevice(rtData, d)
+        	if (device) {
+	        	devices.push(device)
+                deviceIds.push(d)
+	        }
+        } else {
+        	//we're dealing with a variable, let's get the list of devices from it
+        	def var = getVariable(rtData, d)
+            if (var.t == 'device') {
+            	for (vd in var.v) {
+                    def device = getDevice(rtData, vd)
+                    if (device) {
+                        devices.push(device)
+                		deviceIds.push(vd)
+                    }
+                }
+            }
         }
     }
+	rtData.systemVars['$devices'].v = deviceIds.unique()
     for (task in statement.k) {
-        result = executeTask(rtData, devices, statement, task, async)
+        result = executeTask(rtData, devices.unique(), statement, task, async)
         if (!result && !rtData.fastForwardTo) {
         	break
         }
@@ -903,7 +931,7 @@ private Boolean executeTask(rtData, devices, statement, task, async) {
     }
     def params = []
     for (param in task.p) {
-    	def p = (param.vt == 'variable') ? param.x : cast(evaluateOperand(rtData, null, param).v, param.vt)
+    	def p = (param.vt == 'variable') ? param.x : cast(rtData, evaluateOperand(rtData, null, param).v, param.vt)
         //ensure value type is successfuly passed through
 		params.push p
     }
@@ -917,7 +945,7 @@ private Boolean executeTask(rtData, devices, statement, task, async) {
             } catch(all) {
 	            executePhysicalCommand(rtData, device, task.c, params)
 			}
-            info msg
+            debug msg
         } else {
             if (vcmd) {
 	        	delay = executeVirtualCommand(rtData, vcmd.a ? devices : device, task, params)
@@ -997,7 +1025,7 @@ private long executeVirtualCommand(rtData, devices, task, params) {
     long delay = 0
     try {
 		delay = "vcmd_${task.c}"(rtData, devices, params)
-	    info msg
+	    debug msg
     } catch(all) {
     	msg.m = "Error executing virtual command ${devices instanceof List ? "$devices" : "[$devices]"}.${task.c}:"
         msg.e = all
@@ -1029,7 +1057,7 @@ private long vcmd_noop(rtData, device, params) {
 }
 
 private long vcmd_wait(rtData, device, params) {
-	return cast(params[0], 'long')
+	return cast(rtData, params[0], 'long')
 }
 
 private long vcmd_waitRandom(rtData, device, params) {
@@ -1105,6 +1133,7 @@ private long vcmd_setVariable(rtData, device, params) {
 
 private Boolean evaluateConditions(rtData, conditions, collection, async) {
 	def t = now()
+    def msg = timer '', rtData
     //override condition id
     def c = rtData.stack.c    
     rtData.stack.c = conditions.$
@@ -1132,6 +1161,8 @@ private Boolean evaluateConditions(rtData, conditions, collection, async) {
     }
     //restore condition id
     rtData.stack.c = c
+    msg.m = "Condition group #${conditions.$} evaluated $result"
+    debug msg
 	return result
 }
 
@@ -1149,12 +1180,29 @@ private evaluateOperand(rtData, node, operand, index = null, trigger = false) {
 	        if ((values.size() > 1) && !(operand.g in ['any', 'all'])) {
 	            //if we have multiple values and a grouping other than any or all we need to apply that function
 	            try {
-	                values = [[i: "${condition.$}:$index:0", v:"func_${operand.g}"(rtData, values*.v)]]
+	                values = [[i: "${node?.$}:$index:0", v:"func_${operand.g}"(rtData, values*.v)]]
 	            } catch(all) {
 	                error "Error applying grouping method ${operand.g}", rtData
 	            }
 	        }
 	        break;
+		case 'd': //devices
+        	def deviceIds = []
+            for (d in operand.d) {
+                if (d.startsWith(':')) {
+                    if (getDevice(rtData, d)) deviceIds.push(d)
+                } else {
+                    //we're dealing with a variable, let's get the list of devices from it
+                    def var = getVariable(rtData, d)
+                    if (var.t == 'device') {
+                        for (vd in var.v) {
+							if (getDevice(rtData, vd)) deviceIds.push(vd)
+                    	}
+                	}
+            	}
+            }            
+			values = [[i: "${node?.$}:d", v:[t: 'device', v: deviceIds.unique()]]]	
+            break
         case "x": //variable
 	        values = [[i: "${node?.$}:$index:0", v:getVariable(rtData, operand.x)]]
             break
@@ -1172,11 +1220,12 @@ private evaluateOperand(rtData, node, operand, index = null, trigger = false) {
 
 private evaluateScalarOperand(rtData, node, operand, index = null, dataType = 'string') {
 	def value = evaluateOperand(rtData, null, operand, index)
-    return [t: dataType, v: cast((value ? value.v: ''), dataType)]
+    return [t: dataType, v: cast(rtData, (value ? value.v: ''), dataType)]
 }
 
 private Boolean evaluateCondition(rtData, condition, collection, async) {
 	def t = now()
+    def msg = timer '', rtData
     //override condition id
     def c = rtData.stack.c    
     rtData.stack.c = condition.$
@@ -1238,6 +1287,8 @@ private Boolean evaluateCondition(rtData, condition, collection, async) {
     if ((!result || rtData.fastForwardTo) && condition.fs && condition.fs.length) executeStatements(rtData, condition.fs, async)
     //restore condition id
     rtData.stack.c = c
+    msg.m = "Condition #${condition.$} evaluated $result"
+    debug msg
     return result
 }
 
@@ -1320,54 +1371,53 @@ private Map valueChanged(rtData, comparisonValue) {
 	def oldValue = rtData.cache[comparisonValue.i]
     def newValue = comparisonValue.v
     if (!(oldValue instanceof Map)) oldValue = false
-//    warn "value changed? $oldValue >>> $newValue", rtData
     return (!!oldValue && ((oldValue.t != newValue.t) || ("${oldValue.v}" != "${newValue.v}"))) ? [i: comparisonValue.i, v: oldValue] : null
 }
 
 //comparison low level functions
-private boolean comp_is								(rtData, lv, rv = null, rv2 = null) { return cast(lv.v.v, 'string') == cast(rv.v.v, 'string') }
-private boolean comp_is_not							(rtData, lv, rv = null, rv2 = null) { return cast(lv.v.v, 'string') != cast(rv.v.v, 'string') }
-private boolean comp_is_equal_to					(rtData, lv, rv = null, rv2 = null) { return cast(lv.v.v, 'decimal') == cast(rv.v.v, 'decimal') }
-private boolean comp_is_not_equal_to				(rtData, lv, rv = null, rv2 = null) { return cast(lv.v.v, 'decimal') != cast(rv.v.v, 'decimal') }
-private boolean comp_is_different_than				(rtData, lv, rv = null, rv2 = null) { return cast(lv.v.v, 'decimal') != cast(rv.v.v, 'decimal') }
-private boolean comp_is_less_than					(rtData, lv, rv = null, rv2 = null) { return cast(lv.v.v, 'decimal') < cast(rv.v.v, 'decimal') }
-private boolean comp_is_less_than_or_equal_to		(rtData, lv, rv = null, rv2 = null) { return cast(lv.v.v, 'decimal') <= cast(rv.v.v, 'decimal') }
-private boolean comp_is_greater_than				(rtData, lv, rv = null, rv2 = null) { return cast(lv.v.v, 'decimal') > cast(rv.v.v, 'decimal') }
-private boolean comp_is_greater_than_or_equal_to	(rtData, lv, rv = null, rv2 = null) { return cast(lv.v.v, 'decimal') >= cast(rv.v.v, 'decimal') }
-private boolean comp_is_even						(rtData, lv, rv = null, rv2 = null) { return cast(lv.v.v, 'integer').mod(2) == 0 }
-private boolean comp_is_odd							(rtData, lv, rv = null, rv2 = null) { return cast(lv.v.v, 'integer').mod(2) != 0 }
-private boolean comp_is_true						(rtData, lv, rv = null, rv2 = null) { return !!cast(lv.v.v, 'boolean') }
-private boolean comp_is_false						(rtData, lv, rv = null, rv2 = null) { return !cast(lv.v.v, 'boolean') }
-private boolean comp_is_inside_of_range				(rtData, lv, rv = null, rv2 = null) { def v = cast(lv.v.v, 'decimal'); def v1 = cast(rv.v.v, 'decimal'); def v2 = cast(rv2.v.v, 'decimal'); return (v1 < v2) ? ((v >= v1) && (v <= v2)) : ((v >= v2) && (v <= v1)); }
+private boolean comp_is								(rtData, lv, rv = null, rv2 = null) { return cast(rtData, lv.v.v, 'string') == cast(rtData, rv.v.v, 'string') }
+private boolean comp_is_not							(rtData, lv, rv = null, rv2 = null) { return cast(rtData, lv.v.v, 'string') != cast(rtData, rv.v.v, 'string') }
+private boolean comp_is_equal_to					(rtData, lv, rv = null, rv2 = null) { return cast(rtData, lv.v.v, 'decimal') == cast(rtData, rv.v.v, 'decimal') }
+private boolean comp_is_not_equal_to				(rtData, lv, rv = null, rv2 = null) { return cast(rtData, lv.v.v, 'decimal') != cast(rtData, rv.v.v, 'decimal') }
+private boolean comp_is_different_than				(rtData, lv, rv = null, rv2 = null) { return cast(rtData, lv.v.v, 'decimal') != cast(rtData, rv.v.v, 'decimal') }
+private boolean comp_is_less_than					(rtData, lv, rv = null, rv2 = null) { return cast(rtData, lv.v.v, 'decimal') < cast(rtData, rv.v.v, 'decimal') }
+private boolean comp_is_less_than_or_equal_to		(rtData, lv, rv = null, rv2 = null) { return cast(rtData, lv.v.v, 'decimal') <= cast(rtData, rv.v.v, 'decimal') }
+private boolean comp_is_greater_than				(rtData, lv, rv = null, rv2 = null) { return cast(rtData, lv.v.v, 'decimal') > cast(rtData, rv.v.v, 'decimal') }
+private boolean comp_is_greater_than_or_equal_to	(rtData, lv, rv = null, rv2 = null) { return cast(rtData, lv.v.v, 'decimal') >= cast(rtData, rv.v.v, 'decimal') }
+private boolean comp_is_even						(rtData, lv, rv = null, rv2 = null) { return cast(rtData, lv.v.v, 'integer').mod(2) == 0 }
+private boolean comp_is_odd							(rtData, lv, rv = null, rv2 = null) { return cast(rtData, lv.v.v, 'integer').mod(2) != 0 }
+private boolean comp_is_true						(rtData, lv, rv = null, rv2 = null) { return !!cast(rtData, lv.v.v, 'boolean') }
+private boolean comp_is_false						(rtData, lv, rv = null, rv2 = null) { return !cast(rtData, lv.v.v, 'boolean') }
+private boolean comp_is_inside_of_range				(rtData, lv, rv = null, rv2 = null) { def v = cast(rtData, lv.v.v, 'decimal'); def v1 = cast(rtData, rv.v.v, 'decimal'); def v2 = cast(rtData, rv2.v.v, 'decimal'); return (v1 < v2) ? ((v >= v1) && (v <= v2)) : ((v >= v2) && (v <= v1)); }
 private boolean comp_is_outside_of_range			(rtData, lv, rv = null, rv2 = null) { return !comp_is_inside_of_range(rtData, lv, rv, rv2) }
 private boolean comp_changed						(rtData, lv, rv = null, rv2 = null) { return valueChanged(rtData, lv); }
 private boolean comp_did_not_change					(rtData, lv, rv = null, rv2 = null) { return !valueChanged(rtData, lv); }
 
 /*triggers*/
-private boolean comp_gets							(rtData, lv, rv = null, rv2 = null) { return cast(lv.v.v, 'string') == cast(rv.v.v, 'string') }
+private boolean comp_gets							(rtData, lv, rv = null, rv2 = null) { return cast(rtData, lv.v.v, 'string') == cast(rtData, rv.v.v, 'string') }
 private boolean comp_changes						(rtData, lv, rv = null, rv2 = null) { return valueChanged(rtData, lv); }
 private boolean comp_changes_to						(rtData, lv, rv = null, rv2 = null) { return valueChanged(rtData, lv) && ("${lv.v.v}" == "${rv.v.v}"); }
 private boolean comp_changes_away_from				(rtData, lv, rv = null, rv2 = null) { def oldValue = valueChanged(rtData, lv); return oldValue && ("${oldValue.v.v}" == "${rv.v.v}"); }
-private boolean comp_drops							(rtData, lv, rv = null, rv2 = null) { def oldValue = valueChanged(rtData, lv); return oldValue && (cast(oldValue.v.v, 'decimal') > cast(lv.v.v, 'decimal')); }
+private boolean comp_drops							(rtData, lv, rv = null, rv2 = null) { def oldValue = valueChanged(rtData, lv); return oldValue && (cast(rtData, oldValue.v.v, 'decimal') > cast(rtData, lv.v.v, 'decimal')); }
 private boolean comp_does_not_drop					(rtData, lv, rv = null, rv2 = null) { return !comp_drops(rtData, lv, rv, rv2); }
-private boolean comp_drops_below					(rtData, lv, rv = null, rv2 = null) { def oldValue = valueChanged(rtData, lv); return oldValue && (cast(oldValue.v.v, 'decimal') >= cast(rv.v.v, 'decimal')) && (cast(lv.v.v, 'decimal') < cast(rv.v.v, 'decimal')); }
-private boolean comp_drops_to_or_below				(rtData, lv, rv = null, rv2 = null) { def oldValue = valueChanged(rtData, lv); return oldValue && (cast(oldValue.v.v, 'decimal') > cast(rv.v.v, 'decimal')) && (cast(lv.v.v, 'decimal') <= cast(rv.v.v, 'decimal')); }
-private boolean comp_rises							(rtData, lv, rv = null, rv2 = null) { def oldValue = valueChanged(rtData, lv); return oldValue && (cast(oldValue.v.v, 'decimal') < cast(lv.v.v, 'decimal')); }
+private boolean comp_drops_below					(rtData, lv, rv = null, rv2 = null) { def oldValue = valueChanged(rtData, lv); return oldValue && (cast(rtData, oldValue.v.v, 'decimal') >= cast(rtData, rv.v.v, 'decimal')) && (cast(rtData, lv.v.v, 'decimal') < cast(rtData, rv.v.v, 'decimal')); }
+private boolean comp_drops_to_or_below				(rtData, lv, rv = null, rv2 = null) { def oldValue = valueChanged(rtData, lv); return oldValue && (cast(rtData, oldValue.v.v, 'decimal') > cast(rtData, rv.v.v, 'decimal')) && (cast(rtData, lv.v.v, 'decimal') <= cast(rtData, rv.v.v, 'decimal')); }
+private boolean comp_rises							(rtData, lv, rv = null, rv2 = null) { def oldValue = valueChanged(rtData, lv); return oldValue && (cast(rtData, oldValue.v.v, 'decimal') < cast(rtData, lv.v.v, 'decimal')); }
 private boolean comp_does_not_rise					(rtData, lv, rv = null, rv2 = null) { return !comp_rises(rtData, lv, rv, rv2); }
-private boolean comp_rises_above					(rtData, lv, rv = null, rv2 = null) { def oldValue = valueChanged(rtData, lv); return oldValue && (cast(oldValue.v.v, 'decimal') <= cast(rv.v.v, 'decimal')) && (cast(lv.v.v, 'decimal') > cast(rv.v.v, 'decimal')); }
-private boolean comp_rises_to_or_above				(rtData, lv, rv = null, rv2 = null) { def oldValue = valueChanged(rtData, lv); return oldValue && (cast(oldValue.v.v, 'decimal') < cast(rv.v.v, 'decimal')) && (cast(lv.v.v, 'decimal') >= cast(rv.v.v, 'decimal')); }
-private boolean comp_remains_below					(rtData, lv, rv = null, rv2 = null) { def oldValue = valueChanged(rtData, lv); return oldValue && (cast(oldValue.v.v, 'decimal') < cast(rv.v.v, 'decimal')) && (cast(lv.v.v, 'decimal') < cast(rv.v.v, 'decimal')); }
-private boolean comp_remains_below_or_equal_to		(rtData, lv, rv = null, rv2 = null) { def oldValue = valueChanged(rtData, lv); return oldValue && (cast(oldValue.v.v, 'decimal') <= cast(rv.v.v, 'decimal')) && (cast(lv.v.v, 'decimal') <= cast(rv.v.v, 'decimal')); }
-private boolean comp_remains_above					(rtData, lv, rv = null, rv2 = null) { def oldValue = valueChanged(rtData, lv); return oldValue && (cast(oldValue.v.v, 'decimal') > cast(rv.v.v, 'decimal')) && (cast(lv.v.v, 'decimal') > cast(rv.v.v, 'decimal')); }
-private boolean comp_remains_above_or_equal_to		(rtData, lv, rv = null, rv2 = null) { def oldValue = valueChanged(rtData, lv); return oldValue && (cast(oldValue.v.v, 'decimal') >= cast(rv.v.v, 'decimal')) && (cast(lv.v.v, 'decimal') >= cast(rv.v.v, 'decimal')); }
-private boolean comp_enters_range					(rtData, lv, rv = null, rv2 = null) { def oldValue = valueChanged(rtData, lv); if (!oldValue) return false; def ov = cast(oldValue.v.v, 'decimal'); def v = cast(lv.v.v, 'decimal'); def v1 = cast(rv.v.v, 'decimal'); def v2 = cast(rv2.v.v, 'decimal'); if (v1 > v2) { def vv = v1; v1 = v2; v2 = vv; }; return ((ov < v1) || (ov > v2)) && ((v >= v1) && (v <= v2)); }
-private boolean comp_exits_range					(rtData, lv, rv = null, rv2 = null) { def oldValue = valueChanged(rtData, lv); if (!oldValue) return false; def ov = cast(oldValue.v.v, 'decimal'); def v = cast(lv.v.v, 'decimal'); def v1 = cast(rv.v.v, 'decimal'); def v2 = cast(rv2.v.v, 'decimal'); if (v1 > v2) { def vv = v1; v1 = v2; v2 = vv; }; return ((ov >= v1) && (ov <= v2)) && ((v < v1) || (v > v2)); }
-private boolean comp_remains_inside_of_range		(rtData, lv, rv = null, rv2 = null) { def oldValue = valueChanged(rtData, lv); if (!oldValue) return false; def ov = cast(oldValue.v.v, 'decimal'); def v = cast(lv.v.v, 'decimal'); def v1 = cast(rv.v.v, 'decimal'); def v2 = cast(rv2.v.v, 'decimal'); if (v1 > v2) { def vv = v1; v1 = v2; v2 = vv; }; return (ov >= v1) && (ov <= v2) && (v >= v1) && (v <= v2); }
-private boolean comp_remains_outside_of_range		(rtData, lv, rv = null, rv2 = null) { def oldValue = valueChanged(rtData, lv); if (!oldValue) return false; def ov = cast(oldValue.v.v, 'decimal'); def v = cast(lv.v.v, 'decimal'); def v1 = cast(rv.v.v, 'decimal'); def v2 = cast(rv2.v.v, 'decimal'); if (v1 > v2) { def vv = v1; v1 = v2; v2 = vv; }; return ((ov < v1) || (ov > v2)) && ((v < v1) || (v > v2)); }
-private boolean comp_becomes_even					(rtData, lv, rv = null, rv2 = null) { def oldValue = valueChanged(rtData, lv); return oldValue && (cast(oldValue.v.v, 'integer').mod(2) != 0) && (cast(lv.v.v, 'integer').mod(2) == 0); }
-private boolean comp_becomes_odd					(rtData, lv, rv = null, rv2 = null) { def oldValue = valueChanged(rtData, lv); return oldValue && (cast(oldValue.v.v, 'integer').mod(2) == 0) && (cast(lv.v.v, 'integer').mod(2) != 0); }
-private boolean comp_remains_even					(rtData, lv, rv = null, rv2 = null) { def oldValue = valueChanged(rtData, lv); return oldValue && (cast(oldValue.v.v, 'integer').mod(2) == 0) && (cast(lv.v.v, 'integer').mod(2) == 0); }
-private boolean comp_remains_odd					(rtData, lv, rv = null, rv2 = null) { def oldValue = valueChanged(rtData, lv); return oldValue && (cast(oldValue.v.v, 'integer').mod(2) != 0) && (cast(lv.v.v, 'integer').mod(2) != 0); }
+private boolean comp_rises_above					(rtData, lv, rv = null, rv2 = null) { def oldValue = valueChanged(rtData, lv); return oldValue && (cast(rtData, oldValue.v.v, 'decimal') <= cast(rtData, rv.v.v, 'decimal')) && (cast(rtData, lv.v.v, 'decimal') > cast(rtData, rv.v.v, 'decimal')); }
+private boolean comp_rises_to_or_above				(rtData, lv, rv = null, rv2 = null) { def oldValue = valueChanged(rtData, lv); return oldValue && (cast(rtData, oldValue.v.v, 'decimal') < cast(rtData, rv.v.v, 'decimal')) && (cast(rtData, lv.v.v, 'decimal') >= cast(rtData, rv.v.v, 'decimal')); }
+private boolean comp_remains_below					(rtData, lv, rv = null, rv2 = null) { def oldValue = valueChanged(rtData, lv); return oldValue && (cast(rtData, oldValue.v.v, 'decimal') < cast(rtData, rv.v.v, 'decimal')) && (cast(rtData, lv.v.v, 'decimal') < cast(rtData, rv.v.v, 'decimal')); }
+private boolean comp_remains_below_or_equal_to		(rtData, lv, rv = null, rv2 = null) { def oldValue = valueChanged(rtData, lv); return oldValue && (cast(rtData, oldValue.v.v, 'decimal') <= cast(rtData, rv.v.v, 'decimal')) && (cast(rtData, lv.v.v, 'decimal') <= cast(rtData, rv.v.v, 'decimal')); }
+private boolean comp_remains_above					(rtData, lv, rv = null, rv2 = null) { def oldValue = valueChanged(rtData, lv); return oldValue && (cast(rtData, oldValue.v.v, 'decimal') > cast(rtData, rv.v.v, 'decimal')) && (cast(rtData, lv.v.v, 'decimal') > cast(rtData, rv.v.v, 'decimal')); }
+private boolean comp_remains_above_or_equal_to		(rtData, lv, rv = null, rv2 = null) { def oldValue = valueChanged(rtData, lv); return oldValue && (cast(rtData, oldValue.v.v, 'decimal') >= cast(rtData, rv.v.v, 'decimal')) && (cast(rtData, lv.v.v, 'decimal') >= cast(rtData, rv.v.v, 'decimal')); }
+private boolean comp_enters_range					(rtData, lv, rv = null, rv2 = null) { def oldValue = valueChanged(rtData, lv); if (!oldValue) return false; def ov = cast(rtData, oldValue.v.v, 'decimal'); def v = cast(rtData, lv.v.v, 'decimal'); def v1 = cast(rtData, rv.v.v, 'decimal'); def v2 = cast(rtData, rv2.v.v, 'decimal'); if (v1 > v2) { def vv = v1; v1 = v2; v2 = vv; }; return ((ov < v1) || (ov > v2)) && ((v >= v1) && (v <= v2)); }
+private boolean comp_exits_range					(rtData, lv, rv = null, rv2 = null) { def oldValue = valueChanged(rtData, lv); if (!oldValue) return false; def ov = cast(rtData, oldValue.v.v, 'decimal'); def v = cast(rtData, lv.v.v, 'decimal'); def v1 = cast(rtData, rv.v.v, 'decimal'); def v2 = cast(rtData, rv2.v.v, 'decimal'); if (v1 > v2) { def vv = v1; v1 = v2; v2 = vv; }; return ((ov >= v1) && (ov <= v2)) && ((v < v1) || (v > v2)); }
+private boolean comp_remains_inside_of_range		(rtData, lv, rv = null, rv2 = null) { def oldValue = valueChanged(rtData, lv); if (!oldValue) return false; def ov = cast(rtData, oldValue.v.v, 'decimal'); def v = cast(rtData, lv.v.v, 'decimal'); def v1 = cast(rtData, rv.v.v, 'decimal'); def v2 = cast(rtData, rv2.v.v, 'decimal'); if (v1 > v2) { def vv = v1; v1 = v2; v2 = vv; }; return (ov >= v1) && (ov <= v2) && (v >= v1) && (v <= v2); }
+private boolean comp_remains_outside_of_range		(rtData, lv, rv = null, rv2 = null) { def oldValue = valueChanged(rtData, lv); if (!oldValue) return false; def ov = cast(rtData, oldValue.v.v, 'decimal'); def v = cast(rtData, lv.v.v, 'decimal'); def v1 = cast(rtData, rv.v.v, 'decimal'); def v2 = cast(rtData, rv2.v.v, 'decimal'); if (v1 > v2) { def vv = v1; v1 = v2; v2 = vv; }; return ((ov < v1) || (ov > v2)) && ((v < v1) || (v > v2)); }
+private boolean comp_becomes_even					(rtData, lv, rv = null, rv2 = null) { def oldValue = valueChanged(rtData, lv); return oldValue && (cast(rtData, oldValue.v.v, 'integer').mod(2) != 0) && (cast(rtData, lv.v.v, 'integer').mod(2) == 0); }
+private boolean comp_becomes_odd					(rtData, lv, rv = null, rv2 = null) { def oldValue = valueChanged(rtData, lv); return oldValue && (cast(rtData, oldValue.v.v, 'integer').mod(2) == 0) && (cast(rtData, lv.v.v, 'integer').mod(2) != 0); }
+private boolean comp_remains_even					(rtData, lv, rv = null, rv2 = null) { def oldValue = valueChanged(rtData, lv); return oldValue && (cast(rtData, oldValue.v.v, 'integer').mod(2) == 0) && (cast(rtData, lv.v.v, 'integer').mod(2) == 0); }
+private boolean comp_remains_odd					(rtData, lv, rv = null, rv2 = null) { def oldValue = valueChanged(rtData, lv); return oldValue && (cast(rtData, oldValue.v.v, 'integer').mod(2) != 0) && (cast(rtData, lv.v.v, 'integer').mod(2) != 0); }
 
 
 private traverseStatements(node, closure, parentNode = null) {
@@ -1622,20 +1672,17 @@ private getDevice(rtData, idOrName) {
 private Map getDeviceAttribute(rtData, deviceId, attributeName, trigger = false) {
 	def device = getDevice(rtData, deviceId)
     if (device) {
-        def attribute = rtData.attributes[attributeName]
-        if (attribute) {
-        	//x = eXclude - if a momentary attribute is looked for and the device does not match the current device, then we must ignore this during comparisons
-        } else {
-        	//we set eXclude to true, we don't want this to be compared, it's really an error
-            //return [t: "error", v: "Attribute '${attributeName}' not found", x: true]
-            attribute = [t: 'string']
+        def attribute = rtData.attributes[attributeName ?: '']
+        if (!attribute) {
+            attribute = [t: 'string', m: false]
         }
-            return [t: attribute.t, v: device.currentValue(attributeName), d: deviceId, a: attributeName, x: (!!attribute.m || !!trigger) && ((device?.id != rtData.event.device?.id) || (attributeName != rtData.event.name))]
+        //x = eXclude - if a momentary attribute is looked for and the device does not match the current device, then we must ignore this during comparisons
+		return [t: attribute.t, v: (attributeName ? cast(rtData, device.currentValue(attributeName), attribute.t) : "$device"), d: deviceId, a: attributeName, x: (!!attribute.m || !!trigger) && ((device?.id != rtData.event.device?.id) || (attributeName != rtData.event.name))]
     }
     return [t: "error", v: "Device '${deviceId}' not found"]
 }
 
-def getVariable(rtData, name) {
+private getVariable(rtData, name) {
 	name = sanitizeVariableName(name)
 	if (!name) return [t: "error", v: "Invalid empty variable name"]
     def result
@@ -1655,13 +1702,12 @@ def getVariable(rtData, name) {
 		}
 	}
     if (result && (result.t == 'device')) {
-    	if (result.v instanceof List) {
-	    	def ds = []
-            for(d in result.v) ds.push([t: result.t, id: d, v: getDevice(rtData, d)])
-            result = ds
-        } else {
-	    	result = [t: result.t, id: result.v, v: getDevice(rtData, result.v)]
+	   	def deviceIds = []
+        def devices = []
+        for(deviceId in ((result.v instanceof List) ? result.v : [result.v])) {
+            deviceIds.push(deviceId)
         }
+	    result = [t: result.t, v: deviceIds]
     }
     if (result.v instanceof Map) {
     	//we're dealing with an operand, let's parse it
@@ -1677,14 +1723,14 @@ def setVariable(rtData, name, value) {
     	def variable = rtData.globalVars[name]
     	if (variable instanceof Map) {
         	//set global var
-            variable.v = cast(value, variable.t)
+            variable.v = cast(rtData, value, variable.t)
             return variable
         }
 	} else {
 		def variable = rtData.localVars[name]
         if (variable instanceof Map) {
             //set value
-            variable.v = cast(value, variable.t)
+            variable.v = cast(rtData, value, variable.t)
             if (!variable.f) {
             	def vars = atomicState.vars
                 vars[name] = variable.v
@@ -1708,12 +1754,18 @@ def Map proxyEvaluateExpression(rtData, expression, dataType = null) {
 	resetRandomValues()
 	return evaluateExpression(getRunTimeData(rtData), expression, dataType)
 }
+private Map simplifyExpression(expression) {
+	while ((expression.t == 'expression') && expression.i && (expression.i.size() == 1)) expression = expression.i[0]
+    return expression
+}
+
 private Map evaluateExpression(rtData, expression, dataType = null) {
     //if dealing with an expression that has multiple items, let's evaluate each item one by one
     //let's evaluate this expression
     if (!expression) return [t: 'error', v: 'Null expression']
     //not sure what it was needed for - need to comment more
-    if (expression && expression.v instanceof Map) return evaluateExpression(rtData, expression.v, expression.t)
+    //if (expression && expression.v instanceof Map) return evaluateExpression(rtData, expression.v, expression.t)
+    expression = simplifyExpression(expression)
     def time = now()
     def result = [:]    
     switch (expression.t) {
@@ -1727,14 +1779,14 @@ private Map evaluateExpression(rtData, expression, dataType = null) {
         case "time":
         case "date":
         case "datetime":
-        	result = [t: expression.t, v: cast(expression.v, expression.t)]
+        	result = [t: expression.t, v: cast(rtData, expression.v, expression.t)]
         	break
         case "bool":
-        	result = [t: "boolean", v: cast(expression.v, "boolean")]
+        	result = [t: "boolean", v: cast(rtData, expression.v, "boolean")]
         	break
         case "number":
         case "float":
-        	result = [t: "decimal", v: cast(expression.v, "decimal")]
+        	result = [t: "decimal", v: cast(rtData, expression.v, "decimal")]
         	break
         case "duration":
         	def multiplier = 1
@@ -1748,49 +1800,31 @@ private Map evaluateExpression(rtData, expression, dataType = null) {
             	case 'n': multiplier = 2592000000; break;
             	case 'y': multiplier = 31536000000; break;
             }
-        	result = [t: "long", v: cast(cast(expression.v, 'decimal') * multiplier, "long")]
+        	result = [t: "long", v: cast(rtData, cast(rtData, expression.v, 'decimal') * multiplier, "long")]
         	break
         case "variable":
         	//get variable as {n: name, t: type, v: value}
            	result = [t: 'error', v: 'Invalid variable']
-        	def data = getVariable(rtData, expression.x)
-            //list of devices
-            if (data instanceof List) {
-    	        if (data.length && (data[0].t == 'device')) result = [t: "string", v: buildList(data*.v)]            	
-            } else {
-	            //if getting a variable, get it's name
-                result = data
-    	        if (result && (result.t == 'device')) result = [t: "string", v: buildList(result.v)]
-            }
+        	result = getVariable(rtData, expression.x)
         	break
         case "device":
         	//get variable as {n: name, t: type, v: value}
-            def deviceId = expression.id
-            def deviceIds = []
-            if (!deviceId) {
-            	def var = getVariable(rtData, expression.x)
-                if (var) {
-                	if (var instanceof List) {
-	                	deviceIds = var.collect{ it.id ?: it.v }
-                    } else {
-                    	deviceIds = var.id ? [var.id] : [var.v]
+            if (expression.v instanceof List) {
+            	//already parsed
+                result = expression
+            } else {
+                def deviceIds = (expression.id instanceof List) ? expression.id : (expression.id ? [expression.id] : [])
+                if (!deviceIds.size()) {
+                    def var = getVariable(rtData, expression.x)
+                    if (var && (var.t == 'device')) {
+                        deviceIds = var.v
                     }
                 }
-            } else {
-            	deviceIds = [deviceId]
-            }
-            def data = []
-            for(devId in deviceIds) {
-	            data.push(getDeviceAttribute(rtData, devId, expression.a))
-            }
-            if (data.size() == 1) {
-            	result = data[0]
-           	} else {
-            	result = data
+				result = [t: 'device', v: deviceIds, a: expression.a]
             }
         	break
         case "operand":
-        	result = [t: "string", v: cast(expression.v, "string")]
+        	result = [t: "string", v: cast(rtData, expression.v, "string")]
         	break
         case "function":
             def fn = "func_${expression.n}"
@@ -1799,7 +1833,20 @@ private Map evaluateExpression(rtData, expression, dataType = null) {
 				def params = []
                 if (expression.i && expression.i.size()) {
                     for (i in expression.i) {
-                    	if (i && (i.t == 'expression') && i.i && (i.i.findAll{ it.t == 'device'}.size() == i.i.size())) {
+                    	def param = simplifyExpression(i)
+                        if (param.t == 'device') {
+                        	//if multiple devices involved, we need to spread the param into multiple params
+                            param = evaluateExpression(rtData, param)
+                            switch (param.v.size()) {
+                            	case 0: break;
+                            	case 1: params.push(param); break;
+                                default:
+		                            for (v in param.v) {
+                                    	params.push([t: param.t, a: param.a, v: [v]])
+                                    }
+                            }
+                        }
+/*                    	if (i && (i.t == 'expression') && i.i && (i.i.findAll{ it.t == 'device'}.size() == i.i.size())) {
                         	for (item in i.i) {
                             	if (item.id) {
                                 	params.push(item)
@@ -1817,9 +1864,9 @@ private Map evaluateExpression(rtData, expression, dataType = null) {
                             }
                         } else {
                         	params.push(i)
-                        }
+                        }*/
                     }
-                }            
+                }
 				result = "$fn"(rtData, params)
 			} catch (all) {
 				//log error
@@ -1827,6 +1874,7 @@ private Map evaluateExpression(rtData, expression, dataType = null) {
 			}        	
         	break
         case "expression":
+        	//if we have a single item, we simply traverse the expression
         	List items = []
             def operand = -1
         	for(item in expression.i) {
@@ -1915,85 +1963,109 @@ private Map evaluateExpression(rtData, expression, dataType = null) {
                 def t1 = items[idx].t
                 def v1 = items[idx].v
                 def t2 = items[idx + 1].t
-                def v2 = items[idx + 1].t
+                def v2 = items[idx + 1].v
                 def t = t1
                 //fix-ups
                 //integer with decimal gives decimal, also *, /, and ^ require decimals
-                if ((o == '*') || (o == '*') || (o == '/') || (o == '-') || (o == '^')) {
-                    if ((t1 != 'number') && (t1 != 'integer') && (t1 != 'decimal') && (t1 != 'float') && (t1 != 'time')) t1 = 'decimal'
-                    if ((t2 != 'number') && (t2 != 'integer') && (t2 != 'decimal') && (t2 != 'float') && (t2 != 'time')) t2 = 'decimal'
-                    t = (t1 == 'time') || (t2 == 'time') ? 'time' : 'decimal'
+                if ((t1 == 'device') && (t2 == 'device') && ((o == '+') || (o == '-'))) {
+					v1 = (v1 instanceof List) ? v1 : [v1]
+					v2 = (v2 instanceof List) ? v2 : [v2]
+                    v = (o == '+') ? v1 + v2 : v1 - v2                    
+        	        //set the results
+    	            items[idx + 1].t = 'device'
+                    items[idx + 1].v = v
+                } else {
+                    if ((o == '*') || (o == '*') || (o == '/') || (o == '-') || (o == '^')) {
+                        if ((t1 != 'number') && (t1 != 'integer') && (t1 != 'decimal') && (t1 != 'float') && (t1 != 'time')) t1 = 'decimal'
+                        if ((t2 != 'number') && (t2 != 'integer') && (t2 != 'decimal') && (t2 != 'float') && (t2 != 'time')) t2 = 'decimal'
+                        t = (t1 == 'time') || (t2 == 'time') ? 'time' : 'decimal'
+                    }
+                    if ((o == '&') || (o == '|')) {
+                        t1 = 'boolean'
+                        t2 = 'boolean'
+                        t = 'boolean'
+                    }
+                    if ((o == '+') && ((t1 == 'string') || (t1 == 'text') || (t2 == 'string') || (t2 == 'text'))) {
+                        t1 = 'string';
+                        t2 = 'string';
+                        t = 'string'
+                    }
+                    if ((((t1 == 'number') || (t1 == 'integer')) && ((t2 == 'decimal') || (t2 == 'float'))) || (((t2 == 'number') || (t2 == 'integer')) && ((t1 == 'decimal') || (t1 == 'float')))) {
+                        t1 = 'decimal'
+                        t2 = 'decimal'
+                        t = 'decimal'
+                    }
+                    if ((t != 'time') && ((t1 == 'integer') || (t2 == 'integer'))) {
+                        t1 = 'integer'
+                        t2 = 'integer'
+                        t = 'integer'
+                    }
+                    if ((t != 'time') && ((t1 == 'number') || (t2 == 'number') || (t1 == 'decimal') || (t2 == 'decimal') || (t1 == 'float') || (t2 == 'float'))) {
+                        t1 = 'decimal'
+                        t2 = 'decimal'
+                        t = 'decimal'
+                    }
+                    v1 = evaluateExpression(rtData, items[idx], t1).v
+	                v2 = evaluateExpression(rtData, items[idx + 1], t2).v
+    	            switch (o) {
+        	            case '-':
+            	        	v = v1 - v2
+                	    	break
+	                    case '*':
+    	                	v = v1 * v2
+        	            	break
+            	        case '/':
+                	    	v = (v2 != 0 ? v1 / v2 : 0)
+	                    	break
+    	                case '^':
+        	            	v = v1 ** v2
+            	        	break
+                	    case '&':
+	                    	v = !!v1 && !!v2
+    	                	break
+        	            case '|':
+            	        	v = !!v1 || !!v2
+                	    	break
+	                    case '+':
+    	                default:                    	
+        	                v = t == 'string' ? "$v1$v2" : v1 + v2
+            	        	break
+                	}
+
+                    //set the results
+                    items[idx + 1].t = t
+                    items[idx + 1].v = cast(rtData, v, t)
                 }
-                if ((o == '&') || (o == '|')) {
-                    t1 = 'boolean'
-                    t2 = 'boolean'
-                    t = 'boolean'
-                }
-                if ((o == '+') && ((t1 == 'string') || (t1 == 'text') || (t2 == 'string') || (t2 == 'text'))) {
-                    t1 = 'string';
-                    t2 = 'string';
-                    t = 'string'
-                }
-                if ((((t1 == 'number') || (t1 == 'integer')) && ((t2 == 'decimal') || (t2 == 'float'))) || (((t2 == 'number') || (t2 == 'integer')) && ((t1 == 'decimal') || (t1 == 'float')))) {
-                    t1 = 'decimal'
-                    t2 = 'decimal'
-                    t = 'decimal'
-                }
-                if ((t != 'time') && ((t1 == 'integer') || (t2 == 'integer'))) {
-                    t1 = 'integer'
-                    t2 = 'integer'
-                    t = 'integer'
-                }
-                if ((t != 'time') && ((t1 == 'number') || (t2 == 'number') || (t1 == 'decimal') || (t2 == 'decimal') || (t1 == 'float') || (t2 == 'float'))) {
-                    t1 = 'decimal'
-                    t2 = 'decimal'
-                    t = 'decimal'
-                }
-				v1 = evaluateExpression(rtData, items[idx], t1).v
-                v2 = evaluateExpression(rtData, items[idx + 1], t2).v
-                switch (o) {
-                    case '-':
-                    	v = v1 - v2
-                    	break
-                    case '*':
-                    	v = v1 * v2
-                    	break
-                    case '/':
-                    	v = (v2 != 0 ? v1 / v2 : 0)
-                    	break
-                    case '^':
-                    	v = v1 ** v2
-                    	break
-                    case '&':
-                    	v = !!v1 && !!v2
-                    	break
-                    case '|':
-                    	v = !!v1 || !!v2
-                    	break
-                    case '+':
-                    default:                    	
-                        v = t == 'string' ? "$v1$v2" : v1 + v2
-                    	break
-                }
-                //set the results
-                items[idx + 1].t = t
-                items[idx + 1].v = cast(v, t)
                 def sz = items.size()
                 items.remove(idx)
             }
-    	    result = items[0] ? evaluateExpression(rtData, items[0]) : [t: 'dynamic', v: null]
+    	    result = items[0] ? ((items[0].t == 'device') ? items[0] : evaluateExpression(rtData, items[0])) : [t: 'dynamic', v: null]
 	        break
         case "enum":
         case "error":
         case "phone":
         case "text":
         default:
-        	result = [t: "string", v: cast(expression.v, "string")]
+        	result = [t: "string", v: cast(rtData, expression.v, "string")]
         	break
             
     }
     //return the value, either directly or via cast, if certain data type is requested
-    return [t: dataType ?: result.t, v: cast(result.v, dataType?: result.t), d: now() - time] + (result.id ? [id: result.id] : [:])
+   
+  	//when dealing with devices, they need to be "converted" unless the request is to return devices
+    if (dataType && (dataType != 'device') && (result.t == 'device')) {
+        switch (result.v.size()) {
+            case 0: result = [t: 'error', v: 'Empty device list']; break;
+            case 1: result = getDeviceAttribute(rtData, result.v[0], result.a); break;
+            default: result = [t: 'string', v: buildDeviceAttributeList(rtData, result.v, result.a)]; break;
+        }
+    }
+    if (dataType) {
+    	result = [t: dataType, v: cast(rtData, result.v, dataType)]
+    }
+	return result
+    //if (result.t == 'device') return result
+    //return [t: dataType ?: result.t, v: cast(result.v, dataType?: result.t), d: now() - time] + (result.id ? [id: result.id] : [:])
 //    return result.t == "error" ? [t: "string", v: "[ERROR: ${result.v}]", d: now() - time] : [t: dataType ?: result.t, v: cast(result.v, dataType?: result.t), d: now() - time] + (result.id ? [id: result.id] : [:])
 }
 
@@ -2009,6 +2081,29 @@ private buildList(list, suffix = 'and') {
 	return result;
 }
 
+private buildDeviceList(rtData, devices, suffix = 'and') {
+    if (!devices) return ''
+    if (!(devices instanceof List)) devices = [devices]
+    def list = []
+	for (device in devices) {
+    	def dev = getDevice(rtData, device)
+        if (dev) list.push(dev)
+	}
+	return buildList(list, suffix);
+}
+
+private buildDeviceAttributeList(rtData, devices, attribute, suffix = 'and') {
+    if (!devices) return ''
+    if (!(devices instanceof List)) devices = [devices]
+    def list = []
+	for (device in devices) {
+    	def value = getDeviceAttribute(rtData, device, attribute).v
+        list.push(value)
+	}
+	return buildList(list, suffix);
+}
+
+
 /******************************************************************************/
 /*** dewPoint returns the calculated dew point temperature					***/
 /*** Usage: dewPoint(temperature, relativeHumidity[, scale])				***/
@@ -2020,7 +2115,7 @@ private func_dewpoint(rtData, params) {
     double t = evaluateExpression(rtData, params[0], 'decimal').v
     double rh = evaluateExpression(rtData, params[1], 'decimal').v
     //if no temperature scale is provided, we assume the location's temperature scale
-    boolean fahrenheit = cast(params.size() > 2 ? evaluateExpression(rtData, params[2]).v : location.temperatureScale, "string").toUpperCase() == "F"
+    boolean fahrenheit = cast(rtData, params.size() > 2 ? evaluateExpression(rtData, params[2]).v : location.temperatureScale, "string").toUpperCase() == "F"
     if (fahrenheit) {
     	//convert temperature to Celsius
         t = (t - 32.0) * 5.0 / 9.0
@@ -2172,7 +2267,7 @@ private func_floor(rtData, params) {
 	if (!params || !(params instanceof List) || (params.size() < 1)) {
     	return [t: "error", v: "Invalid parameters. Expecting floor(decimal or string)"];
     }
-    return [t: "integer", v: cast(Math.floor(evaluateExpression(rtData, params[0], 'decimal').v), 'integer')]
+    return [t: "integer", v: cast(rtData, Math.floor(evaluateExpression(rtData, params[0], 'decimal').v), 'integer')]
 }
 
 /******************************************************************************/
@@ -2183,7 +2278,7 @@ private func_ceiling(rtData, params) {
 	if (!params || !(params instanceof List) || (params.size() < 1)) {
     	return [t: "error", v: "Invalid parameters. Expecting ceiling(decimal or string)"];
     }
-    return [t: "integer", v: cast(Math.ceil(evaluateExpression(rtData, params[0], 'decimal').v), 'integer')]
+    return [t: "integer", v: cast(rtData, Math.ceil(evaluateExpression(rtData, params[0], 'decimal').v), 'integer')]
 }
 private func_ceil(rtData, params) { return func_ceiling(rtData, params) }
 
@@ -2364,7 +2459,7 @@ private func_least(rtData, params) {
     }
     Map data = [:]
     for (param in params) {
-    	def value = evaluateExpression(rtData, param)
+    	def value = evaluateExpression(rtData, param, 'dynamic')
     	data[value.v] = [t: value.t, v: value.v, c: (data[value.v]?.c ?: 0) + 1]
     }
     def value = data.sort{ it.value.c }.collect{ it.value }[0]
@@ -2381,7 +2476,7 @@ private func_most(rtData, params) {
     }
     Map data = [:]
     for (param in params) {
-    	def value = evaluateExpression(rtData, param)
+    	def value = evaluateExpression(rtData, param, 'dynamic')
     	data[value.v] = [t: value.t, v: value.v, c: (data[value.v]?.c ?: 0) + 1]
     }
     def value = data.sort{ - it.value.c }.collect{ it.value }[0]
@@ -2494,18 +2589,9 @@ private func_age(rtData, params) {
 	if (!params || !(params instanceof List) || (params.size() != 1)) {
     	return [t: "error", v: "Invalid parameters. Expecting age([device:attribute])"];
     }
-    def param = params[0];
-    if ((param.t == 'expression') && param.i && (param.i.size() == 1)) {
-    	//it may be inside an expression, get it out of there
-        param = param.i[0]
-    }
-    if ((param.t == 'device') && (param.a)) {
-    	def deviceId = param.id
-		if (!deviceId) {
-			def var = getVariable(rtData, param.x)
-			if (var) deviceId = var.id ?: var.v
-		}
-		def device = getDevice(rtData, deviceId)
+    def param = evaluateExpression(rtData, params[0], 'device')
+    if ((param.t == 'device') && (param.a) && param.v.size()) {
+		def device = getDevice(rtData, param.v[0])
         if (device) {
         	def state = device.currentState(param.a)
             if (state) {
@@ -2526,18 +2612,9 @@ private func_previousage(rtData, params) {
 	if (!params || !(params instanceof List) || (params.size() != 1)) {
     	return [t: "error", v: "Invalid parameters. Expecting previousAge([device:attribute])"];
     }
-    def param = params[0];
-    if ((param.t == 'expression') && param.i && (param.i.size() == 1)) {
-    	//it may be inside an expression, get it out of there
-        param = param.i[0]
-    }
-    if ((param.t == 'device') && (param.a)) {
-    	def deviceId = param.id
-		if (!deviceId) {
-			def var = getVariable(rtData, param.x)
-			if (var) deviceId = var.id ?: var.v
-		}
-		def device = getDevice(rtData, deviceId)
+    def param = evaluateExpression(rtData, params[0], 'device')
+    if ((param.t == 'device') && (param.a) && param.v.size()) {
+		def device = getDevice(rtData, param.v[0])
         if (device) {
         	def states = device.statesSince(param.a, new Date(now() - 604500000), [max: 5])
             if (states.size() > 1) {
@@ -2565,21 +2642,12 @@ private func_previousvalue(rtData, params) {
 	if (!params || !(params instanceof List) || (params.size() != 1)) {
     	return [t: "error", v: "Invalid parameters. Expecting previousValue([device:attribute])"];
     }
-    def param = params[0];
-    if ((param.t == 'expression') && param.i && (param.i.size() == 1)) {
-    	//it may be inside an expression, get it out of there
-        param = param.i[0]
-    }
-    if ((param.t == 'device') && (param.a)) {
+    def param = evaluateExpression(rtData, params[0], 'device')
+    if ((param.t == 'device') && (param.a) && param.v.size()) {
     	def attribute = rtData.attributes[param.a]
         if (attribute) {
-            def deviceId = param.id
-            if (!deviceId) {
-                def var = getVariable(rtData, param.x)
-				if (var) deviceId = var.id ?: var.v
-            }
-            def device = getDevice(rtData, deviceId)
-            if (device) {
+			def device = getDevice(rtData, param.v[0])
+	        if (device) {
                 def states = device.statesSince(param.a, new Date(now() - 604500000), [max: 5])
                 if (states.size() > 1) {
                     def newValue = states[0].getValue()
@@ -2587,7 +2655,7 @@ private func_previousvalue(rtData, params) {
                     for(int i = 1; i < states.size(); i++) {
                         def result = states[i].getValue()
                         if (result != newValue) {
-                            return [t: attribute.t, v: cast(result, attribute.t)]
+                            return [t: attribute.t, v: cast(rtData, result, attribute.t)]
                         }
                     }                    
                 }
@@ -2784,123 +2852,92 @@ def String hashId(id) {
 	return ":${md5("core." + id)}:"
 }
 
-private cast(value, dataType) {
+private cast(rtData, value, dataType, srcDataType = null) {
+	if (dataType == 'dynamic') return value
 	def trueStrings = ["1", "true", "on", "open", "locked", "active", "wet", "detected", "present", "occupied", "muted", "sleeping"]
 	def falseStrings = ["0", "false", "off", "closed", "unlocked", "inactive", "dry", "clear", "not detected", "not present", "not occupied", "unmuted", "not sleeping"]
-    if (value instanceof GString) {
-    	value = value.toString()
+	//get rid of GStrings
+    if (value == null) {
+    	value = '';
+        srcDataType = 'string';
     }
-    if (value instanceof List) {
-    	switch (value.size()) {
-        	case 0:
-            	value = '';
-                break;
-            case 1:
-            	value = value[0]
-                breal
-            default:
-                //we have an array of values, we convert that based on data type
-                def dt = dataType
-                if (value[0] instanceof Float) dt = 'decimal'
-                if (value[0] instanceof BigDecimal) dt = 'decimal'
-                if (value[0] instanceof Long) dt = 'decimal'
-                if (value[0] instanceof Integer) dt = 'decimal'
-                if (value[0] instanceof Boolean) dt = 'boolean'
-                switch (dt) {
-                    case 'integer':
-                    case 'int32':
-                    case 'number':
-                    case 'int64':
-                    case 'long':
-                    case 'float':
-                    case 'decimal':
-                        value = func_avg(rtData, value.collect{ [v: it] }).v
-                        break;
-                    case 'bool':
-                    case 'boolean':
-                        def v = true;
-                        for (i in value) v = v && cast(i, 'boolean')
-                        value = v
-                        break;
-                    default:
-                        value = buildList(value)
-                        break;
-                }
+	value = (value instanceof GString) ? value.toString() : value
+    if (!srcDataType) {
+        switch (value) {
+            case {it instanceof List}: srcDataType = 'device'; break;
+            case {it instanceof Boolean}: srcDataType = 'boolean'; break;
+            case {it instanceof String}: srcDataType = 'string'; break;
+            case {it instanceof String}: srcDataType = 'string'; break;
+            case {it instanceof Integer}: srcDataType = 'integer'; break;
+            case {it instanceof BigInteger}: srcDataType = 'integer'; break;
+            case {it instanceof Long}: srcDataType = 'integer'; break;
+            case {it instanceof Float}: srcDataType = 'decimal'; break;
+            case {it instanceof BigDecimal}: srcDataType = 'decimal'; break;
+            default: value = "$value".toString(); srcDataType = 'string'; break;
         }
+	}
+    //overrides
+    switch (srcDataType) {
+    	case 'bool': srcDataType = 'boolean'; break;
+    	case 'number': srcDataType = 'decimal'; break;
+    	case 'enum': srcDataType = 'string'; break;
+    	case 'long': srcDataType = 'integer'; break;
     }
-    if (value == null) value = '';
+    switch (dataType) {
+    	case 'bool': dataType = 'boolean'; break;
+    	case 'number': dataType = 'decimal'; break;
+    	case 'enum': dataType = 'string'; break;
+    	case 'long': dataType = 'integer'; break;
+    }
+    //perform the conversion
 	switch (dataType) {
 		case "string":
 		case "text":
-			if (value instanceof Boolean) {
-				return value ? "true" : "false"
-			}										
-			if ((value instanceof Long) && (value > 9999999999)) {
-				return formatLocalTime(value)
-			}
-			return "$value"
-		case "integer":
-		case "int32":
-		case "number":
-			if (value == null) return (int) 0
-			if (value instanceof String) {
-            	value = value.replaceAll(/[^\d.-]/, '')
-				if (value.isInteger())
-					return value.toInteger()
-				if (value.isLong())
-					return (long) value.toLong()
-				if (value.isFloat())
-					return (int) Math.floor(value.toFloat())
-				if (value in trueStrings)
-					return (int) 1
-			}
-			if (value instanceof Boolean) {
-            	return (int) (value ? 1 : 0)
+        	switch (srcDataType) {
+            	case 'boolean': return value ? "true" : "false";
+            	case 'integer': if (value > 9999999999) { return formatLocalTime(value) }; break;
+                case 'time': return formatLocalTime(value);
+                case 'date':
+                case 'datetime': return formatLocalTime(value);
+                case 'device': return buildDeviceList(rtData, value);
             }
-			def result = (int) 0
-			try {
-				result = (int) value
-			} catch(all) {
-				result = (int) 0
-			}
-			return result ? result : (int) 0
-		case "int64":
-		case "long":
-			if (value == null) return (long) 0
-			if (value instanceof String) {
-            	value = value.replaceAll(/[^\d.-]/, '')
-				if (value.isInteger())
-					return (long) value.toInteger()
-				if (value.isLong())
-					return (long) value.toLong()
-				if (value.isFloat())
-					return (long) Math.round(value.toFloat())
-				if (value in trueStrings)
-					return (long) 1
-			}
-			if (value instanceof Boolean) {
-            	return (long) (value ? 1 : 0)
+			return "$value".toString()
+		case "integer":
+			switch (srcDataType) {
+            	case 'string':
+                    value = value.replaceAll(/[^\d.-]/, '')
+                    if (value.isLong())
+                        return (long) value.toLong()
+                    if (value.isInteger())
+                        return (long) value.toInteger()
+                    if (value.isFloat())
+                        return (long) Math.floor(value.toFloat())
+                    if (value in trueStrings)
+                        return (long) 1
+                    break
+				case 'boolean': return (int) (value ? 1 : 0);
             }
 			def result = (long) 0
 			try {
 				result = (long) value
 			} catch(all) {
+				result = (long) 0
 			}
 			return result ? result : (long) 0
-		case "float":
 		case "decimal":
-			if (value == null) return (float) 0
-			if (value instanceof String) {
-            	value = value.replaceAll(/[^\d.-]/, '')
-				if (value.isFloat())
-					return (float) value.toFloat()
-				if (value.isInteger())
-					return (float) value.toInteger()
-				if (value in trueStrings)
-					return (float) 1
-			}
-			if (value instanceof Boolean) {
-            	return (float) (value ? 1 : 0)
+			switch (srcDataType) {
+            	case 'string':
+                    value = value.replaceAll(/[^\d.-]/, '')
+                    if (value.isFloat())
+                        return (float) value.toFloat()
+                    if (value.isLong())
+                        return (float) value.toLong()
+                    if (value.isInteger())
+                        return (float) value.toInteger()
+                    if (value in trueStrings)
+                        return (float) 1
+					break
+				case 'boolean': return (float) (value ? 1 : 0);
             }
 			def result = (float) 0
 			try {
@@ -2909,30 +2946,40 @@ private cast(value, dataType) {
 			}
 			return result ? result : (float) 0
 		case "boolean":
+			switch (srcDataType) {
+            	case 'integer':
+            	case 'decimal':
+            	case 'boolean':
+					return !!value;
+			}
             if (value) {
             	if ("$value".toLowerCase().trim() in trueStrings) return true
 	            if ("$value".toLowerCase().trim() in falseStrings) return false
             }
 			return !!value
 		case "time":
-			return value instanceof String ? utcToLocalDate(value).time : cast(value, "long") % 86400000
+			return ((srcDataType == 'string') ? utcToLocalDate(value).time : cast(rtData, value, "long")) % 86400000
 		case "date":
-			def d = value instanceof String ? utcToLocalDate(value).time : cast(value, "long")
+			def d = ((srcDataType == 'string') ? utcToLocalDate(value).time : cast(rtData, value, "long"))
             return d - (d % 864000000)
 		case "datetime":
-			return value instanceof String ? utcToLocalDate(value).time : cast(value, "long")
+			return ((srcDataType == 'string') ? utcToLocalDate(value).time : cast(rtData, value, "long"))
 		case "vector3":
-			return value instanceof String ? utcToLocalDate(value).time : cast(value, "long")
+			return value instanceof String ? utcToLocalDate(value).time : cast(rtData, value, "long")
 		case "orientation":
 			return getThreeAxisOrientation(value)
-        case 'ms': return cast(value, 'decimal')
-        case 's': return cast(value, 'decimal') * 1000
-        case 'm': return cast(value, 'decimal') * 60000
-        case 'h': return cast(value, 'decimal') * 3600000
-        case 'd': return cast(value, 'decimal') * 86400000
-        case 'w': return cast(value, 'decimal') * 604800000
-        case 'n': return cast(value, 'decimal') * 2592000000
-        case 'y': return cast(value, 'decimal') * 31536000000           
+        case 'ms': return cast(rtData, value, 'decimal')
+        case 's': return cast(rtData, value, 'decimal') * 1000
+        case 'm': return cast(rtData, value, 'decimal') * 60000
+        case 'h': return cast(rtData, value, 'decimal') * 3600000
+        case 'd': return cast(rtData, value, 'decimal') * 86400000
+        case 'w': return cast(rtData, value, 'decimal') * 604800000
+        case 'n': return cast(rtData, value, 'decimal') * 2592000000
+        case 'y': return cast(rtData, value, 'decimal') * 31536000000
+        case 'device':
+        	//device type is an array of device Ids
+        	if (value instanceof List) return value;
+            return [cast(rtData, value, 'string')]
 	}
 	//anything else...
 	return value
@@ -3025,7 +3072,7 @@ private log(message, rtData = null, shift = null, err = null, cmd = null, force 
     	rtData = message.d
     	shift = message.s
         err = message.e
-        message = message.m + " (done in ${now() - message.t}ms)"
+        message = message.m + " (${now() - message.t}ms)"
     }
 	if (!force && rtData && !rtData.logging && (cmd != "error")) {
 		return
@@ -3147,9 +3194,9 @@ private getSunset() {
 private Map getLocalVariables(rtData, vars) {
 	Map result = [:]
 	for (var in vars) {
-    	def variable = [t: var.t, v: var.v ?: cast(state.vars[var.n], var.t), f: !!var.v] //f means fixed value - we won't save this to the state
+    	def variable = [t: var.t, v: var.v ?: cast(rtData, state.vars[var.n], var.t), f: !!var.v] //f means fixed value - we won't save this to the state
         if (rtData && var.v && (var.a == 's')) {
-        	variable.v = cast(evaluateOperand(rtData, null, var.v).v, var.t)
+        	variable.v = cast(rtData, evaluateOperand(rtData, null, var.v).v, var.t)
         }
         result[var.n] = variable
     }
@@ -3175,6 +3222,7 @@ private Map getSystemVariables() {
 		"\$name": [t: "string", d: true],
 		"\$state": [t: "string", v: ''],
 		"\$now": [t: "datetime", d: true],
+        '$device': [t: 'device', v: null],
         '$devices': [t: 'device', v: null],
         '$location': [t: 'device', v: null],
 		"\$utc": [t: "datetime", d: true],
