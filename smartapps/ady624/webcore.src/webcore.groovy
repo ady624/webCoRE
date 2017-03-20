@@ -19,8 +19,9 @@
  *  Version history
  */
 
-public static String version() { return "v0.0.04f.20170320" }
+public static String version() { return "v0.0.050.20170320" }
 /*
+ *	03/20/2016 >>> v0.0.050.20170320 - ALPHA - Introducing parallelism, a semaphore mechanism to allow synchronization of multiple simultaneous executions, disabled by default (pistons wait at a semaphore)
  *	03/20/2016 >>> v0.0.04f.20170320 - ALPHA - Minor fixes for device typed variables (lost attribute) and counter variable in for each
  *	03/20/2016 >>> v0.0.04e.20170320 - ALPHA - Major operand/expression/cast refactoring to allow for arrays of devices - may break things. Also introduced for each loops and actions on device typed variables
  *	03/19/2016 >>> v0.0.04d.20170319 - ALPHA - Fixes for functions and device typed variables
@@ -810,11 +811,30 @@ public String mem(showBytes = true) {
 	return Math.round(100.00 * (bytes/ 100000.00)) + "%${showBytes ? " ($bytes bytes)" : ""}"
 }
 
-public Map getRunTimeData() {
-	//def msg = timer "Generated run time data"
+public Map getRunTimeData(semaphore) {
+    def startTime = now()
+    semaphore = semaphore ?: 0
+    def semaphoreDelay = 0
+    def semaphoreName = "sph$semaphore"
+    def waited = false
+    //if we need to wait for a semaphore, we do it here
+    while (semaphore) {
+        def lastSemaphore = atomicState[semaphoreName] ?: 0
+        if (!lastSemaphore || (now() - lastSemaphore > 10000)) {
+        	semaphoreDelay = waited ? now() - startTime : 0
+            semaphore = now()
+            atomicState[semaphoreName] = semaphore
+            break
+        }
+        waited = true
+    	pause(250)
+    }
 	Map result = [
     	logging: settings.logging,
     	attributes: attributes(),
+        semaphore: semaphore,
+        semaphoreName: semaphoreName,
+        semaphoreDelay: semaphoreDelay,
         commands: commands(),
 		commands: [
         	physical: commands(),
@@ -826,7 +846,6 @@ public Map getRunTimeData() {
         virtualDevices: atomicState.virtualDevices ?: virtualDevices(),
         globalVars: listAvailableVariables()
     ]
-    //trace msg
     return result
 }
 
@@ -855,8 +874,14 @@ public void updateRunTimeData(data) {
         s: data.state, //state
     ]
     atomicState[id] = piston
+
     //broadcast variable change events
     //todo
+    //release semaphores
+	if (data.semaphoreName && (atomicState[data.semaphoreName] <= data.semaphore)) {
+    	//release the semaphore
+        atomicState[data.semaphoreName] = 0
+    }
 }
 
 /******************************************************************************/
@@ -1507,7 +1532,7 @@ private Map getRoutineOptions() {
 }
 
 
-private virtualDevices() {
+private Map virtualDevices() {
 	return [
     	date:			[ n: 'Date'],
     	time:			[ n: 'Time',],

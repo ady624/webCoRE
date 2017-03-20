@@ -13,8 +13,9 @@
  *  for the specific language governing permissions and limitations under the License.
  *
 */
-public static String version() { return "v0.0.04f.20170320" }
+public static String version() { return "v0.0.050.20170320" }
 /*
+ *	03/20/2016 >>> v0.0.050.20170320 - ALPHA - Introducing parallelism, a semaphore mechanism to allow synchronization of multiple simultaneous executions, disabled by default (pistons wait at a semaphore)
  *	03/20/2016 >>> v0.0.04f.20170320 - ALPHA - Minor fixes for device typed variables (lost attribute) and counter variable in for each
  *	03/20/2016 >>> v0.0.04e.20170320 - ALPHA - Major operand/expression/cast refactoring to allow for arrays of devices - may break things. Also introduced for each loops and actions on device typed variables
  *	03/19/2016 >>> v0.0.04d.20170319 - ALPHA - Fixes for functions and device typed variables
@@ -324,7 +325,7 @@ def config(data) {
 
 def pause() {
 	state.active = false
-    def rtData = getRunTimeData(null, true)
+    def rtData = getRunTimeData()
 	def msg = timer "Piston successfully stopped", rtData, -1
     trace "Stopping piston...", rtData, 0
     checkVersion(rtData)
@@ -343,7 +344,7 @@ def resume() {
 	def tempRtData = [timestamp: now(), logs:[], logging: true]
     def msg = timer "Piston successfully started", tempRtData,  -1
 	trace "Starting piston... (${version()})", tempRtData, 0
-    def rtData = getRunTimeData(null, true)
+    def rtData = getRunTimeData()
     rtData.logs = rtData.logs + (rtData.logging ? tempRtData.logs : [])
     checkVersion(rtData)
     msg.d = rtData
@@ -358,9 +359,10 @@ def execute() {
 
 }
 
-private getRunTimeData(rtData = null, noVars = false) {
+private getRunTimeData(rtData = null, semaphore = null) {
 	def timestamp = rtData?.timestamp ?: now()
-	rtData = rtData ?: parent.getRunTimeData()
+    def piston = state.piston
+	rtData = rtData ?: parent.getRunTimeData(semaphore && !(piston.o?.pep) ? hashId(app.id) : null)
     rtData.timestamp = timestamp
     rtData.logs = [[t: timestamp]]
     rtData.trace = [t: timestamp, points: [:]]
@@ -371,15 +373,13 @@ private getRunTimeData(rtData = null, noVars = false) {
     rtData.newCache = [:]
     rtData.schedules = []
     rtData.cancelations = [statements:[], conditions:[]]
-    rtData.piston = state.piston
+    rtData.piston = piston
     rtData.locationId = hashId(location.id)
     //flow control
     rtData.state = [old: (state.state ?: ''), new: state.piston.o?.mps ? (state.state ?: '') : 'true'];
     rtData.statementLevel = 0;
     rtData.fastForwardTo = null
     rtData.break = false
-
-	if (noVars) return rtData   
     rtData.systemVars = getSystemVariables()
     rtData.localVars = getLocalVariables(rtData, state.piston.v)
     return rtData
@@ -399,7 +399,7 @@ private checkVersion(rtData) {
 /*** 																		***/
 /******************************************************************************/
 def fakeHandler(event) {
-	def rtData = getRunTimeData(null, true)
+	def rtData = getRunTimeData()
 	warn "Received unexpected event [${event.device}].${event.name} = ${event.value} (device has no active subscriptions)... ", rtData
     updateLogs(rtData)
 }
@@ -427,11 +427,14 @@ def handleEvents(event) {
     //todo start execution
     def ver = version()
 	def msg2 = timer "Runtime successfully initialized ($ver)"
-    Map rtData = getRunTimeData(null)
+    Map rtData = getRunTimeData(null, true)
     rtData.logs = rtData.logs + (rtData.logging ? tempRtData.logs : [])
     msg.d = rtData
     msg2.d = rtData
     checkVersion(rtData)    
+    if (rtData.semaphoreDelay) {
+    	warn "Piston waited at a semaphore for ${rtData.semaphoreDelay}ms", rtData
+    }
     trace msg2
     rtData.stats.timing = [
     	t: startTime,
@@ -572,8 +575,6 @@ private finalizeEvent(rtData, initialMsg, success = true) {
     atomicState.schedules = schedules
     atomicState.nextSchedule = rtData.stats.nextSchedule
 
-	parent.updateRunTimeData(rtData)
-
     if (initialMsg) {
     	if (success) {
         	trace initialMsg
@@ -591,6 +592,7 @@ private finalizeEvent(rtData, initialMsg, success = true) {
     if (stats.timing.size() > 500) stats.timing = stats.timing[stats.timing.size() - 500..stats.timing.size() - 1]
     rtData.trace.d = now() - rtData.trace.t
 
+
 	state.state = rtData.state.new
 	//atomicState.stats = stats
     state.stats = stats
@@ -600,6 +602,8 @@ private finalizeEvent(rtData, initialMsg, success = true) {
     for(item in rtData.newCache) rtData.cache[item.key] = item.value
     //beat race conditions
     state.cache = rtData.cache
+    
+	parent.updateRunTimeData(rtData)   
     state.schedules = atomicState.schedules
 }
 
