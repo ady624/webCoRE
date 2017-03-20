@@ -32,12 +32,8 @@
                     <li class="dropdown">
                         <a id="options" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false"><i class="fa fa-cog" aria-hidden="true"></i> Options<span class="caret"></span></a>
                         <ul class="dropdown-menu btn btn-default">
-                            <li class="{{piston.view.variables ? 'active-tick' : ''}}" ng-click="toggleView('variables');"><a>Show variables</a>
-                            </li>
-                            <li class="{{piston.view.elseIfs ? 'active-tick' : ''}}" ng-click="toggleView('elseIfs');"><a>Show complex IFs</a>
-                            </li>
-                            <li class="{{piston.view.restrictions ? 'active-tick' : ''}}" ng-click="toggleView('restrictions');"><a>Show restrictions</a>
-                            </li>
+                            <li ng-click="newPiston();"><a>Add a new piston</a></li>
+                            <li ng-if="instanceCount > 1" ng-click="movePiston();"><a>Move piston(s)</a></li>
                             <li role="separator" class="divider"></li>
                             <li ng-click="logOut();"><a>Log out</a></li>
                         </ul>
@@ -46,75 +42,46 @@
         </div>
       </div>
     </nav>
-<viewer class="dashboard" ng-if="initialized" ng-animate class="no-animate">
-    <div class="body container-fluid">
-      <div class="row">
-        <div class="col-sm-1 sidebar">
-          <ul class="nav nav-sidebar">
-            <li><a href="" ng-click="newPiston();">Add a new piston</a></li>
-          </ul>
-        </div>
-        <div class="col-sm-11 col-sm-offset-1 main">
-
-          <!--<div class="row placeholders">
-            <div class="col-xs-6 col-sm-3 placeholder">
-              <img src="data:image/gif;base64,R0lGODlhAQABAIAAAHd3dwAAACH5BAAAAAAALAAAAAABAAEAAAICRAEAOw==" width="200" height="200" class="img-responsive" alt="Generic placeholder thumbnail">
-              <h4>Label</h4>
-              <span class="text-muted">Something else</span>
-            </div>
-            <div class="col-xs-6 col-sm-3 placeholder">
-              <img src="data:image/gif;base64,R0lGODlhAQABAIAAAHd3dwAAACH5BAAAAAAALAAAAAABAAEAAAICRAEAOw==" width="200" height="200" class="img-responsive" alt="Generic placeholder thumbnail">
-              <h4>Label</h4>
-              <span class="text-muted">Something else</span>
-            </div>
-            <div class="col-xs-6 col-sm-3 placeholder">
-              <img src="data:image/gif;base64,R0lGODlhAQABAIAAAHd3dwAAACH5BAAAAAAALAAAAAABAAEAAAICRAEAOw==" width="200" height="200" class="img-responsive" alt="Generic placeholder thumbnail">
-              <h4>Label</h4>
-              <span class="text-muted">Something else</span>
-            </div>
-            <div class="col-xs-6 col-sm-3 placeholder">
-              <img src="data:image/gif;base64,R0lGODlhAQABAIAAAHd3dwAAACH5BAAAAAAALAAAAAABAAEAAAICRAEAOw==" width="200" height="200" class="img-responsive" alt="Generic placeholder thumbnail">
-              <h4>Label</h4>
-              <span class="text-muted">Something else</span>
-            </div>
-          </div>-->
-
-          <div new class="table-responsive no-animate" ng-if="instance">
-            <table class="table table-striped">
-              <tbody>
-                <tr ng-click="newPiston();"">
-                  <td new>+ add new piston</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-          <div class="table-responsive no-animate" ng-if="instance && activePistons">
-			<label>Active pistons ({{activePistons}})</label>
-            <table class="table table-striped">
-              <tbody>
-                <tr ng-repeat="piston in instance.pistons" ng-click="openPiston(piston.id);" active="true" ng-if="piston.meta && piston.meta.a" title="{{piston.meta.t ? 'Executed ' + timeSince(piston.meta.t) : 'Never executed'}}">
-                  <td><i star class="fa fa-gears" style="opacity: {{getOpacity(piston.meta ? piston.meta.t : 0)}}" aria-hidden="true"></i>{{piston.name}}</td>
-				  <td class="col-md-1 text-right">{{piston.meta.n ? timeCounter(piston.meta.n) : ''}}</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-          <div class="table-responsive no-animate" ng-if="instance && pausedPistons">
-			<label>Paused pistons ({{pausedPistons}})</label>
-            <table class="table table-striped">
-              <tbody>
-                <tr ng-repeat="piston in instance.pistons" ng-click="openPiston(piston.id);" active="false" ng-if="!piston.meta || !piston.meta.a" title="{{piston.meta.t ? 'Paused on ' + utcToString(piston.meta.t) : ''}}">
-                  <td>{{piston.name}}</td>
-				  <td class="col-md-1 text-right">{{piston.meta.n ? timeCounter(piston.meta.n) : ''}}</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-    </div>
-
-</viewer>
+	<viewer class="dashboard" ng-if="initialized" ng-animate class="no-animate">
+		<div class="body container-fluid">
+			<div class="row">
+				<div class="col-sm-1 sidebar">
+					<ul class="nav nav-sidebar">
+						<li><a href="" ng-click="newPiston();">Add a new piston</a></li>
+						<li ng-if="instanceCount > 1"><a href="" ng-click="movePiston();">Move piston(s)</a></li>
+					</ul>
+				</div>
+				<div class="col-sm-11 col-sm-offset-1 main">
+					<div lonely ng-if="!activePistons && !pausedPistons">
+						<i class="fa fa-frown-o" aria-hidden="true"></i>
+						<div>It's kinda lonely in here...<br/>How about <a ng-click="newPiston();">creating a piston</a>?</div>
+					</div>
+					<div class="table-responsive no-animate" ng-if="instance && activePistons">
+						<label>Active pistons ({{activePistons}})</label>
+						<table class="table table-striped">
+							<tbody>
+								<tr ng-repeat="piston in instance.pistons" ng-click="openPiston(piston.id);" active="true" ng-if="piston.meta && piston.meta.a" title="{{piston.meta.t ? 'Executed ' + timeSince(piston.meta.t) : 'Never executed'}}">
+									<td><i star class="fa fa-gears" ng-style="{opacity: piston.opacity}" aria-hidden="true"></i><span>{{piston.name}}</span><span ng-if="piston.meta.s && piston.meta.s.new" state="{{piston.meta.s.new}}">{{piston.meta.s.new}}</span></td>
+									<td dur class="col-md-1 text-right">{{piston.meta.n ? timeCounter(piston.meta.n) : ''}}</td>
+								</tr>
+							</tbody>
+						</table>
+					</div>
+					<div class="table-responsive no-animate" ng-if="instance && pausedPistons">
+						<label>Paused pistons ({{pausedPistons}})</label>
+						<table class="table table-striped">
+							<tbody>
+								<tr ng-repeat="piston in instance.pistons" ng-click="openPiston(piston.id);" active="false" ng-if="!piston.meta || !piston.meta.a" title="{{piston.meta.t ? 'Paused on ' + utcToString(piston.meta.t) : ''}}">
+									<td><span>{{piston.name}}</span></td>
+									<td class="col-md-1 text-right">{{piston.meta.n ? timeCounter(piston.meta.n) : ''}}</td>
+								</tr>
+							</tbody>
+						</table>
+					</div>
+				</div>
+			</div>
+		</div>
+	</viewer>
 
 
 
@@ -259,6 +226,41 @@
         <footer>
             <button type="button" class="btn btn-info pull-right" ng-disabled="!designer.type || !designer.author || !designer.name || ((designer.type == 'duplicate') && !designer.piston) || ((designer.type == 'restore') && !designer.bin)" ng-click="createPiston();">Create</button>
             <button type="button" class="btn btn-default" ng-click="prevPage();">Back</button>
+        </footer>
+    </designer>
+</script>
+
+
+
+
+<script type="text/ng-template" id="dialog-move-piston">
+	<designer>
+        <header>
+            <label>Move piston(s)</label>
+        </header>
+		<form>
+			<div class="form-group">
+				<label for="piston">Select the piston(s) you want to move</label>
+				<select id="piston" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-default" ng-model="designer.pistons" data-mobile="{{mobile}}" ng-init="instances = listAllInstances()" multiple>
+					<option style="display:none" value="">Nothing selected...</option>
+					<optgroup ng-repeat="i in instances" label="{{i.name}}">
+	                	<option ng-repeat="p in i.pistons" value="{{i.id}}{{p.id}}">{{p.name}}</option>
+					</optgroup>
+				</select>
+			</div>
+
+			<div class="form-group">
+				<label for="piston">Select the destination instance</label>
+				<select id="piston" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-default" ng-model="designer.instance" data-mobile="{{mobile}}" ng-init="instances = listAllInstances()">
+					<option style="display:none" value="">Nothing selected...</option>
+					<option ng-repeat="i in instances" value="{{i.id}}">{{i.name}}</option>
+				</select>
+			</div>
+        </form>
+
+        <footer>
+            <button type="button" class="btn btn-info pull-right" ng-disabled="!designer.pistons || !designer.pistons.length || !designer.instance" ng-click="movePistons();">Move</button>
+            <button type="button" class="btn btn-default" ng-click="closeDialog();">Cancel</button>
         </footer>
     </designer>
 </script>

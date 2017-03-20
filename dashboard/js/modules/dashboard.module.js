@@ -23,6 +23,7 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
         dataService.setStatusCallback($scope.setStatus);
 		dataService.loadInstance(instance, uri, pin)
 			.success(function(data) {
+				if ($scope.$$destroyed) return;
 				if (currentRequestId != $scope.requestId) { return };
 				if (data.error) {
 					switch (data.error) {
@@ -35,6 +36,7 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 					$scope.location = dataService.getLocation();
 					$scope.instance = dataService.getInstance();
 					$scope.currentInstanceId = $scope.instance.id;
+					$scope.instanceCount = dataService.getInstanceCount();
 					window.scope = $scope;
 					$scope.loading = false;
 					$scope.activePistons = 0;
@@ -47,10 +49,12 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 							$scope.pausedPistons++;
 						}
 					}
+					$scope.clock();
 					$scope.render();
 				}
 		    })
 			.error(function(data, status, headers, config) {
+				if ($scope.$$destroyed) return;
 				if (status == 404) {
 					$scope.dialogDeleteInstance(instance);
 				}
@@ -65,9 +69,17 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 		if ($scope.$$destroyed) return;
 		if (!$scope.initialized) return;
         //do nothing, but rerenders
-		if (!tmrClock) tmrClock = $interval(function() {}, 1000);
+		if (!tmrClock) tmrClock = $interval($scope.clock, 1000);
 		if (!tmrActivity) tmrActivity = $timeout($scope.init, 5000);
     }
+
+
+	$scope.clock = function() {
+		for(pistonIndex in $scope.instance.pistons) {
+			var piston = $scope.instance.pistons[pistonIndex];
+			piston.opacity = $scope.getOpacity(piston.meta.t);
+		}
+	};
 
     $scope.setStatus = function(status) {
         if (tmrStatus) $timeout.cancel(tmrStatus);
@@ -149,6 +161,25 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 	        });
 		});
     };
+
+
+	$scope.movePiston = function() {
+		$scope.designer = {
+			pistons: [],
+			instance: ''
+		}
+   	    $scope.designer.dialog = ngDialog.open({
+       	    template: 'dialog-move-piston',
+           	className: 'ngdialog-theme-default ngdialog-large',
+            closeByDocument: false,
+   	        disableAnimation: true,
+       	    scope: $scope
+        });
+	};
+
+	$scope.movePistons = function() {
+		alert('Sorry, not ready yet');
+	}
 
 	$scope.createPiston = function() {
 		var success = function(data) {

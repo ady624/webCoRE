@@ -24,13 +24,16 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 
 	$scope.render = function(cancelTimer) {
 		//do nothing, but rerenders
-		if (cancelTimer) {
-			if (tmrClock) $timeout.cancel(tmrClock);
-			tmrClock = null;
-		} else {
-			if (!tmrClock && ($scope.mode == 'view') && ($scope.view.trace)) {
+		if (($scope.mode == 'view') && ($scope.view.trace)) {
+			if (!tmrClock) {
 				tmrClock = $interval($scope.render, 1000);
 			}
+			if ($scope.trace) {
+			}
+
+		} else {
+			if (tmrClock) $timeout.cancel(tmrClock);
+			tmrClock = null;
 		}
 	}
 
@@ -53,6 +56,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 			return;
 		}
 		dataService.getActivity($scope.pistonId, ($scope.logs && $scope.logs.length && $scope.logs[0].t ? $scope.logs[0].t : 0)).success(function (response) {
+			if ($scope.$$destroyed) return;
 			if (response.error == 'ERR_INVALID_ID') {
 				//the app has been deleted
 				$scope.home();
@@ -60,6 +64,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 			}
 			if (response && response.activity) {
 				//we got data
+				if (response.activity.state) $scope.state = response.activity.state;
 				if (response.activity.logs && response.activity.logs.length) $scope.logs = response.activity.logs.concat($scope.logs);
 				if (response.activity.trace) $scope.trace = response.activity.trace;
 				if (response.activity.localVars) $scope.localVars = response.activity.localVars;
@@ -79,109 +84,111 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		$scope.loading = true;
 		if ($scope.piston) $scope.loading = true;
 		dataService.getPiston($scope.pistonId).success(function (response) {
-		try {
-			var showOptions = $scope.piston ? !!$scope.showOptions : false;
-			if (!response || !response.data || !response.data.piston) {
-				$scope.error = $sce.trustAsHtml('Sorry, an error occurred while retrieving the piston data.');
-				$scope.loading = false;
-				return;
-			}
-			$scope.piston = response.data.piston;
-			$scope.meta = response.data.meta ? response.data.meta : {}
-			//database
-			$scope.db = response.db;
-			$scope.location = dataService.getLocation();
-			$scope.instance = dataService.getInstance();
-			$scope.view = dataService.loadFromStore('view') || {
-				variables: false,
-				elseIfs: false,
-				restrictions: false,
-				whens: false,
-				advancedStatements: false
-			};
-			$scope.subscriptions = response.data.subscriptions ? response.data.subscriptions : {};
-			$scope.logs = response.data.logs ? response.data.logs : [];
-			$scope.stats = response.data.stats ? response.data.stats : {};
-			$scope.trace = response.data.trace ? response.data.trace : {};
-			$scope.memory = response.data.memory ? response.data.memory : 0;
-			$scope.lastExecuted = response.data.lastExecuted;
-			$scope.nextSchedule = response.data.nextSchedule;
-			
-			$scope.initChart();
-			$scope.devices = $scope.listAvailableDevices();
-			$scope.virtualDevices = $scope.listAvailableVirtualDevices();
-			window.scope = $scope;
-			$scope.localVars = response.data.localVars;
-			$scope.globalVars = response.data.globalVars;
-			$scope.systemVars = response.data.systemVars;
-			$scope.systemVarNames = []; //fix for angular ignoring keys that start with $
-			for(name in $scope.systemVars) $scope.systemVarNames.push(name);
-			$scope.meta.build = $scope.meta.build ? 1 * $scope.meta.build : 0;
-			if ($scope.piston && ($scope.meta.build == 0)) {
-				$scope.piston.z = $scope.params && $scope.params.description ? $scope.params.description : '';
-				$scope.mode = 'edit';
-				if ($scope.params && $scope.params.type != 'blank') {
-					switch ($scope.params.type) {
-						case 'duplicate':
-							if ($scope.params.piston) {
-								$scope.loading = true;
-								dataService.getPiston($scope.params.piston).success(function (response) {
-									$scope.loading = false;
-									if (response && response.data && response.data.piston) {
-										$scope.piston.o = response.data.piston.o ? response.data.piston.o : {};
-										$scope.piston.r = response.data.piston.r ? response.data.piston.r : [];
-										$scope.piston.rn = !!response.data.piston.rn;
-										$scope.piston.ro = response.data.piston.ro ? response.data.piston.ro : 'and';
-										$scope.piston.s = response.data.piston.s ? response.data.piston.s : [];
-										$scope.piston.v = response.data.piston.v ? response.data.piston.v : [];
-									}
-									$scope.initialized = true;
-									$scope.loading = false;
-								});
-								return;
-							}
-							break;
-						case 'restore':
-							if ($scope.params.bin) {
-								$scope.loading = true;
-								dataService.loadFromBin($scope.params.bin).success(function (piston) {
-									$scope.loading = false;
-									if (piston) {
-										$scope.piston.o = piston.o ? piston.o : {};
-										$scope.piston.r = piston.r ? piston.r : [];
-										$scope.piston.rn = !!piston.rn;
-										$scope.piston.ro = piston.ro ? piston.ro : 'and';
-										$scope.piston.s = piston.s ? piston.s : [];
-										$scope.piston.v = piston.v ? piston.v : [];
-										$scope.piston.z = piston.z ? piston.z : '';
-									}
-									$scope.initialized = true;
-									$scope.loading = false;
-								});
-								return;
-							}
-							break;
+			if ($scope.$$destroyed) return;
+			try {
+				var showOptions = $scope.piston ? !!$scope.showOptions : false;
+				if (!response || !response.data || !response.data.piston) {
+					$scope.error = $sce.trustAsHtml('Sorry, an error occurred while retrieving the piston data.');
+					$scope.loading = false;
+					return;
+				}	
+				$scope.piston = response.data.piston;
+				$scope.meta = response.data.meta ? response.data.meta : {}
+				//database
+				$scope.db = response.db;
+				$scope.location = dataService.getLocation();
+				$scope.instance = dataService.getInstance();
+				$scope.view = dataService.loadFromStore('view') || {
+					variables: false,
+					elseIfs: false,
+					restrictions: false,
+					whens: false,
+					advancedStatements: false
+				};
+				$scope.subscriptions = response.data.subscriptions ? response.data.subscriptions : {};
+				$scope.logs = response.data.logs ? response.data.logs : [];
+				$scope.stats = response.data.stats ? response.data.stats : {};
+				$scope.state = response.data.state ? response.data.state : '';
+				$scope.trace = response.data.trace ? response.data.trace : {};
+				$scope.memory = response.data.memory ? response.data.memory : 0;
+				$scope.lastExecuted = response.data.lastExecuted;
+				$scope.nextSchedule = response.data.nextSchedule;
+				
+				$scope.initChart();
+				$scope.devices = $scope.listAvailableDevices();
+				$scope.virtualDevices = $scope.listAvailableVirtualDevices();
+				window.scope = $scope;
+				$scope.localVars = response.data.localVars;
+				$scope.globalVars = response.data.globalVars;
+				$scope.systemVars = response.data.systemVars;
+				$scope.systemVarNames = []; //fix for angular ignoring keys that start with $
+				for(name in $scope.systemVars) $scope.systemVarNames.push(name);
+				$scope.meta.build = $scope.meta.build ? 1 * $scope.meta.build : 0;
+				if ($scope.piston && ($scope.meta.build == 0)) {
+					$scope.piston.z = $scope.params && $scope.params.description ? $scope.params.description : '';
+					$scope.mode = 'edit';
+					if ($scope.params && $scope.params.type != 'blank') {
+						switch ($scope.params.type) {
+							case 'duplicate':
+								if ($scope.params.piston) {
+									$scope.loading = true;
+									dataService.getPiston($scope.params.piston).success(function (response) {
+										$scope.loading = false;
+										if (response && response.data && response.data.piston) {
+											$scope.piston.o = response.data.piston.o ? response.data.piston.o : {};
+											$scope.piston.r = response.data.piston.r ? response.data.piston.r : [];
+											$scope.piston.rn = !!response.data.piston.rn;
+											$scope.piston.ro = response.data.piston.ro ? response.data.piston.ro : 'and';
+											$scope.piston.s = response.data.piston.s ? response.data.piston.s : [];
+											$scope.piston.v = response.data.piston.v ? response.data.piston.v : [];
+										}
+										$scope.initialized = true;
+										$scope.loading = false;
+									});
+									return;
+								}
+								break;
+							case 'restore':
+								if ($scope.params.bin) {
+									$scope.loading = true;
+									dataService.loadFromBin($scope.params.bin).success(function (piston) {
+										$scope.loading = false;
+										if (piston) {
+											$scope.piston.o = piston.o ? piston.o : {};
+											$scope.piston.r = piston.r ? piston.r : [];
+											$scope.piston.rn = !!piston.rn;
+											$scope.piston.ro = piston.ro ? piston.ro : 'and';
+											$scope.piston.s = piston.s ? piston.s : [];
+											$scope.piston.v = piston.v ? piston.v : [];
+											$scope.piston.z = piston.z ? piston.z : '';
+										}
+										$scope.initialized = true;
+										$scope.loading = false;
+									});
+									return;
+								}
+								break;
+						}
 					}
 				}
-			}
-			if ($scope.mode == 'edit') {
-				$scope.loadStack();
-			} else {
-				$scope.updateActivity(true);
-			}
+				if ($scope.mode == 'edit') {
+					$scope.loadStack();
+				} else {
+						$scope.updateActivity(true);
+				}	
 
-			$scope.piston.o = $scope.piston.o ? $scope.piston.o : {cto: 0, ced: 0};
-			$scope.piston.r = $scope.piston.r ? $scope.piston.r : [];
-			$scope.piston.s = $scope.piston.s ? $scope.piston.s : [];
-			$scope.piston.ro = $scope.piston.ro ? $scope.piston.ro : 'and';
-			$scope.piston.rn = !!$scope.piston.rn;
-			$scope.piston.v = $scope.piston.v ? $scope.piston.v : [];
-			$scope.piston.z = $scope.piston.z || '';
-
-			$scope.initialized = true;
-			$scope.loading = false;
-			$scope.render();
-		} catch(e) { alert(e); }
+				$scope.piston.o = $scope.piston.o ? $scope.piston.o : {cto: 0, ced: 0};
+				$scope.piston.r = $scope.piston.r ? $scope.piston.r : [];
+				$scope.piston.s = $scope.piston.s ? $scope.piston.s : [];
+				$scope.piston.ro = $scope.piston.ro ? $scope.piston.ro : 'and';
+				$scope.piston.rn = !!$scope.piston.rn;
+				$scope.piston.v = $scope.piston.v ? $scope.piston.v : [];
+				$scope.piston.z = $scope.piston.z || '';
+	
+				$scope.initialized = true;
+				$scope.loading = false;
+				$scope.render();
+			} catch(e) { alert(e); }
 		});
 	};
 
@@ -306,7 +313,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 	}
 
 	$scope.toggleView = function(item) {
-		$scope.view[item] = !$scope.view[item];
+		if(item) $scope.view[item] = !$scope.view[item];
 		dataService.saveToStore('view', $scope.view);
 
 	}
@@ -487,6 +494,8 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		if ($scope.mode != 'edit') return;
 		$scope.designer = {
 			name: $scope.meta.name,
+			description: $scope.piston.z,
+			automaticState: $scope.piston.o.mps ? '1' : '0',
 			conditionOptimizations: $scope.piston.o.cto ? '1' : '0',
 			commandDelay: $scope.piston.o.ced ? $scope.piston.o.ced : 0
 		};
@@ -502,6 +511,8 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 
 	$scope.updateSettings = function() {
 		$scope.meta.name = $scope.designer.name;
+		$scope.piston.z = $scope.designer.description;
+		$scope.piston.o.mps = $scope.designer.automaticState == '1' ? 1 : 0;
 		$scope.piston.o.cto = $scope.designer.conditionOptimizations == '1' ? 1 : 0;
 		$scope.piston.o.ced = isNaN($scope.designer.commandDelay) ? 0 : parseInt($scope.designer.commandDelay);
 		$scope.closeDialog();
@@ -564,6 +575,31 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		$scope.designer.tos = statement.os;
 		$scope.designer.ctp = statement.ctp || 'i';
 		$scope.designer.async = statement.a;
+		$scope.designer.ontypechanged = function(designer, type) {
+			switch (type) {
+				case 'for':
+					designer.operand.dataType = 'decimal';
+					designer.operand2.dataType = 'decimal';
+					designer.operand3.dataType = 'decimal';
+					if (designer.new) designer.operand.data = {t: 'c'};
+					if (designer.new) designer.operand2.data = {t: 'c'};
+					if (designer.new) designer.operand3.data = {t: 'c'};
+					$scope.validateOperand(designer.operand, true);
+					$scope.validateOperand(designer.operand2, true);
+					$scope.validateOperand(designer.operand3, true);
+					break;
+				case 'each':
+					designer.operand.dataType = 'devices';
+					if (designer.new) designer.operand.data = {t: 'd'};
+					$scope.validateOperand(designer.operand, true);
+					break;
+				case 'switch':
+					designer.operand.dataType = '';
+					if (designer.new) designer.operand.data = {t: 'p'};
+					$scope.validateOperand(designer.operand, true);
+					break;
+			}
+		}
 		window.designer = $scope.designer;
 		$scope.designer.items = {
 			simple: [
@@ -573,15 +609,14 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 			advanced: [
 				{ type: 'switch', name: 'SWITCH', icon: 'code-fork', class: 'btn-info' },
 				{ type: 'for', name: 'FOR loop', icon: 'circle-o-notch', class: 'btn-warning' },
+				{ type: 'each', name: 'FOR EACH loop', icon: 'circle-o-notch', class: 'btn-warning' },
 				{ type: 'while', name: 'WHILE loop', icon: 'circle-o-notch', class: 'btn-warning' },
 				{ type: 'repeat', name: 'REPEAT loop', icon: 'circle-o-notch', class: 'btn-warning' },
 				{ type: 'break', name: 'BREAK', icon: 'ban', class: 'btn-danger' },
 				{ type: 'exit', name: 'EXIT', icon: 'ban', class: 'btn-danger' }
 			]
 		};
-		$scope.validateOperand($scope.designer.operand, 'c');
-		$scope.validateOperand($scope.designer.operand2, 'c');
-		$scope.validateOperand($scope.designer.operand3, 'c');
+		$scope.designer.ontypechanged($scope.designer, $scope.designer.type);
 		$scope.designer.dialog = ngDialog.open({
 			template: 'dialog-edit-statement',
 			className: 'ngdialog-theme-default ngdialog-large',
@@ -629,6 +664,11 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 				statement.lo3 = $scope.designer.operand3.data;
 				statement.s = statement.s ? statement.s : [];
 				break;
+			case 'each':
+				statement.x = $scope.designer.x;
+				statement.lo = $scope.designer.operand.data;
+				statement.s = statement.s ? statement.s : [];
+				break;
 			case 'while':
 				statement.o = $scope.designer.operator;
 				statement.n = $scope.designer.not;
@@ -644,7 +684,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 			case 'break':
 				break;
 			case 'exit':
-				statement.v = statement.v ? statement.v : '';
+				statement.lo = $scope.designer.operand.data;
 				break;
 			default: statement.t = null;
 		}
@@ -675,6 +715,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 					$scope.addCondition(statement.c);
 					break;
 				case 'for':
+				case 'each':
 				case 'repeat':
 					$scope.addStatement(statement.s);
 					break;
@@ -1141,7 +1182,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		$scope.designer.type = variable.t;
 		$scope.designer.assignment = variable.a || 'd';
 		$scope.designer.name = variable.n;
-		$scope.designer.operand = {data: variable.v, allowMultiple: false, dataType: variable.t, optional: true}
+		$scope.designer.operand = {data: (variable.t == 'device' ? { t: 'd', d: variable.v} : variable.v), allowMultiple: false, dataType: variable.t, optional: true}
 		$scope.designer.description = variable.z;
 		window.designer = $scope.designer;
 		window.scope = $scope;
@@ -1163,10 +1204,16 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		variable.z = $scope.designer.description;
 		variable.a = $scope.designer.assignment;
 		var value = $scope.designer.operand.data;
-		if (value.t == '') {
-			variable.v = null;
-		} else {
-			variable.v = value;
+		switch (value.t) {
+			case '':
+				variable.v = null;
+				break;
+			case 'd':
+				variable.v = value.d;
+				break;
+			default:
+				variable.v = value;
+				break;
 		}
 		if ($scope.designer.new) {
 			$scope.piston.v.push(variable);
@@ -1189,6 +1236,9 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 	$scope.setDesignerType = function(type) {
  		$scope.designer.type = type;
 		$scope.nextPage();
+		if ($scope.designer.ontypechanged) {
+			$scope.designer.ontypechanged($scope.designer, type);
+		}
 	};
 
 	$scope.closeDialog = function() {
@@ -1423,16 +1473,21 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 			result += '<span ' + tag + (className ? ' class="' + className + '"' : '') + '>' + item + '</span>' + (possessive ? '\'' + (item.substr(-1) == 's' ? '' : 's') : '') + (cnt < list.length ? (cnt == list.length - 1 ? (list.length > 2 ? ', ' : ' ') + suffix + ' ' : ', ') : '');
 			cnt++;
 		}
-		return $sce.trustAsHtml(result.trim());
+		return result.trim();
 	}
 
 	$scope.buildDeviceNameList = function(devices) {
 		var deviceNames = [];
 		if (devices instanceof Array) {
 			for (deviceIndex in devices) {
-				var device = $scope.getDeviceById(devices[deviceIndex]);
-				if (device) {
-					deviceNames.push(device.n);
+				var deviceId = devices[deviceIndex] || '';
+				if (deviceId.startsWith(':')) {
+					var device = $scope.getDeviceById(deviceId);
+					if (device) {
+						deviceNames.push(device.n);
+					}
+				} else {
+					deviceNames.push('{<span var>' + deviceId + '</span>}');
 				}
 			}
 			if (deviceNames.length) {
@@ -1442,6 +1497,9 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		return 'Location';
 	};
 
+	$scope.renderDeviceNameList = function(devices) {
+		return $sce.trustAsHtml($scope.buildDeviceNameList(devices));
+	}
 
 	$scope.hasCommand = function(device, commandName) {
 		if (!device || !device.c) return false;
@@ -1468,14 +1526,23 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		var commands = {}
 		var deviceCount = devices.length;
 		for (deviceIndex in devices) {
-			var device = $scope.getDeviceById(devices[deviceIndex]);
+			var deviceId = devices[deviceIndex] || '';
+			var cmds = [];
+			var all = false;
+			if (deviceId.startsWith(':')) {
+				var device = $scope.getDeviceById(devices[deviceIndex]);
+				cmds = device.c;
+			} else {
+				all = true;
+				cmds = $scope.db.commands.physical;
+			}
 			//get all the device supported commands
-			for (commandIndex in device.c) {
-				var command = device.c[commandIndex];
-				if (commands[command.n]) {
-					commands[command.n] += 1;
+			for (commandIndex in cmds) {
+				var commandName = all ? commandIndex : cmds[commandIndex].n;
+				if (commands[commandName]) {
+					commands[commandName] += 1;
 				} else {
-					commands[command.n] = 1;
+					commands[commandName] = 1;
 				}
 			}
 		}
@@ -1498,14 +1565,19 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 			if (command.r) {
 				var count = 0;
 				for (deviceIndex in devices) {
-					var device = $scope.getDeviceById(devices[deviceIndex]);
-					var ok = !!device;
-					if (ok) for(req in command.r) {
-						if (!$scope.hasCommand(device, command.r[req])) {
-//						if (!device.c.find(x => x.n === command.r[req])) {
-							ok = false;
-							break;
+					var deviceId = devices[deviceIndex] || '';
+					var ok = false;
+					if (deviceId.startsWith(':')) {
+						var device = $scope.getDeviceById(devices[deviceIndex]);
+						ok = !!device;
+						if (ok) for(req in command.r) {
+							if (!$scope.hasCommand(device, command.r[req])) {
+								ok = false;
+								break;
+							}
 						}
+					} else {
+						ok = true;
 					}
 					if (ok) {
 						count++;
@@ -1514,11 +1586,9 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 				if (count > 0 ){
 					if (count == deviceCount) {
 						if (!$scope.hasId(result.common, commandName))
-//						if (!result.common.find(x => x.id === commandName))
 							result.common.push(mergeObjects({id: commandName, em: true}, command));
 					} else {
 						if (!$scope.hasId(result.partial, commandName))
-//						if (!result.partial.find(x => x.id === commandName))
 							result.partial.push(mergeObjects({id: commandName, em: true}, command));
 					}
 				}
@@ -1770,6 +1840,10 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 				operand.allowMultiple = true;
 				dataType = 'variable';
 			}
+			if (dataType == 'devices') {
+				operand.allowMultiple = true;
+				dataType = 'device';
+			}
 			if (dataType == 'enums') {
 				operand.allowMultiple = true;
 				dataType = 'enum';
@@ -1794,18 +1868,35 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 				operand.data.t = t;
 			}
 			var strict = !!operand.strict;
-			operand.allowPhysical = (dataType != 'variable') && (!strict || (dataType != 'boolean')) && (dataType != 'duration');
-			operand.allowVirtual = (dataType != 'variable') && (dataType != 'decimal') && (dataType != 'integer') && (dataType != 'number') && (dataType != 'boolean') && (dataType != 'enum') && (dataType != 'color') && (dataType != 'duration');
-			operand.allowVariable = !strict || (dataType != 'boolean');
-			operand.allowConstant = (dataType != 'variable');
-			operand.allowExpression = (dataType != 'variable') && (dataType != 'enum') && (!strict || (dataType != 'boolean'));
+			operand.allowDevices = dataType == 'device';
+			operand.allowPhysical = (dataType != 'device') && (dataType != 'variable') && (!strict || (dataType != 'boolean')) && (dataType != 'duration');
+			operand.allowVirtual = (dataType != 'device') && (dataType != 'variable') && (dataType != 'decimal') && (dataType != 'integer') && (dataType != 'number') && (dataType != 'boolean') && (dataType != 'enum') && (dataType != 'color') && (dataType != 'duration');
+			operand.allowVariable = (dataType != 'device' || ((dataType == 'device') && operand.allowMultiple)) && (!strict || (dataType != 'boolean'));
+			operand.allowConstant = (dataType != 'device') && (dataType != 'variable');
+			operand.allowExpression = (dataType != 'device') && (dataType != 'variable') && (dataType != 'enum') && (!strict || (dataType != 'boolean'));
 
 			if (!operand.config) {
 				operand.config = $scope.copy($scope.getExpressionConfig());
 				operand.config.autocomplete[5].words = [/([0-9]+)(\.[0-9]+)?/g];
 			}
 
-			operand.restrictAttribute = dataType == 'color' ? 'color' : null;
+			operand.restrictAttribute = null;
+			operand.restrictType = null;
+			switch (dataType) {
+				case 'color':
+					operand.restrictAttribute = 'color';
+					break;
+				case 'device':
+					operand.restrictType = 'device';
+					break;
+				case 'integer':
+					operand.restrictType = 'integer';
+					break;
+				case 'decimal':
+					operand.restrictType = 'integer,decimal';
+					break;
+
+			}
 			operand.dataType = dataType;
 
 			operand.durationUnit = operand.data.vt || 's';
@@ -1887,6 +1978,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 
 		operand.valid = (!operand.error) && (
 			((operand.data.t=='') && (operand.optional)) ||
+			((operand.data.t=='d') && operand.data.d && operand.data.d.length) ||
 			((operand.data.t=='p') && operand.data.d && operand.data.d.length && !!operand.data.a) ||
 			((operand.data.t=='v') && !!operand.data.v) ||
 			((operand.data.t=='x') && !!operand.data.x && !!operand.data.x.length) ||
@@ -2129,42 +2221,57 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 	$scope.renderOperand = function(operand, noQuotes = false) {
 		var result = '';
 		if (operand) {
-			switch (operand.t) {
-				case 'p': //physical devices
-					if (operand.d && operand.a)
-						result = $scope.renderDeviceList(operand.d, operand.a, operand.g, true) + ' <span attr>' + operand.a + '</span>';
-					break;
-				case 'v': //virtual devices
-					if (operand.v)
-						result = '<span vdev>' + operand.v + '</span>';
-					break;
-				case 'x': //variable
-					if (operand.x)
-						result = '<span var>{' + operand.x + '}</span>';
-					break;
-				case 'c': //constant
-					var s = operand.c;
-					var m = 'num';
-					if (isNaN(s)) {
-						if ((operand.vt == 'boolean') || (operand.vt == 'enum')) noQuotes = true;
-						s = (noQuotes ? '' : '\'') + s + (noQuotes ? '' : '\'');
-						m = 'lit';
-					}
-					result = '<span ' + m + '>' + s + '</span>';
-					break;
-				case 'e': //expression
-					if (operand.e)
-						result = '<span exp>{' + operand.e + '}</span>';
-					break;
+			if (operand instanceof Array) {
+				result = $scope.renderDeviceList(operand, null, 'and', true);
+			} else {
+				switch (operand.t) {
+					case 'd': //physical devices
+						if (operand.d)
+							result = $scope.buildDeviceNameList(operand.d);
+						break;
+					case 'p': //physical devices
+						if (operand.d && operand.a)
+							result = $scope.renderDeviceList(operand.d, operand.a, operand.g, true) + ' <span attr>' + operand.a + '</span>';
+						break;
+					case 'v': //virtual devices
+						if (operand.v)
+							result = '<span vdev>' + operand.v + '</span>';
+						break;
+					case 'x': //variable
+						if (operand.x)
+							result = '<span var>{' + operand.x + '}</span>';
+						break;
+					case 'c': //constant
+						var s = operand.c;
+							var m = 'num';
+						if (isNaN(s)) {
+							if ((operand.vt == 'boolean') || (operand.vt == 'enum')) noQuotes = true;
+							s = (noQuotes ? '' : '\'') + s + (noQuotes ? '' : '\'');
+							m = 'lit';
+						}
+						result = '<span ' + m + '>' + s + '</span>';
+						break;
+					case 'e': //expression
+						if (operand.e)
+							result = '<span exp>{' + operand.e + '}</span>';
+						break;
+				}
 			}
 		}
-		return $sce.trustAsHtml(result ? result : '(invalid operand)');
+		result = result ? result : '(invalid operand)';
+		return (result instanceof String) ? $sce.trustAsHtml(result) : result;
 	}
 
 
 	$scope.renderForOperands = function(statement) {
 		var result;
-		result = '<span var>' + (statement.x ? statement.x : '$index') + '</span> <span pun>=</span> <span num>' + $scope.renderOperand(statement.lo) + ' <span kwd>to</span> ' + $scope.renderOperand(statement.lo2) + ' <span kwd>step</span> ' + $scope.renderOperand(statement.lo3);
+		result = '<span var>' + (statement.x ? statement.x : '$index') + '</span><span pun>&nbsp;=&nbsp;</span><span num>' + $scope.renderOperand(statement.lo) + '<span kwd>&nbsp;to&nbsp;</span>' + $scope.renderOperand(statement.lo2) + '<span kwd>&nbsp;step&nbsp;</span>' + $scope.renderOperand(statement.lo3);
+		return $sce.trustAsHtml(result ? result : '(invalid operands)');
+	}
+
+	$scope.renderForEachOperands = function(statement) {
+		var result;
+		result = '<span var>' + (statement.x ? statement.x : '$device') + '</span><span pun>&nbsp;in&nbsp;</span><span num>' + $scope.renderOperand(statement.lo);
 		return $sce.trustAsHtml(result ? result : '(invalid operands)');
 	}
 
@@ -2227,6 +2334,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 
 
 	$scope.renderDeviceList = function(devices, attribute, aggregation, trailing) {
+		var result = '';
 		var deviceNames = [];
 		suffix = (aggregation == 'any' ? 'or' : 'and');
 		var prefix = '';
@@ -2276,10 +2384,10 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 				}
 			}
 			if (deviceNames.length) {
-				return prefix + $scope.buildNameList(deviceNames, suffix, 'dev', '', !!attribute);
+				result = prefix + $scope.buildNameList(deviceNames, suffix, 'dev', '', !!attribute);
 			}
 		}
-		return '';
+		return $sce.trustAsHtml(result);
 	};
 
 

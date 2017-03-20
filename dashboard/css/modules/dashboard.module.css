@@ -137,7 +137,45 @@ td i[star] {
 }
 
 
+td[dur] {
+	font-size: 14px;
+}
 
+
+div[lonely] {
+	margin-top: 32px;
+	text-align: center;
+	color: #999;
+	font-size: 16px;
+}
+
+div[lonely] i {
+	font-size: 192px;
+	color: #ccc;
+}
+
+
+span[state] {
+	margin-left: 8px;
+	font-size: 12px;
+	padding: 0px 8px;
+	color: #aaa;
+	background: rgba(0, 0, 0, 0.05);
+	border: solid 1px rgba(0, 0, 0, 0.1);
+	border-radius: 4px;
+	line-height: 17px;
+}
+
+
+span[state=true] {
+	color: #aca;
+	background: rgba(0, 255, 0, 0.05);
+}
+
+span[state=false] {
+	color: #caa;
+	background: rgba(255, 0, 0, 0.05);
+}
 
 @media (min-width: 768px) {
 	.main {
@@ -211,5 +249,6 @@ td i[star] {
 	.table-responsive label {
 		background: rgba(0, 0, 0, 0.05);
 	}
+
 	
 }

@@ -106,7 +106,7 @@ app.filter('orderObjectBy', function() {
 
 
 var config = app.config(['$routeProvider', '$locationProvider', '$sceDelegateProvider', 'cfpLoadingBarProvider', '$rootScopeProvider',  function ($routeProvider, $locationProvider, $sceDelegateProvider, $cfpLoadingBarProvider, $rootScopeProvider) {
-	$rootScopeProvider.digestTtl(100); 
+	//$rootScopeProvider.digestTtl(100); 
 	$cfpLoadingBarProvider.includeSpinner = false;
     var ext = '.module.css';
     $sceDelegateProvider.resourceUrlWhitelist([
@@ -299,6 +299,16 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 		for(iid in instances) {
 			if (!locationId || (instances[iid].locationId == locationId)) {
 				result.push(JSON.parse(JSON.stringify(instances[iid])));
+			}
+		}
+		return result;
+	};
+
+	dataService.getInstanceCount = function (locationId) {
+		var result = 0;
+		for(iid in instances) {
+			if (!locationId || (instances[iid].locationId == locationId)) {
+				result++;
 			}
 		}
 		return result;
@@ -995,4 +1005,4 @@ if (document.selection) {
      document.execCommand("Copy");
 }}
 
-version = function() { return 'v0.0.044.20170317'; }
+version = function() { return 'v0.0.04f.20170320'; }

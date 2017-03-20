@@ -344,14 +344,16 @@ line[new] {
 }
 
 span.vartype {
+	/*
 	float:left;
-	width: 60px;	
-	color: #2b91af;
 	text-align: right;
-	font-size: 0.75em;
 	line-height: 20px;;
+	width: 60px;	
+	*/
+	color: #2b91af;
+	font-size: 0.75em;
 	vertical-alignment: middle;
-	padding: 0px 8px;
+	padding: 0px 4px;
 }
 
 span.varval {

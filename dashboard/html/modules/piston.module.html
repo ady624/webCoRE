@@ -106,6 +106,7 @@
 				</div>
 				<div class="col-md-4">
 					<h2>Quick facts</h2>
+					<p>Piston state: {{piston.state}}</p>
 					<p>Last executed: {{lastExecuted ? utcToString(lastExecuted) : 'never'}}</p>
 					<p>Next scheduled: {{nextSchedule ? utcToString(nextSchedule) : 'never'}}</p>
 					<p>Subscriptions: {{subscriptions.events ? subscriptions.events : 'no'}} event{{subscriptions.events != 1 ? 's' : ''}}, {{subscriptions.controls ? subscriptions.controls : 'no'}} control{{subscriptions.controls != 1 ? 's' : ''}}</p>
@@ -137,7 +138,7 @@
 						<button class="btn btn-success" ng-click="snapshot(true);" title="Take an anonymized snapshot of the piston"><i class="fa fa-camera" aria-hidden="true"></i></button>
 						<button class="btn btn-danger" ng-click="snapshot();" title="Take a snapshot of the piston"><i class="fa fa-camera" aria-hidden="true"></i></button>
 						<button class="btn btn-default" ng-click="textSnapshot();" title="Copy piston to clipboard"><i class="fa fa-copy" aria-hidden="true"></i></button>
-						<toggle ng-if="trace && trace.points" ng-model="view.trace" on="Trace" off="Trace"></toggle>
+						<toggle ng-if="trace && trace.points" ng-model="view.trace" on="Trace" off="Trace" ng-click="toggleView(null)"></toggle>
 						<button class="btn btn-danger pull-right" ng-click="deleteDialog();">Delete »</button>
 					</div>
 				</div>
@@ -201,8 +202,9 @@
 		<line com>{{padComment('', 64)}}</line>
 		<line com ng-if-end>/**************************************************************/</line>
 		<line>&nbsp;</line>
-		<line kwd ng-if-start="((mode == 'edit') && view.settings) || piston.o.cto || piston.o.ced" ng-click="editSettings();">settings</line>
+		<line kwd ng-if-start="((mode == 'edit') && view.settings) || piston.o.cto || piston.o.ced || piston.o.mps" ng-click="editSettings();">settings</line>
 		<container>
+			<line kwd ng-if="piston.o.mps">disable automatic piston state<span pun>;</span></line>
 			<line kwd ng-if="piston.o.cto">disable condition traversal optimizations<span pun>;</span></line>
 			<line kwd ng-if="piston.o.ced">set command execution delay to {{piston.o.ced}}ms<span pun>;</span></line>
 		</container>
@@ -251,7 +253,7 @@
 			<restrictions ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)" data-ng-repeat="collection in [statement]" data-ng-include="'restrictions'" dnd-nodrag data-ng-model="statement"></restrictions>
 			<line ng-if-start="((mode=='edit') && view.movable) || ((statement.d) && (statement.d.length)) || ((statement.r) && (statement.r.length)) || ((statement.k) && (statement.k.length==0))" kwd ng-click="editStatement(statement, statements)"><handle dnd-handle class="fa fa-sort"></handle>with</line>
 			<container>
-				<line pun ng-click="editStatement(statement, statements);" ng-attr-invalid="{{(!statement.d) || (!statement.d.length)}}" ng-bind-html="buildDeviceNameList(statement.d)"></line>
+				<line pun ng-click="editStatement(statement, statements);" ng-attr-invalid="{{(!statement.d) || (!statement.d.length)}}" ng-bind-html="renderDeviceNameList(statement.d)"></line>
 			</container>
 			<line kwd>do</line>
 			<tasks dnd-list="statement.k" dnd-allowed-types="['task']" data-ng-repeat="tasks in [statement.k]" data-ng-model="statement.k" data-ng-include="'tasks'"></tasks>
@@ -312,7 +314,20 @@
 			<line kwd ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)">when</line>
 			<restrictions ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)" data-ng-repeat="collection in [statement]" data-ng-include="'restrictions'" dnd-nodrag data-ng-model="statement"></restrictions>
 			<line kwd ng-click="editStatement(statement, statements)">
-				<handle dnd-handle class="fa fa-sort"></handle>for <span pun> (</span><span ng-bind-html="statement.$$html || (statement.$$html = renderForOperands(statement))"></span><span pun>)</span>
+				<handle dnd-handle class="fa fa-sort"></handle>for<span pun>&nbsp;(</span><span ng-bind-html="statement.$$html || (statement.$$html = renderForOperands(statement))"></span><span pun>)</span>
+			</line>
+			<line kwd>do</line>
+			<statements dnd-list="statement.s" dnd-allowed-types="['statement']" data-ng-repeat="statements in [statement.s]" data-ng-include="'statements'" dnd-nodrag data-ng-model="statement.s"></statements>
+			<line kwd>end for;</line>
+		</div>
+
+		<!--each-->
+		<div no-drag class="no-drag" ng-if="statement.t=='each'">
+			<line com ng-if="statement.z">/* {{statement.z}} */</line>
+			<line kwd ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)">when</line>
+			<restrictions ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)" data-ng-repeat="collection in [statement]" data-ng-include="'restrictions'" dnd-nodrag data-ng-model="statement"></restrictions>
+			<line kwd ng-click="editStatement(statement, statements)">
+				<handle dnd-handle class="fa fa-sort"></handle>for each<span pun>&nbsp;(</span><span ng-bind-html="statement.$$html || (statement.$$html = renderForEachOperands(statement))"></span><span pun>)</span>
 			</line>
 			<line kwd>do</line>
 			<statements dnd-list="statement.s" dnd-allowed-types="['statement']" data-ng-repeat="statements in [statement.s]" data-ng-include="'statements'" dnd-nodrag data-ng-model="statement.s"></statements>
@@ -357,16 +372,14 @@
 			</line>
 		</div>
 
-		<!--exit-->
+		<!--return-->
 		<div no-drag class="no-drag" ng-if="statement.t=='exit'">
 			<line com ng-if="statement.z">/* {{statement.z}} */</line>
 			<line kwd ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)">when</line>
 			<restrictions ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)" data-ng-repeat="collection in [statement]" data-ng-include="'restrictions'" dnd-nodrag data-ng-model="statement"></restrictions>
 			<line kwd ng-click="editStatement(statement, statements)">
-				<handle dnd-handle class="fa fa-sort"></handle>exit;</line>
-			<container>
-				<line ex>expression goes here</line>
-			</container>
+				<handle dnd-handle class="fa fa-sort"></handle><span kwd>exit&nbsp;</span><span lit ng-bind-html="renderOperand(statement.lo)"></span><span kwd>;</span>
+			</line>
 		</div>
 	</dnd-nodrag>
 </script>
@@ -593,10 +606,31 @@
 					</div>
 				</div>
 			</div>
-			<div class="form-group" ng-if="designer.type=='return'">
+			<div class="form-group" ng-if="designer.type=='each'">
+				<info>A FOR EACH loop is an iteration block that allows you to repeat the same action for each device in a device list</info>
+				<div class="form-group">
+					<label for="variableInput">Counter variable (optional)</label>
+					<div class="form-table">
+						<select selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-default" ng-model="designer.x" data-mobile="{{mobile}}" ng-change="">
+							<option value="">Nothing selected</option>
+							<optgroup ng-if="piston.v && piston.v.length" label="Local variables">
+								<option ng-repeat="variable in piston.v" ng-if="variable.t == 'device'" value="{{variable.n}}" data-content="<span class='vartype'>{{variable.t}}</span>{{variable.n}}">{{variable.n}} ({{variable.t}})</option>
+							</optgroup>
+							<optgroup ng-if="globalVars && globalVars.length" label="Global variables">
+								<option ng-repeat="variable in globalVars" ng-if="variable.t == 'device'" value="{{variable.n}}" data-content="<span class='vartype'>{{variable.t}}</span>{{variable.n}}">{{variable.n}} ({{variable.t}})</option>
+							</optgroup>
+						</select>
+					</div>
+				</div>
+				<div class="form-group">
+					<label class="col-lg-12 no-padding">List of devices<span class="error" ng-if="!designer.operand.valid">{{designer.operand.error}}<span ng-if="designer.operand.expressionVar"> (<a ng-click="autoAddVariable(designer.operand.expressionVar); validateOperand(designer.operand);">create it</a>)</span>&nbsp;<i class="fa fa-warning"></i></span></label>
+					<operand ng-repeat="operand in [designer.operand]" ng-model="designer.operand" ng-include="'operand'"></operand>
+				</div>
+			</div>
+			<div class="form-group" ng-if="designer.type=='exit'">
 				<info>Return causes the piston to end the evaluation stage and set the piston state to the value provided.</info>
-				<label for="returnValueInput">Return value</label>
-				<input type="text" id="returnValueInput" class="form-control" placeholder="CoRE sets the new piston state to this value">
+				<label class="col-lg-12 no-padding">New piston state<span class="error" ng-if="!designer.operand.valid">{{designer.operand.error}}<span ng-if="designer.operand.expressionVar"> (<a ng-click="autoAddVariable(designer.operand.expressionVar); validateOperand(designer.operand);">create it</a>)</span>&nbsp;<i class="fa fa-warning"></i></span></label>
+				<operand ng-repeat="operand in [designer.operand]" ng-model="designer.operand" ng-include="'operand'"></operand>
 			</div>
 			<div class="form-group" ng-if="designer.type=='action'">
 				<info>Actions represent a collection of tasks a device or group of devices have to perform. The <i>Location</i> virtual device provides a way to execute some non-device-specific tasks, such as changing the location mode, the SHM state, sending notifications, communicating with integrated apps, and more. Note that these virtual tasks are also available to any and all devices.</info>
@@ -608,6 +642,15 @@
 						</optgroup>
 						<optgroup label="Physical devices">
 							<option ng-repeat="device in devices" value="{{device.id}}">{{device.n}}</option>
+						</optgroup>
+						<optgroup label="Local variables">
+							<option ng-repeat="variable in piston.v" value="{{variable.n}}" ng-if="variable.t == 'device'" data-content="<span class='vartype'>{{variable.t}}</span>{{variable.n}}">{{variable.n}} ({{variable.t}})</option>
+						</optgroup>
+						<optgroup label="Global variables">
+							<option ng-repeat="(name, variable) in globalVars" value="{{name}}" ng-if="variable.t == 'device')" data-content="<span class='vartype'>{{variable.t}}</span>{{name}}">{{name}} ({{variable.t}})</option>
+						</optgroup>
+						<optgroup label="System variables" ng-if="operand.dataType != 'variable'">
+							<option ng-repeat="name in systemVarNames" value="{{name}}" ng-if="systemVars[name].t == 'device'" data-content="<span class='vartype'>{{systemVars[name].t}}</span>{{name}}<span class='varval'>{{systemVars[name].v}}</span>">{{name}} ({{systemVars[name].t}})</option>
 						</optgroup>
 					</select>
 				</div>
@@ -680,6 +723,7 @@
 			<button type="button" ng-if="(designer.type=='if' ) && (designer.new)" class="btn btn-info pull-right" ng-disabled="!designer.type" ng-click="updateStatement(true);">Add a condition</button>
 			<button type="button" ng-if="(designer.type=='switch' ) && (designer.new)" class="btn btn-info pull-right" ng-disabled="!designer.type" ng-click="updateStatement(true);">Add a case</button>
 			<button type="button" ng-if="(designer.type=='for' ) && (designer.new)" class="btn btn-info pull-right" ng-disabled="!designer.type" ng-click="updateStatement(true);">Add a statement</button>
+			<button type="button" ng-if="(designer.type=='each' ) && (designer.new)" class="btn btn-info pull-right" ng-disabled="!designer.type" ng-click="updateStatement(true);">Add a statement</button>
 			<button type="button" ng-if="(designer.type=='while' ) && (designer.new)" class="btn btn-info pull-right" ng-disabled="!designer.type" ng-click="updateStatement(true);">Add a condition</button>
 			<button type="button" ng-if="(designer.type=='repeat' ) && (designer.new)" class="btn btn-info pull-right" ng-disabled="!designer.type" ng-click="updateStatement(true);">Add a statement</button>
 			<button type="button" ng-if="(designer.type=='action' ) && (designer.new)" class="btn btn-info pull-right" ng-disabled="!designer.type" ng-click="updateStatement(true);">Add a task</button>
@@ -1134,6 +1178,7 @@
 			<select selectpicker class="selectpicker show-tick input-addon" data-width="25%" data-style="btn-info" ng-model="operand.data.t" data-mobile="{{mobile}}" ng-change="validateOperand(operand)">
 				<option ng-if="operand.optional" value="">Nothing selected</option>
 				<option ng-if="!operand.optional" style="display:none" disabled value="">Nothing selected</option>
+				<option ng-if="operand.allowDevices" value="d">Physical device(s)</option>
 				<option ng-if="operand.allowPhysical" value="p">Physical device(s)</option>
 				<option ng-if="operand.allowVirtual" value="v" ng-if="designer.type != 'for'">Virtual device</option>
 				<option ng-if="operand.allowConstant" value="c">Constant</option>
@@ -1144,6 +1189,24 @@
 				<div class="form-table input-group" ng-if="operand.data.t==''">
 					<label class="form-control"></label>
 				</div>
+				<!-- physical devices (variable) -->
+				<div class="form-table input-group" ng-if="operand.data.t=='d'">
+					<select selectpicker class="selectpicker show-tick no-border-radius" data-width="100%" data-style="btn-default" ng-model="operand.data.d"  data-header="Use the input box below to quickly search for devices" data-live-search="true" data-mobile="{{mobile}}" multiple ng-change="validateOperand(operand)">
+						<optgroup label="Physical devices">
+							<option ng-repeat="device in devices" value="{{device.id}}">{{device.n}}</option>
+						</optgroup>
+						<optgroup label="Local variables">
+							<option ng-repeat="variable in piston.v" value="{{variable.n}}" ng-if="variable.t == 'device'" data-content="<span class='vartype'>{{variable.t}}</span>{{variable.n}}">{{variable.n}} ({{variable.t}})</option>
+						</optgroup>
+						<optgroup label="Global variables">
+							<option ng-repeat="(name, variable) in globalVars" value="{{name}}" ng-if="variable.t == 'device')" data-content="<span class='vartype'>{{variable.t}}</span>{{name}}">{{name}} ({{variable.t}})</option>
+						</optgroup>
+						<optgroup label="System variables" ng-if="operand.dataType != 'variable'">
+							<option ng-repeat="name in systemVarNames" value="{{name}}" ng-if="systemVars[name].t == 'device'" data-content="<span class='vartype'>{{systemVars[name].t}}</span>{{name}}<span class='varval'>{{systemVars[name].v}}</span>">{{name}} ({{systemVars[name].t}})</option>
+						</optgroup>
+					</select>
+				</div>
+				<!-- physical devices -->
 				<div class="form-table input-group" ng-if="operand.data.t=='p'">
 					<select selectpicker class="selectpicker show-tick no-border-radius" data-width="75%" data-style="btn-default" ng-model="operand.data.d"  data-header="Use the input box below to quickly search for devices" data-live-search="true" data-mobile="{{mobile}}" multiple ng-change="validateOperand(operand)">
 						<optgroup label="Physical devices">
@@ -1157,23 +1220,23 @@
 				<!-- virtual devices -->
 				<div class="form-table input-group" ng-if="operand.data.t=='v'">
 					<select selectpicker class="selectpicker show-tick no-border-radius" data-width="100%" data-style="btn-default" ng-model="operand.data.v" data-mobile="{{mobile}}"  ng-change="validateOperand(operand)">
-						<option ng-repeat="device in virtualDevices" ng-if="(designer.type == 'condition') || (designer.type == 'restriction') || !!device.x" value="{{device.id}}">{{device.n}}</option>
 						<option style="display:none" value="" disabled>Nothing selected</option>
+						<option ng-repeat="device in virtualDevices" ng-if="(designer.type == 'condition') || (designer.type == 'restriction') || !!device.x" value="{{device.id}}">{{device.n}}</option>
 					</select>
 				</div>
 				<!-- variables -->
 				<div class="form-table input-group pull-left" ng-if="operand.data.t=='x'" style="width:{{operand.dataType == 'duration' ? '75' : '100'}}%">
 					<select selectpicker class="selectpicker show-tick" data-width="75%" data-style="btn-default" ng-model="operand.data.x" data-mobile="{{mobile}}" ng-change="validateOperand(operand)" {{!!operand.allowMultiple ? 'multiple' : ''}}>
+						<option style="display:none" value="" disabled>Nothing selected</option>
 						<optgroup ng-if="piston.v && piston.v.length" label="Local variables">
-							<option ng-repeat="variable in piston.v" value="{{variable.n}}" data-content="<span class='vartype'>{{variable.t}}</span>{{variable.n}}">{{variable.n}} ({{variable.t}})</option>
+							<option ng-repeat="variable in piston.v" value="{{variable.n}}" ng-if="!operand.restrictType || (operand.restrictType.indexOf(variable.t) >= 0)" data-content="<span class='vartype'>{{variable.t}}</span>{{variable.n}}">{{variable.n}} ({{variable.t}})</option>
 						</optgroup>
 						<optgroup label="Global variables">
-							<option ng-repeat="(name, variable) in globalVars" value="{{name}}" data-content="<span class='vartype'>{{variable.t}}</span>{{name}}">{{name}} ({{variable.t}})</option>
+							<option ng-repeat="(name, variable) in globalVars" value="{{name}}" ng-if="!operand.restrictType || (operand.restrictType.indexOf(variable.t) >= 0)" data-content="<span class='vartype'>{{variable.t}}</span>{{name}}">{{name}} ({{variable.t}})</option>
 						</optgroup>
 						<optgroup label="System variables" ng-if="operand.dataType != 'variable'">
-							<option ng-repeat="name in systemVarNames" value="{{name}}" data-content="<span class='vartype'>{{systemVars[name].t}}</span>{{name}}<span class='varval'>{{systemVars[name].v}}</span>">{{name}} ({{systemVars[name].t}})</option>
+							<option ng-repeat="name in systemVarNames" value="{{name}}" ng-if="!operand.restrictType || (operand.restrictType.indexOf(systemVars[name].t) >= 0)" data-content="<span class='vartype'>{{systemVars[name].t}}</span>{{name}}<span class='varval'>{{systemVars[name].v}}</span>">{{name}} ({{systemVars[name].t}})</option>
 						</optgroup>
-						<option style="display:none" value="" disabled>Nothing selected</option>
 					</select>
 				</div>
 				<div class="form-table input-group pull-left" ng-if="(operand.data.t=='c') && (!operand.options)" style="width:{{operand.dataType == 'duration' ? '75' : '100'}}%">
@@ -1182,8 +1245,8 @@
 				</div>
 				<div class="form-table input-group pull-left" ng-if="(operand.data.t=='c') && (operand.options)" style="width:{{operand.dataType == 'duration' ? '75' : '100'}}%">
 					<select selectpicker class="selectpicker show-tick no-border-radius" data-width="75%" data-style="btn-default" ng-model="operand.data.c" data-mobile="{{mobile}}" ng-change="validateOperand(operand)">
-						<option ng-repeat="option in operand.options" value="{{option.n ? option.v : option}}">{{option.n ? option.n : option}}</option>
 						<option style="display:none" value="" disabled>Nothing selected</option>
+						<option ng-repeat="option in operand.options" value="{{option.n ? option.v : option}}">{{option.n ? option.n : option}}</option>
 					</select>
 				</div>
 				<div class="form-table input-group pull-left" ng-if="operand.data.t=='e'" style="display: inline-block; width:{{operand.dataType == 'duration' ? '75' : '100'}}%">
@@ -1193,6 +1256,7 @@
 				<!-- last - duration unit -->
 				<div class="form-table input-group pull-left" ng-if="operand.dataType == 'duration'" style="width:25%">
 					<select selectpicker class="show-tick selectpicker input-group-btn" data-width="100%" ng-model="operand.durationUnit" data-mobile="{{mobile}}" data-style="btn-default" ng-change="validateOperand(operand)">
+						<option style="display:none" value="" disabled>Nothing selected</option>
 						<option value="ms">milliseconds</option>
 						<option value="s">seconds</option>
 						<option value="m">minutes</option>
@@ -1201,7 +1265,6 @@
 						<option value="w">weeks</option>
 						<option value="n">months</option>
 						<option value="y">years</option>
-						<option style="display:none" value="" disabled>Nothing selected</option>
 					</select>
 				</div>
 			</div>
@@ -1302,7 +1365,7 @@
 		<form>
 			<div class="form-group">
 				<label for="devicesInput">With...</label>
-				<p ng-bind-html="buildDeviceNameList(designer.parent.d)"></p>
+				<p ng-bind-html="renderDeviceNameList(designer.parent.d)"></p>
 			</div>
 			<div class="form-group" ng-if="designer.parent.k.length">
 				<task preview ng-repeat="task in designer.parent.k" ng-click="selectTaskIndex($index);" ng-if="($index < designer.insertIndex) && (task != designer.$task)">
@@ -1370,6 +1433,9 @@
 						<option value="integer">Number (integer)</option>
 						<option value="decimal">Number (decimal)</option>
 						<option value="datetime">Date and Time</option>
+						<option value="date">Date (date only)</option>
+						<option value="time">Time (time only)</option>
+						<option value="device">Device</option>
 					</select>
 					<input class="form-control" id="name" ng-model="designer.name" type="text" />
 				</div>
@@ -1381,7 +1447,7 @@
 			<div class="form-group" ng-if="designer.operand.data.t != ''">
 				<label>NOTE: By providing a value to the variable, you are instructing the piston to initialize this variable on every run. While you can change the value of the variable during a piston run, the variable will revert to this initial value on subsequent piston runs.</label>
 			</div>
-			<div class="form-group" ng-if="designer.operand.data.t != ''">
+			<div class="form-group" ng-if="(designer.operand.data.t != '') && (designer.operand.data.t != 'd')">
 				<label class="col-lg-12 no-padding">Assignment type</label>
 				<select id="type" selectpicker class="selectpicker show-tick input-addon" data-width="100%" data-style="btn-info" ng-model="designer.assignment" data-mobile="{{mobile}}">
 					<option value="d">Dynamic (default)</option>
@@ -1441,6 +1507,13 @@
 				<input type="text" class="form-control" ng-model="designer.name" />
 			</div>
 			<div class="form-group">
+				<label class="col-lg-12 no-padding">Automatic piston state</label>
+				<select id="type" selectpicker class="selectpicker show-tick input-addon" data-width="100%" data-style="btn-info" ng-model="designer.automaticState" data-mobile="{{mobile}}">
+					<option value="1">Disabled</option>
+					<option value="0">Enabled (default)</option>
+				</select>
+			</div>
+			<div class="form-group">
 				<label class="col-lg-12 no-padding">Condition traversal optimizations</label>
 				<select id="type" selectpicker class="selectpicker show-tick input-addon" data-width="100%" data-style="btn-info" ng-model="designer.conditionOptimizations" data-mobile="{{mobile}}">
 					<option value="1">Disabled</option>
@@ -1453,6 +1526,11 @@
 					<input type="number" class="form-control" ng-model="designer.commandDelay" min="0" max="5000"/>
 					<span class="input-group-addon">ms</span>
 				</div>
+			</div>
+			<div class="divider" data-toggle="collapse" data-target="#advopt" collapsed-title="Show Advanced Options" expanded-title="Hide Advanced Options" aria-expanded="false"></div>
+			<div id="advopt" class="form-group collapse">
+				<label for="descriptionInput">Description (optional)</label>
+				<textarea type="text" id="descriptionInput" class="form-control" placeholder="Description for this statement" ng-model="designer.description"></textarea>
 			</div>
 		</form>
 		<footer>
