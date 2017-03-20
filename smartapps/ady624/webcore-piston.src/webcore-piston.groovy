@@ -13,8 +13,9 @@
  *  for the specific language governing permissions and limitations under the License.
  *
 */
-public static String version() { return "v0.0.050.20170320" }
+public static String version() { return "v0.0.051.20170320" }
 /*
+ *	03/20/2016 >>> v0.0.051.20170320 - ALPHA - Fixed a problem where start values for variables would not be correctly picked up from atomicState (used state by mistake)
  *	03/20/2016 >>> v0.0.050.20170320 - ALPHA - Introducing parallelism, a semaphore mechanism to allow synchronization of multiple simultaneous executions, disabled by default (pistons wait at a semaphore)
  *	03/20/2016 >>> v0.0.04f.20170320 - ALPHA - Minor fixes for device typed variables (lost attribute) and counter variable in for each
  *	03/20/2016 >>> v0.0.04e.20170320 - ALPHA - Major operand/expression/cast refactoring to allow for arrays of devices - may break things. Also introduced for each loops and actions on device typed variables
@@ -381,7 +382,7 @@ private getRunTimeData(rtData = null, semaphore = null) {
     rtData.fastForwardTo = null
     rtData.break = false
     rtData.systemVars = getSystemVariables()
-    rtData.localVars = getLocalVariables(rtData, state.piston.v)
+    rtData.localVars = getLocalVariables(rtData, piston.v)
     return rtData
 }
 
@@ -3177,8 +3178,9 @@ private getSunset() {
 
 private Map getLocalVariables(rtData, vars) {
 	Map result = [:]
+    def values = atomicState.vars
 	for (var in vars) {
-    	def variable = [t: var.t, v: var.v ?: cast(rtData, state.vars[var.n], var.t), f: !!var.v] //f means fixed value - we won't save this to the state
+    	def variable = [t: var.t, v: var.v ?: cast(rtData, values[var.n], var.t), f: !!var.v] //f means fixed value - we won't save this to the state
         if (rtData && var.v && (var.a == 's')) {
         	variable.v = cast(rtData, evaluateOperand(rtData, null, var.v).v, var.t)
         }
