@@ -19,8 +19,9 @@
  *  Version history
  */
 
-public static String version() { return "v0.0.04e.20170320" }
+public static String version() { return "v0.0.04f.20170320" }
 /*
+ *	03/20/2016 >>> v0.0.04f.20170320 - ALPHA - Minor fixes for device typed variables (lost attribute) and counter variable in for each
  *	03/20/2016 >>> v0.0.04e.20170320 - ALPHA - Major operand/expression/cast refactoring to allow for arrays of devices - may break things. Also introduced for each loops and actions on device typed variables
  *	03/19/2016 >>> v0.0.04d.20170319 - ALPHA - Fixes for functions and device typed variables
  *	03/19/2016 >>> v0.0.04c.20170319 - ALPHA - Device typed variables now enabled - not yet possible to use them in conditions or in actions, but getting there

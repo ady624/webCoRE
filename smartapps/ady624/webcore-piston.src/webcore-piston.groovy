@@ -13,8 +13,9 @@
  *  for the specific language governing permissions and limitations under the License.
  *
 */
-public static String version() { return "v0.0.04e.20170320" }
+public static String version() { return "v0.0.04f.20170320" }
 /*
+ *	03/20/2016 >>> v0.0.04f.20170320 - ALPHA - Minor fixes for device typed variables (lost attribute) and counter variable in for each
  *	03/20/2016 >>> v0.0.04e.20170320 - ALPHA - Major operand/expression/cast refactoring to allow for arrays of devices - may break things. Also introduced for each loops and actions on device typed variables
  *	03/19/2016 >>> v0.0.04d.20170319 - ALPHA - Fixes for functions and device typed variables
  *	03/19/2016 >>> v0.0.04c.20170319 - ALPHA - Device typed variables now enabled - not yet possible to use them in conditions or in actions, but getting there
@@ -751,7 +752,7 @@ private Boolean executeStatement(rtData, statement, async = false) {
                         }
                         setSystemVariableValue(rtData, '$index', index)
 						if ((statement.t == 'each') && !rtData.fastForward) setSystemVariableValue(rtData, '$device', (index < devices.size() ? [devices[(int) index]] : []))
-                        if (counterVariable && !rtData.fastForward) setVariable(rtData, counterVariable, (statement.t == 'each') ? [t: 'device', v:(index < devices.size() ? [devices[(int) index]] : [])] : index)
+                        if (counterVariable && !rtData.fastForward) setVariable(rtData, counterVariable, (statement.t == 'each') ? (index < devices.size() ? [devices[(int) index]] : []) : index)
                         //do the loop
                         perform = executeStatements(rtData, statement.s, async)                        
                         if (!perform) {
@@ -770,7 +771,7 @@ private Boolean executeStatement(rtData, statement, async = false) {
                         index = index + stepValue
                         setSystemVariableValue(rtData, '$index', index)
 						if ((statement.t == 'each') && !rtData.fastForward) setSystemVariableValue(rtData, '$device', (index < devices.size() ? [devices[(int) index]] : []))
-                        if (counterVariable && !rtData.fastForward) setVariable(rtData, counterVariable, (statement.t == 'each') ? [t: 'device', v:(index < devices.size() ? [devices[(int) index]] : [])] : index)
+                        if (counterVariable && !rtData.fastForward) setVariable(rtData, counterVariable, (statement.t == 'each') ? (index < devices.size() ? [devices[(int) index]] : []) : index)
                         rtData.cache["f:${statement.$}"] = index
                         if (((stepValue > 0 ) && (index > endValue)) || ((stepValue < 0 ) && (index < endValue))) {
                         	perform = false
@@ -1846,25 +1847,6 @@ private Map evaluateExpression(rtData, expression, dataType = null) {
                                     }
                             }
                         }
-/*                    	if (i && (i.t == 'expression') && i.i && (i.i.findAll{ it.t == 'device'}.size() == i.i.size())) {
-                        	for (item in i.i) {
-                            	if (item.id) {
-                                	params.push(item)
-                                } else if (item.x) {                                
-                                	def dev = getVariable(rtData, item.x)
-                                    //inherit the attribute, if any
-                                    if (dev) {
-                                    	if (dev instanceof List) {
-	                                    	params = params + dev.collect{ it + [a: item.a] }
-                                    	} else {
-                                    		params.push(dev + [a: item.a])
-                                        }
-                                   	}
-    							}                            
-                            }
-                        } else {
-                        	params.push(i)
-                        }*/
                     }
                 }
 				result = "$fn"(rtData, params)
@@ -2061,12 +2043,10 @@ private Map evaluateExpression(rtData, expression, dataType = null) {
         }
     }
     if (dataType) {
-    	result = [t: dataType, v: cast(rtData, result.v, dataType)]
+    	result = [t: dataType, v: cast(rtData, result.v, dataType)] + (result.a ? [a: result.a] : [:])
     }
+    result.d = now() - time;
 	return result
-    //if (result.t == 'device') return result
-    //return [t: dataType ?: result.t, v: cast(result.v, dataType?: result.t), d: now() - time] + (result.id ? [id: result.id] : [:])
-//    return result.t == "error" ? [t: "string", v: "[ERROR: ${result.v}]", d: now() - time] : [t: dataType ?: result.t, v: cast(result.v, dataType?: result.t), d: now() - time] + (result.id ? [id: result.id] : [:])
 }
 
 private buildList(list, suffix = 'and') {
@@ -3204,7 +3184,7 @@ private Map getLocalVariables(rtData, vars) {
 }
 
 
-private Map getSystemVariables() {
+private static Map getSystemVariables() {
 	return [
 		"\$currentEventAttribute": [t: "string", v: null],
 		"\$currentEventDate": [t: "datetime", v: null],
