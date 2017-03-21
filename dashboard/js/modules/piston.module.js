@@ -3,6 +3,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 	var tmrStatus;
 	var tmrActivity;
 	var tmrClock;
+	$scope.lastLogEntry = 0;
 	$scope.error = '';
 	$scope.loading = true;
 	$scope.initialized = false;
@@ -55,7 +56,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 			tmrActivity = $timeout($scope.updateActivity, 10000);
 			return;
 		}
-		dataService.getActivity($scope.pistonId, ($scope.logs && $scope.logs.length && $scope.logs[0].t ? $scope.logs[0].t : 0)).success(function (response) {
+		dataService.getActivity($scope.pistonId, $scope.lastLogEntry).success(function (response) {
 			if ($scope.$$destroyed) return;
 			if (response.error == 'ERR_INVALID_ID') {
 				//the app has been deleted
@@ -72,7 +73,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 				if (response.activity.lastExecuted) $scope.lastExecuted = response.activity.lastExecuted;
 				if (response.activity.nextSchedule) $scope.nextSchedule = response.activity.nextSchedule;
 				if (response.activity.name) $scope.meta.name = response.activity.name;
-
+				if ($scope.logs && $scope.logs.length) $scope.lastLogEntry =$scope.logs[0].t;
 			}
 			tmrActivity = $timeout($scope.updateActivity, 3000);
 		});
@@ -107,6 +108,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 				};
 				$scope.subscriptions = response.data.subscriptions ? response.data.subscriptions : {};
 				$scope.logs = response.data.logs ? response.data.logs : [];
+				$scope.lastLogEntry = ($scope.logs && $scope.logs.length) ? $scope.logs[0].t : 0;
 				$scope.stats = response.data.stats ? response.data.stats : {};
 				$scope.state = response.data.state ? response.data.state : '';
 				$scope.trace = response.data.trace ? response.data.trace : {};
@@ -497,6 +499,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 			description: $scope.piston.z,
 			automaticState: $scope.piston.o.mps ? '1' : '0',
 			conditionOptimizations: $scope.piston.o.cto ? '1' : '0',
+			executionParallelism: $scope.piston.o.pep ? '1' : '0',
 			commandDelay: $scope.piston.o.ced ? $scope.piston.o.ced : 0
 		};
 		window.designer = $scope.designer;
@@ -513,6 +516,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		$scope.meta.name = $scope.designer.name;
 		$scope.piston.z = $scope.designer.description;
 		$scope.piston.o.mps = $scope.designer.automaticState == '1' ? 1 : 0;
+		$scope.piston.o.pep = $scope.designer.executionParallelism == '1' ? 1 : 0;
 		$scope.piston.o.cto = $scope.designer.conditionOptimizations == '1' ? 1 : 0;
 		$scope.piston.o.ced = isNaN($scope.designer.commandDelay) ? 0 : parseInt($scope.designer.commandDelay);
 		$scope.closeDialog();
@@ -612,6 +616,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 				{ type: 'each', name: 'FOR EACH loop', icon: 'circle-o-notch', class: 'btn-warning' },
 				{ type: 'while', name: 'WHILE loop', icon: 'circle-o-notch', class: 'btn-warning' },
 				{ type: 'repeat', name: 'REPEAT loop', icon: 'circle-o-notch', class: 'btn-warning' },
+				{ type: 'timer', name: 'TIMER', icon: 'clock-o', class: 'btn-default' },
 				{ type: 'break', name: 'BREAK', icon: 'ban', class: 'btn-danger' },
 				{ type: 'exit', name: 'EXIT', icon: 'ban', class: 'btn-danger' }
 			]

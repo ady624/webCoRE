@@ -146,7 +146,7 @@
 			<div class="row">
 				<div class="col-md-12">
 					<h2>Logs</h2>
-					<p class="logs" ng-if="logs && logs.length">
+					<p class="logs" ng-if="logs">
 						<table class="table logs table-striped">
 							<tbody>				
 								<tr ng-repeat="log in logs" log="{{log.c}}">
@@ -154,13 +154,13 @@
 									<td ng-if-start="log.o != null">+{{log.o}}ms</td>
 									<td ng-if-end>{{log.p}}<span>{{log.m}}</span></td>					
 								</tr>
+								<tr ng-if="logs.length == 0">
+									<th>The log is empty</th>
+								</tr>
 							</tbody>
 						</table>
 					</p>
-					<div ng-if="!logs || !logs.length">
-						The log is empty.
-					</div>
-					<div ng-if="logs && logs.length">
+					<div class="form-group" ng-if="logs && logs.length">
 						<button class="btn btn-default" ng-click="clearLogs();" title="Clear the logs">Clear</button>
 					</div>
 				</div>
@@ -202,8 +202,9 @@
 		<line com>{{padComment('', 64)}}</line>
 		<line com ng-if-end>/**************************************************************/</line>
 		<line>&nbsp;</line>
-		<line kwd ng-if-start="((mode == 'edit') && view.settings) || piston.o.cto || piston.o.ced || piston.o.mps" ng-click="editSettings();">settings</line>
+		<line kwd ng-if-start="((mode == 'edit') && view.settings) || piston.o.pep || piston.o.cto || piston.o.ced || piston.o.mps" ng-click="editSettings();">settings</line>
 		<container>
+			<line kwd ng-if="piston.o.pep">enable parallelism<span pun>;</span></line>
 			<line kwd ng-if="piston.o.mps">disable automatic piston state<span pun>;</span></line>
 			<line kwd ng-if="piston.o.cto">disable condition traversal optimizations<span pun>;</span></line>
 			<line kwd ng-if="piston.o.ced">set command execution delay to {{piston.o.ced}}ms<span pun>;</span></line>
@@ -1507,30 +1508,40 @@
 				<input type="text" class="form-control" ng-model="designer.name" />
 			</div>
 			<div class="form-group">
+				<label for="descriptionInput">Description (optional)</label>
+				<textarea type="text" id="descriptionInput" class="form-control" placeholder="Description for this statement" ng-model="designer.description"></textarea>
+			</div>
+			<div class="form-group">
 				<label class="col-lg-12 no-padding">Automatic piston state</label>
 				<select id="type" selectpicker class="selectpicker show-tick input-addon" data-width="100%" data-style="btn-info" ng-model="designer.automaticState" data-mobile="{{mobile}}">
 					<option value="1">Disabled</option>
 					<option value="0">Enabled (default)</option>
 				</select>
 			</div>
-			<div class="form-group">
-				<label class="col-lg-12 no-padding">Condition traversal optimizations</label>
-				<select id="type" selectpicker class="selectpicker show-tick input-addon" data-width="100%" data-style="btn-info" ng-model="designer.conditionOptimizations" data-mobile="{{mobile}}">
-					<option value="1">Disabled</option>
-					<option value="0">Enabled (default)</option>
-				</select>
-			</div>
-			<div class="form-group">
-				<label class="col-lg-12 no-padding">Command execution delay</label>
-				<div class="input-group">
-					<input type="number" class="form-control" ng-model="designer.commandDelay" min="0" max="5000"/>
-					<span class="input-group-addon">ms</span>
-				</div>
-			</div>
+			
 			<div class="divider" data-toggle="collapse" data-target="#advopt" collapsed-title="Show Advanced Options" expanded-title="Hide Advanced Options" aria-expanded="false"></div>
-			<div id="advopt" class="form-group collapse">
-				<label for="descriptionInput">Description (optional)</label>
-				<textarea type="text" id="descriptionInput" class="form-control" placeholder="Description for this statement" ng-model="designer.description"></textarea>
+			<div id="advopt" class="collapse">
+				<div class="form-group">
+					<label class="col-lg-12 no-padding">Piston execution parallelism</label>
+					<select id="type" selectpicker class="selectpicker show-tick input-addon" data-width="100%" data-style="btn-info" ng-model="designer.executionParallelism" data-mobile="{{mobile}}">
+						<option value="0">Disabled (default)</option>
+						<option value="1">Enabled</option>
+					</select>
+				</div>
+				<div class="form-group">
+					<label class="col-lg-12 no-padding">Condition traversal optimizations</label>
+					<select id="type" selectpicker class="selectpicker show-tick input-addon" data-width="100%" data-style="btn-info" ng-model="designer.conditionOptimizations" data-mobile="{{mobile}}">
+						<option value="1">Disabled</option>
+						<option value="0">Enabled (default)</option>
+					</select>
+				</div>
+				<div class="form-group">
+					<label class="col-lg-12 no-padding">Command execution delay</label>
+					<div class="input-group">
+						<input type="number" class="form-control" ng-model="designer.commandDelay" min="0" max="5000"/>
+						<span class="input-group-addon">ms</span>
+					</div>
+				</div>
 			</div>
 		</form>
 		<footer>
