@@ -19,8 +19,9 @@
  *  Version history
  */
 
-public static String version() { return "v0.0.052.20170320" }
+public static String version() { return "v0.0.053.20170321" }
 /*
+ *	03/21/2016 >>> v0.0.053.20170321 - ALPHA - Fixed a bug where variables containing expressions would be cast to the variable type outside of evaluateExpression (the right way)
  *	03/20/2016 >>> v0.0.052.20170320 - ALPHA - Fixed $shmStatus
  *	03/20/2016 >>> v0.0.051.20170320 - ALPHA - Fixed a problem where start values for variables would not be correctly picked up from atomicState (used state by mistake)
  *	03/20/2016 >>> v0.0.050.20170320 - ALPHA - Introducing parallelism, a semaphore mechanism to allow synchronization of multiple simultaneous executions, disabled by default (pistons wait at a semaphore)
@@ -1446,6 +1447,7 @@ private static Map functions() {
       	most			: [ t: "dynamic",						],
       	avg				: [ t: "decimal",						],
       	variance		: [ t: "decimal",						],
+      	median			: [ t: "decimal",						],
       	stdev			: [ t: "decimal",						],
       	round			: [ t: "decimal",						],
       	ceil			: [ t: "decimal",						],

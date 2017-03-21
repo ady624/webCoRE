@@ -13,8 +13,9 @@
  *  for the specific language governing permissions and limitations under the License.
  *
 */
-public static String version() { return "v0.0.052.20170320" }
+public static String version() { return "v0.0.053.20170321" }
 /*
+ *	03/21/2016 >>> v0.0.053.20170321 - ALPHA - Fixed a bug where variables containing expressions would be cast to the variable type outside of evaluateExpression (the right way)
  *	03/20/2016 >>> v0.0.052.20170320 - ALPHA - Fixed $shmStatus
  *	03/20/2016 >>> v0.0.051.20170320 - ALPHA - Fixed a problem where start values for variables would not be correctly picked up from atomicState (used state by mistake)
  *	03/20/2016 >>> v0.0.050.20170320 - ALPHA - Introducing parallelism, a semaphore mechanism to allow synchronization of multiple simultaneous executions, disabled by default (pistons wait at a semaphore)
@@ -369,16 +370,17 @@ private getRunTimeData(rtData = null, semaphore = null) {
     rtData.logs = [[t: timestamp]]
     rtData.trace = [t: timestamp, points: [:]]
     rtData.id = hashId(app.id)
-	rtData.active = state.active;
+	rtData.active = atomicState.active;
     rtData.stats = [nextScheduled: 0]
-    rtData.cache = state.cache ?: [:]
+    rtData.cache = atomicState.cache ?: [:]
     rtData.newCache = [:]
     rtData.schedules = []
     rtData.cancelations = [statements:[], conditions:[]]
     rtData.piston = piston
     rtData.locationId = hashId(location.id)
     //flow control
-    rtData.state = [old: (state.state ?: ''), new: state.piston.o?.mps ? (state.state ?: '') : 'true'];
+    def oldState = atomicState.state ?: ''
+    rtData.state = [old: oldState, new: state.piston.o?.mps ? oldState : 'true'];
     rtData.statementLevel = 0;
     rtData.fastForwardTo = null
     rtData.break = false
@@ -1216,7 +1218,7 @@ private evaluateOperand(rtData, node, operand, index = null, trigger = false) {
             break
         case "c": //constant
         case "e": //expression
-	        values = [[i: "${node?.$}:$index:0", v: evaluateExpression(rtData, operand.exp)]]
+	        values = [[i: "${node?.$}:$index:0", v: [:] + evaluateExpression(rtData, operand.exp)]]
             break
     }
     if (!node) {
@@ -1716,10 +1718,9 @@ private getVariable(rtData, name) {
             deviceIds.push(deviceId)
         }
 	    result = [t: result.t, v: deviceIds]
-    }
-    if (result.v instanceof Map) {
+    } else if (result.v instanceof Map) {
     	//we're dealing with an operand, let's parse it
-        result = [t: result.t, v: evaluateOperand(rtData, null, result.v).v]
+        result = evaluateExpression(rtData, evaluateOperand(rtData, null, result.v), result.t)
     }
     return result
 }
@@ -1775,7 +1776,7 @@ private Map evaluateExpression(rtData, expression, dataType = null) {
     //if (expression && expression.v instanceof Map) return evaluateExpression(rtData, expression.v, expression.t)
     expression = simplifyExpression(expression)
     def time = now()
-    def result = [:]    
+    def result = expression
     switch (expression.t) {
         case "string":
         case "integer":
@@ -1789,12 +1790,19 @@ private Map evaluateExpression(rtData, expression, dataType = null) {
         case "datetime":
         	result = [t: expression.t, v: cast(rtData, expression.v, expression.t)]
         	break
-        case "bool":
+        case "enum":
+        case "error":
+        case "phone":
+        case "text":
+        	result = [t: 'string', v: cast(rtData, expression.v, 'string')]
+        	break        
+		case "bool":
         	result = [t: "boolean", v: cast(rtData, expression.v, "boolean")]
         	break
         case "number":
         case "float":
         	result = [t: "decimal", v: cast(rtData, expression.v, "decimal")]
+			result = expression
         	break
         case "duration":
         	def multiplier = 1
@@ -1891,7 +1899,7 @@ private Map evaluateExpression(rtData, expression, dataType = null) {
                         operand = -1;
                     }
 	            } else {
-	                items.push(evaluateExpression(rtData, item))
+	                items.push(evaluateExpression(rtData, item) + [:])
                     operand = items.size() - 1;
 	            }
 	        }
@@ -2030,17 +2038,8 @@ private Map evaluateExpression(rtData, expression, dataType = null) {
             }
     	    result = items[0] ? ((items[0].t == 'device') ? items[0] : evaluateExpression(rtData, items[0])) : [t: 'dynamic', v: null]
 	        break
-        case "enum":
-        case "error":
-        case "phone":
-        case "text":
-        default:
-        	result = [t: "string", v: cast(rtData, expression.v, "string")]
-        	break
-            
     }
     //return the value, either directly or via cast, if certain data type is requested
-   
   	//when dealing with devices, they need to be "converted" unless the request is to return devices
     if (dataType && (dataType != 'device') && (result.t == 'device')) {
         switch (result.v.size()) {
