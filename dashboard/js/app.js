@@ -1005,4 +1005,4 @@ if (document.selection) {
      document.execCommand("Copy");
 }}
 
-version = function() { return 'v0.0.051.20170320'; }
+version = function() { return 'v0.0.054.20170321'; }
