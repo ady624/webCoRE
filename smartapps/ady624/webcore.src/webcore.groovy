@@ -19,8 +19,9 @@
  *  Version history
  */
 
-public static String version() { return "v0.0.053.20170321" }
+public static String version() { return "v0.0.054.20170321" }
 /*
+ *	03/21/2016 >>> v0.0.054.20170321 - ALPHA - Moved the dashboard website to https://webcore.homecloudhub.com/dashboard/
  *	03/21/2016 >>> v0.0.053.20170321 - ALPHA - Fixed a bug where variables containing expressions would be cast to the variable type outside of evaluateExpression (the right way)
  *	03/20/2016 >>> v0.0.052.20170320 - ALPHA - Fixed $shmStatus
  *	03/20/2016 >>> v0.0.051.20170320 - ALPHA - Fixed a problem where start values for variables would not be correctly picked up from atomicState (used state by mistake)
@@ -110,7 +111,7 @@ public static String version() { return "v0.0.053.20170321" }
 /*** CoRE (SE) DEFINITION													***/
 /******************************************************************************/
 private static String handle() { return "webCoRE" }
-private static String domain() { return "core.homecloudhub.com" }
+private static String domain() { return "webcore.homecloudhub.com" }
 definition(
 	name: "webCoRE",
 	namespace: "ady624",
