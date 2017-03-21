@@ -13,8 +13,9 @@
  *  for the specific language governing permissions and limitations under the License.
  *
 */
-public static String version() { return "v0.0.051.20170320" }
+public static String version() { return "v0.0.052.20170320" }
 /*
+ *	03/20/2016 >>> v0.0.052.20170320 - ALPHA - Fixed $shmStatus
  *	03/20/2016 >>> v0.0.051.20170320 - ALPHA - Fixed a problem where start values for variables would not be correctly picked up from atomicState (used state by mistake)
  *	03/20/2016 >>> v0.0.050.20170320 - ALPHA - Introducing parallelism, a semaphore mechanism to allow synchronization of multiple simultaneous executions, disabled by default (pistons wait at a semaphore)
  *	03/20/2016 >>> v0.0.04f.20170320 - ALPHA - Minor fixes for device typed variables (lost attribute) and counter variable in for each
@@ -945,7 +946,7 @@ private Boolean executeTask(rtData, devices, statement, task, async) {
     long delay = 0
     for (device in (virtualDevice ? [virtualDevice] : devices)) {
         if (!virtualDevice && device.hasCommand(task.c)) {
-        	def msg = timer "Executed [$device].${task.c}", rtData
+            def msg = timer "Executed [$device].${task.c}", rtData
         	try {
             	delay = "cmd_${task.c}"(rtData, device, params)
             } catch(all) {
@@ -1026,8 +1027,9 @@ private long cmd_setLevel(rtData, device, params) {
     return 0
 }
 
-private long executeVirtualCommand(rtData, devices, task, params) {
-   	def msg = timer "Executed virtual command ${devices ? (devices instanceof List ? "$devices." : "[$devices].") : ""}${task.c}", rtData
+private long executeVirtualCommand(rtData, devices, task, params)
+{
+	def msg = timer "Executed virtual command ${devices ? (devices instanceof List ? "$devices." : "[$devices].") : ""}${task.c}", rtData
     long delay = 0
     try {
 		delay = "vcmd_${task.c}"(rtData, devices, params)
@@ -3299,7 +3301,7 @@ private getSystemVariableValue(name) {
 		case "\$randomSaturation": def result = getRandomValue("\$randomSaturation") ?: (int)Math.round(50 + 50 * Math.random()); setRandomValue("\$randomSaturation", result); return result 
 		case "\$randomHue": def result = getRandomValue("\$randomHue") ?: (int)Math.round(360 * Math.random()); setRandomValue("\$randomHue", result); return result 
   		case "\$locationMode": return location.getMode()
-		case "\$shmStatus": return location.getMode()
+		case "\$shmStatus": return location.currentState("alarmSystemStatus")?.value
     }
 }
 

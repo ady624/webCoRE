@@ -19,8 +19,9 @@
  *  Version history
  */
 
-public static String version() { return "v0.0.051.20170320" }
+public static String version() { return "v0.0.052.20170320" }
 /*
+ *	03/20/2016 >>> v0.0.052.20170320 - ALPHA - Fixed $shmStatus
  *	03/20/2016 >>> v0.0.051.20170320 - ALPHA - Fixed a problem where start values for variables would not be correctly picked up from atomicState (used state by mistake)
  *	03/20/2016 >>> v0.0.050.20170320 - ALPHA - Introducing parallelism, a semaphore mechanism to allow synchronization of multiple simultaneous executions, disabled by default (pistons wait at a semaphore)
  *	03/20/2016 >>> v0.0.04f.20170320 - ALPHA - Minor fixes for device typed variables (lost attribute) and counter variable in for each
@@ -399,7 +400,7 @@ private api_get_base_result(deviceVersion = 0) {
 
 private api_intf_dashboard_load() {
 	def result
-    debug "Dashboard: Request received to initialize instance"
+    //debug "Dashboard: Request received to initialize instance"
 	if (verifySecurityToken(params.token)) {
     	result = api_get_base_result(params.dev)
     } else {
