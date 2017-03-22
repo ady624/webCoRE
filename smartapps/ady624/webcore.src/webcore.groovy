@@ -19,8 +19,9 @@
  *  Version history
  */
 
-public static String version() { return "v0.0.054.20170321" }
+public static String version() { return "v0.0.055.20170322" }
 /*
+ *	03/22/2016 >>> v0.0.055.20170321 - ALPHA - Various improvements, including a revamp of the comparison dialog, also moved the dashboard website to https://dashboard.webcore.co
  *	03/21/2016 >>> v0.0.054.20170321 - ALPHA - Moved the dashboard website to https://webcore.homecloudhub.com/dashboard/
  *	03/21/2016 >>> v0.0.053.20170321 - ALPHA - Fixed a bug where variables containing expressions would be cast to the variable type outside of evaluateExpression (the right way)
  *	03/20/2016 >>> v0.0.052.20170320 - ALPHA - Fixed $shmStatus
@@ -111,7 +112,7 @@ public static String version() { return "v0.0.054.20170321" }
 /*** CoRE (SE) DEFINITION													***/
 /******************************************************************************/
 private static String handle() { return "webCoRE" }
-private static String domain() { return "webcore.homecloudhub.com" }
+private static String domain() { return "dashboard.webcore.co" }
 definition(
 	name: "webCoRE",
 	namespace: "ady624",
@@ -157,8 +158,15 @@ def pageMain() {
 	if (!state.installed) {
         return dynamicPage(name: "pageMain", title: "", install: false, uninstall: false, nextPage: "pageInitializeDashboard") {
             section() {
-                paragraph "Welcome to ${handle()}!"
-                paragraph "You will be guided through a few steps that will get ${handle()} ready for the road. First, we'll configure the dashboard. You will need to setup OAuth in the SmartThings IDE for the ${handle()}web app. If you haven't done so already, please go to the SmartThings IDE, go to the SmartApps tab, select ${handle()} and choose App Settings, then enable OAuth under the OAuth section."
+                paragraph "Welcome to ${handle()}"
+                paragraph "Please take a few moments to complete the installation steps that will get ${handle()} ready for the road."
+            }
+            section() {
+            	paragraph "First, please choose a name for this instance"
+				label name: "name", title: "Name", defaultValue: app.name, required: true                
+			}
+            section() {
+				paragraph "Next, we'll configure the dashboard. You will need to setup OAuth in the SmartThings IDE for the ${handle()} SmartApp. If you haven't done so already, please go to your SmartThings IDE, click on the My SmartApps, locate the 'ady624 : ${handle()}' SmartApp in the list, click the 'Edit Properties' button to the left of the SmartApp name (a notepad and pencil icon), click on OAuth, then click the 'Enable OAuth in Smart App' button. Click the Update button to finish."
                 paragraph "Once you're ready, tap Next"
             }
         }
@@ -168,13 +176,13 @@ def pageMain() {
     	section("Engine block") {
 			href "pageEngineBlock", title: "Cast iron", description: app.version(), image: "https://cdn.rawgit.com/ady624/webCoRE/master/resources/icons/app-CoRE.png", required: false
         }
-		section("Dashboard") {
+		section("") {
 			if (!state.endpoint) {
-				href "pageInitializeDashboard", title: "${handle()} Dashboard", description: "Tap here to initialize the ${handle()} dashboard", image: "https://cdn.rawgit.com/ady624/CoRE/master/resources/images/icons/dashboard.png", required: false
+				href "pageInitializeDashboard", title: "Dashboard", description: "Tap to initialize", image: "https://cdn.rawgit.com/ady624/CoRE/master/resources/images/icons/dashboard.png", required: false
 			} else {
-            	def dashboardUrl = getDashboardInitUrl()
-				trace "*** DO NOT SHARE THIS LINK WITH ANYONE *** Dashboard URL: ${dashboardUrl}"
-				href "", title: "${handle()} Dashboard", style: "external", url: dashboardUrl, image: "https://cdn.rawgit.com/ady624/CoRE/master/resources/images/icons/dashboard.png", required: false
+				//trace "*** DO NOT SHARE THIS LINK WITH ANYONE *** Dashboard URL: ${getDashboardInitUrl()}"
+				href "", title: "Dashboard", style: "external", url: getDashboardInitUrl(), description: "Tap to open", image: "https://cdn.rawgit.com/ady624/CoRE/master/resources/images/icons/dashboard.png", required: false
+				href "", title: "Register a browser", style: "embedded", url: getDashboardInitUrl(true), description: "Tap to open", image: "https://cdn.rawgit.com/ady624/CoRE/master/resources/images/icons/dashboard.png", required: false
 			}
 		}	
 		section(title:"Settings") {
@@ -191,7 +199,8 @@ private pageInitializeDashboard() {
 			if (success) {
 				paragraph "Success! Your ${handle()} dashboard is now enabled. ${state.installed ? "Tap Done to continue." : "Now, choose a security password for your dashboard. You will need to enter this password when accessing your dashboard for the first time and possibly from time to time."}", required: false			   
 			} else {
-				paragraph "Please go to your SmartThings IDE, select the My SmartApps section, click the 'Edit Properties' button of the CoRE app, open the OAuth section and click the 'Enable OAuth in Smart App' button. Click the Update button to finish.\n\nOnce finished, tap Done and try again.", title: "Please enable OAuth for CoRE", required: true, state: null
+				paragraph "Please go to your SmartThings IDE, click on the My SmartApps, locate the 'ady624 : ${handle()}' SmartApp in the list, click the 'Edit Properties' button to the left of the SmartApp name (a notepad and pencil icon), click on OAuth, then click the 'Enable OAuth in Smart App' button. Click the Update button to finish."
+                paragraph "Once finished, tap Done and try again.", title: "Please enable OAuth for CoRE", required: true, state: null
 				return
 			}
 		}
@@ -218,7 +227,12 @@ private pageFinishInstall() {
 	initTokens()
 	dynamicPage(name: "pageFinishInstall", title: "", install: true) {
 		section() {
-			paragraph "Excellent! You have now completed all the ${handle()} installation steps and are ready to go. Remember, you can now access ${handle()} from the SmartApps section of the Automation tab of the SmartThings app. Now go ahead and tap Done and start enjoying ${handle()}!"
+			paragraph "Excellent! You have now completed all the ${handle()} installation steps and are ready to finish the installation process. Remember, you can now access ${handle()} from the SmartApps section of the Automation tab of the SmartThings app."
+            paragraph "NOTE: Once you finish the installation process by tapping Done, you can access the dashboard from the installed SmartApp on your phone, or in any browser by visiting:"
+            paragraph "https://dashboard.webcore.co"
+        }
+        section() {
+            paragraph "Now go ahead and tap that last Done button and enjoy ${handle()}!"
 		}
 	}
 }
@@ -604,7 +618,10 @@ private api_intf_dashboard_piston_pause() {
 	if (verifySecurityToken(params.token)) {
 	    def piston = getChildApps().find{ hashId(it.id) == params.id };
 	    if (piston) {
-        	piston.pause()
+        	def rtData = piston.pause()
+            updateRunTimeData(rtData)
+            //update the state because it will overwrite the atomicState
+            state[piston.id] = atomicState[piston.id]
 			result = [status: "ST_SUCCESS", active: false]
         } else {
 	    	result = api_get_error_result("ERR_INVALID_ID")
@@ -621,7 +638,11 @@ private api_intf_dashboard_piston_resume() {
 	if (verifySecurityToken(params.token)) {
 	    def piston = getChildApps().find{ hashId(it.id) == params.id };
 	    if (piston) {
-        	result = piston.resume()
+        	def rtData = piston.resume()
+            result = rtData.result
+            updateRunTimeData(rtData)
+            //update the state because it will overwrite the atomicState
+            state[piston.id] = atomicState[piston.id]
 			result.status = "ST_SUCCESS"
         } else {
 	    	result = api_get_error_result("ERR_INVALID_ID")
@@ -706,10 +727,10 @@ private api_intf_dashboard_piston_activity() {
 /*** 																		***/
 /******************************************************************************/
 
-private String getDashboardInitUrl() {
-	def url = getDashboardUrl()
+private String getDashboardInitUrl(register = false) {
+	def url = getDashboardUrl(register)
     if (!url) return null
-    return url + "init/" + (apiServerUrl("").replace("https://", '').replace(".api.smartthings.com", "").replace(":443", "").replace("/", "") + (state.accessToken + app.id).replace("-", "")).bytes.encodeBase64()
+    return url + (register ? "register/" : "init/") + (apiServerUrl("").replace("https://", '').replace(".api.smartthings.com", "").replace(":443", "").replace("/", "") + (state.accessToken + app.id).replace("-", "")).bytes.encodeBase64()
 }
 
 private Map listAvailableDevices(raw = false) {
@@ -805,9 +826,9 @@ private String generatePistonName() {
 /*** 																		***/
 /******************************************************************************/
 
-public String getDashboardUrl() {
+public String getDashboardUrl(register = false) {
 	if (!state.endpoint) return null
-	return "https://${domain()}/dashboard/"
+	return "https://${register ? domain().replace('dashboard', 'api') + '/dashboard' : domain()}/"
 }
 
 public String mem(showBytes = true) {

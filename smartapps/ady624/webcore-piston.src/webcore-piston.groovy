@@ -13,8 +13,9 @@
  *  for the specific language governing permissions and limitations under the License.
  *
 */
-public static String version() { return "v0.0.054.20170321" }
+public static String version() { return "v0.0.055.20170322" }
 /*
+ *	03/22/2016 >>> v0.0.055.20170321 - ALPHA - Various improvements, including a revamp of the comparison dialog, also moved the dashboard website to https://dashboard.webcore.co
  *	03/21/2016 >>> v0.0.054.20170321 - ALPHA - Moved the dashboard website to https://webcore.homecloudhub.com/dashboard/
  *	03/21/2016 >>> v0.0.053.20170321 - ALPHA - Fixed a bug where variables containing expressions would be cast to the variable type outside of evaluateExpression (the right way)
  *	03/20/2016 >>> v0.0.052.20170320 - ALPHA - Fixed $shmStatus
@@ -335,12 +336,13 @@ def pause() {
     checkVersion(rtData)
     state.schedules = []
     rtData.stats.nextSchedule = 0
+    unsubscribe()
+    unschedule()
     state.trace = [:]
     state.subscriptions = [:]
-    unsubscribe()
-    parent.updateRunTimeData(rtData)
-    trace msg
     updateLogs(rtData)
+    trace msg
+    return rtData
 }
 
 def resume() {
@@ -352,11 +354,11 @@ def resume() {
     rtData.logs = rtData.logs + (rtData.logging ? tempRtData.logs : [])
     checkVersion(rtData)
     msg.d = rtData
-    subscribeAll(rtData)
-    parent.updateRunTimeData(rtData)
+    subscribeAll(rtData)    
     trace msg
     updateLogs(rtData)
-    return [active: true, subscriptions: state.subscriptions]
+    rtData.result = [active: true, subscriptions: state.subscriptions]
+    return rtData
 }
 
 def execute() {
@@ -371,8 +373,9 @@ private getRunTimeData(rtData = null, semaphore = null) {
     rtData.logs = [[t: timestamp]]
     rtData.trace = [t: timestamp, points: [:]]
     rtData.id = hashId(app.id)
-	rtData.active = atomicState.active;
+	rtData.active = state.active;
     rtData.stats = [nextScheduled: 0]
+    //we're reading the cache from atomicState because we might have waited at a semaphore
     rtData.cache = atomicState.cache ?: [:]
     rtData.newCache = [:]
     rtData.schedules = []
@@ -380,8 +383,9 @@ private getRunTimeData(rtData = null, semaphore = null) {
     rtData.piston = piston
     rtData.locationId = hashId(location.id)
     //flow control
+    //we're reading the old state from atomicState because we might have waited at a semaphore
     def oldState = atomicState.state ?: ''
-    rtData.state = [old: oldState, new: state.piston.o?.mps ? oldState : 'true'];
+    rtData.state = [old: oldState, new: piston.o?.mps ? oldState : 'true'];
     rtData.statementLevel = 0;
     rtData.fastForwardTo = null
     rtData.break = false
@@ -423,7 +427,7 @@ def handleEvents(event) {
 	//cancel all pending jobs, we'll handle them later
 	unschedule(timeHandler)
 	def startTime = now()
-    atomicState.lastExecuted = startTime
+    state.lastExecuted = startTime
     def eventDelay = startTime - event.date.getTime()
 	def msg = timer "Event processed successfully", null, -1
     def tempRtData = [timestamp: startTime, logs:[], logging: true]
@@ -578,7 +582,7 @@ private finalizeEvent(rtData, initialMsg, success = true) {
     	rtData.stats.nextSchedule = 0
     }
     atomicState.schedules = schedules
-    atomicState.nextSchedule = rtData.stats.nextSchedule
+    state.nextSchedule = rtData.stats.nextSchedule
 
     if (initialMsg) {
     	if (success) {
@@ -599,16 +603,14 @@ private finalizeEvent(rtData, initialMsg, success = true) {
 
 
 	state.state = rtData.state.new
-	//atomicState.stats = stats
     state.stats = stats
-    //atomicState.trace = rtData.trace
     state.trace = rtData.trace
     //flush the new cache value
     for(item in rtData.newCache) rtData.cache[item.key] = item.value
     //beat race conditions
-    state.cache = rtData.cache
-    
-	parent.updateRunTimeData(rtData)   
+    state.cache = rtData.cache    
+	parent.updateRunTimeData(rtData)
+    //overwrite state, might have changed meanwhile
     state.schedules = atomicState.schedules
 }
 
@@ -1742,9 +1744,9 @@ def setVariable(rtData, name, value) {
             //set value
             variable.v = cast(rtData, value, variable.t)
             if (!variable.f) {
-            	def vars = atomicState.vars
+            	def vars = state.vars
                 vars[name] = variable.v
-                atomicState.vars = vars
+                state.vars = vars
             }
             return variable
             
@@ -2003,6 +2005,7 @@ private Map evaluateExpression(rtData, expression, dataType = null) {
                         t2 = 'decimal'
                         t = 'decimal'
                     }
+                    debug "Calculating ($t1) $v1 $o ($t2) $v2", rtData
                     v1 = evaluateExpression(rtData, items[idx], t1).v
 	                v2 = evaluateExpression(rtData, items[idx + 1], t2).v
     	            switch (o) {
