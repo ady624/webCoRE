@@ -456,12 +456,12 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 			});
     }
 
-    dataService.generateBackupBin = function (data, public) {
+    dataService.generateBackupBin = function (data, publicBin) {
 		var inst = dataService.getInstance();
         return $http({
             method: 'POST',
             url: 'https://api.myjson.com/bins',
-            data: data ? (public ? {d: encryptObject(data, _dk)} : {e: encryptObject(data, _dk + inst.account.id)}) : {},
+            data: data ? (publicBin ? {d: encryptObject(data, _dk)} : {e: encryptObject(data, _dk + inst.account.id)}) : {},
             transformResponse: function(data) {
 				try {
 					data = JSON.parse(data);
@@ -647,6 +647,10 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 				return data;
 			});
     }
+
+	dataService.registerHandler = function() {
+		navigator.registerProtocolHandler('web+core','https://' + window.location.hostname + '/handler/%s', 'webCoRE');
+	};
 
 	//initialize store
 	store = readObject('store');
@@ -999,7 +1003,6 @@ function utoa(str) {
 function atou(str) {
     return decodeURIComponent(escape(window.atob(str)));
 }
-//window.navigator.registerProtocolHandler('web+core','https://graph.api.smartthings.com/api/token//smartapps/installations//dashboard#/handler/%s', 'CoRE');
 
 document.documentElement.addEventListener('touchstart', function (event) {
     if (event.touches.length > 1) {
@@ -1022,4 +1025,5 @@ if (document.selection) {
      document.execCommand("Copy");
 }}
 
-version = function() { return 'v0.0.055.20170322'; }
+//navigator.registerProtocolHandler('web+core','https://' + window.location.hostname + '/handler/%s', 'webCoRE');
+version = function() { return 'v0.0.056.20170323'; };

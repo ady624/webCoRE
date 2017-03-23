@@ -225,7 +225,7 @@
 		<line kwd>end define;</line>
 		<line ng-if-end>&nbsp;</line>
 		<line com ng-if="piston.z">/* {{piston.z}} */</line>
-		<line kwd ng-if="((mode=='edit') && view.restrictions) || (piston.r && piston.r.length)">when</line>
+		<line kwd ng-if="((mode=='edit') && view.restrictions) || (piston.r && piston.r.length)">only when</line>
 		<restrictions ng-if="((mode=='edit') && view.restrictions) || (piston.r && piston.r.length)" data-ng-repeat="collection in [piston]" data-ng-include="'restrictions'" dnd-nodrag data-ng-model="statement"></restrictions>
 		<line kwd>execute</line>
 		<statements dnd-list="piston.s" dnd-allowed-types="['statement']" data-ng-model="piston.s" data-ng-repeat="statements in [piston.s]" data-ng-include="'statements'" exec="{{piston && piston.s && piston.s.length && trace && trace.points && !!trace.points['s:' + piston.s[0].$]}}"></statements>
@@ -250,7 +250,7 @@
 		<!--action-->
 		<div no-drag class="no-drag" ng-if="statement.t=='action'" no-drag>
 			<line com ng-if="statement.z">/* {{statement.z}} */</line>
-			<line kwd ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)">when</line>
+			<line kwd ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)">only when</line>
 			<restrictions ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)" data-ng-repeat="collection in [statement]" data-ng-include="'restrictions'" dnd-nodrag data-ng-model="statement"></restrictions>
 			<line ng-if-start="((mode=='edit') && view.movable) || ((statement.d) && (statement.d.length)) || ((statement.r) && (statement.r.length)) || ((statement.k) && (statement.k.length==0))" kwd ng-click="editStatement(statement, statements)"><handle dnd-handle class="fa fa-sort"></handle>with</line>
 			<container>
@@ -266,7 +266,7 @@
 		<!--if-->
 		<div no-drag class="no-drag" ng-if="statement.t=='if'" no-drag>
 			<line com ng-if="statement.z">/* {{statement.z}} */</line>
-			<line kwd ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)">when</line>
+			<line kwd ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)">only when</line>
 			<restrictions ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)" data-ng-repeat="collection in [statement]" data-ng-include="'restrictions'" dnd-nodrag data-ng-model="statement"></restrictions>
 			<line kwd ng-click="editStatement(statement, statements)">
 				<handle dnd-handle class="fa fa-sort"></handle>if</line>
@@ -289,7 +289,7 @@
 		<!--switch-->
 		<div no-drag class="no-drag" ng-if="statement.t=='switch'">
 			<line com ng-if="statement.z">/* {{statement.z}} */</line>
-			<line kwd ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)">when</line>
+			<line kwd ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)">only when</line>
 			<restrictions ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)" data-ng-repeat="collection in [statement]" data-ng-include="'restrictions'" dnd-nodrag data-ng-model="statement"></restrictions>
 			<line kwd ng-click="editStatement(statement, statements)">
 				<handle dnd-handle class="fa fa-sort"></handle>switch <span pun> (</span><span ng-bind-html="statement.$$html || (statement.$$html = renderOperand(statement.lo))"></span><span pun>)</span><span pun title="Fall-through mode" ng-if="statement.ctp == 'e'"><i class="fa fa-sort-amount-asc" aria-hidden="true"></i></span>
@@ -312,7 +312,7 @@
 		<!--for-->
 		<div no-drag class="no-drag" ng-if="statement.t=='for'">
 			<line com ng-if="statement.z">/* {{statement.z}} */</line>
-			<line kwd ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)">when</line>
+			<line kwd ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)">only when</line>
 			<restrictions ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)" data-ng-repeat="collection in [statement]" data-ng-include="'restrictions'" dnd-nodrag data-ng-model="statement"></restrictions>
 			<line kwd ng-click="editStatement(statement, statements)">
 				<handle dnd-handle class="fa fa-sort"></handle>for<span pun>&nbsp;(</span><span ng-bind-html="statement.$$html || (statement.$$html = renderForOperands(statement))"></span><span pun>)</span>
@@ -325,7 +325,7 @@
 		<!--each-->
 		<div no-drag class="no-drag" ng-if="statement.t=='each'">
 			<line com ng-if="statement.z">/* {{statement.z}} */</line>
-			<line kwd ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)">when</line>
+			<line kwd ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)">only when</line>
 			<restrictions ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)" data-ng-repeat="collection in [statement]" data-ng-include="'restrictions'" dnd-nodrag data-ng-model="statement"></restrictions>
 			<line kwd ng-click="editStatement(statement, statements)">
 				<handle dnd-handle class="fa fa-sort"></handle>for each<span pun>&nbsp;(</span><span ng-bind-html="statement.$$html || (statement.$$html = renderForEachOperands(statement))"></span><span pun>)</span>
@@ -338,7 +338,7 @@
 		<!--while-->
 		<div no-drag class="no-drag" ng-if="statement.t=='while'">
 			<line com ng-if="statement.z">/* {{statement.z}} */</line>
-			<line kwd ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)">when</line>
+			<line kwd ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)">only when</line>
 			<restrictions ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)" data-ng-repeat="collection in [statement]" data-ng-include="'restrictions'" dnd-nodrag data-ng-model="statement"></restrictions>
 			<line kwd ng-click="editStatement(statement, statements)">
 				<handle dnd-handle class="fa fa-sort"></handle>while
@@ -352,7 +352,7 @@
 		<!--repeat-->
 		<div no-drag class="no-drag" ng-if="statement.t=='repeat'">
 			<line com ng-if="statement.z">/* {{statement.z}} */</line>
-			<line kwd ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)">when</line>
+			<line kwd ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)">only when</line>
 			<restrictions ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)" data-ng-repeat="collection in [statement]" data-ng-include="'restrictions'" dnd-nodrag data-ng-model="statement"></restrictions>
 			<line ng-click="editStatement(statement, statements)">
 				<handle dnd-handle class="fa fa-sort"></handle>repeat</line>
@@ -366,7 +366,7 @@
 		<!--break-->
 		<div no-drag class="no-drag" ng-if="statement.t=='break'">
 			<line com ng-if="statement.z">/* {{statement.z}} */</line>
-			<line kwd ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)">when</line>
+			<line kwd ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)">only when</line>
 			<restrictions ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)" data-ng-repeat="collection in [statement]" data-ng-include="'restrictions'" dnd-nodrag data-ng-model="statement"></restrictions>
 			<line kwd ng-click="editStatement(statement, statements)">
 				<handle dnd-handle class="fa fa-sort"></handle>break;
@@ -376,7 +376,7 @@
 		<!--return-->
 		<div no-drag class="no-drag" ng-if="statement.t=='exit'">
 			<line com ng-if="statement.z">/* {{statement.z}} */</line>
-			<line kwd ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)">when</line>
+			<line kwd ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)">only when</line>
 			<restrictions ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)" data-ng-repeat="collection in [statement]" data-ng-include="'restrictions'" dnd-nodrag data-ng-model="statement"></restrictions>
 			<line kwd ng-click="editStatement(statement, statements)">
 				<handle dnd-handle class="fa fa-sort"></handle><span kwd>exit&nbsp;</span><span lit ng-bind-html="renderOperand(statement.lo)"></span><span kwd>;</span>
@@ -394,18 +394,18 @@
 		<bar ng-if="(mode=='edit') || (collection.c && (collection.c.length > 1))"></bar>
 		<trace ng-if="(view.trace && (mode=='view') && (collection.c) && (collection.c.length > 1) && trace && trace.points && trace.points['c:' + collection.$])"><span>+{{point.o}}ms</span><span dur eval="{{trace.points['c:' + collection.$].v}}">{{point.d}}ms</span></trace>
 		<div no-drag class="no-drag" dnd-list="collection.c" dnd-allowed-types="['condition']">
-			<line pun data-ng-if-start="collection.n == '1'" data-ng-click="collection.t == 'group' ? editCondition(collection, collection.$$parent.c) : editStatement(collection, statement);">not (</line>
+			<line com ng-if="collection.z">/* {{collection.z}} */</line>
+			<line pun data-ng-if-start="(collection.t == 'group') || !!collection.n" data-ng-click="editConditionGroup(collection, (collection.t == 'group' ? collection.$$parent.c : null));">{{collection.n ? 'not ' : ''}}(</line>
 			<container>
 				<condition data-ng-repeat-start="condition in collection.c" data-ng-include="'condition'" dnd-nodra data-ng-model="collection" nag-init="condition.$$parent = collection" dnd-draggable="condition" dnd-nodrag dnd-type="'condition'" dnd-moved="drag(collection.c, $index);" dnd-effect-allowed="copyMove"></condition>
-				<line operator data-ng-repeat-end data-ng-click="collection.t == 'group' ? editCondition(collection, collection.$$parent.c) : editStatement(collection, statement);">{{collection.o}}</line>
+				<line operator data-ng-repeat-end data-ng-click="editConditionGroup(collection, (collection.t == 'group' ? collection.$$parent.c : null));">{{collection.o}}</line>
 				<line new data-ng-click="addCondition(collection)">+ add a new condition</line>
 			</container>
-			<line data-ng-if-end pun data-ng-click="collection.t == 'group' ? editCondition(collection, collection.$$parent.c) : editStatement(collection, statement);">)</line>
-			<condition data-ng-if-start="collection.n != '1'" data-ng-repeat-start="condition in collection.c" data-ng-include="'condition'" dnd-nodrag data-ng-model="collection" nag-init="condition.$$parent = collection" dnd-draggable="condition" dnd-nodrag dnd-type="'condition'" dnd-moved="drag(collection.c, $index);" dnd-effect-allowed="copyMove"></condition>
-			<line operator data-ng-if-end data-ng-repeat-end data-ng-click="collection.t == 'group' ? editCondition(collection, collection.$$parent.c) : editStatement(collection, statement);">{{collection.o}}</line>
-			<line new data-ng-if="collection.n != '1'" data-ng-click="addCondition(collection)">+ add a new condition</line>
-		</div>
-		
+			<line data-ng-if-end pun>)</line>
+			<condition ng-if-start="(collection.t != 'group') && !collection.n" data-ng-repeat-start="condition in collection.c" data-ng-include="'condition'" dnd-nodrag data-ng-model="collection" nag-init="condition.$$parent = collection" dnd-draggable="condition" dnd-nodrag dnd-type="'condition'" dnd-moved="drag(collection.c, $index);" dnd-effect-allowed="copyMove"></condition>
+			<line operator ng-if-end data-ng-repeat-end data-ng-click="editConditionGroup(collection, (collection.t == 'group' ? collection.$$parent.c : null));">{{collection.o}}</line>
+			<line new ng-if="(collection.t != 'group') && !collection.n" data-ng-click="addCondition(collection)">+ add a new condition</line>
+		</div>		
 	</dnd-nodrag>
 </script>
 <script type="text/ng-template" id="condition">
@@ -413,11 +413,8 @@
 		<div>
 		<trace ng-if="(view.trace && (mode=='view') && trace && trace.points && trace.points['c:' + condition.$])"><span>+{{trace.points['c:' + condition.$].o}}ms</span><span dur eval="{{trace.points['c:' + condition.$].v}}">{{trace.points['c:' + condition.$].d}}ms</span></trace>
 		<subscription ng-if="(mode == 'view') && !!condition.s" class="fa fa-bolt" title="This condition subscribes to events"></subscription>
-		<line com ng-if="condition.z">/* {{condition.z}} */</line>
-		<line pun ng-if-start="condition.c" ng-click="editCondition(condition, collection.c)">
-			<handle dnd-handle class="fa fa-sort"></handle>{{condition.n == '1' ? 'not ' : ''}}(</line>
-		<conditions data-ng-repeat="collection in [condition]" data-ng-include="'conditions'" dnd-nodrag data-ng-model="condition" dnd-draggable="condition" dnd-type="'condition'" dnd-moved="drag(collection.c, $index);" dnd-effect-allowed="copyMove" eval="{{collection && trace && trace.points && trace.points['c:' + collection.$] ? trace.points['c:' + collection.$].v : ''}}"></conditions>
-		<line pun ng-if-end ng-click="editCondition(condition, collection.c)">)</line>
+		<conditions ng-if="condition.c" data-ng-repeat="collection in [condition]" data-ng-include="'conditions'" dnd-nodrag data-ng-model="condition" dnd-draggable="condition" dnd-type="'condition'" dnd-moved="drag(collection.c, $index);" dnd-effect-allowed="copyMove" eval="{{collection && trace && trace.points && trace.points['c:' + collection.$] ? trace.points['c:' + collection.$].v : ''}}"></conditions>
+		<line com ng-if="!condition.c && !!condition.z">/* {{condition.z}} */</line>
 		<line cond ng-if="!condition.c" ng-click="editCondition(condition, collection.c);">
 			<handle dnd-handle class="fa fa-sort"></handle><span ng-bind-html="condition.$$html || (condition.$$html = renderComparison(condition.lo, condition.co, condition.ro, condition.ro2))"></span>
 		</line>
@@ -431,26 +428,93 @@
 			</container>
 			<line pun>}</line>
 		</container>
-		</div>
-		
+		</div>	
 	</dnd-nodrag>
 </script>
 
+
+
+
+
+
+
+
+
+
+
+
+
+<script type="text/ng-template" id="restrictions">
+	<dnd-nodrag>
+		<bar ng-if="(mode=='edit') || (collection.r && (collection.r.length > 1))"></bar>
+		<trace ng-if="(view.trace && (mode=='view') && (collection.r) && (collection.r.length > 1) && trace && trace.points && trace.points['c:' + collection.$])"><span>+{{point.o}}ms</span><span dur eval="{{trace.points['c:' + collection.$].v}}">{{point.d}}ms</span></trace>
+		<div no-drag class="no-drag" dnd-list="collection.r" dnd-allowed-types="['restriction']">
+			<line com ng-if="collection.z">/* {{collection.z}} */</line>
+			<line pun data-ng-if-start="(collection.t == 'group') || !!collection.rn" data-ng-click="editRestrictionGroup(collection, (collection.t == 'group' ? collection.$$parent.r : null));">{{collection.rn ? 'not ' : ''}}(</line>
+			<container>
+				<restriction data-ng-repeat-start="restriction in collection.r" data-ng-include="'restriction'" dnd-nodra data-ng-model="collection" nag-init="restriction.$$parent = collection" dnd-draggable="restriction" dnd-nodrag dnd-type="'restriction'" dnd-moved="drag(collection.r, $index);" dnd-effect-allowed="copyMove"></restriction>
+				<line operator data-ng-repeat-end data-ng-click="editRestrictionGroup(collection, (collection.t == 'group' ? collection.$$parent.r : null));">{{collection.rop}}</line>
+				<line new data-ng-click="addrestriction(collection)">+ add a new restriction</line>
+			</container>
+			<line data-ng-if-end pun>)</line>
+			<restriction ng-if-start="(collection.t != 'group') && !collection.rn" data-ng-repeat-start="restriction in collection.r" data-ng-include="'restriction'" dnd-nodrag data-ng-model="collection" nag-init="restriction.$$parent = collection" dnd-draggable="restriction" dnd-nodrag dnd-type="'restriction'" dnd-moved="drag(collection.r, $index);" dnd-effect-allowed="copyMove"></restriction>
+			<line operator ng-if-end data-ng-repeat-end data-ng-click="editRestrictionGroup(collection, (collection.t == 'group' ? collection.$$parent.r : null));">{{collection.rop}}</line>
+			<line new ng-if="(collection.t != 'group') && !collection.rn" data-ng-click="addrestriction(collection)">+ add a new restriction</line>
+		</div>		
+	</dnd-nodrag>
+</script>
+<script type="text/ng-template" id="restriction">
+	<dnd-nodrag>
+		<div>
+		<trace ng-if="(view.trace && (mode=='view') && trace && trace.points && trace.points['c:' + restriction.$])"><span>+{{trace.points['c:' + restriction.$].o}}ms</span><span dur eval="{{trace.points['c:' + restriction.$].v}}">{{trace.points['c:' + restriction.$].d}}ms</span></trace>
+		<subscription ng-if="(mode == 'view') && !!restriction.s" class="fa fa-bolt" title="This restriction subscribes to events"></subscription>
+		<restrictions ng-if="restriction.r" data-ng-repeat="collection in [restriction]" data-ng-include="'restrictions'" dnd-nodrag data-ng-model="restriction" dnd-draggable="restriction" dnd-type="'restriction'" dnd-moved="drag(collection.r, $index);" dnd-effect-allowed="copyMove" eval="{{collection && trace && trace.points && trace.points['c:' + collection.$] ? trace.points['c:' + collection.$].v : ''}}"></restrictions>
+		<line com ng-if="!restriction.r && !!restriction.z">/* {{restriction.z}} */</line>
+		<line cond ng-if="!restriction.r" ng-click="editrestriction(restriction, collection.r);">
+			<handle dnd-handle class="fa fa-sort"></handle><span ng-bind-html="restriction.$$html || (restriction.$$html = renderComparison(restriction.lo, restriction.co, restriction.ro, restriction.ro2))"></span>
+		</line>
+		<container ng-if="((mode=='edit') && view.whens) || (restriction.ts && restriction.ts.length) || (restriction.fs && restriction.fs.length)">
+			<line pun>{</line>
+			<container>
+				<line kwd when ng-if-start="view.whens || (restriction.ts && restriction.ts.length)">when true</line>
+				<statements ng-if-end dnd-list="restriction.ts" dnd-allowed-types="['statement']" data-ng-repeat="statements in [restriction.ts]" data-ng-include="'statements'" dnd-nodrag data-ng-model="restriction.ts"></statements>
+				<line kwd when ng-if-start="view.whens || (restriction.fs && restriction.fs.length)">when false</line>
+				<statements ng-if-end dnd-list="restriction.fs" dnd-allowed-types="['statement']" data-ng-repeat="statements in [restriction.fs]" data-ng-include="'statements'" dnd-nodrag data-ng-model="restriction.fs"></statements>
+			</container>
+			<line pun>}</line>
+		</container>
+		</div>	
+	</dnd-nodrag>
+</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!--
 <script type="text/ng-template" id="restrictions">
 	<dnd-nodrag>
 		<bar ng-if="(mode=='edit') || (collection.r && (collection.r.length > 1))"></bar>
 		<trace ng-if="(view.trace && (mode=='view') && (collection.r) && (collection.r.length > 1) && trace && trace.points && trace.points['c:' + collection.$])"><span>+{{trace.points['c:' + collection.$].o}}ms</span><span dur eval="{{trace.points['c:' + collection.$].v}}">{{trace.points['c:' + collection.$].d}}ms</span></trace>
 		<div no-drag class="no-drag" dnd-list="collection.r" dnd-allowed-types="['restriction']">
-			<line pun data-ng-if-start="collection.rn == '1'" data-ng-click="collection.t == 'group' ? editRestriction(collection, collection.$$parent.r) : editStatement(collection, statement);">not (</line>
+			<line pun data-ng-if-start="collection.rn" data-ng-click="collection.t == 'group' ? editRestriction(collection, collection.$$parent.r) : editStatement(collection, statement);">not (</line>
 			<container>
 				<restriction data-ng-repeat-start="restriction in collection.r" data-ng-include="'restriction'" dnd-nodrag data-ng-model="collection" nag-init="restriction.$$parent = collection" dnd-draggable="restriction" dnd-type="'restriction'" dnd-moved="drag(collection.r, $index);" dnd-effect-allowed="copyMove"></restriction>
-				<line operator data-ng-repeat-end data-ng-click="collection.t == 'group' ? editRestriction(collection, collection.$$parent.r) : editStatement(collection, statement);">{{collection.ro}}</line>
+				<line operator data-ng-repeat-end data-ng-click="collection.t == 'group' ? editRestriction(collection, collection.$$parent.r) : editStatement(collection, statement);">{{collection.rop}}</line>
 				<line new data-ng-click="addRestriction(collection)">+ add a new restriction</line>
 			</container>
 			<line data-ng-if-end pun ng-click="editStatement(collection, statement)">)</line>
-			<restriction data-ng-if-start="collection.rn != '1'" data-ng-repeat-start="restriction in collection.r" data-ng-include="'restriction'" dnd-nodrag data-ng-model="collection" nag-init="restriction.$$parent = collection" dnd-draggable="restriction" dnd-type="'restriction'" dnd-moved="drag(collection.r, $index);" dnd-effect-allowed="copyMove"></restriction>
-			<line operator data-ng-if-end data-ng-repeat-end data-ng-click="collection.t == 'group' ? editRestriction(collection, collection.$$parent.r) : editStatement(collection, statement);">{{collection.ro}}</line>
-			<line new data-ng-if="collection.rn != '1'" data-ng-click="addRestriction(collection)">+ add a new restriction</line>
+			<restriction data-ng-if-start="!collection.rn" data-ng-repeat-start="restriction in collection.r" data-ng-include="'restriction'" dnd-nodrag data-ng-model="collection" nag-init="restriction.$$parent = collection" dnd-draggable="restriction" dnd-type="'restriction'" dnd-moved="drag(collection.r, $index);" dnd-effect-allowed="copyMove"></restriction>
+			<line operator data-ng-if-end data-ng-repeat-end data-ng-click="collection.t == 'group' ? editRestriction(collection, collection.$$parent.r) : editStatement(collection, statement);">{{collection.rop}}</line>
+			<line new data-ng-if="!collection.rn" data-ng-click="addRestriction(collection)">+ add a new restriction</line>
 		</div>
 	</dnd-nodrag>
 </script>
@@ -460,7 +524,7 @@
 		<trace ng-if="(view.trace && (mode=='view') && trace && trace.points && trace.points['c:' + restriction.$])"><span>+{{trace.points['c:' + restriction.$].o}}ms</span><span dur eval="{{trace.points['c:' + restriction.$].v}}">{{trace.points['c:' + restriction.$].d}}ms</span></trace>
 		<line com ng-if="restriction.z">/* {{restriction.z}} */</line>
 		<line pun ng-if-start="restriction.r" ng-click="editRestriction(restriction, collection.r)">
-			<handle dnd-handle class="fa fa-sort"></handle>{{restriction.rn == '1' ? 'not ' : ''}}(</line>
+			<handle dnd-handle class="fa fa-sort"></handle>{{restriction.rn ? 'not ' : ''}}(</line>
 		<restrictions data-ng-repeat="collection in [restriction]" data-ng-include="'restrictions'" dnd-nodrag data-ng-model="restriction" dnd-draggable="restriction" dnd-type="'restriction'" dnd-moved="drag(collection.r, $index);" dnd-effect-allowed="copyMove"></restrictions>
 		<line pun ng-if-end ng-click="editRestriction(restriction, collection.r)">)</line>
 		<line cond ng-if="!restriction.r" ng-click="editRestriction(restriction, collection.r);">
@@ -470,7 +534,7 @@
 	</dnd-nodrag>
 </script>
 
-
+-->
 
 
 
@@ -510,11 +574,11 @@
 		</header>
 		<p ng-if="view.advancedStatements">Basic statements</p>
 		<items>
-			<item ng-repeat="item in designer.items.simple" type="{{item.type}}" class="fa fa-{{item.icon}} {{item.class}}" title="{{item.name}}" ng-selected="item.type==designer.type" ng-click="setDesignerType(item.type)"></item>
+			<item ng-repeat="item in designer.items.simple" type="{{item.type}}" class="fa fa-{{item.icon}} {{item.cssClass}}" title="{{item.name}}" ng-selected="item.type==designer.type" ng-click="setDesignerType(item.type)"></item>
 		</items>
 		<p ng-if-start="view.advancedStatements">Advanced statements</p>
 		<items ng-if-end>
-			<item ng-repeat="item in designer.items.advanced" type="{{item.type}}" class="fa fa-{{item.icon}} {{item.class}}" title="{{item.name}}" ng-selected="item.type==designer.type" ng-click="setDesignerType(item.type)"></item>
+			<item ng-repeat="item in designer.items.advanced" type="{{item.type}}" class="fa fa-{{item.icon}} {{item.cssClass}}" title="{{item.name}}" ng-selected="item.type==designer.type" ng-click="setDesignerType(item.type)"></item>
 		</items>
 		<footer>
 			<button type="button" class="btn btn-info pull-right" ng-disabled="!designer.type" ng-click="nextPage();">Next</button>
@@ -524,8 +588,8 @@
 
 	<designer ng-if="designer.page==1">
 		<header>
-			<label ng-if="designer.new">Add a new {{designer.type}}</label>
-			<label ng-if="!designer.new">Edit {{designer.type}}</label>
+			<label ng-if="designer.$new">Add a new {{designer.type}}</label>
+			<label ng-if="!designer.$new">Edit {{designer.type}}</label>
 		</header>
 		<form>
 			<div class="form-group" ng-if="designer.type=='if'">
@@ -721,25 +785,22 @@
 			</div>
 		</form>
 		<footer>
-			<button type="button" ng-if="(designer.type=='if' ) && (designer.new)" class="btn btn-info pull-right" ng-disabled="!designer.type" ng-click="updateStatement(true);">Add a condition</button>
-			<button type="button" ng-if="(designer.type=='switch' ) && (designer.new)" class="btn btn-info pull-right" ng-disabled="!designer.type" ng-click="updateStatement(true);">Add a case</button>
-			<button type="button" ng-if="(designer.type=='for' ) && (designer.new)" class="btn btn-info pull-right" ng-disabled="!designer.type" ng-click="updateStatement(true);">Add a statement</button>
-			<button type="button" ng-if="(designer.type=='each' ) && (designer.new)" class="btn btn-info pull-right" ng-disabled="!designer.type" ng-click="updateStatement(true);">Add a statement</button>
-			<button type="button" ng-if="(designer.type=='while' ) && (designer.new)" class="btn btn-info pull-right" ng-disabled="!designer.type" ng-click="updateStatement(true);">Add a condition</button>
-			<button type="button" ng-if="(designer.type=='repeat' ) && (designer.new)" class="btn btn-info pull-right" ng-disabled="!designer.type" ng-click="updateStatement(true);">Add a statement</button>
-			<button type="button" ng-if="(designer.type=='action' ) && (designer.new)" class="btn btn-info pull-right" ng-disabled="!designer.type" ng-click="updateStatement(true);">Add a task</button>
-			<button type="button" ng-if="(designer.type=='break' ) && (designer.new)" class="btn btn-info pull-right" ng-disabled="!designer.type" ng-click="updateStatement();">Add</button>
-			<button type="button" ng-if="(designer.type=='exit' ) && (designer.new)" class="btn btn-info pull-right" ng-disabled="!designer.type" ng-click="updateStatement();">Add</button>
-			<button type="button" ng-if="!designer.new" class="btn btn-info pull-right" ng-disabled="!designer.type" ng-click="updateStatement();">Save</button>
-			<button type="button" ng-if="!designer.new && ((designer.type=='if' ) || (designer.type=='while' ) || (designer.type=='repeat' ))" class="btn btn-info pull-right" ng-disabled="!designer.type" ng-click="upgradeStatement();">Convert to new group</button>
-			<button type="button" ng-if="designer.new" class="btn btn-default" ng-click="prevPage();">Back</button>
-			<button type="button" ng-if="!designer.new" class="btn btn-default" ng-click="closeDialog();">Cancel</button>
-			<button type="button" ng-if="!designer.new" class="btn btn-danger" ng-click="deleteObject();">Delete</button>
+			<button type="button" ng-if="(designer.type=='if' ) && (designer.$new)" class="btn btn-info pull-right" ng-disabled="!designer.type" ng-click="updateStatement(true);">Add a condition</button>
+			<button type="button" ng-if="(designer.type=='switch' ) && (designer.$new)" class="btn btn-info pull-right" ng-disabled="!designer.type" ng-click="updateStatement(true);">Add a case</button>
+			<button type="button" ng-if="(designer.type=='for' ) && (designer.$new)" class="btn btn-info pull-right" ng-disabled="!designer.type" ng-click="updateStatement(true);">Add a statement</button>
+			<button type="button" ng-if="(designer.type=='each' ) && (designer.$new)" class="btn btn-info pull-right" ng-disabled="!designer.type" ng-click="updateStatement(true);">Add a statement</button>
+			<button type="button" ng-if="(designer.type=='while' ) && (designer.$new)" class="btn btn-info pull-right" ng-disabled="!designer.type" ng-click="updateStatement(true);">Add a condition</button>
+			<button type="button" ng-if="(designer.type=='repeat' ) && (designer.$new)" class="btn btn-info pull-right" ng-disabled="!designer.type" ng-click="updateStatement(true);">Add a statement</button>
+			<button type="button" ng-if="(designer.type=='action' ) && (designer.$new)" class="btn btn-info pull-right" ng-disabled="!designer.type" ng-click="updateStatement(true);">Add a task</button>
+			<button type="button" ng-if="(designer.type=='break' ) && (designer.$new)" class="btn btn-info pull-right" ng-disabled="!designer.type" ng-click="updateStatement();">Add</button>
+			<button type="button" ng-if="(designer.type=='exit' ) && (designer.$new)" class="btn btn-info pull-right" ng-disabled="!designer.type" ng-click="updateStatement();">Add</button>
+			<button type="button" ng-if="!designer.$new" class="btn btn-info pull-right" ng-disabled="!designer.type" ng-click="updateStatement();">Save</button>
+			<button type="button" ng-if="!designer.$new && ((designer.type=='if' ) || (designer.type=='while' ) || (designer.type=='repeat' ))" class="btn btn-info pull-right" ng-disabled="!designer.type" ng-click="upgradeStatement();">Convert to new group</button>
+			<button type="button" ng-if="designer.$new" class="btn btn-default" ng-click="prevPage();">Back</button>
+			<button type="button" ng-if="!designer.$new" class="btn btn-default" ng-click="closeDialog();">Cancel</button>
+			<button type="button" ng-if="!designer.$new" class="btn btn-danger" ng-click="deleteObject();">Delete</button>
 		</footer>
 	</designer>
-
-
-
 </script>
 
 <script type="text/ng-template" id="dialog-edit-condition">
@@ -749,7 +810,7 @@
 			<span>Please select one of the condition types below and then click Next</span>
 		</header>
 		<items>
-			<item ng-repeat="item in designer.items" type="{{item.type}}" class="fa fa-{{item.icon}} {{item.class}}" title="{{item.name}}" ng-selected="item.type==designer.type" ng-click="setDesignerType(item.type, true)"></item>
+			<item ng-repeat="item in designer.items" type="{{item.type}}" class="fa fa-{{item.icon}} {{item.cssClass}}" title="{{item.name}}" ng-selected="item.type==designer.type" ng-click="setDesignerType(item.type, true)"></item>
 		</items>
 		<footer>
 			<button type="button" class="btn btn-default" ng-click="closeDialog();">Cancel</button>
@@ -759,8 +820,8 @@
 
 	<designer ng-if="designer.page==1">
 		<header>
-			<label ng-if="designer.new">Add a new {{designer.type}}</label>
-			<label ng-if="!designer.new">Edit {{designer.type}}</label>
+			<label ng-if="designer.$new">Add a new {{designer.type}}</label>
+			<label ng-if="!designer.$new">Edit {{designer.type}}</label>
 		</header>
 		<form>
 			<info ng-if="designer.type=='condition'">A condition allows for a single comparison to be made between two expressions.</info>
@@ -797,16 +858,64 @@
 
 		</form>
 		<footer>
-			<button type="button" ng-if="designer.new" class="btn btn-info pull-right" ng-disabled="!designer.type || ((designer.type=='condition') && !designer.comparison.valid)" ng-click="updateCondition();">Add</button>
-			<button type="button" ng-if="designer.new" class="btn btn-success pull-right" ng-disabled="!designer.type || ((designer.type=='condition') && !designer.comparison.valid)" ng-click="updateCondition(true);">Add more</button>
-			<button type="button" ng-if="!designer.new" class="btn btn-info pull-right" ng-disabled="!designer.type || ((designer.type=='condition') && !designer.comparison.valid)" ng-click="updateCondition();">Save</button>
-			<!--<button type="button" ng-if="!designer.new && designer.parent" class="btn btn-info pull-right" ng-disabled="!designer.type" ng-click="upgradeCondition();">Convert to new group</button>-->
-			<button type="button" ng-if="designer.new" class="btn btn-default" ng-click="prevPage();">Back</button>
-			<button type="button" ng-if="!designer.new" class="btn btn-default" ng-click="closeDialog();">Cancel</button>
-			<button type="button" ng-if="!designer.new" class="btn btn-danger" ng-click="deleteObject();">Delete</button>
+			<button type="button" ng-if="designer.$new" class="btn btn-info pull-right" ng-disabled="!designer.type || ((designer.type=='condition') && !designer.comparison.valid)" ng-click="updateCondition();">Add</button>
+			<button type="button" ng-if="designer.$new" class="btn btn-success pull-right" ng-disabled="!designer.type || ((designer.type=='condition') && !designer.comparison.valid)" ng-click="updateCondition(true);">Add more</button>
+			<button type="button" ng-if="!designer.$new" class="btn btn-info pull-right" ng-disabled="!designer.type || ((designer.type=='condition') && !designer.comparison.valid)" ng-click="updateCondition();">Save</button>
+			<!--<button type="button" ng-if="!designer.$new && designer.parent" class="btn btn-info pull-right" ng-disabled="!designer.type" ng-click="upgradeCondition();">Convert to new group</button>-->
+			<button type="button" ng-if="designer.$new" class="btn btn-default" ng-click="prevPage();">Back</button>
+			<button type="button" ng-if="!designer.$new" class="btn btn-default" ng-click="closeDialog();">Cancel</button>
+			<button type="button" ng-if="!designer.$new" class="btn btn-danger" ng-click="deleteObject();">Delete</button>
 		</footer>
 	</designer>
 </script>
+
+
+
+<script type="text/ng-template" id="dialog-edit-condition-group">
+	<designer>
+		<header>
+			<label>Edit condition group</label>
+		</header>
+		<form>
+			<div class="form-group">
+				<label for="operator">Logical Operator</label>
+				<div class="form-table input-group">
+					<select id="operator" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-default" ng-model="designer.operator" data-mobile="{{mobile}}">
+						<option value="and">Logical AND</option>
+						<option value="or">Logical OR</option>
+						<option value="xor">Logical eXclusive OR (XOR)</option>
+						<option value="followed by">Followed by</option>
+					</select>
+				</div>
+			</div>
+			<div class="form-group">
+				<label for="operator">Whole group negation</label>
+				<div class="form-table input-group">
+					<select id="operator" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-default" ng-model="designer.not" data-mobile="{{mobile}}">
+						<option value="0">Not negated</option>
+						<option value="1">Negated</option>
+					</select>
+				</div>
+			</div>
+
+			<div class="divider" data-toggle="collapse" data-target="#advopt" collapsed-title="Show Advanced Options" expanded-title="Hide Advanced Options" aria-expanded="false"></div>
+			<div id="advopt" class="form-group collapse">
+				<div class="form-group">
+					<label for="descriptionInput">Description (optional)</label>
+					<textarea type="text" id="descriptionInput" class="form-control" placeholder="Description for this statement" ng-model="designer.description"></textarea>
+				</div>
+			</div>
+		</form>
+		<footer>
+			<button type="button" class="btn btn-info pull-right" ng-click="updateConditionGroup();">Save</button>
+			<button type="button" class="btn btn-default" ng-click="closeDialog();">Cancel</button>
+			<button type="button" ng-if="designer.group.t == 'group'" class="btn btn-danger" ng-click="deleteObject();">Delete</button>
+		</footer>
+	</designer>
+</script>
+
+
+
 
 
 
@@ -817,7 +926,7 @@
 			<span>Please select one of the restriction types below and then click Next</span>
 		</header>
 		<items>
-			<item ng-repeat="item in designer.items" type="{{item.type}}" class="fa fa-{{item.icon}} {{item.class}}" title="{{item.name}}" ng-selected="item.type==designer.type" ng-click="setDesignerType(item.type, true)"></item>
+			<item ng-repeat="item in designer.items" type="{{item.type}}" class="fa fa-{{item.icon}} {{item.cssClass}}" title="{{item.name}}" ng-selected="item.type==designer.type" ng-click="setDesignerType(item.type, true)"></item>
 		</items>
 		<footer>
 			<button type="button" class="btn btn-default" ng-click="closeDialog();">Cancel</button>
@@ -826,8 +935,8 @@
 	</designer>
 	<designer ng-if="designer.page==1">
 		<header>
-			<label ng-if="designer.new">Add a new {{designer.type}}</label>
-			<label ng-if="!designer.new">Edit {{designer.type}}</label>
+			<label ng-if="designer.$new">Add a new {{designer.type}}</label>
+			<label ng-if="!designer.$new">Edit {{designer.type}}</label>
 		</header>
 		<form>
 			<info ng-if="designer.type=='restriction'">A restriction allows for a single comparison to be made between two expressions.</info>
@@ -840,23 +949,67 @@
 			</div>
 		</form>
 		<footer>
-			<button type="button" ng-if="designer.new" class="btn btn-info pull-right" ng-disabled="!designer.type || ((designer.type=='restriction') && !designer.comparison.valid)" ng-click="updateRestriction();">Add</button>
-			<button type="button" ng-if="!designer.new" class="btn btn-info pull-right" ng-disabled="!designer.type || ((designer.type=='restriction') && !designer.comparison.valid)" ng-click="updateRestriction();">Save</button>
-			<button type="button" ng-if="(0==1) && !designer.new && designer.parent" class="btn btn-info pull-right" ng-disabled="!designer.type" ng-click="upgradeRestriction();">Convert to new group</button>
-			<button type="button" ng-if="designer.new" class="btn btn-default" ng-click="prevPage();">Back</button>
-			<button type="button" ng-if="!designer.new" class="btn btn-default" ng-click="closeDialog();">Cancel</button>
-			<button type="button" ng-if="!designer.new" class="btn btn-danger" ng-click="deleteObject();">Delete</button>
+			<button type="button" ng-if="designer.$new" class="btn btn-info pull-right" ng-disabled="!designer.type || ((designer.type=='restriction') && !designer.comparison.valid)" ng-click="updateRestriction();">Add</button>
+			<button type="button" ng-if="!designer.$new" class="btn btn-info pull-right" ng-disabled="!designer.type || ((designer.type=='restriction') && !designer.comparison.valid)" ng-click="updateRestriction();">Save</button>
+			<button type="button" ng-if="(0==1) && !designer.$new && designer.parent" class="btn btn-info pull-right" ng-disabled="!designer.type" ng-click="upgradeRestriction();">Convert to new group</button>
+			<button type="button" ng-if="designer.$new" class="btn btn-default" ng-click="prevPage();">Back</button>
+			<button type="button" ng-if="!designer.$new" class="btn btn-default" ng-click="closeDialog();">Cancel</button>
+			<button type="button" ng-if="!designer.$new" class="btn btn-danger" ng-click="deleteObject();">Delete</button>
 		</footer>
 	</designer>
 </script>
 
 
 
+<script type="text/ng-template" id="dialog-edit-restriction-group">
+	<designer>
+		<header>
+			<label>Edit restriction group</label>
+		</header>
+		<form>
+			<div class="form-group">
+				<label for="operator">Logical Operator</label>
+				<div class="form-table input-group">
+					<select id="operator" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-default" ng-model="designer.operator" data-mobile="{{mobile}}">
+						<option value="and">Logical AND</option>
+						<option value="or">Logical OR</option>
+						<option value="xor">Logical eXclusive OR (XOR)</option>
+						<option value="followed by">Followed by</option>
+					</select>
+				</div>
+			</div>
+			<div class="form-group">
+				<label for="operator">Whole group negation</label>
+				<div class="form-table input-group">
+					<select id="operator" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-default" ng-model="designer.not" data-mobile="{{mobile}}">
+						<option value="0">Not negated</option>
+						<option value="1">Negated</option>
+					</select>
+				</div>
+			</div>
+
+			<div class="divider" data-toggle="collapse" data-target="#advopt" collapsed-title="Show Advanced Options" expanded-title="Hide Advanced Options" aria-expanded="false"></div>
+			<div id="advopt" class="form-group collapse">
+				<div class="form-group">
+					<label for="descriptionInput">Description (optional)</label>
+					<textarea type="text" id="descriptionInput" class="form-control" placeholder="Description for this statement" ng-model="designer.description"></textarea>
+				</div>
+			</div>
+		</form>
+		<footer>
+			<button type="button" class="btn btn-info pull-right" ng-click="updateRestrictionGroup();">Save</button>
+			<button type="button" class="btn btn-default" ng-click="closeDialog();">Cancel</button>
+			<button type="button" ng-if="designer.group.t == 'group'" class="btn btn-danger" ng-click="deleteObject();">Delete</button>
+		</footer>
+	</designer>
+</script>
+
+
 <script type="text/ng-template" id="dialog-edit-case">
 	<designer>
 		<header>
-			<label ng-if="designer.new">Add a new case</label>
-			<label ng-if="!designer.new">Edit case</label>
+			<label ng-if="designer.$new">Add a new case</label>
+			<label ng-if="!designer.$new">Edit case</label>
 		</header>
 		<form>
 			<div class="form-group">
@@ -881,10 +1034,10 @@
 			</div>
 		</form>
 		<footer>
-			<button type="button" ng-if="designer.new" class="btn btn-info pull-right" ng-disabled="!designer.type" ng-click="updateCase(true);">Add a statement</button>
-			<button type="button" ng-if="!designer.new" class="btn btn-info pull-right" ng-disabled="!designer.type" ng-click="updateCase();">Save</button>
+			<button type="button" ng-if="designer.$new" class="btn btn-info pull-right" ng-disabled="!designer.type" ng-click="updateCase(true);">Add a statement</button>
+			<button type="button" ng-if="!designer.$new" class="btn btn-info pull-right" ng-disabled="!designer.type" ng-click="updateCase();">Save</button>
 			<button type="button" class="btn btn-default" ng-click="closeDialog();">Cancel</button>
-			<button type="button" ng-if="!designer.new" class="btn btn-danger" ng-click="deleteObject();">Delete</button>
+			<button type="button" ng-if="!designer.$new" class="btn btn-danger" ng-click="deleteObject();">Delete</button>
 		</footer>
 	</designer>
 </script>
@@ -1457,11 +1610,11 @@
 		</form>
 
 		<footer>
-			<button type="button" ng-if="designer.new" class="btn btn-info pull-right" ng-disabled="!designer.command" ng-click="updateTask();">Add</button>
-			<button type="button" ng-if="designer.new" class="btn btn-success pull-right" ng-disabled="!designer.command" ng-click="updateTask(true);">Add more</button>
-			<button type="button" ng-if="!designer.new" class="btn btn-info pull-right" ng-disabled="!designer.command" ng-click="updateTask();">Save</button>
+			<button type="button" ng-if="designer.$new" class="btn btn-info pull-right" ng-disabled="!designer.command" ng-click="updateTask();">Add</button>
+			<button type="button" ng-if="designer.$new" class="btn btn-success pull-right" ng-disabled="!designer.command" ng-click="updateTask(true);">Add more</button>
+			<button type="button" ng-if="!designer.$new" class="btn btn-info pull-right" ng-disabled="!designer.command" ng-click="updateTask();">Save</button>
 			<button type="button" class="btn btn-default" ng-click="closeDialog();">Cancel</button>
-			<button type="button" ng-if="!designer.new" class="btn btn-danger" ng-click="deleteObject();">Delete</button>
+			<button type="button" ng-if="!designer.$new" class="btn btn-danger" ng-click="deleteObject();">Delete</button>
 		</footer>
 	</designer>
 
@@ -1515,11 +1668,11 @@
 		</form>
 
 		<footer>
-			<button type="button" ng-if="designer.new" class="btn btn-info pull-right" ng-disabled="!designer.name" ng-click="updateVariable();">Add</button>
-			<button type="button" ng-if="designer.new" class="btn btn-success pull-right" ng-disabled="!designer.name" ng-click="updateVariable(true);">Add more</button>
-			<button type="button" ng-if="!designer.new" class="btn btn-info pull-right" ng-disabled="!designer.name" ng-click="updateVariable();">Save</button>
+			<button type="button" ng-if="designer.$new" class="btn btn-info pull-right" ng-disabled="!designer.name" ng-click="updateVariable();">Add</button>
+			<button type="button" ng-if="designer.$new" class="btn btn-success pull-right" ng-disabled="!designer.name" ng-click="updateVariable(true);">Add more</button>
+			<button type="button" ng-if="!designer.$new" class="btn btn-info pull-right" ng-disabled="!designer.name" ng-click="updateVariable();">Save</button>
 			<button type="button" class="btn btn-default" ng-click="closeDialog();">Cancel</button>
-			<button type="button" ng-if="!designer.new" class="btn btn-danger" ng-click="deleteObject();">Delete</button>
+			<button type="button" ng-if="!designer.$new" class="btn btn-danger" ng-click="deleteObject();">Delete</button>
 		</footer>
 	</designer>
 </script>
@@ -1543,7 +1696,7 @@
 		</form>
 		<footer>
 			<button type="button" class="btn btn-default pull-right" ng-click="closeDialog();">Cancel</button>
-			<button type="button" class="btn btn-danger" ng-click="delete();">Delete</button>
+			<button type="button" class="btn btn-danger" ng-click="del();">Delete</button>
 		</footer>
 	</designer>
 </script>

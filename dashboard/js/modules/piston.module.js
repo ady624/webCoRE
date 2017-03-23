@@ -48,7 +48,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		}
 	}
 
-	$scope.updateActivity = function(init = false) {	
+	$scope.updateActivity = function(init) {	
 		if ($scope.$$destroyed) return;	
 		if ($scope.mode != 'view') return;
 		if (tmrActivity) $timeout.cancel(tmrActivity);
@@ -140,7 +140,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 											$scope.piston.o = response.data.piston.o ? response.data.piston.o : {};
 											$scope.piston.r = response.data.piston.r ? response.data.piston.r : [];
 											$scope.piston.rn = !!response.data.piston.rn;
-											$scope.piston.ro = response.data.piston.ro ? response.data.piston.ro : 'and';
+											$scope.piston.rop = response.data.piston.rop ? response.data.piston.rop : 'and';
 											$scope.piston.s = response.data.piston.s ? response.data.piston.s : [];
 											$scope.piston.v = response.data.piston.v ? response.data.piston.v : [];
 										}
@@ -159,7 +159,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 											$scope.piston.o = piston.o ? piston.o : {};
 											$scope.piston.r = piston.r ? piston.r : [];
 											$scope.piston.rn = !!piston.rn;
-											$scope.piston.ro = piston.ro ? piston.ro : 'and';
+											$scope.piston.rop = piston.rop ? piston.rop : 'and';
 											$scope.piston.s = piston.s ? piston.s : [];
 											$scope.piston.v = piston.v ? piston.v : [];
 											$scope.piston.z = piston.z ? piston.z : '';
@@ -182,7 +182,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 				$scope.piston.o = $scope.piston.o ? $scope.piston.o : {cto: 0, ced: 0};
 				$scope.piston.r = $scope.piston.r ? $scope.piston.r : [];
 				$scope.piston.s = $scope.piston.s ? $scope.piston.s : [];
-				$scope.piston.ro = $scope.piston.ro ? $scope.piston.ro : 'and';
+				$scope.piston.rop = $scope.piston.rop ? $scope.piston.rop : 'and';
 				$scope.piston.rn = !!$scope.piston.rn;
 				$scope.piston.v = $scope.piston.v ? $scope.piston.v : [];
 				$scope.piston.z = $scope.piston.z || '';
@@ -346,7 +346,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 			s: $scope.piston.s,
 			v: $scope.piston.v,
 			r: $scope.piston.r,
-			ro: $scope.piston.ro,
+			rop: $scope.piston.rop,
 			rn: $scope.piston.rn,
 			z: $scope.piston.z,
 			n: $scope.meta.name
@@ -388,8 +388,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		});
 	}
 
-
-	$scope.delete = function() {
+	$scope.del = function() {
 		$scope.loading = true;
 		dataService.deletePiston($scope.pistonId).success(function(data) {
 			$scope.closeDialog();
@@ -542,7 +541,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 			statement.d = []; //devices
 			statement.o = 'and'; //operator
 			statement.n = false; //negation
-			statement.ro = 'and'; //restriction operator
+			statement.rop = 'and'; //restriction operator
 			statement.rn = false; //restriction negation
 			statement.a = '0'; //async
 			statement.p = 'none'; //tcp
@@ -556,12 +555,12 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		};
 		$scope.designer.$obj = statement;
 		$scope.designer.$statement = statement;
-		$scope.designer.new = statement.t ? false : true;
+		$scope.designer.$new = statement.t ? false : true;
 		$scope.designer.type = statement.t;
 		$scope.designer.page = statement.t ? 1 : 0;
 		$scope.designer.operator = statement.o;
 		$scope.designer.not = statement.n;
-		$scope.designer.roperator = statement.ro;
+		$scope.designer.roperator = statement.rop;
 		$scope.designer.rnot = statement.rn;
 		$scope.designer.description = statement.z;
 		$scope.designer.parent = parent;
@@ -585,21 +584,21 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 					designer.operand.dataType = 'decimal';
 					designer.operand2.dataType = 'decimal';
 					designer.operand3.dataType = 'decimal';
-					if (designer.new) designer.operand.data = {t: 'c'};
-					if (designer.new) designer.operand2.data = {t: 'c'};
-					if (designer.new) designer.operand3.data = {t: 'c'};
+					if (designer.$new) designer.operand.data = {t: 'c'};
+					if (designer.$new) designer.operand2.data = {t: 'c'};
+					if (designer.$new) designer.operand3.data = {t: 'c'};
 					$scope.validateOperand(designer.operand, true);
 					$scope.validateOperand(designer.operand2, true);
 					$scope.validateOperand(designer.operand3, true);
 					break;
 				case 'each':
 					designer.operand.dataType = 'devices';
-					if (designer.new) designer.operand.data = {t: 'd'};
+					if (designer.$new) designer.operand.data = {t: 'd'};
 					$scope.validateOperand(designer.operand, true);
 					break;
 				case 'switch':
 					designer.operand.dataType = '';
-					if (designer.new) designer.operand.data = {t: 'p'};
+					if (designer.$new) designer.operand.data = {t: 'p'};
 					$scope.validateOperand(designer.operand, true);
 					break;
 			}
@@ -607,18 +606,18 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		window.designer = $scope.designer;
 		$scope.designer.items = {
 			simple: [
-				{ type: 'if', name: 'IF', icon: 'code-fork', class: 'btn-info' },
-				{ type: 'action', name: 'Action', icon: 'code', class: 'btn-success' }
+				{ type: 'if', name: 'IF', icon: 'code-fork', cssClass: 'btn-info' },
+				{ type: 'action', name: 'Action', icon: 'code', cssClass: 'btn-success' }
 			],
 			advanced: [
-				{ type: 'switch', name: 'SWITCH', icon: 'code-fork', class: 'btn-info' },
-				{ type: 'for', name: 'FOR loop', icon: 'circle-o-notch', class: 'btn-warning' },
-				{ type: 'each', name: 'FOR EACH loop', icon: 'circle-o-notch', class: 'btn-warning' },
-				{ type: 'while', name: 'WHILE loop', icon: 'circle-o-notch', class: 'btn-warning' },
-				{ type: 'repeat', name: 'REPEAT loop', icon: 'circle-o-notch', class: 'btn-warning' },
-				{ type: 'timer', name: 'TIMER', icon: 'clock-o', class: 'btn-default' },
-				{ type: 'break', name: 'BREAK', icon: 'ban', class: 'btn-danger' },
-				{ type: 'exit', name: 'EXIT', icon: 'ban', class: 'btn-danger' }
+				{ type: 'switch', name: 'SWITCH', icon: 'code-fork', cssClass: 'btn-info' },
+				{ type: 'for', name: 'FOR loop', icon: 'circle-o-notch', cssClass: 'btn-warning' },
+				{ type: 'each', name: 'FOR EACH loop', icon: 'circle-o-notch', cssClass: 'btn-warning' },
+				{ type: 'while', name: 'WHILE loop', icon: 'circle-o-notch', cssClass: 'btn-warning' },
+				{ type: 'repeat', name: 'REPEAT loop', icon: 'circle-o-notch', cssClass: 'btn-warning' },
+				{ type: 'timer', name: 'TIMER', icon: 'clock-o', cssClass: 'btn-default' },
+				{ type: 'break', name: 'BREAK', icon: 'ban', cssClass: 'btn-danger' },
+				{ type: 'exit', name: 'EXIT', icon: 'ban', cssClass: 'btn-danger' }
 			]
 		};
 		$scope.designer.ontypechanged($scope.designer, $scope.designer.type);
@@ -631,9 +630,9 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		});
 	};
 
-	$scope.updateStatement = function(nextDialog = false) {
+	$scope.updateStatement = function(nextDialog) {
 		$scope.autoSave();
-		var statement = $scope.designer.new ? {t: $scope.designer.type} : $scope.designer.$statement;
+		var statement = $scope.designer.$new ? {t: $scope.designer.type} : $scope.designer.$statement;
 		statement.a = $scope.designer.async;
 		statement.p = $scope.designer.tcp;
 		statement.pr = $scope.designer.tcpr;
@@ -641,7 +640,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		statement.os = $scope.designer.tos;
 		statement.z = $scope.designer.description;
 		statement.r = statement.r ? statement.r : [];
-		statement.ro = $scope.designer.roperator;
+		statement.rop = $scope.designer.roperator;
 		statement.rn = $scope.designer.rnot;
 		switch (statement.t) {
 			case 'action':
@@ -695,7 +694,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		}
 		if (statement.t) {
 			statement.$$html = null;
-			if ($scope.designer.new) {
+			if ($scope.designer.$new) {
 				//we're adding a new statement
 				if ($scope.designer.parent instanceof Array) {
 					$scope.designer.parent.push(statement);
@@ -780,7 +779,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		};
 		$scope.designer.$obj = _case;
 		$scope.designer.$case = _case;
-		$scope.designer.new = _new;
+		$scope.designer.$new = _new;
 		$scope.designer.parent = parent;
 		$scope.designer.type = _case.t;
 		$scope.designer.operand = {data: _case.ro, multiple: false};
@@ -799,7 +798,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		});
 	};
 
-	$scope.updateCase = function(nextDialog = false) {
+	$scope.updateCase = function(nextDialog) {
 		$scope.autoSave();
 		var _case = $scope.designer.$case;
 		_case.t = $scope.designer.type;
@@ -810,7 +809,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		if (_case.t) {
 			_case.$$html = null;
 			_case.$$html2 = null;
-			if ($scope.designer.new) {
+			if ($scope.designer.$new) {
 				//we're adding a new statement
 				if ($scope.designer.parent instanceof Array) {
 					$scope.designer.parent.push(_case);
@@ -864,9 +863,9 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		$scope.designer.$condition = condition;
 		$scope.designer.$obj = condition;
 		$scope.designer.type = condition.t;
-		$scope.designer.new = condition.t ? false : true;
+		$scope.designer.$new = condition.t ? false : true;
 		$scope.designer.newElseIf = newElseIf;
-		$scope.designer.page = $scope.designer.new ? 0 : 1;
+		$scope.designer.page = $scope.designer.$new ? 0 : 1;
 		$scope.designer.parent = parent;
 		$scope.designer.devices = condition.d;
 		$scope.designer.not = condition.n;
@@ -883,8 +882,8 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		$scope.designer.description = condition.z;
 		window.designer = $scope.designer;
 		$scope.designer.items = [
-			{ type: 'condition', name: 'Condition', icon: 'code', class: 'btn-info' },
-			{ type: 'group', name: 'Group', icon: 'code-fork', class: 'btn-warning' },
+			{ type: 'condition', name: 'Condition', icon: 'code', cssClass: 'btn-info' },
+			{ type: 'group', name: 'Group', icon: 'code-fork', cssClass: 'btn-warning' },
 		];
 
 
@@ -899,7 +898,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 
 	$scope.updateCondition = function(nextDialog) {
 		$scope.autoSave();
-		var condition = $scope.designer.new ? {t: $scope.designer.type} : $scope.designer.$condition;
+		var condition = $scope.designer.$new ? {t: $scope.designer.type} : $scope.designer.$condition;
 		switch (condition.t) {
 			case 'condition':
 				condition.lo = $scope.designer.comparison.left.data;
@@ -920,7 +919,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		condition.z = $scope.designer.description;
 		if (condition.t) {
 			condition.$$html = null;
-			if ($scope.designer.new) {
+			if ($scope.designer.$new) {
 				if ($scope.designer.newElseIf) {
 					var elseIf = {o: 'and', n: false, c: [], s: []};
 					elseIf.c.push(condition);		
@@ -966,95 +965,151 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 
 
 
-	/* restrictions */
 
-	$scope.addRestriction = function(parent) {
-		return $scope.editRestriction(null, parent);
-	}
-
-	$scope.editRestriction = function(restriction, parent) {
+	$scope.editConditionGroup = function(group, parent) {
 		if ($scope.mode != 'edit') return;
-		if (!restriction) {
-			restriction = {};
-			restriction.t = null;
-			restriction.d = [];
-			restriction.rn = false;
-			restriction.lo = {t: 'v', d: [], a: null, g:'any', v: null, c: '', x: null, e: ''};
-			restriction.co = null;
-			restriction.ro = {t: 'c', d: [], a: null, g:'any', v: null, c: '', x: null, e: ''};
-			restriction.ro2 = {t: 'c', d: [], a: null, g:'any', v: null, c: '', x: null, e: ''};
-			restriction.z = '';
-		}
+
 		$scope.designer = {
-			config: $scope.getExpressionConfig()
+			operator: group.o || 'and',
+			not: group.n ? '1' : '0',
+			description: group.z
 		};
-		$scope.designer.$restriction = restriction;
-		$scope.designer.$obj = restriction;
-		$scope.designer.type = restriction.t;
-		$scope.designer.new = restriction.t ? false : true;
-		$scope.designer.page = $scope.designer.new ? 0 : 1;
+		$scope.designer.group = group;
+		$scope.designer.$obj = group;
 		$scope.designer.parent = parent;
-		$scope.designer.devices = restriction.d;
-		$scope.designer.not = restriction.rn;
-		$scope.designer.operator = restriction.ro;
-		$scope.designer.comparison = {
-			left: restriction.lo ? $scope.copy(restriction.lo) : {},
-			operator: restriction.co,
-			right: restriction.ro ? $scope.copy(restriction.ro) : {},
-			right2: restriction.ro2 ? $scope.copy(restriction.ro2) : {}
-		}
-		$scope.validateComparison($scope.designer.comparison);
-		$scope.designer.description = restriction.z;
 		window.designer = $scope.designer;
-		$scope.designer.items = [
-			{ type: 'restriction', name: 'restriction', icon: 'code', class: 'btn-info' },
-			{ type: 'group', name: 'Group', icon: 'code-fork', class: 'btn-warning' },
-		];
+
 		$scope.designer.dialog = ngDialog.open({
-			template: 'dialog-edit-restriction',
+			template: 'dialog-edit-condition-group',
 			className: 'ngdialog-theme-default ngdialog-large',
 			closeByDocument: false,
 			disableAnimation: true,
 			scope: $scope
 		});
 	};
-		
-	$scope.updateRestriction = function(nextDialog) {
+
+	$scope.updateConditionGroup = function() {
 		$scope.autoSave();
-		var restriction = $scope.designer.new ? {t: $scope.designer.type} : $scope.designer.$restriction;
-		switch (restriction.t) {
-			case 'restriction':
-				restriction.lo = $scope.designer.comparison.left;
-				restriction.co = $scope.designer.comparison.operator;
-				restriction.ro = $scope.designer.comparison.right;
-				restriction.ro2 = $scope.designer.comparison.right2;
-				break;
-			case 'group':
-				restriction.r = restriction.r ? restriction.r : [];
-				restriction.ro = $scope.designer.operator;
-				restriction.rn = $scope.designer.not;
-				break;
-		}
-		restriction.z = $scope.designer.description;
-		if (restriction.t) {
-			restriction.$$html = null;
-			if ($scope.designer.new) {
-				if ($scope.designer.parent instanceof Array) {
-					$scope.designer.parent.push(restriction);
-				} else if (($scope.designer.parent.r) && ($scope.designer.parent.r instanceof Array)) {
-						$scope.designer.parent.r.push(restriction);
-				} else {
-					$scope.designer.parent.r = [restriction];
-				} 
-			} else {
-				$scope.designer.$restriction = restriction;
-			}
-		}
+		var group = $scope.designer.group;
+		group.n = $scope.designer.not == '1';
+		group.o = $scope.designer.operator;
+		group.z = $scope.designer.description;
 		$scope.closeDialog();
-		if (restriction.t && nextDialog) {
-			$scope.addRestriction(restriction.t == 'group' ? restriction : $scope.designer.parent);
-		}
 	}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	/* restrictions */
+
+	$scope.addRestriction = function(parent) {
+		return $scope.editRestriction(null, parent);
+	}
+
+    $scope.editRestriction = function(restriction, parent) {
+        if ($scope.mode != 'edit') return;
+
+        if (!restriction) {
+            restriction = {};
+            restriction.t = null;
+            restriction.d = [];
+            restriction.rn = false;
+            restriction.rop = 'and';
+            restriction.lo = {t: 'p', d: [], a: null, g:'any', v: null, c: '', x: null, e: ''};
+            restriction.co = null;
+            restriction.ro = {t: 'c', d: [], a: null, g:'any', v: null, c: '', x: null, e: ''};
+            restriction.ro2 = {t: 'c', d: [], a: null, g:'any', v: null, c: '', x: null, e: ''};
+            restriction.to = {t: 'c', d: [], a: null, g:'any', v: null, c: '', x: null, e: ''};
+            restriction.z = '';
+        }
+        $scope.designer = {
+            config: $scope.getExpressionConfig()
+        };
+        $scope.designer.$restriction = restriction;
+        $scope.designer.$obj = restriction;
+        $scope.designer.type = restriction.t;
+        $scope.designer.$new = restriction.t ? false : true;
+        $scope.designer.page = $scope.designer.$new ? 0 : 1;
+        $scope.designer.parent = parent;
+        $scope.designer.devices = restriction.d;
+        $scope.designer.not = restriction.rn;
+        $scope.designer.operator = restriction.rop;
+        $scope.designer.comparison = {
+            left: {data: restriction.lo ? $scope.copy(restriction.lo) : {}, multiple: true},
+            operator: restriction.co,
+            right: {data: restriction.ro ? $scope.copy(restriction.ro) : {}},
+            right2: {data: restriction.ro2 ? $scope.copy(restriction.ro2) : {}},
+            time: {data: restriction.to ? $scope.copy(restriction.to) : {t:'c'}, dataType: 'duration'}
+        }
+        $scope.validateComparison($scope.designer.comparison, true);
+        $scope.designer.smode = restriction.sm;
+        $scope.designer.description = restriction.z;
+        window.designer = $scope.designer;
+        $scope.designer.items = [
+            { type: 'restriction', name: 'Restriction', icon: 'code', cssClass: 'btn-info' },
+            { type: 'group', name: 'Group', icon: 'code-fork', cssClass: 'btn-warning' },
+        ];
+
+
+        $scope.designer.dialog = ngDialog.open({
+            template: 'dialog-edit-restriction',
+            className: 'ngdialog-theme-default ngdialog-large',
+            closeByDocument: false,
+            disableAnimation: true,
+            scope: $scope
+        });
+    };
+
+    $scope.updateRestriction = function(nextDialog) {
+        $scope.autoSave();
+        var restriction = $scope.designer.$new ? {t: $scope.designer.type} : $scope.designer.$restriction;
+        switch (restriction.t) {
+            case 'restriction':
+                restriction.lo = $scope.designer.comparison.left.data;
+                restriction.co = $scope.designer.comparison.operator;
+                restriction.ro = $scope.designer.comparison.right.data;
+                restriction.ro2 = $scope.designer.comparison.right2.data;
+                restriction.to = $scope.designer.comparison.time.data;
+                break;
+            case 'group':
+                restriction.r = restriction.r ? restriction.r : [];
+                restriction.rop = $scope.designer.operator;
+                restriction.rn = $scope.designer.not;
+                break;
+        }
+        restriction.z = $scope.designer.description;
+        if (restriction.t) {
+            restriction.$$html = null;
+            if ($scope.designer.$new) {
+		if ($scope.designer.parent instanceof Array) {
+                    $scope.designer.parent.push(restriction);
+                } else if (($scope.designer.parent.r) && ($scope.designer.parent.r instanceof Array)) {
+                        $scope.designer.parent.r.push(restriction);
+                } else {
+                    $scope.designer.parent.r = [restriction];
+                }
+            } else {
+                $scope.designer.$restriction = restriction;
+            }
+        }
+        $scope.closeDialog();
+        if (restriction.t && nextDialog) {
+            $scope.addRestriction(restriction.t == 'group' ? restriction : $scope.designer.parent);
+        }
+    }
 		
 	$scope.upgradeRestriction = function() {
 		$scope.updateRestriction();
@@ -1065,17 +1120,56 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 				var restriction = {}
 				restriction.t = $scope.designer.$restriction.t;
 				restriction.rn = $scope.designer.$restriction.rn;
-				restriction.ro = $scope.designer.$restriction.ro;
+				restriction.rop = $scope.designer.$restriction.rop;
 				restriction.c = $scope.designer.$restriction.c;
 				$scope.designer.$restriction = {}
 				$scope.designer.$restriction.t = 'group';
 				$scope.designer.$restriction.rn = false;
-				$scope.designer.$restriction.ro = 'and';
+				$scope.designer.$restriction.rop = 'and';
 				$scope.designer.$restriction.c = [restriction];
 				parent[index] = $scope.designer.$restriction;
 			}
 		}
 	}
+
+
+
+
+
+	$scope.editRestrictionGroup = function(group, parent) {
+		if ($scope.mode != 'edit') return;
+
+		$scope.designer = {
+			operator: group.rop || 'and',
+			not: group.rn ? '1' : '0',
+			description: group.z
+		};
+		$scope.designer.group = group;
+		$scope.designer.$obj = group;
+		$scope.designer.parent = parent;
+		window.designer = $scope.designer;
+
+		$scope.designer.dialog = ngDialog.open({
+			template: 'dialog-edit-restriction-group',
+			className: 'ngdialog-theme-default ngdialog-large',
+			closeByDocument: false,
+			disableAnimation: true,
+			scope: $scope
+		});
+	};
+
+	$scope.updateRestrictionGroup = function() {
+		$scope.autoSave();
+		var group = $scope.designer.group;
+		group.rn = $scope.designer.not == '1';
+		group.rop = $scope.designer.operator;
+		group.z = $scope.designer.description;
+		$scope.closeDialog();
+	}
+
+
+
+
 
 
 
@@ -1101,7 +1195,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		$scope.designer.insertIndex = insertIndex;
 		$scope.designer.$task = task;
 		$scope.designer.$obj = task;
-		$scope.designer.new = _new;
+		$scope.designer.$new = _new;
 		$scope.designer.page = 0;
 		$scope.designer.parent = parent;
 		$scope.designer.command = task.c;
@@ -1122,7 +1216,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 
 	$scope.updateTask = function(nextDialog) {
 		$scope.autoSave();
-		var task = $scope.designer.new ? {} : $scope.designer.$task;
+		var task = $scope.designer.$new ? {} : $scope.designer.$task;
 		task.c = $scope.designer.command;
 		task.a = $scope.designer.async;
 		task.z = $scope.designer.description;
@@ -1133,7 +1227,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 				var param = $scope.designer.parameters[parameterIndex].data;
 				task.p.push(param);
 			}
-			if ($scope.designer.new) {
+			if ($scope.designer.$new) {
 				if (($scope.designer.parent) && ($scope.designer.parent.k instanceof Array)) {
 					$scope.designer.parent.k.push(task);
 					//save the current insert index
@@ -1184,7 +1278,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		$scope.designer = {};
 		$scope.designer.$variable = variable;
 		$scope.designer.$obj = variable;
-		$scope.designer.new = variable.n ? false : true;
+		$scope.designer.$new = variable.n ? false : true;
 		$scope.designer.page = 0;
 		$scope.designer.parent = $scope.piston.v;
 		$scope.designer.type = variable.t;
@@ -1206,7 +1300,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 
 	$scope.updateVariable = function(nextDialog) {
 		$scope.autoSave();
-		var variable = $scope.designer.new ? {} : $scope.designer.$variable;
+		var variable = $scope.designer.$new ? {} : $scope.designer.$variable;
 		variable.t = $scope.designer.operand.dataType;
 		variable.n = $scope.designer.name.trim().replace(/[^a-z0-9]|\s+|\r?\n|\r/gmi, '_');
 		variable.z = $scope.designer.description;
@@ -1223,7 +1317,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 				variable.v = value;
 				break;
 		}
-		if ($scope.designer.new) {
+		if ($scope.designer.$new) {
 			$scope.piston.v.push(variable);
 		} else {
 			$scope.designer.variable = variable;
@@ -1480,7 +1574,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		return null;
 	}
 
-	$scope.buildName = function(name, noQuotes = false, pedantic = false) {
+	$scope.buildName = function(name, noQuotes, pedantic) {
 		if (!name) return '';
 		if (name instanceof Array) return $scope.buildNameList(name, 'or', '', '', false, noQuotes, pedantic);
 		if (pedantic || (name.length == 34)) {
@@ -1729,7 +1823,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		return false;
 	}
 
-	$scope.listAvailableAttributes = function(devices, restrictAttribute = null) {
+	$scope.listAvailableAttributes = function(devices, restrictAttribute) {
 		var result = [];
 		var device = null;
 		if (devices && devices.length) {
@@ -1856,7 +1950,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		}
 	}
 
-	$scope.validateOperand = function(operand, reinit = false, managed = false) {
+	$scope.validateOperand = function(operand, reinit, managed) {
 		if (!!$scope.designer.comparison && !managed) {
 			$scope.validateComparison($scope.designer.comparison, reinit);
 			return;
@@ -2035,7 +2129,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 			case 'c':
 				var expression = $scope.parseString(operand.data.c);
 				operand.error = expression.err;
-				operand.expressionVar = expression.var;
+				operand.expressionVar = expression.errVar;
 				operand.data.exp = expression;
 				if (!operand.options) {
 					if (!operand.optional && !operand.data.c) {
@@ -2053,7 +2147,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 			case 'e':
 				var expression = $scope.parseExpression(operand.data.e);
 				operand.error = expression.err;
-				operand.expressionVar = expression.var;
+				operand.expressionVar = expression.errVar;
 				if (expression.err) {
 					var loc = (expression.loc ? expression.loc : '0:' + (expression.str.length - 1).toString()).split(':');
 					var start = parseInt(loc[0]);
@@ -2111,7 +2205,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		}
 	}
 
-	$scope.validateComparison = function(comparison, reinit = false) {
+	$scope.validateComparison = function(comparison, reinit) {
 		//we run the operand validation, this time managed
 		$scope.validateOperand(comparison.left, reinit, true);
 
@@ -2397,7 +2491,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		}
 	};
 
-	$scope.renderOperand = function(operand, noQuotes = false, pedantic = false) {
+	$scope.renderOperand = function(operand, noQuotes, pedantic) {
 		var result = '';
 		if (operand) {
 			if (operand instanceof Array) {
@@ -2571,7 +2665,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 				}
 			}
 			if (deviceNames.length) {
-				result = prefix + $scope.buildNameList(deviceNames, suffix, 'dev', '', !!attribute);
+				result = prefix + $scope.buildNameList(deviceNames, suffix, 'dev', '', !!attribute, true);
 			}
 		}
 		return $sce.trustAsHtml(result);
@@ -3167,7 +3261,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		validateItem(expression);
 		if (error) {
 			expression.err = error;
-			expression.var = errVar;
+			expression.errVar = errVar;
 			expression.loc = errorLoc;
 		}
 		return expression.ok;
@@ -3195,25 +3289,6 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 	$scope.md5 = window.md5;
 }]);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 function test(value, parseAsString) {
 	scope.evaluateExpression(scope.parseExpression(value, parseAsString));
 }
-

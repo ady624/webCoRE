@@ -29,11 +29,16 @@
             	</li>
 			</ul>
                 <ul class="nav navbar-nav navbar-right">
+					<li class="dropdown">
+                        <a target="_blank" href="https://wiki.webcore.co" class="" role="button" aria-haspopup="true" aria-expanded="false">Wiki</a>
+					</li>
                     <li class="dropdown">
                         <a id="options" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false"><i class="fa fa-cog" aria-hidden="true"></i> Options<span class="caret"></span></a>
                         <ul class="dropdown-menu btn btn-default">
                             <li ng-click="newPiston();"><a>Add a new piston</a></li>
                             <li ng-if="instanceCount > 1" ng-click="movePiston();"><a>Move piston(s)</a></li>
+                            <li role="separator" class="divider"></li>
+                            <li><a href="register">Register another instance</a></li>
                             <li role="separator" class="divider"></li>
                             <li ng-click="logOut();"><a>Log out</a></li>
                         </ul>
@@ -135,7 +140,7 @@
             <span>Please select one of the methods below</span>
         </header>
         <items>
-            <item ng-repeat="item in designer.items" type="{{item.type}}" class="fa fa-{{item.icon}} {{item.class}}" title="{{item.name}}" ng-click="setDesignerType(item.type)"></item>
+            <item ng-repeat="item in designer.items" type="{{item.type}}" class="fa fa-{{item.icon}} {{item.cssClass}}" title="{{item.name}}" ng-click="setDesignerType(item.type)"></item>
         </items>
 	</designer>
 	<designer ng-if="designer.page==1">

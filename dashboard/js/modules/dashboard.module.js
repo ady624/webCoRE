@@ -146,11 +146,11 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 			$scope.designer.backup = !!dataService.loadFromStore('backup.auto');
 			$scope.designer.disclaimer = !$scope.designer.backup;
         	$scope.designer.items = [
-	            { type: 'blank', name: 'Create a blank piston', icon: 'code', class: 'wide btn-default' },
-	            { type: 'duplicate', name: 'Create a duplicate piston', icon: 'code', class: 'wide btn-info' },
-    	        { type: 'template', name: 'Create a piston from a template', icon: 'code', class: 'wide btn-success' },
-        	    { type: 'restore', name: 'Restore a piston using a backup code', icon: 'code', class: 'wide btn-warning' },
-        	    { type: 'import', name: 'Import a piston from an external source', icon: 'code', class: 'wide btn-danger' },
+	            { type: 'blank', name: 'Create a blank piston', icon: 'code', cssClass: 'wide btn-default' },
+	            { type: 'duplicate', name: 'Create a duplicate piston', icon: 'code', cssClass: 'wide btn-info' },
+    	        { type: 'template', name: 'Create a piston from a template', icon: 'code', cssClass: 'wide btn-success' },
+        	    { type: 'restore', name: 'Restore a piston using a backup code', icon: 'code', cssClass: 'wide btn-warning' },
+        	    { type: 'import', name: 'Import a piston from an external source', icon: 'code', cssClass: 'wide btn-danger' },
 	        ];
     	    $scope.designer.dialog = ngDialog.open({
         	    template: 'dialog-add-piston',
@@ -218,8 +218,9 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 
 
 	$scope.logOut = function() {
+		$scope.loading = true;
 		localStorage.clear();
-		window.location = 'https://core.homecloudhub.com';
+		window.location = '//';
 	}
 
 
@@ -506,25 +507,3 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 	$scope.formatTime = formatTime;
     $scope.utcToString = utcToString;
 }]);
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
