@@ -63,7 +63,10 @@ body > logo {
   opacity:0;
 }
 
-.no-animate .ng-leave {
+.no-animate .ng-enter,
+.no-animate .ng-leave,
+.ngdialog-content .ng-enter,
+.ngdialog-content .ng-leave {
 	display: none !important;
 }
 

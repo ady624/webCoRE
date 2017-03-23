@@ -1,4 +1,4 @@
-var app = angular.module('CoRE', ['ng', 'ngRoute', 'ngAnimate', 'ngSanitize', 'ngResource', 'ngDialog', 'angular-loading-bar', 'angular-svg-round-progressbar', 'angular-bootstrap-select', 'aCKolor', 'dndLists', 'ui.toggle', 'chart.js', 'smartArea']);
+var app = angular.module('CoRE', ['ng', 'ngRoute', 'ngSanitize', 'ngResource', 'ngDialog', 'angular-loading-bar', 'angular-svg-round-progressbar', 'angular-bootstrap-select', 'aCKolor', 'dndLists', 'ui.toggle', 'chart.js', 'smartArea']);
 //var cdn = 'https://core.homecloudhub.com/dashboard/';
 var cdn = '';
 var theme = '';
@@ -118,6 +118,11 @@ var config = app.config(['$routeProvider', '$locationProvider', '$sceDelegatePro
         templateUrl: cdn + theme + 'html/modules/dashboard.module.html',
         controller: 'dashboard',
         css: cdn + theme + 'css/modules/dashboard' + ext
+    }).
+    when('/register', {
+        templateUrl: cdn + theme + 'html/modules/register.module.html',
+        controller: 'register',
+        css: cdn + theme + 'css/modules/register' + ext
     }).
     when('/init/:init', {
         redirectTo: function(params) {
@@ -368,6 +373,8 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 			}
 		}
 		if (!si) {
+			$location.path('/register');
+			/*
 			if (mobileCheck()) {
 				msg = '<p>Oops, you are not logged in!</p>Please open the SmartThings CoRE app and open the dashboard by tapping on the "CoRE Dashboard" link at the top.';
 			} else {
@@ -378,6 +385,7 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 			error.innerHTML = msg;
 			document.body.appendChild(error);
 			inst = 'about:blank#';
+			*/
 		} else {
 			var error = document.getElementById('error');
 			if (error) error.parentNode.removeChild(error);
@@ -631,6 +639,15 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 				return data;
 			});
     }
+
+
+    dataService.registerDashboard = function (code) {
+    	return $http.post('https://api.webcore.co/dashboard/register/' + code)
+			.success(function(data) {
+				return data;
+			});
+    }
+
 	//initialize store
 	store = readObject('store');
 	if (!store) {
@@ -1005,4 +1022,4 @@ if (document.selection) {
      document.execCommand("Copy");
 }}
 
-version = function() { return 'v0.0.054.20170321'; }
+version = function() { return 'v0.0.055.20170322'; }

@@ -566,10 +566,10 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		$scope.designer.description = statement.z;
 		$scope.designer.parent = parent;
 		$scope.designer.devices = statement.d;
-		$scope.designer.operand = {data: statement.lo, allowMultiple: false};
-		$scope.designer.operand2 = {data: statement.lo2, allowMultiple: false};
-		$scope.designer.operand3 = {data: statement.lo3, allowMultiple: false};
-		$scope.designer.operand = {data: statement.lo, allowMultiple: false};
+		$scope.designer.operand = {data: statement.lo, multiple: false};
+		$scope.designer.operand2 = {data: statement.lo2, multiple: false};
+		$scope.designer.operand3 = {data: statement.lo3, multiple: false};
+		$scope.designer.operand = {data: statement.lo, multiple: false};
 		$scope.designer.x = statement.x;
 		$scope.designer.autoDialogs = true;
 		//advanced options
@@ -783,8 +783,8 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		$scope.designer.new = _new;
 		$scope.designer.parent = parent;
 		$scope.designer.type = _case.t;
-		$scope.designer.operand = {data: _case.ro, allowMultiple: false};
-		$scope.designer.operand2 = {data: _case.ro2, allowMultiple: false};
+		$scope.designer.operand = {data: _case.ro, multiple: false};
+		$scope.designer.operand2 = {data: _case.ro2, multiple: false};
 		$scope.designer.autoDialogs = true;
 		//advanced options
 		window.designer = $scope.designer;
@@ -852,6 +852,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 			condition.co = null;
 			condition.ro = {t: 'c', d: [], a: null, g:'any', v: null, c: '', x: null, e: ''};
 			condition.ro2 = {t: 'c', d: [], a: null, g:'any', v: null, c: '', x: null, e: ''};
+			condition.to = {t: 'c', d: [], a: null, g:'any', v: null, c: '', x: null, e: ''};
 			condition.z = '';
 			condition.sm = 'auto';
 			condition.ts = [];
@@ -871,12 +872,13 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		$scope.designer.not = condition.n;
 		$scope.designer.operator = condition.o;
 		$scope.designer.comparison = {
-			left: condition.lo ? $scope.copy(condition.lo) : {},
+			left: {data: condition.lo ? $scope.copy(condition.lo) : {}, multiple: true},
 			operator: condition.co,
-			right: condition.ro ? $scope.copy(condition.ro) : {},
-			right2: condition.ro2 ? $scope.copy(condition.ro2) : {}
+			right: {data: condition.ro ? $scope.copy(condition.ro) : {}},
+			right2: {data: condition.ro2 ? $scope.copy(condition.ro2) : {}},
+			time: {data: condition.to ? $scope.copy(condition.to) : {t:'c'}, dataType: 'duration'}
 		}
-		$scope.validateComparison($scope.designer.comparison);
+		$scope.validateComparison($scope.designer.comparison, true);
 		$scope.designer.smode = condition.sm;
 		$scope.designer.description = condition.z;
 		window.designer = $scope.designer;
@@ -900,10 +902,11 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		var condition = $scope.designer.new ? {t: $scope.designer.type} : $scope.designer.$condition;
 		switch (condition.t) {
 			case 'condition':
-				condition.lo = $scope.designer.comparison.left;
+				condition.lo = $scope.designer.comparison.left.data;
 				condition.co = $scope.designer.comparison.operator;
-				condition.ro = $scope.designer.comparison.right;
-				condition.ro2 = $scope.designer.comparison.right2;
+				condition.ro = $scope.designer.comparison.right.data;
+				condition.ro2 = $scope.designer.comparison.right2.data;
+				condition.to = $scope.designer.comparison.time.data;
 				break;
 			case 'group':
 				condition.c = condition.c ? condition.c : [];
@@ -1187,7 +1190,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		$scope.designer.type = variable.t;
 		$scope.designer.assignment = variable.a || 'd';
 		$scope.designer.name = variable.n;
-		$scope.designer.operand = {data: (variable.t == 'device' ? { t: 'd', d: variable.v} : variable.v), allowMultiple: false, dataType: variable.t, optional: true}
+		$scope.designer.operand = {data: (variable.t == 'device' ? { t: 'd', d: variable.v} : variable.v), multiple: false, dataType: variable.t, optional: true}
 		$scope.designer.description = variable.z;
 		window.designer = $scope.designer;
 		window.scope = $scope;
@@ -1302,7 +1305,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 					data: {},
 					name: parameter.n,
 					dataType: parameter.t.toLowerCase(),
-					allowMultiple: false,
+					multiple: false,
 					optional: ((parameter.t != 'bool') && (parameter.t != 'boolean')) && !!parameter.d,
 					options: parameter.o,			
 					strict: !!parameter.s
@@ -1410,8 +1413,8 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 	}
 
 	$scope.getDeviceById = function(deviceId) {
-		if (deviceId == 'location') {
-			return {id: 'location', name:'Location'};
+		if (deviceId == $scope.location.id) {
+			return {id: deviceId, name: $scope.location.name};
 		}
 		return $scope.instance.devices[deviceId];
 	}
@@ -1424,6 +1427,14 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		}
 		return null;
 	}
+
+	$scope.getVirtualDeviceById = function(deviceId) {
+		if (deviceId == $scope.location.id) {
+			return {id: deviceId, name: $scope.location.name};
+		}
+		return $scope.instance.virtualDevices[deviceId];
+	}
+
 
 	$scope.getCapabilityById = function(capabilityId) {
 		return $scope.db.capabilities[capabilityId];
@@ -1469,12 +1480,29 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		return null;
 	}
 
+	$scope.buildName = function(name, noQuotes = false, pedantic = false) {
+		if (!name) return '';
+		if (name instanceof Array) return $scope.buildNameList(name, 'or', '', '', false, noQuotes, pedantic);
+		if (pedantic || (name.length == 34)) {
+			for (deviceId in $scope.instance.virtualDevices) {
+				var device = $scope.instance.virtualDevices[deviceId];
+				if (device.o) {
+					for (id in device.o) {
+						noQuotes = noQuotes || !pedantic;
+						if (name == id) return (!noQuotes ? '\'' : '') + device.o[id] + (!noQuotes ? '\'' : '');
+					}
+				}
+			}
+		}
+		return (!noQuotes ? '\'' : '') + name + (!noQuotes ? '\'' : '');
+	}
 
-	$scope.buildNameList = function(list, suffix, tag, className, possessive) {
+
+	$scope.buildNameList = function(list, suffix, tag, className, possessive, noQuotes, pedantic) {
 		var cnt = 1;
 		var result = '';
 		for (i in list) {
-			var item = list[i];
+			var item = $scope.buildName(list[i], noQuotes, pedantic);
 			result += '<span ' + tag + (className ? ' class="' + className + '"' : '') + '>' + item + '</span>' + (possessive ? '\'' + (item.substr(-1) == 's' ? '' : 's') : '') + (cnt < list.length ? (cnt == list.length - 1 ? (list.length > 2 ? ', ' : ' ') + suffix + ' ' : ', ') : '');
 			cnt++;
 		}
@@ -1828,7 +1856,11 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		}
 	}
 
-	$scope.validateOperand = function(operand, reinit = false) {
+	$scope.validateOperand = function(operand, reinit = false, managed = false) {
+		if (!!$scope.designer.comparison && !managed) {
+			$scope.validateComparison($scope.designer.comparison, reinit);
+			return;
+		}
 		operand = operand || {};
 		operand.data = operand.data || {};
 		operand.data.a = operand.data.a || '';
@@ -1837,28 +1869,31 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		operand.data.e = operand.data.e || '';
 		operand.data.x = operand.data.x || '';
 		operand.data.d = operand.data.d || [];
-
+		operand.data.g = operand.data.g || (operand.multiple ? 'any' : 'avg');
+		operand.data.f = operand.data.f || 'l';
+		operand.options = operand.options || [];
 		
 		if (!operand.initialized || reinit) {
 			var dataType = (operand.dataType || 'string').toLowerCase();
 			if (dataType == 'variables') {
-				operand.allowMultiple = true;
+				operand.multiple = true;
 				dataType = 'variable';
 			}
 			if (dataType == 'devices') {
-				operand.allowMultiple = true;
+				operand.multiple = true;
 				dataType = 'device';
 			}
 			if (dataType == 'enums') {
-				operand.allowMultiple = true;
+				operand.multiple = true;
 				dataType = 'enum';
 			}
+			if (dataType == 'number') dataType = 'decimal';
 			if (dataType == 'bool') dataType = 'boolean';
 			if ((dataType == 'enum') && !operand.options && !operand.options.length) {
 				dataType = 'string';
 			}
 	
-			if (dataType != 'enum') operand.options = null;
+			//if (dataType != 'enum') operand.options = null;
 	
 			if ((dataType == 'bool') || (dataType == 'boolean')) {
 				operand.options = ['false', 'true'];
@@ -1876,9 +1911,12 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 			operand.allowDevices = dataType == 'device';
 			operand.allowPhysical = (dataType != 'device') && (dataType != 'variable') && (!strict || (dataType != 'boolean')) && (dataType != 'duration');
 			operand.allowVirtual = (dataType != 'device') && (dataType != 'variable') && (dataType != 'decimal') && (dataType != 'integer') && (dataType != 'number') && (dataType != 'boolean') && (dataType != 'enum') && (dataType != 'color') && (dataType != 'duration');
-			operand.allowVariable = (dataType != 'device' || ((dataType == 'device') && operand.allowMultiple)) && (!strict || (dataType != 'boolean'));
+			operand.allowVariable = (dataType != 'device' || ((dataType == 'device') && operand.multiple)) && (!strict || (dataType != 'boolean'));
 			operand.allowConstant = (dataType != 'device') && (dataType != 'variable');
 			operand.allowExpression = (dataType != 'device') && (dataType != 'variable') && (dataType != 'enum') && (!strict || (dataType != 'boolean'));
+
+
+			if (((operand.data.t == 'p') && (!operand.allowPhysical)) || ((operand.data.t == 'v') && (!operand.allowVirtual))) operand.data.t = 'c';
 
 			if (!operand.config) {
 				operand.config = $scope.copy($scope.getExpressionConfig());
@@ -1907,31 +1945,83 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 			operand.durationUnit = operand.data.vt || 's';
 			operand.data.vt = dataType;
 
-			if ((operand.options) && (operand.options.length) && (operand.data.t == 'c') && (operand.options.indexOf(operand.data.c) < 0)) {
-				var v = operand.options[0];
-				operand.data.c = ((v instanceof Object) && (vn) ? v.v : v).toString();
-			}
 
+		}
+
+		//default value for options
+		if ((!operand.multiple) && (operand.options) && (operand.options.length) && (operand.data.t == 'c')) {
+			if (operand.options[0] instanceof Object) {
+				var found = false;
+				for (i in operand.options) {
+					if (operand.options[i].v == operand.data.c) {
+						found = true;
+						break;
+					}
+				}
+				if (!found) operand.data.c = operand.options[0].v;
+			} else {
+				if (operand.options.indexOf(operand.data.c) < 0) operand.data.c = operand.options[0];
+			}
 		}
 	
 
 		if (operand.dataType == 'duration') operand.data.vt = operand.durationUnit;
 		operand.initialized = true;
+		operand.allowAggregation = true;
+		operand.allowAll = true;
 		operand.attributes = (operand.data.t == 'p') ? $scope.listAvailableAttributes(operand.data.d, operand.restrictAttribute) : [];
 		operand.valid = false;
-		operand.multiple = (operand.data.t=='p') && operand.data.d && (operand.data.d.length > 1) && ((operand.data.g == 'all') || (operand.data.g == 'any'));
+		operand.selectedMultiple = (operand.data.t=='p') && operand.data.d && (operand.data.d.length > 1) && ((operand.data.g == 'all') || (operand.data.g == 'any'));
 		operand.error = null;
+		operand.momentary = false;
+
+		operand.selectedDataType = 'string';
+		operand.selectedOptions = [];
 
 		switch (operand.data.t) {
 			case 'p':
 				var attribute = $scope.db.attributes[operand.data.a];
-				if (attribute) {
-					operand.selectedDataType = attribute.t;
-				} else {
-					operand.error = "Invalid device attribute"
+				if (!attribute) {
+					if (operand.data.d.length) {
+						var device = $scope.getDeviceById(operand.data.d[0]);
+						if (device) {
+							for (a in device.a) {
+								if (device.a[a].n == operand.data.a) {
+									attribute = device.a[a];
+									break;
+								}
+							}
+						}
+					}
 				}
-				if (operand.data.d && (operand.data.d.length > 1) && !(['any', 'all', 'least', 'most'].indexOf(operand.data.g) >= 0)) {
-					operand.selectedDataType = 'decimal';
+				if (attribute) {
+					operand.momentary = attribute.m;
+					operand.selectedDataType = attribute.t.toLowerCase();
+					operand.selectedOptions = attribute.o;
+					if (operand.momentary) {
+						operand.allowAll = false;
+						operand.allowAggregation = false;
+					}
+				} else {
+					operand.selectedDataType = 'string';
+				}
+				if (operand.data.d && (operand.data.d.length > 1)) {
+					if (!operand.data.g) {
+						operand.error = 'Invalid aggregation method';
+					}
+					if (!(['any', 'all', 'least', 'most'].indexOf(operand.data.g) >= 0)) {
+						operand.selectedDataType = 'decimal';
+					}
+				}
+				break;
+			case 'v':
+				var virtualDevice = $scope.instance.virtualDevices[operand.data.v];
+				operand.selectedDataType = 'string';
+				if (virtualDevice) {
+					//save the options
+					for (o in virtualDevice.o) {
+						operand.selectedOptions.push({v: o, n: virtualDevice.o[o]});
+					}
 				}
 				break;
 			case 'x':
@@ -1991,17 +2081,101 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 			((operand.data.t=='e') && !!operand.data.e && !!operand.data.e.length)
 		);
 
+		switch (operand.dataType) {
+			case 'duration':
+			case 'integer':
+			case 'decimal':
+				operand.inputType = 'number';
+				try {
+					operand.data.c = parseInt(operand.data.c);
+				} catch(all) {
+					operand.data.c = 0;
+				}
+				break;
+			default:
+				operand.inputType = operand.dataType;
+		}
+
 		if (operand.linkedOperand) {
 			operand.linkedOperand.dataType = operand.selectedDataType;
+			operand.linkedOperand.options = operand.selectedOptions;
 			$scope.validateOperand(operand.linkedOperand, true);
 		}
 	};
 
 	$scope.refreshSelects = function(type) {
-		$('select[' + type + ']').selectpicker('refresh');
+		if (type) {
+			$timeout(function() {$('select[' + type + ']').selectpicker('refresh');}, 0, false);
+		} else {
+			$timeout(function() {$('select').selectpicker('refresh');}, 0, false);
+		}
 	}
 
-	$scope.validateComparison = function(comparison) {
+	$scope.validateComparison = function(comparison, reinit = false) {
+		//we run the operand validation, this time managed
+		$scope.validateOperand(comparison.left, reinit, true);
+
+		//rebuild the list of comparisons, but only if needed
+		if ((comparison.left.selectedDataType != comparison.dataType) || (comparison.left.selectedMultiple != comparison.selectedMultiple) || (comparison.left.momentary != comparison.momentary)) {
+			comparison.dataType = comparison.left.selectedDataType;
+			comparison.selectedMultiple = comparison.left.selectedMultiple;
+			comparison.momentary = comparison.left.momentary;
+			var optionList = [];
+			var options = [];
+			var dt = comparison.dataType == 'enum' ? 's' : comparison.dataType.substr(0, 1);
+            dt = (comparison.momentary ? 'm' : ((dt == 'n' ? 'd' : dt)));
+			for(conditionId in $scope.db.comparisons.conditions) {
+				var condition = $scope.db.comparisons.conditions[conditionId];
+				if (condition.g.indexOf(dt) >= 0) {
+					options.push({ id: conditionId, d: (comparison.selectedMultiple ? (condition.dd ? condition.dd : condition.d) : condition.d), c: 'Conditions' });
+				}
+			}
+			optionList = optionList.concat(options.sort($scope.sortByDisplay));
+			options = [];
+			for(triggerId in $scope.db.comparisons.triggers) {
+				var trigger = $scope.db.comparisons.triggers[triggerId];
+				if (trigger.g.indexOf(dt) >= 0) {
+					options.push({ id: triggerId, d: (comparison.selectedMultiple ? (trigger.dd ? trigger.dd : trigger.d) : trigger.d), c: 'Triggers' });
+				}
+			}
+			optionList = optionList.concat(options.sort($scope.sortByDisplay));
+			comparison.options = optionList;
+		}
+
+
+		var comp = $scope.db.comparisons.conditions[comparison.operator] || $scope.db.comparisons.triggers[comparison.operator];		
+		comparison.operatorValid = !!comp;
+		comparison.parameterCount = comp && comp.p ? comp.p : 0;
+		comparison.multiple = comp && comp.m ? true : false;
+
+		comparison.valid = comparison.left.valid && comparison.operatorValid;
+
+		comparison.timed = comp ? comp.t : 0;
+
+		if (comparison.parameterCount > 0) {
+			comparison.right.multiple = comparison.multiple;
+			comparison.right.disableAggregation = true;
+			comparison.right.dataType = comparison.left.selectedDataType;
+			comparison.right.options = comparison.left.selectedOptions;
+			$scope.validateOperand(comparison.right, reinit, true);
+			comparison.valid = comparison.valid && comparison.right.valid;
+		}
+
+		if (comparison.parameterCount > 1) {
+			comparison.right2.multiple = comparison.multiple;
+			comparison.right2.disableAggregation = true;
+			comparison.right2.dataType = comparison.left.selectedDataType;
+			comparison.right2.options = comparison.left.selectedOptions;
+			$scope.validateOperand(comparison.right2, reinit, true);
+			comparison.valid = comparison.valid && comparison.right2.valid;
+		}
+
+		if (comparison.timed) $scope.validateOperand(comparison.time, reinit, true);
+		$scope.refreshSelects();
+
+	}
+/*
+	$scope.validateComparison2 = function(comparison) {
 		comparison.attributes = {
 			left: $scope.listAvailableAttributes(comparison.left.d),
 			right: $scope.listAvailableAttributes(comparison.right.d),
@@ -2208,7 +2382,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		//finalize it
 		comparison.validation = validation;
 	}
-
+*/
 
 
 	$scope.detectDataType = function(value) {
@@ -2223,7 +2397,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		}
 	};
 
-	$scope.renderOperand = function(operand, noQuotes = false) {
+	$scope.renderOperand = function(operand, noQuotes = false, pedantic = false) {
 		var result = '';
 		if (operand) {
 			if (operand instanceof Array) {
@@ -2238,23 +2412,21 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 						if (operand.d && operand.a)
 							result = $scope.renderDeviceList(operand.d, operand.a, operand.g, true) + ' <span attr>' + operand.a + '</span>';
 						break;
-					case 'v': //virtual devices
-						if (operand.v)
-							result = '<span vdev>' + operand.v + '</span>';
+					case 'v': //physical devices
+						var device = $scope.getVirtualDeviceById(operand.v);
+						result = '<span vdev>' + (device ? device.n : '(invalid virtual device)') + '</span>';
 						break;
 					case 'x': //variable
 						if (operand.x)
 							result = '<span var>{' + operand.x + '}</span>';
 						break;
 					case 'c': //constant
-						var s = operand.c;
-							var m = 'num';
-						if (isNaN(s)) {
+						var m = 'num';
+						if (isNaN(operand.c)) {
 							if ((operand.vt == 'boolean') || (operand.vt == 'enum')) noQuotes = true;
-							s = (noQuotes ? '' : '\'') + s + (noQuotes ? '' : '\'');
 							m = 'lit';
 						}
-						result = '<span ' + m + '>' + s + '</span>';
+						result = '<span ' + m + '>' + scope.buildName(operand.c, noQuotes, pedantic) + '</span>';
 						break;
 					case 'e': //expression
 						if (operand.e)
@@ -2283,8 +2455,18 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 	$scope.renderComparison = function(l, o, r, r2) {
 		var comparison = $scope.db.comparisons.conditions[o] || $scope.db.comparisons.triggers[o];
 		if (!comparison) return '[ERROR: Invalid comparison]';
+		var pedantic = l.t == 'v';
 		var plural = l && (l.t == 'p') && l.d && (l.d.length > 1) && (l.g == 'all');
-		var result = $scope.renderOperand(l) + ' <span kwd>' + (plural ? (comparison.dd ? comparison.dd : comparison.d) : comparison.d) + '</span>' + (comparison.p > 0 ? '<span pun>&nbsp;</span>' + $scope.renderOperand(r) : '') + (comparison.p > 1 ? '<span pun>&nbsp;through&nbsp;</span>' + $scope.renderOperand(r2) : '')
+		var noQuotes = false;
+		if (l.t == 'v') {
+			switch (l.v) {
+				case 'locationMode':
+				case 'shmState':
+					noQuotes = true;
+					break;
+			}
+		}
+		var result = $scope.renderOperand(l) + ' <span kwd>' + (plural ? (comparison.dd ? comparison.dd : comparison.d) : comparison.d) + '</span>' + (comparison.p > 0 ? '<span pun>&nbsp;</span>' + $scope.renderOperand(r, noQuotes, pedantic) : '') + (comparison.p > 1 ? '<span pun>&nbsp;through&nbsp;</span>' + $scope.renderOperand(r2, noQuotes, pedantic) : '')
 		return $sce.trustAsHtml(result);
 	}
 
