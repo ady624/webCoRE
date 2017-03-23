@@ -19,9 +19,10 @@
  *  Version history
  */
 
-public static String version() { return "v0.0.055.20170322" }
+public static String version() { return "v0.0.056.20170323" }
 /*
- *	03/22/2016 >>> v0.0.055.20170321 - ALPHA - Various improvements, including a revamp of the comparison dialog, also moved the dashboard website to https://dashboard.webcore.co
+ *	03/23/2016 >>> v0.0.056.20170323 - ALPHA - Various fixes for restrictions
+ *	03/22/2016 >>> v0.0.055.20170322 - ALPHA - Various improvements, including a revamp of the comparison dialog, also moved the dashboard website to https://dashboard.webcore.co
  *	03/21/2016 >>> v0.0.054.20170321 - ALPHA - Moved the dashboard website to https://webcore.homecloudhub.com/dashboard/
  *	03/21/2016 >>> v0.0.053.20170321 - ALPHA - Fixed a bug where variables containing expressions would be cast to the variable type outside of evaluateExpression (the right way)
  *	03/20/2016 >>> v0.0.052.20170320 - ALPHA - Fixed $shmStatus

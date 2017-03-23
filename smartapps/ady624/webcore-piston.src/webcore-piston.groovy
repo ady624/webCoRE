@@ -13,9 +13,10 @@
  *  for the specific language governing permissions and limitations under the License.
  *
 */
-public static String version() { return "v0.0.055.20170322" }
+public static String version() { return "v0.0.056.20170323" }
 /*
- *	03/22/2016 >>> v0.0.055.20170321 - ALPHA - Various improvements, including a revamp of the comparison dialog, also moved the dashboard website to https://dashboard.webcore.co
+ *	03/23/2016 >>> v0.0.056.20170323 - ALPHA - Various fixes for restrictions
+ *	03/22/2016 >>> v0.0.055.20170322 - ALPHA - Various improvements, including a revamp of the comparison dialog, also moved the dashboard website to https://dashboard.webcore.co
  *	03/21/2016 >>> v0.0.054.20170321 - ALPHA - Moved the dashboard website to https://webcore.homecloudhub.com/dashboard/
  *	03/21/2016 >>> v0.0.053.20170321 - ALPHA - Fixed a bug where variables containing expressions would be cast to the variable type outside of evaluateExpression (the right way)
  *	03/20/2016 >>> v0.0.052.20170320 - ALPHA - Fixed $shmStatus
@@ -238,7 +239,7 @@ def set(data) {
     	o: data.o ?: {},
     	r: data.r ?: [],
     	rn: !!data.rn,
-		ro: data.ro ?: 'and',
+		rop: data.rop ?: 'and',
 		s: data.s ?: [],
         v: data.v ?: [],
         z: data.z ?: ''
@@ -1151,7 +1152,7 @@ private Boolean evaluateConditions(rtData, conditions, collection, async) {
     def c = rtData.stack.c    
     rtData.stack.c = conditions.$
     def not = (collection == 'c') ? !!conditions.n : !!conditions.rn
-    def grouping = (collection == 'c') ? conditions.o : conditions.ro
+    def grouping = (collection == 'c') ? conditions.o : conditions.rop
     def value = (grouping == 'or' ? false : true)
 	for(condition in conditions[collection]) {
     	def res = evaluateCondition(rtData, condition, collection, async)
@@ -1614,6 +1615,7 @@ private void subscribeAll(rtData) {
         	operandTraverser(node, node.lo, 'condition')
         	for (c in node.cs) {
             	operandTraverser(c, c.ro, null)
+                //if case is a range, traverse the second operand too
                 if (c.t == 'r') operandTraverser(c, c.ro2, null)
                 if (c.s instanceof List) {
                 	traverseStatements(c.s, statementTraverser)
@@ -1669,6 +1671,12 @@ private void subscribeAll(rtData) {
     }
     state.subscriptions = ss
     trace msg
+    
+    subscribe(app, appHandler)
+}
+
+def appHandler(evt) {
+    log.debug "app event ${evt.name}:${evt.value} received"
 }
 
 
@@ -2005,7 +2013,6 @@ private Map evaluateExpression(rtData, expression, dataType = null) {
                         t2 = 'decimal'
                         t = 'decimal'
                     }
-                    debug "Calculating ($t1) $v1 $o ($t2) $v2", rtData
                     v1 = evaluateExpression(rtData, items[idx], t1).v
 	                v2 = evaluateExpression(rtData, items[idx + 1], t2).v
     	            switch (o) {
