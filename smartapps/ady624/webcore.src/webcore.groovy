@@ -985,12 +985,10 @@ public void updateRunTimeData(data) {
 }
 
 def webCoREHandler(event) {
-	log.trace "EVENT ${event.name} / ${event.value}!"
     if (!event || (event.name != handle())) return;
     def data = event.jsonData ?: null
     switch (event.value) {
     	case 'ping':
-        	log.trace "GOT A PING $data"
         	if (data && data.id && data.name && (data.id != hashId(app.id))) {
         		sendLocationEvent( [name: handle(), value: 'pong', isStateChange: true, displayed: false, linkText: "${handle()} ping reply", descriptionText: "${handle()} has received a ping reply and is replying with a pong", data: [id: hashId(app.id), name: app.label]] )
             } else {
@@ -998,12 +996,10 @@ def webCoREHandler(event) {
             }
 			//fall through to pong
     	case 'pong':
-        	log.trace "GOT A PONG"
         	if (data && data.id && data.name && (data.id != hashId(app.id))) {
         		def pong = atomicState.pong ?: [:]
             	pong[data.id] = data.name
                 atomicState.pong = pong
-                log.trace "PONG! $pong"
 			}
         	break;
     }
