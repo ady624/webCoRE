@@ -559,7 +559,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		$scope.designer.type = statement.t;
 		$scope.designer.page = statement.t ? 1 : 0;
 		$scope.designer.operator = statement.o;
-		$scope.designer.not = statement.n;
+		$scope.designer.not = statement.n ? '1' : '0';
 		$scope.designer.roperator = statement.rop;
 		$scope.designer.rnot = statement.rn;
 		$scope.designer.description = statement.z;
@@ -630,7 +630,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		});
 	};
 
-	$scope.updateStatement = function(nextDialog) {
+	$scope.updateStatement = function(nextDialog, defaultType) {
 		$scope.autoSave();
 		var statement = $scope.designer.$new ? {t: $scope.designer.type} : $scope.designer.$statement;
 		statement.a = $scope.designer.async;
@@ -649,7 +649,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 				break;
 			case 'if':
 				statement.o = $scope.designer.operator;
-				statement.n = $scope.designer.not;
+				statement.n = $scope.designer.not == '1';
 				statement.c = statement.c ? statement.c : [];
 				statement.s = statement.s ? statement.s : [];
 				statement.ei = statement.ei ? statement.ei : [];
@@ -675,13 +675,13 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 				break;
 			case 'while':
 				statement.o = $scope.designer.operator;
-				statement.n = $scope.designer.not;
+				statement.n = $scope.designer.not == '1';
 				statement.c = statement.c ? statement.c : [];
 				statement.s = statement.s ? statement.s : [];
 				break;
 			case 'repeat':
 				statement.o = $scope.designer.operator;
-				statement.n = $scope.designer.not;
+				statement.n = $scope.designer.not == '1';
 				statement.c = statement.c ? statement.c : [];
 				statement.s = statement.s ? statement.s : [];
 				break;
@@ -715,6 +715,8 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 					$scope.addTask(statement);
 					break;
 				case 'if':
+					$scope.addCondition(statement.c, false, defaultType);
+					break;
 				case 'while':
 					$scope.addCondition(statement.c);
 					break;
@@ -834,16 +836,16 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 
 	/* conditions */
 
-	$scope.addCondition = function(parent, newElseIf) {
-		return $scope.editCondition(null, parent, newElseIf);
+	$scope.addCondition = function(parent, newElseIf, defaultType) {
+		return $scope.editCondition(null, parent, newElseIf, defaultType);
 	}
 
-	$scope.editCondition = function(condition, parent, newElseIf) {
+	$scope.editCondition = function(condition, parent, newElseIf, defaultType) {
 		if ($scope.mode != 'edit') return;
 
 		if (!condition) {
 			condition = {};
-			condition.t = null;
+			condition.t = defaultType;
 			condition.d = [];
 			condition.n = false;
 			condition.o = 'and';
@@ -863,12 +865,12 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		$scope.designer.$condition = condition;
 		$scope.designer.$obj = condition;
 		$scope.designer.type = condition.t;
-		$scope.designer.$new = condition.t ? false : true;
+		$scope.designer.$new = !defaultType && !!condition.t ? false : true;
 		$scope.designer.newElseIf = newElseIf;
-		$scope.designer.page = $scope.designer.$new ? 0 : 1;
+		$scope.designer.page = $scope.designer.$new && !defaultType ? 0 : 1;
 		$scope.designer.parent = parent;
 		$scope.designer.devices = condition.d;
-		$scope.designer.not = condition.n;
+		$scope.designer.not = condition.n ? '1' : '0';
 		$scope.designer.operator = condition.o;
 		$scope.designer.comparison = {
 			left: {data: condition.lo ? $scope.copy(condition.lo) : {}, multiple: true},
@@ -910,7 +912,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 			case 'group':
 				condition.c = condition.c ? condition.c : [];
 				condition.o = $scope.designer.operator;
-				condition.n = $scope.designer.not;
+				condition.n = $scope.designer.not == '1';
 				break;
 		}
 		condition.sm = $scope.designer.smode;
@@ -1045,7 +1047,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
         $scope.designer.page = $scope.designer.$new ? 0 : 1;
         $scope.designer.parent = parent;
         $scope.designer.devices = restriction.d;
-        $scope.designer.not = restriction.rn;
+        $scope.designer.not = restriction.rn ? '1' : '0';
         $scope.designer.operator = restriction.rop;
         $scope.designer.comparison = {
             left: {data: restriction.lo ? $scope.copy(restriction.lo) : {}, multiple: true},
@@ -1087,7 +1089,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
             case 'group':
                 restriction.r = restriction.r ? restriction.r : [];
                 restriction.rop = $scope.designer.operator;
-                restriction.rn = $scope.designer.not;
+                restriction.rn = $scope.designer.not == '1';
                 break;
         }
         restriction.z = $scope.designer.description;

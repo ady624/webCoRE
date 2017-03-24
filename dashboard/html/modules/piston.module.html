@@ -76,11 +76,6 @@
 	<div class="container" ng-if="mode=='view'">
 		<div class="row">
 			<h2>{{meta.name}}</h2>
-			<div class="row" ng-if="stats && stats.timing && stats.timing.length">
-				<div class="col-md-12">
-					<canvas id="line" height="100" class="chart chart-line" chart-data="chart.data" chart-labels="chart.labels" chart-series="chart.series" chart-options="chart.options" chart-dataset-override="chart.datasetOverride" disabled-chart-click_ed="chart.onClick"></canvas>
-				</div>
-			</div>
 			<div class="row" ng-if="0==1">
 				<div class="col-md-12">
 					<div class="btn-group btn-group-justified" role="group">
@@ -92,6 +87,7 @@
 					</div>
 				</div>
 			</div>
+			<div ng-if="!subscriptions.events" class="alert alert-warning">This piston does not subscribe to any events. Unless executed by other means, it will never run on its own</div>
 			<div class="row">
 				<div class="col-md-4">
 					<h2>Status</h2>
@@ -129,7 +125,7 @@
 			</div>
 			<div class="row">
 				<div class="col-md-12">
-					<h2>Piston code</h2>
+					<h2>Script</h2>
 					<p>
 						<piston id="piston" ng-if="initialized" mode="{{mode}}" ng-repeat="piston in [piston]" data-ng-model="piston" ng-include="'piston'" trace="{{view.trace && (mode=='view') && !!trace && !!trace.points}}" no-animation></piston>
 					</p>
@@ -163,6 +159,12 @@
 					<div class="form-group" ng-if="logs && logs.length">
 						<button class="btn btn-default" ng-click="clearLogs();" title="Clear the logs">Clear</button>
 					</div>
+				</div>
+			</div>
+			<div class="row" ng-if="!mobile && stats && stats.timing && stats.timing.length">
+				<h2>Statistics</h2>
+				<div class="col-md-12">
+					<canvas id="line" height="100" class="chart chart-line" chart-data="chart.data" chart-labels="chart.labels" chart-series="chart.series" chart-options="chart.options" chart-dataset-override="chart.datasetOverride" disabled-chart-click_ed="chart.onClick"></canvas>
 				</div>
 			</div>
 		</div>
@@ -395,21 +397,21 @@
 		<trace ng-if="(view.trace && (mode=='view') && (collection.c) && (collection.c.length > 1) && trace && trace.points && trace.points['c:' + collection.$])"><span>+{{point.o}}ms</span><span dur eval="{{trace.points['c:' + collection.$].v}}">{{point.d}}ms</span></trace>
 		<div no-drag class="no-drag" dnd-list="collection.c" dnd-allowed-types="['condition']">
 			<line com ng-if="collection.z">/* {{collection.z}} */</line>
-			<line pun data-ng-if-start="(collection.t == 'group') || !!collection.n" data-ng-click="editConditionGroup(collection, (collection.t == 'group' ? collection.$$parent.c : null));">{{collection.n ? 'not ' : ''}}(</line>
-			<container>
-				<condition data-ng-repeat-start="condition in collection.c" data-ng-include="'condition'" dnd-nodra data-ng-model="collection" nag-init="condition.$$parent = collection" dnd-draggable="condition" dnd-nodrag dnd-type="'condition'" dnd-moved="drag(collection.c, $index);" dnd-effect-allowed="copyMove"></condition>
-				<line operator data-ng-repeat-end data-ng-click="editConditionGroup(collection, (collection.t == 'group' ? collection.$$parent.c : null));">{{collection.o}}</line>
+			<line pun data-ng-if-start="(collection.t == 'group') || !!collection.n" data-ng-click="editConditionGroup(collection, (collection.t == 'group' ? collection.$$parent : null));">{{collection.n ? 'not ' : ''}}(</line>
+			<container dnd-list="collection.c" dnd-allowed-types="['condition']">
+				<condition data-ng-repeat-start="condition in collection.c" data-ng-include="'condition'" dnd-nodrag data-ng-model="collection.c" dnd-draggable="condition" dnd-nodrag dnd-type="'condition'" dnd-moved="drag(collection.c, $index);" dnd-effect-allowed="copyMove"></condition>
+				<line operator data-ng-repeat-end data-ng-click="editConditionGroup(collection, (collection.t == 'group' ? collection.$$parent : null));">{{collection.o}}</line>
 				<line new data-ng-click="addCondition(collection)">+ add a new condition</line>
 			</container>
 			<line data-ng-if-end pun>)</line>
-			<condition ng-if-start="(collection.t != 'group') && !collection.n" data-ng-repeat-start="condition in collection.c" data-ng-include="'condition'" dnd-nodrag data-ng-model="collection" nag-init="condition.$$parent = collection" dnd-draggable="condition" dnd-nodrag dnd-type="'condition'" dnd-moved="drag(collection.c, $index);" dnd-effect-allowed="copyMove"></condition>
-			<line operator ng-if-end data-ng-repeat-end data-ng-click="editConditionGroup(collection, (collection.t == 'group' ? collection.$$parent.c : null));">{{collection.o}}</line>
+			<condition ng-if-start="(collection.t != 'group') && !collection.n" data-ng-repeat-start="condition in collection.c" data-ng-include="'condition'" dnd-nodrag data-ng-model="collection" dnd-draggable="condition" dnd-nodrag dnd-type="'condition'" dnd-moved="drag(collection.c, $index);" dnd-effect-allowed="copyMove"></condition>
+			<line operator ng-if-end data-ng-repeat-end data-ng-click="editConditionGroup(collection);">{{collection.o}}</line>
 			<line new ng-if="(collection.t != 'group') && !collection.n" data-ng-click="addCondition(collection)">+ add a new condition</line>
 		</div>		
 	</dnd-nodrag>
 </script>
 <script type="text/ng-template" id="condition">
-	<dnd-nodrag>
+	<dnd-nodrag ng-init="condition.$$parent=collection.c">
 		<div>
 		<trace ng-if="(view.trace && (mode=='view') && trace && trace.points && trace.points['c:' + condition.$])"><span>+{{trace.points['c:' + condition.$].o}}ms</span><span dur eval="{{trace.points['c:' + condition.$].v}}">{{trace.points['c:' + condition.$].d}}ms</span></trace>
 		<subscription ng-if="(mode == 'view') && !!condition.s" class="fa fa-bolt" title="This condition subscribes to events"></subscription>
@@ -442,35 +444,34 @@
 
 
 
-
-
 <script type="text/ng-template" id="restrictions">
 	<dnd-nodrag>
 		<bar ng-if="(mode=='edit') || (collection.r && (collection.r.length > 1))"></bar>
-		<trace ng-if="(view.trace && (mode=='view') && (collection.r) && (collection.r.length > 1) && trace && trace.points && trace.points['c:' + collection.$])"><span>+{{point.o}}ms</span><span dur eval="{{trace.points['c:' + collection.$].v}}">{{point.d}}ms</span></trace>
+		<trace ng-if="(view.trace && (mode=='view') && (collection.r) && (collection.r.length > 1) && trace && trace.points && trace.points['c:' + collection.$])"><span>+{{point.rop}}ms</span><span dur eval="{{trace.points['c:' + collection.$].v}}">{{point.d}}ms</span></trace>
 		<div no-drag class="no-drag" dnd-list="collection.r" dnd-allowed-types="['restriction']">
 			<line com ng-if="collection.z">/* {{collection.z}} */</line>
-			<line pun data-ng-if-start="(collection.t == 'group') || !!collection.rn" data-ng-click="editRestrictionGroup(collection, (collection.t == 'group' ? collection.$$parent.r : null));">{{collection.rn ? 'not ' : ''}}(</line>
-			<container>
-				<restriction data-ng-repeat-start="restriction in collection.r" data-ng-include="'restriction'" dnd-nodra data-ng-model="collection" nag-init="restriction.$$parent = collection" dnd-draggable="restriction" dnd-nodrag dnd-type="'restriction'" dnd-moved="drag(collection.r, $index);" dnd-effect-allowed="copyMove"></restriction>
-				<line operator data-ng-repeat-end data-ng-click="editRestrictionGroup(collection, (collection.t == 'group' ? collection.$$parent.r : null));">{{collection.rop}}</line>
-				<line new data-ng-click="addrestriction(collection)">+ add a new restriction</line>
+			<line pun data-ng-if-start="(collection.t == 'group') || !!collection.rn" data-ng-click="editRestrictionGroup(collection, (collection.t == 'group' ? collection.$$parent : null));">{{collection.rn ? 'not ' : ''}}(</line>
+			<container dnd-list="collection.r" dnd-allowed-types="['restriction']">
+				<restriction data-ng-repeat-start="restriction in collection.r" data-ng-include="'restriction'" dnd-nodrag data-ng-model="collection.r" dnd-draggable="restriction" dnd-nodrag dnd-type="'restriction'" dnd-moved="drag(collection.r, $index);" dnd-effect-allowed="copyMove"></restriction>
+				<line operator data-ng-repeat-end data-ng-click="editRestrictionGroup(collection, (collection.t == 'group' ? collection.$$parent : null));">{{collection.rop}}</line>
+				<line new data-ng-click="addRestriction(collection)">+ add a new restriction</line>
 			</container>
 			<line data-ng-if-end pun>)</line>
-			<restriction ng-if-start="(collection.t != 'group') && !collection.rn" data-ng-repeat-start="restriction in collection.r" data-ng-include="'restriction'" dnd-nodrag data-ng-model="collection" nag-init="restriction.$$parent = collection" dnd-draggable="restriction" dnd-nodrag dnd-type="'restriction'" dnd-moved="drag(collection.r, $index);" dnd-effect-allowed="copyMove"></restriction>
-			<line operator ng-if-end data-ng-repeat-end data-ng-click="editRestrictionGroup(collection, (collection.t == 'group' ? collection.$$parent.r : null));">{{collection.rop}}</line>
-			<line new ng-if="(collection.t != 'group') && !collection.rn" data-ng-click="addrestriction(collection)">+ add a new restriction</line>
+			<restriction ng-if-start="(collection.t != 'group') && !collection.rn" data-ng-repeat-start="restriction in collection.r" data-ng-include="'restriction'" dnd-nodrag data-ng-model="collection.r" dnd-draggable="restriction" dnd-nodrag dnd-type="'restriction'" dnd-moved="drag(collection.r, $index);" dnd-effect-allowed="copyMove"></restriction>
+			<line operator ng-if-end data-ng-repeat-end data-ng-click="editRestrictionGroup(collection);">{{collection.rop}}</line>
+			<line new ng-if="(collection.t != 'group') && !collection.rn" data-ng-click="addRestriction(collection)">+ add a new restriction</line>
 		</div>		
 	</dnd-nodrag>
 </script>
+
 <script type="text/ng-template" id="restriction">
-	<dnd-nodrag>
+	<dnd-nodrag ng-init="restriction.$$parent=collection.r">
 		<div>
 		<trace ng-if="(view.trace && (mode=='view') && trace && trace.points && trace.points['c:' + restriction.$])"><span>+{{trace.points['c:' + restriction.$].o}}ms</span><span dur eval="{{trace.points['c:' + restriction.$].v}}">{{trace.points['c:' + restriction.$].d}}ms</span></trace>
 		<subscription ng-if="(mode == 'view') && !!restriction.s" class="fa fa-bolt" title="This restriction subscribes to events"></subscription>
 		<restrictions ng-if="restriction.r" data-ng-repeat="collection in [restriction]" data-ng-include="'restrictions'" dnd-nodrag data-ng-model="restriction" dnd-draggable="restriction" dnd-type="'restriction'" dnd-moved="drag(collection.r, $index);" dnd-effect-allowed="copyMove" eval="{{collection && trace && trace.points && trace.points['c:' + collection.$] ? trace.points['c:' + collection.$].v : ''}}"></restrictions>
 		<line com ng-if="!restriction.r && !!restriction.z">/* {{restriction.z}} */</line>
-		<line cond ng-if="!restriction.r" ng-click="editrestriction(restriction, collection.r);">
+		<line cond ng-if="!restriction.r" ng-click="editRestriction(restriction, collection.r);">
 			<handle dnd-handle class="fa fa-sort"></handle><span ng-bind-html="restriction.$$html || (restriction.$$html = renderComparison(restriction.lo, restriction.co, restriction.ro, restriction.ro2))"></span>
 		</line>
 		<container ng-if="((mode=='edit') && view.whens) || (restriction.ts && restriction.ts.length) || (restriction.fs && restriction.fs.length)">
@@ -594,16 +595,16 @@
 		<form>
 			<div class="form-group" ng-if="designer.type=='if'">
 				<info>An IF block is the simplest decisional block available. It allows you to execute different actions depending on conditions you set.</info>
-				<div class="form-group">
-					<label for="operator">Logical Operator</label>
-					<div class="form-table input-group">
-						<toggle class="form-control input-group-addon col-lg-3 no-padding" ng-model="designer.not" on="Negated" off="Not negated"></toggle>
-						<select id="operator" selectpicker class="selectpicker show-tick" data-width="75%" data-style="btn-default" ng-model="designer.operator" data-mobile="{{mobile}}">
-							<option value="and">Logical AND</option>
-							<option value="or">Logical OR</option>
-							<option value="xor">Logical eXclusive OR (XOR)</option>
-							<option value="followed by">Followed by</option>
-						</select>
+				<div class="form-group row">
+					<div class="col-sm-6">
+						<div class="alert alert-info">Condition</div>
+						<p>A condition is a single comparison between two or more operands, the basic building block of a decisional statement</p>
+						<div class="text-center"><button class="btn btn-info" ng-click="updateStatement(true, 'condition');">Add a condition</button></div>
+					</div>
+					<div class="col-sm-6">
+						<div class="alert alert-warning">Group</div>
+						<p>A group is a collection of conditions, with a logical operator between them, allowing for complex decisional statements</p>
+						<div class="text-center"><button class="btn btn-warning" ng-click="updateStatement(true, 'group');">Add a group</button></div>
 					</div>
 				</div>
 			</div>
@@ -614,33 +615,9 @@
 			</div>
 			<div class="form-group" ng-if="designer.type=='while'">
 				<info>A WHILE loop is an iteration block that checks a condition and executes actions when that condition is true, then repeats the actions until the condition becomes false.</info>
-				<div class="form-group">
-					<label for="operator">Logical Operator</label>
-					<div class="form-table input-group">
-						<toggle class="form-control input-group-addon col-lg-3 no-padding" ng-model="designer.not" on="Negated" off="Not negated"></toggle>
-						<select id="operator" selectpicker class="selectpicker show-tick" data-width="75%" data-style="btn-default" ng-model="designer.operator" data-mobile="{{mobile}}">
-							<option value="and">Logical AND</option>
-							<option value="or">Logical OR</option>
-							<option value="xor">Logical eXclusive OR (XOR)</option>
-							<option value="followed by">Followed by</option>
-						</select>
-					</div>
-				</div>
 			</div>
 			<div class="form-group" ng-if="designer.type=='repeat'">
 				<info>A REPEAT loop is an iteration block that executs some actions, then checks a condition and repeats the actions if that condition is found to be true.</info>
-				<div class="form-group">
-					<label for="operator">Logical Operator</label>
-					<div class="form-table input-group">
-						<toggle class="form-control input-group-addon col-lg-3 no-padding" ng-model="designer.not" on="Negated" off="Not negated"></toggle>
-						<select id="operator" selectpicker class="selectpicker show-tick" data-width="75%" data-style="btn-default" ng-model="designer.operator" data-mobile="{{mobile}}">
-							<option value="and">Logical AND</option>
-							<option value="or">Logical OR</option>
-							<option value="xor">Logical eXclusive OR (XOR)</option>
-							<option value="followed by">Followed by</option>
-						</select>
-					</div>
-				</div>
 			</div>
 			<div class="form-group" ng-if="designer.type=='for'">
 				<info>A FOR loop is an iteration block that allows you to repeat the same action for a preset number of times, also known as iterations. You can optionally use a counter variable that will be updated to reflect the current iteration index. The system variable <i>$index</i> is also providing that same value. When nesting for loops, $index contains the index for the inner-most loop.</info>
@@ -720,7 +697,7 @@
 					</select>
 				</div>
 			</div>
-			<div class="divider" data-toggle="collapse" data-target="#advopt" collapsed-title="Show Advanced Options" expanded-title="Hide Advanced Options" aria-expanded="false"></div>
+			<div class="form-group divider" data-toggle="collapse" data-target="#advopt" collapsed-title="Show Advanced Options" expanded-title="Hide Advanced Options" aria-expanded="false"></div>
 			<div id="advopt" class="form-group collapse">
 				<div class="form-group">
 					<label for="descriptionInput">Description (optional)</label>
@@ -764,18 +741,6 @@
 					</select>
 				</div>
 				<div class="form-group">
-					<label for="roperator">Restrictions Logical Operator</label>
-					<div class="form-table input-group">
-						<toggle class="form-control input-group-addon col-lg-3 no-padding" ng-model="designer.rnot" on="Negated" off="Not negated"></toggle>
-						<select id="roperator" selectpicker class="selectpicker show-tick" data-width="75%" data-style="btn-default" ng-model="designer.roperator" data-mobile="{{mobile}}">
-							<option value="and">Logical AND</option>
-							<option value="or">Logical OR</option>
-							<option value="xor">Logical eXclusive OR (XOR)</option>
-							<option value="followed by">Followed by</option>
-						</select>
-					</div>
-				</div>
-				<div class="form-group">
 					<label for="async">Execution method</label>
 					<select id="async" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-default" ng-model="designer.async" data-mobile="{{mobile}}">
 						<option value="0">Synchronous (default)</option>
@@ -785,7 +750,7 @@
 			</div>
 		</form>
 		<footer>
-			<button type="button" ng-if="(designer.type=='if' ) && (designer.$new)" class="btn btn-info pull-right" ng-disabled="!designer.type" ng-click="updateStatement(true);">Add a condition</button>
+			<!--<button type="button" ng-if="(designer.type=='if' ) && (designer.$new)" class="btn btn-info pull-right" ng-disabled="!designer.type" ng-click="updateStatement(true);">Add a condition</button>-->
 			<button type="button" ng-if="(designer.type=='switch' ) && (designer.$new)" class="btn btn-info pull-right" ng-disabled="!designer.type" ng-click="updateStatement(true);">Add a case</button>
 			<button type="button" ng-if="(designer.type=='for' ) && (designer.$new)" class="btn btn-info pull-right" ng-disabled="!designer.type" ng-click="updateStatement(true);">Add a statement</button>
 			<button type="button" ng-if="(designer.type=='each' ) && (designer.$new)" class="btn btn-info pull-right" ng-disabled="!designer.type" ng-click="updateStatement(true);">Add a statement</button>
@@ -795,7 +760,7 @@
 			<button type="button" ng-if="(designer.type=='break' ) && (designer.$new)" class="btn btn-info pull-right" ng-disabled="!designer.type" ng-click="updateStatement();">Add</button>
 			<button type="button" ng-if="(designer.type=='exit' ) && (designer.$new)" class="btn btn-info pull-right" ng-disabled="!designer.type" ng-click="updateStatement();">Add</button>
 			<button type="button" ng-if="!designer.$new" class="btn btn-info pull-right" ng-disabled="!designer.type" ng-click="updateStatement();">Save</button>
-			<button type="button" ng-if="!designer.$new && ((designer.type=='if' ) || (designer.type=='while' ) || (designer.type=='repeat' ))" class="btn btn-info pull-right" ng-disabled="!designer.type" ng-click="upgradeStatement();">Convert to new group</button>
+			<button type="button" ng-if="!designer.$new && ((designer.type=='if' ) || (designer.type=='while' ) || (designer.type=='repeat' ))" class="btn btn-warning pull-right" ng-disabled="!designer.type" ng-click="upgradeStatement();">Convert to new group</button>
 			<button type="button" ng-if="designer.$new" class="btn btn-default" ng-click="prevPage();">Back</button>
 			<button type="button" ng-if="!designer.$new" class="btn btn-default" ng-click="closeDialog();">Cancel</button>
 			<button type="button" ng-if="!designer.$new" class="btn btn-danger" ng-click="deleteObject();">Delete</button>
@@ -807,14 +772,26 @@
 	<designer ng-if="designer.page==0">
 		<header>
 			<label>Add a new condition</label>
-			<span>Please select one of the condition types below and then click Next</span>
 		</header>
-		<items>
-			<item ng-repeat="item in designer.items" type="{{item.type}}" class="fa fa-{{item.icon}} {{item.cssClass}}" title="{{item.name}}" ng-selected="item.type==designer.type" ng-click="setDesignerType(item.type, true)"></item>
-		</items>
+		<form>
+			<div class="form-group">
+				<info>An IF block is the simplest decisional block available. It allows you to execute different actions depending on conditions you set.</info>
+				<div class="form-group row">
+					<div class="col-sm-6">
+						<div class="alert alert-info">Condition</div>
+						<p>A condition is a single comparison between two or more operands, the basic building block of a decisional statement</p>
+						<div class="text-center"><button class="btn btn-info" ng-click="setDesignerType('condition', true);">Add a condition</button></div>
+					</div>
+					<div class="col-sm-6">
+						<div class="alert alert-warning">Group</div>
+						<p>A group is a collection of conditions, with a logical operator between them, allowing for complex decisional statements</p>
+						<div class="text-center"><button class="btn btn-warning" ng-click="setDesignerType('group', true);">Add a group</button></div>
+					</div>
+				</div>
+			</div>
+		</form>
 		<footer>
 			<button type="button" class="btn btn-default" ng-click="closeDialog();">Cancel</button>
-			<button type="button" class="btn btn-info pull-right" ng-disabled="!designer.type" ng-click="nextPage();">Next</button>
 		</footer>
 	</designer>
 
@@ -826,35 +803,43 @@
 		<form>
 			<info ng-if="designer.type=='condition'">A condition allows for a single comparison to be made between two expressions.</info>
 			<info ng-if="designer.type=='group'">A group is a container for other conditions or groups and allows building more complex logic.</info>
-				<comparison ng-if="designer.type=='condition'" ng-repeat="comparison in [designer.comparison]" ng-include="'comparison'"></comparison>
-				<div class="form-group" ng-if="designer.type=='group'">
-					<label for="operator">Logical Operator</label>
+			<comparison ng-if="designer.type=='condition'" ng-repeat="comparison in [designer.comparison]" ng-include="'comparison'"></comparison>
+			<div class="form-group" ng-if-start="designer.type=='group'">
+				<label for="operator">Logical Operator</label>
 					<div class="form-table input-group">
-						<toggle class="form-control input-group-addon col-lg-3 no-padding" ng-model="designer.not" on="Negated" off="Not negated"></toggle>
-						<select id="operator" selectpicker class="selectpicker show-tick" data-width="75%" data-style="btn-default" ng-model="designer.operator" data-mobile="{{mobile}}">
-							<option value="and">Logical AND</option>
-							<option value="or">Logical OR</option>
-							<option value="xor">Logical eXclusive OR (XOR)</option>
-							<option value="followed by">Followed by</option>
-						</select>
-					</div>
+					<select id="operator" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-default" ng-model="designer.operator" data-mobile="{{mobile}}">
+						<option value="and">Logical AND</option>
+						<option value="or">Logical OR</option>
+						<option value="xor">Logical eXclusive OR (XOR)</option>
+						<option value="followed by">Followed by</option>
+					</select>
 				</div>
+			</div>
+			<div class="form-group" ng-if-end>
+				<label for="operator">Whole group negation</label>
+				<div class="form-table input-group">
+					<select id="operator" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-default" ng-model="designer.not" data-mobile="{{mobile}}">
+						<option value="0">Not negated</option>
+						<option value="1">Negated</option>
+					</select>
+				</div>
+			</div>
 
-				<div class="divider" data-toggle="collapse" data-target="#advopt" collapsed-title="Show Advanced Options" expanded-title="Hide Advanced Options" aria-expanded="false"></div>
-				<div id="advopt" class="form-group collapse">
-					<div class="form-group">
-						<label for="smode">Subscription method</label>
-						<select id="smode" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-default" ng-model="designer.smode" data-mobile="{{mobile}}">
-							<option value="auto">Automatic</option>
-							<option value="always">Always subscribe</option>
-							<option value="never">Never subscribe</option>
-						</select>
-					</div>
-					<div class="form-group">
-						<label for="descriptionInput">Description (optional)</label>
-						<textarea type="text" id="descriptionInput" class="form-control" placeholder="Description for this statement" ng-model="designer.description"></textarea>
-					</div>
+			<div class="divider" data-toggle="collapse" data-target="#advopt" collapsed-title="Show Advanced Options" expanded-title="Hide Advanced Options" aria-expanded="false"></div>
+			<div id="advopt" class="form-group collapse">
+				<div class="form-group">
+					<label for="smode">Subscription method</label>
+					<select id="smode" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-default" ng-model="designer.smode" data-mobile="{{mobile}}">
+						<option value="auto">Automatic</option>
+						<option value="always">Always subscribe</option>
+						<option value="never">Never subscribe</option>
+					</select>
 				</div>
+				<div class="form-group">
+					<label for="descriptionInput">Description (optional)</label>
+					<textarea type="text" id="descriptionInput" class="form-control" placeholder="Description for this statement" ng-model="designer.description"></textarea>
+				</div>
+			</div>
 
 		</form>
 		<footer>
@@ -909,7 +894,7 @@
 		<footer>
 			<button type="button" class="btn btn-info pull-right" ng-click="updateConditionGroup();">Save</button>
 			<button type="button" class="btn btn-default" ng-click="closeDialog();">Cancel</button>
-			<button type="button" ng-if="designer.group.t == 'group'" class="btn btn-danger" ng-click="deleteObject();">Delete</button>
+			<button type="button" ng-if="designer.parent" class="btn btn-danger" ng-click="deleteObject();">Delete</button>
 		</footer>
 	</designer>
 </script>
@@ -923,14 +908,27 @@
 	<designer ng-if="designer.page==0">
 		<header>
 			<label>Add a new restriction</label>
-			<span>Please select one of the restriction types below and then click Next</span>
 		</header>
-		<items>
-			<item ng-repeat="item in designer.items" type="{{item.type}}" class="fa fa-{{item.icon}} {{item.cssClass}}" title="{{item.name}}" ng-selected="item.type==designer.type" ng-click="setDesignerType(item.type, true)"></item>
-		</items>
+		<form>
+			<div class="form-group">
+				<info>An IF block is the simplest decisional block available. It allows you to execute different actions depending on conditions you set.</info>
+				<div class="alert alert-danger">Restrictions are conditions that need to be met for the execution to continue. Restrictions <b>DO NOT</b> subscribe to events and will not cause the piston to run.</div>
+				<div class="form-group row">
+					<div class="col-sm-6">
+						<div class="alert alert-info">Restriction</div>
+						<p>A restriction is a single comparison between two or more operands, the basic building block of a decisional statement</p>
+						<div class="text-center"><button class="btn btn-info" ng-click="setDesignerType('restriction', true);">Add a restriction</button></div>
+					</div>
+					<div class="col-sm-6">
+						<div class="alert alert-warning">Group</div>
+						<p>A group is a collection of restrictions, with a logical operator between them, allowing for complex decisional statements</p>
+						<div class="text-center"><button class="btn btn-warning" ng-click="setDesignerType('group', true);">Add a group</button></div>
+					</div>
+				</div>
+			</div>
+		</form>
 		<footer>
 			<button type="button" class="btn btn-default" ng-click="closeDialog();">Cancel</button>
-			<button type="button" class="btn btn-info pull-right" ng-disabled="!designer.type" ng-click="nextPage();">Next</button>
 		</footer>
 	</designer>
 	<designer ng-if="designer.page==1">
@@ -941,7 +939,29 @@
 		<form>
 			<info ng-if="designer.type=='restriction'">A restriction allows for a single comparison to be made between two expressions.</info>
 			<info ng-if="designer.type=='group'">A group is a container for other restrictions or groups and allows building more complex logic.</info>
+			<div class="alert alert-danger">Restrictions are conditions that need to be met for the execution to continue. Restrictions <b>DO NOT</b> subscribe to events and will not cause the piston to run.</div>
 			<comparison ng-if="designer.type=='restriction'" ng-repeat="comparison in [designer.comparison]" ng-include="'comparison'"></comparison>
+			<div class="form-group" ng-if-start="designer.type=='group'">
+				<label for="operator">Logical Operator</label>
+				<div class="form-table input-group">
+					<select id="operator" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-default" ng-model="designer.operator" data-mobile="{{mobile}}">
+						<option value="and">Logical AND</option>
+						<option value="or">Logical OR</option>
+						<option value="xor">Logical eXclusive OR (XOR)</option>
+						<option value="followed by">Followed by</option>
+					</select>
+				</div>
+			</div>
+			<div class="form-group" ng-if-end>
+				<label for="operator">Whole group negation</label>
+				<div class="form-table input-group">
+					<select id="operator" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-default" ng-model="designer.not" data-mobile="{{mobile}}">
+						<option value="0">Not negated</option>
+						<option value="1">Negated</option>
+					</select>
+				</div>
+			</div>
+
 			<div class="divider" data-toggle="collapse" data-target="#advopt" collapsed-title="Show Advanced Options" expanded-title="Hide Advanced Options" aria-expanded="false"></div>
 			<div id="advopt" class="form-group collapse">
 				<label for="descriptionInput">Description (optional)</label>
@@ -999,7 +1019,7 @@
 		<footer>
 			<button type="button" class="btn btn-info pull-right" ng-click="updateRestrictionGroup();">Save</button>
 			<button type="button" class="btn btn-default" ng-click="closeDialog();">Cancel</button>
-			<button type="button" ng-if="designer.group.t == 'group'" class="btn btn-danger" ng-click="deleteObject();">Delete</button>
+			<button type="button" ng-if="designer.parent" class="btn btn-danger" ng-click="deleteObject();">Delete</button>
 		</footer>
 	</designer>
 </script>

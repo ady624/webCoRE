@@ -642,6 +642,10 @@ parameter[optional=true] label.control-label::after {
 }
 
 
+div.divider {
+	margin-top: 32px;
+}
+
 
 textarea[expression] {
 	font-size: 14px;
