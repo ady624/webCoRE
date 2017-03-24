@@ -13,8 +13,9 @@
  *  for the specific language governing permissions and limitations under the License.
  *
 */
-public static String version() { return "v0.0.056.20170323" }
+public static String version() { return "v0.0.057.20170324" }
 /*
+ *	03/24/2016 >>> v0.0.057.20170324 - ALPHA - Improved installation experience, preventing direct installation of child app, location mode and shm status finally working
  *	03/23/2016 >>> v0.0.056.20170323 - ALPHA - Various fixes for restrictions
  *	03/22/2016 >>> v0.0.055.20170322 - ALPHA - Various improvements, including a revamp of the comparison dialog, also moved the dashboard website to https://dashboard.webcore.co
  *	03/21/2016 >>> v0.0.054.20170321 - ALPHA - Moved the dashboard website to https://webcore.homecloudhub.com/dashboard/
@@ -111,7 +112,7 @@ definition(
     name: "webCoRE Piston",
     namespace: "ady624",
     author: "Adrian Caramaliu",
-    description: handle(),
+    description: "Do not install this directly, use webCoRE instead",
     category: "Convenience",
 	parent: "ady624:webCoRE",
     /* icons courtesy of @chauger - thank you */
@@ -133,27 +134,37 @@ preferences {
 /******************************************************************************/
 def pageMain() {
 	//webCoRE Piston main page
-	return dynamicPage(name: "pageMain", title: "", install: true, uninstall: false) {
-		def currentState = state.currentState
-        
-        section ("General") {
-			label name: "name", title: "Name", required: true, state: (name ? "complete" : null), defaultValue: parent.generatePistonName()
-        }
-        
-		section("Dashboard") {        
-			def dashboardUrl = parent.getDashboardUrl()
-        	if (dashboardUrl) {
-            	dashboardUrl = "${dashboardUrl}piston/${hashId(app.id)}"
-				href "", title: "View piston in dashboard", style: "external", url: dashboardUrl, image: "https://cdn.rawgit.com/ady624/CoRE/master/resources/images/icons/dashboard.png", required: false
-			} else {
-                paragraph "Sorry, your dashboard does not seem to be enabled, please go to the parent app and enable the dashboard."
+	return dynamicPage(name: "pageMain", title: "", uninstall: false) {
+    	if (!parent.isInstalled()) {        
+        	section() {
+				paragraph "Sorry, you cannot install a piston directly from the Marketplace, please use the webCoRE SmartApp instead."
+            }
+        	section("Installing webCoRE") {
+            	paragraph "If you are trying to install webCoRE, please go back one step and choose webCoRE, not webCoRE Piston. You can also visit wiki.webcore.co for more information on how to install and use webCoRE"
+				href "", title: "More information ${parent.getWikiUrl()}", style: "external", url: parent.getWikiUrl(), image: "https://cdn.rawgit.com/ady624/webCoRE/master/resources/icons/app-CoRE.png", required: false
+            }
+        } else {
+            def currentState = state.currentState
+
+            section ("General") {
+                label name: "name", title: "Name", required: true, state: (name ? "complete" : null), defaultValue: parent.generatePistonName()
+            }
+
+            section("Dashboard") {        
+                def dashboardUrl = parent.getDashboardUrl()
+                if (dashboardUrl) {
+                    dashboardUrl = "${dashboardUrl}piston/${hashId(app.id)}"
+                    href "", title: "View piston in dashboard", style: "external", url: dashboardUrl, image: "https://cdn.rawgit.com/ady624/CoRE/master/resources/images/icons/dashboard.png", required: false
+                } else {
+                    paragraph "Sorry, your dashboard does not seem to be enabled, please go to the parent app and enable the dashboard."
+                }
+            }
+
+            section(title:"Application Info") {
+                paragraph version(), title: "Version"
+                paragraph mem(), title: "Memory Usage"
             }
         }
-        
-		section(title:"Application Info") {
-			paragraph version(), title: "Version"
-			paragraph mem(), title: "Memory Usage"
-		}
 	}
 }
 
@@ -1217,6 +1228,16 @@ private evaluateOperand(rtData, node, operand, index = null, trigger = false) {
             }            
 			values = [[i: "${node?.$}:d", v:[t: 'device', v: deviceIds.unique()]]]	
             break
+		case 'v': //virtual devices
+        	switch (operand.v) {
+            	case 'locationMode':
+                	values = [[i: "${node?.$}:v", v:getDeviceAttribute(rtData, rtData.locationId, 'mode')]];
+                    break;
+            	case 'shmStatus':
+                	values = [[i: "${node?.$}:v", v:getDeviceAttribute(rtData, rtData.locationId, 'shm')]];
+                    break;
+            }
+            break
         case "x": //variable
 	        values = [[i: "${node?.$}:$index:0", v:getVariable(rtData, operand.x)]]
             break
@@ -1389,8 +1410,8 @@ private Map valueChanged(rtData, comparisonValue) {
 }
 
 //comparison low level functions
-private boolean comp_is								(rtData, lv, rv = null, rv2 = null) { return cast(rtData, lv.v.v, 'string') == cast(rtData, rv.v.v, 'string') }
-private boolean comp_is_not							(rtData, lv, rv = null, rv2 = null) { return cast(rtData, lv.v.v, 'string') != cast(rtData, rv.v.v, 'string') }
+private boolean comp_is								(rtData, lv, rv = null, rv2 = null) { return (cast(rtData, lv.v.v, 'string') == cast(rtData, rv.v.v, 'string')) || (lv.v.n && (cast(rtData, lv.v.n, 'string') == cast(rtData, rv.v.v, 'string'))) }
+private boolean comp_is_not							(rtData, lv, rv = null, rv2 = null) { return !comp_is(rtData, lv, rv, rv2) }
 private boolean comp_is_equal_to					(rtData, lv, rv = null, rv2 = null) { return cast(rtData, lv.v.v, 'decimal') == cast(rtData, rv.v.v, 'decimal') }
 private boolean comp_is_not_equal_to				(rtData, lv, rv = null, rv2 = null) { return cast(rtData, lv.v.v, 'decimal') != cast(rtData, rv.v.v, 'decimal') }
 private boolean comp_is_different_than				(rtData, lv, rv = null, rv2 = null) { return cast(rtData, lv.v.v, 'decimal') != cast(rtData, rv.v.v, 'decimal') }
@@ -1691,6 +1712,19 @@ private getDevice(rtData, idOrName) {
 }
 
 private Map getDeviceAttribute(rtData, deviceId, attributeName, trigger = false) {
+	if (deviceId == rtData.locationId) {
+    	//we have the location here
+        switch (attributeName) {
+        	case 'mode': 
+            	def mode = location.getCurrentMode();
+            	return [t: 'string', v: hashId(mode.getId()), n: mode.getName()]
+        	case 'shm': 
+				def v = location.currentState("alarmSystemStatus")?.value
+                def n = rtData.virtualDevices['shmStatus']?.o[v]
+				return [t: 'string', v: v, n: n]
+        }
+        return [t: 'string', v: location.getName().toString()]
+    }
 	def device = getDevice(rtData, deviceId)
     if (device) {
         def attribute = rtData.attributes[attributeName ?: '']
@@ -1715,7 +1749,7 @@ private getVariable(rtData, name) {
 			result = rtData.systemVars[name]
             if (!(result instanceof Map)) result = [t: "error", v: "Variable '$name' not found"]
             if (result && result.d) {
-            	result = [t: result.t, v: getSystemVariableValue(name)]
+            	result = [t: result.t, v: getSystemVariableValue(rtData, name)]
             }
 		} else {
 			result = rtData.localVars[name]
@@ -3276,7 +3310,7 @@ private static Map getSystemVariables() {
 	]
 }
 
-private getSystemVariableValue(name) {
+private getSystemVariableValue(rtData, name) {
 	switch (name) {
 		case "\$name": return app.label
 		case "\$now": return (long) now()
@@ -3311,7 +3345,7 @@ private getSystemVariableValue(name) {
 		case "\$randomSaturation": def result = getRandomValue("\$randomSaturation") ?: (int)Math.round(50 + 50 * Math.random()); setRandomValue("\$randomSaturation", result); return result 
 		case "\$randomHue": def result = getRandomValue("\$randomHue") ?: (int)Math.round(360 * Math.random()); setRandomValue("\$randomHue", result); return result 
   		case "\$locationMode": return location.getMode()
-		case "\$shmStatus": return location.currentState("alarmSystemStatus")?.value
+		case "\$shmStatus": return rtData.virtualDevices['shmStatus']?.o[location.currentState("alarmSystemStatus")?.value]
     }
 }
 

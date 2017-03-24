@@ -1,5 +1,5 @@
 /*
- *  CoRE (SE) - Community's own Rule Engine - Web Edition
+ *  webCoRE - Community's own Rule Engine - Web Edition
  *
  *  Copyright 2016 Adrian Caramaliu <ady624("at" sign goes here)gmail.com>
  *
@@ -19,8 +19,9 @@
  *  Version history
  */
 
-public static String version() { return "v0.0.056.20170323" }
+public static String version() { return "v0.0.057.20170324" }
 /*
+ *	03/24/2016 >>> v0.0.057.20170324 - ALPHA - Improved installation experience, preventing direct installation of child app, location mode and shm status finally working
  *	03/23/2016 >>> v0.0.056.20170323 - ALPHA - Various fixes for restrictions
  *	03/22/2016 >>> v0.0.055.20170322 - ALPHA - Various improvements, including a revamp of the comparison dialog, also moved the dashboard website to https://dashboard.webcore.co
  *	03/21/2016 >>> v0.0.054.20170321 - ALPHA - Moved the dashboard website to https://webcore.homecloudhub.com/dashboard/
@@ -110,21 +111,21 @@ public static String version() { return "v0.0.056.20170323" }
  */
 
 /******************************************************************************/
-/*** CoRE (SE) DEFINITION													***/
+/*** webCoRE DEFINITION														***/
 /******************************************************************************/
 private static String handle() { return "webCoRE" }
-private static String domain() { return "dashboard.webcore.co" }
+private static String domain() { return "webcore.co" }
 definition(
-	name: "webCoRE",
+	name: "${handle()}",
 	namespace: "ady624",
 	author: "Adrian Caramaliu",
-	description: handle(),
+	description: "Tap here to install ${handle()} ${version()}",
 	category: "Convenience",
 	singleInstance: false,
     /* icons courtesy of @chauger - thank you */
-	iconUrl: "https://cdn.rawgit.com/ady624/webCoRE/master/resources/icons/app-CoRE.png",
-	iconX2Url: "https://cdn.rawgit.com/ady624/webCoRE/master/resources/icons/app-CoRE@2x.png",
-	iconX3Url: "https://cdn.rawgit.com/ady624/webCoRE/master/resources/icons/app-CoRE@3x.png"
+	iconUrl: "https://cdn.rawgit.com/ady624/${handle()}/master/resources/icons/app-CoRE.png",
+	iconX2Url: "https://cdn.rawgit.com/ady624/${handle()}/master/resources/icons/app-CoRE@2x.png",
+	iconX3Url: "https://cdn.rawgit.com/ady624/${handle()}/master/resources/icons/app-CoRE@3x.png"
 )
 
 
@@ -142,7 +143,7 @@ preferences {
 
 
 /******************************************************************************/
-/*** CoRE CONSTANTS															***/
+/*** webCoRE CONSTANTS														***/
 /******************************************************************************/
 
 
@@ -156,26 +157,38 @@ preferences {
 /*** COMMON PAGES															***/
 /******************************************************************************/
 def pageMain() {
+	//webCoRE Dashboard initialization
+	def success = initializeWebCoREEndpoint()
 	if (!state.installed) {
         return dynamicPage(name: "pageMain", title: "", install: false, uninstall: false, nextPage: "pageInitializeDashboard") {
             section() {
                 paragraph "Welcome to ${handle()}"
-                paragraph "Please take a few moments to complete the installation steps that will get ${handle()} ready for the road."
+                paragraph "You will be guided through a few installation steps that should only take a minute."
             }
-            section() {
-            	paragraph "First, please choose a name for this instance"
-				label name: "name", title: "Name", defaultValue: app.name, required: true                
-			}
-            section() {
-				paragraph "Next, we'll configure the dashboard. You will need to setup OAuth in the SmartThings IDE for the ${handle()} SmartApp. If you haven't done so already, please go to your SmartThings IDE, click on the My SmartApps, locate the 'ady624 : ${handle()}' SmartApp in the list, click the 'Edit Properties' button to the left of the SmartApp name (a notepad and pencil icon), click on OAuth, then click the 'Enable OAuth in Smart App' button. Click the Update button to finish."
-                paragraph "Once you're ready, tap Next"
+            if (success) {
+            	if (!state.oAuthRequired) {
+            		section('Note') {
+		            	paragraph "If you have previously installed ${handle()} and are trying to open it, please go back to the Automations tab and access ${handle()} from the SmartApps section.\r\n\r\nIf you are trying to install another instance of ${handle()} then please continue with the steps.", required: true
+		            }
+                }
+                section() {
+                	paragraph "It looks like you are ready to go, please tap Next"
+                }
+            } else {
+                section() {
+                    paragraph "We'll start by configuring the dashboard. You need to setup OAuth in the SmartThings IDE for the ${handle()} SmartApp."
+                }
+                pageSectionInstructions()
+                section () {
+                    paragraph "Once you have finished the steps above, tap Next", required: true
+                }
             }
         }
 	}
-	//CoRE main page
+	//webCoRE main page
 	dynamicPage(name: "pageMain", title: "", install: true, uninstall: false) {
     	section("Engine block") {
-			href "pageEngineBlock", title: "Cast iron", description: app.version(), image: "https://cdn.rawgit.com/ady624/webCoRE/master/resources/icons/app-CoRE.png", required: false
+			href "pageEngineBlock", title: "Cast iron", description: app.version(), image: "https://cdn.rawgit.com/ady624/${handle()}/master/resources/icons/app-CoRE.png", required: false
         }
 		section("") {
 			if (!state.endpoint) {
@@ -192,16 +205,43 @@ def pageMain() {
 	}	
 }
 
+private pageSectionInstructions() {
+	state.oAuthRequired = true
+    section () {
+        paragraph "Please follow these steps:", required: true
+        paragraph "1. Go to your SmartThings IDE and log in", required: true
+        paragraph "2. Click on 'My SmartApps' and locate the 'ady624 : ${handle()}' SmartApp in the list", required: true
+        paragraph "3. Click the 'Edit Properties' button to the left of the SmartApp name (a notepad and pencil icon)", required: true
+        paragraph "4. Click on 'OAuth'", required: true
+        paragraph "5. Click the 'Enable OAuth in Smart App' button", required: true
+        paragraph "6. Click the 'Update' button", required: true
+    }
+}
+
 private pageInitializeDashboard() {
-	//CoRE Dashboard initialization
-	def success = initializeCoREEndpoint()
-	dynamicPage(name: "pageInitializeDashboard", title: "", nextPage: state.installed && success ? null : "pageSelectDevices") {
-		if (!state.installed) section() {
+	//webCoRE Dashboard initialization
+	def success = initializeWebCoREEndpoint()
+	dynamicPage(name: "pageInitializeDashboard", title: "", nextPage: success ? "pageSelectDevices" : null) {
+		if (!state.installed) {
 			if (success) {
-				paragraph "Success! Your ${handle()} dashboard is now enabled. ${state.installed ? "Tap Done to continue." : "Now, choose a security password for your dashboard. You will need to enter this password when accessing your dashboard for the first time and possibly from time to time."}", required: false			   
+            	section() {
+					paragraph "Great, the dashboard is ready to go."
+                }
+                section() {
+	            	paragraph "Now, please choose a name for this ${handle()} instance"
+					label name: "name", title: "Name", defaultValue: app.name, required: true
+                }
+                section() {
+                	paragraph "${state.installed ? "Tap Done to continue." : "Next, choose a security password for your dashboard. You will need to enter this password when accessing your dashboard for the first time, and possibly from time to time, depending on your settings."}", required: false
+				}
 			} else {
-				paragraph "Please go to your SmartThings IDE, click on the My SmartApps, locate the 'ady624 : ${handle()}' SmartApp in the list, click the 'Edit Properties' button to the left of the SmartApp name (a notepad and pencil icon), click on OAuth, then click the 'Enable OAuth in Smart App' button. Click the Update button to finish."
-                paragraph "Once finished, tap Done and try again.", title: "Please enable OAuth for CoRE", required: true, state: null
+            	section() {
+					paragraph "Sorry, it looks like OAuth is not properly enabled."
+                }
+				pageSectionInstructions()
+				section () {
+                    paragraph "Once you have finished the steps above, go back and try again", required: true
+	            }
 				return
 			}
 		}
@@ -213,8 +253,18 @@ private pageSelectDevices() {
 	state.deviceVersion = now().toString()
 	dynamicPage(name: "pageSelectDevices", title: "", nextPage: state.installed ? null : "pageFinishInstall") {
 		section() {
-			paragraph "${state.installed ? "Select the devices you want ${handle()} to have access to." : "It's now time to allow ${handle()} access to some of your devices."} Only allow ${handle()} access to devices you plan on using with ${handle()} pistons, as they only have access to these selected devices.${state.installed ? "" : " When ready, tap Done to finish installing ${handle()}."}"
-			if (!state.installed) paragraph "NOTE: You can always come back to ${handle()} and add or remove devices from the list."
+			paragraph "${state.installed ? "Select the devices you want ${handle()} to have access to." : "Great, now let's select some devices."}"
+            paragraph "It is a good idea to only select the devices you plan on using with ${handle()} pistons. Pistons will only have access to the devices you selected."
+        }
+        if (!state.installed) {
+        	section (Note) {
+            	paragraph "Remember, you can always come back to ${handle()} and add or remove devices as needed.", required: true
+            }
+        	section() {
+            	paragraph "So go ahead, select a few devices, then tap Next"
+            }
+        }
+        section () {
 			def d
 			for (capability in capabilities().findAll{ it.value.d != null }.sort{ it.value.d }) {
 				if (capability.value.d != d) input "dev:${capability.key}", "capability.${capability.key}", multiple: true, title: "Which ${capability.value.d}", required: false
@@ -228,12 +278,14 @@ private pageFinishInstall() {
 	initTokens()
 	dynamicPage(name: "pageFinishInstall", title: "", install: true) {
 		section() {
-			paragraph "Excellent! You have now completed all the ${handle()} installation steps and are ready to finish the installation process. Remember, you can now access ${handle()} from the SmartApps section of the Automation tab of the SmartThings app."
-            paragraph "NOTE: Once you finish the installation process by tapping Done, you can access the dashboard from the installed SmartApp on your phone, or in any browser by visiting:"
-            paragraph "https://dashboard.webcore.co"
+			paragraph "Excellent! You are now ready to use ${handle()}"
+        }
+        section("Note") {
+            paragraph "After you tap Done, go to the Automation tab, select the SmartApps section, and open the '${app.label}' SmartApp to access the dashboard.", required: true
+            paragraph "You can also access the dashboard on any another device by entering ${domain()} in the address bar of your browser.", required: true
         }
         section() {
-            paragraph "Now go ahead and tap that last Done button and enjoy ${handle()}!"
+            paragraph "Now tap Done and enjoy ${handle()}!"
 		}
 	}
 }
@@ -291,8 +343,10 @@ private pageSavePassword() {
 
 def pageRemove() {
 	dynamicPage(name: "pageRemove", title: "", install: false, uninstall: true) {
-		section() {
-			paragraph "CAUTION: You are about to completely remove CoRE and all of its pistons. This action is irreversible. If you are sure you want to do this, please tap on the Remove button below.", required: true, state: null
+		section('CAUTION') {
+			paragraph "You are about to completely remove ${handle()} and all of its pistons.", required: true
+            paragraph "This action is irreversible.", required: true
+            paragraph "If you are sure you want to do this, please tap on the Remove button below.", required: true
 		}
 	}
 }
@@ -309,23 +363,25 @@ def pageRemove() {
 /******************************************************************************/
 
 
-def installed() {
+private installed() {
+	state.installed = true
 	initialize()
 	return true
 }
 
-def updated() {
+private updated() {
 	unsubscribe()
 	initialize()
 	return true
 }
 
-def initialize() {
-	state.installed = true
+private initialize() {
+	subscribeAll()
     state.vars = state.vars ?: [:]
+    ping()
 }
 
-private initializeCoREEndpoint() {
+private initializeWebCoREEndpoint() {
 	if (!state.endpoint) {
 		try {
 			def accessToken = createAccessToken()
@@ -339,6 +395,9 @@ private initializeCoREEndpoint() {
 	return state.endpoint
 }
 
+private subscribeAll() {
+	subscribe(location, handle(), webCoREHandler)
+}
 
 /******************************************************************************/
 /*** 																		***/
@@ -452,7 +511,7 @@ private api_intf_dashboard_piston_create() {
 	def result
     debug "Dashboard: Request received to generate a new piston name"
 	if (verifySecurityToken(params.token)) {
-    	def piston = addChildApp("ady624", "webCoRE Piston", params.name?:generatePistonName())
+    	def piston = addChildApp("ady624", "${handle()} Piston", params.name?:generatePistonName())
         if (params.author || params.bin) {
         	piston.config([bin: params.bin, author: params.author])
         }
@@ -729,9 +788,14 @@ private api_intf_dashboard_piston_activity() {
 /******************************************************************************/
 
 private String getDashboardInitUrl(register = false) {
-	def url = getDashboardUrl(register)
+	def url = register ? getDashboardRegistrationUrl() : getDashboardUrl()
     if (!url) return null
     return url + (register ? "register/" : "init/") + (apiServerUrl("").replace("https://", '').replace(".api.smartthings.com", "").replace(":443", "").replace("/", "") + (state.accessToken + app.id).replace("-", "")).bytes.encodeBase64()
+}
+
+private String getDashboardRegistrationUrl() {
+	if (!state.endpoint) return null
+	return "https://api.${domain()}/dashboard/"
 }
 
 private Map listAvailableDevices(raw = false) {
@@ -821,17 +885,27 @@ private String generatePistonName() {
 	}
 }
 
+private ping() {
+	sendLocationEvent( [name: handle(), value: 'ping', isStateChange: true, displayed: false, linkText: "${handle()} ping reply", descriptionText: "${handle()} has received a ping reply and is replying with a pong", data: [id: hashId(app.id), name: app.label]] )
+}
+
 /******************************************************************************/
 /*** 																		***/
 /*** PUBLIC METHODS															***/
 /*** 																		***/
 /******************************************************************************/
-
-public String getDashboardUrl(register = false) {
-	if (!state.endpoint) return null
-	return "https://${register ? domain().replace('dashboard', 'api') + '/dashboard' : domain()}/"
+public Boolean isInstalled() {
+	return !!state.installed
 }
 
+public String getDashboardUrl() {
+	if (!state.endpoint) return null
+	return "https://dashboard.${domain()}/"
+}
+
+public String getWikiUrl() {
+	return "https://wiki.${domain()}/"
+}
 public String mem(showBytes = true) {
 	def bytes = atomicState.toString().length()
 	return Math.round(100.00 * (bytes/ 100000.00)) + "%${showBytes ? " ($bytes bytes)" : ""}"
@@ -909,6 +983,38 @@ public void updateRunTimeData(data) {
         atomicState[data.semaphoreName] = 0
     }
 }
+
+def webCoREHandler(event) {
+	log.trace "EVENT ${event.name} / ${event.value}!"
+    if (!event || (event.name != handle())) return;
+    def data = event.jsonData ?: null
+    switch (event.value) {
+    	case 'ping':
+        	log.trace "GOT A PING $data"
+        	if (data && data.id && data.name && (data.id != hashId(app.id))) {
+        		sendLocationEvent( [name: handle(), value: 'pong', isStateChange: true, displayed: false, linkText: "${handle()} ping reply", descriptionText: "${handle()} has received a ping reply and is replying with a pong", data: [id: hashId(app.id), name: app.label]] )
+            } else {
+        		break;
+            }
+			//fall through to pong
+    	case 'pong':
+        	log.trace "GOT A PONG"
+        	if (data && data.id && data.name && (data.id != hashId(app.id))) {
+        		def pong = atomicState.pong ?: [:]
+            	pong[data.id] = data.name
+                atomicState.pong = pong
+                log.trace "PONG! $pong"
+			}
+        	break;
+    }
+}
+
+
+
+
+
+
+
 
 /******************************************************************************/
 /***																		***/
@@ -1540,7 +1646,7 @@ private Map getLocationModeOptions() {
 	}
 	return result
 }
-private static Map getSHMStateOptions() {
+private static Map getSHMStatusOptions() {
 	return [
     	off:	"Disarmed",
         stay: 	"Armed/Stay",
@@ -1564,8 +1670,8 @@ private Map virtualDevices() {
     	date:			[ n: 'Date'],
     	time:			[ n: 'Time',],
     	dateTime:		[ n: 'Date & Time',],        
-    	locationMode:	[ n: 'Location mode',				o: getLocationModeOptions()	, x: true],
-    	shmState:		[ n: 'Smart Home Monitor state',	o: getSHMStateOptions()		, x: true],
+    	locationMode:	[ n: 'Location mode',				o: getLocationModeOptions(),				x: true],
+    	shmStatus:		[ n: 'Smart Home Monitor status',	o: getSHMStatusOptions(),					x: true],
         routine:		[ n: 'Routine',						o: getRoutineOptions(),						m: true],
         askAlexa:		[ n: 'Ask Alexa',					o: [opt1: 'Option 1', opt2: 'Option 2'],	m: true	],
         ifttt:			[ n: 'IFTTT',						o: [opt1: 'Option 1', opt2: 'Option 2'],	m: true	],
