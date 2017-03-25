@@ -13,8 +13,9 @@
  *  for the specific language governing permissions and limitations under the License.
  *
 */
-public static String version() { return "v0.0.057.20170324" }
+public static String version() { return "v0.0.058.20170325" }
 /*
+ *	03/25/2016 >>> v0.0.058.20170325 - ALPHA - Fixes for major issues introduced due to the new comparison editor (you need to re-edit all comparisons to fix them), added log multiline support, use \r or \n or \r\n in a string
  *	03/24/2016 >>> v0.0.057.20170324 - ALPHA - Improved installation experience, preventing direct installation of child app, location mode and shm status finally working
  *	03/23/2016 >>> v0.0.056.20170323 - ALPHA - Various fixes for restrictions
  *	03/22/2016 >>> v0.0.055.20170322 - ALPHA - Various improvements, including a revamp of the comparison dialog, also moved the dashboard website to https://dashboard.webcore.co
@@ -1340,7 +1341,6 @@ private Boolean evaluateComparison(rtData, comparison, lo, ro = null, ro2 = null
                 try {
                     if (!ro) {
                         res = "$fn"(rtData, value)
-
                     } else {
                         def rres
                         res = (ro.operand.g == 'any' ? false : true)
@@ -1906,6 +1906,8 @@ private Map evaluateExpression(rtData, expression, dataType = null) {
                                     	params.push([t: param.t, a: param.a, v: [v]])
                                     }
                             }
+                        } else {
+                        	params.push(param);
                         }
                     }
                 }
@@ -2471,7 +2473,7 @@ private func_title(rtData, params) {
 /******************************************************************************/
 private func_avg(rtData, params) {
 	if (!params || !(params instanceof List) || (params.size() < 1)) {
-    	return [t: "error", v: "Invalid parameters. Expecting avg(values)"];
+    	return [t: "error", v: "Invalid parameters. Expecting avg(value1, value2, ..., valueN)"];
     }
     float sum = 0
     for (param in params) {
@@ -2481,12 +2483,28 @@ private func_avg(rtData, params) {
 }
 
 /******************************************************************************/
+/*** median returns the value in the middle of a sorted array				***/
+/*** Usage: median(values)													***/
+/******************************************************************************/
+private func_median(rtData, params) {
+	if (!params || !(params instanceof List) || (params.size() < 1)) {
+    	return [t: "error", v: "Invalid parameters. Expecting median(value1, value2, ..., valueN)"];
+    }
+    List data = params.collect{ evaluateExpression(rtData, it, 'dynamic') }.sort{ it.v }
+    if (data.size()) {
+    	return data[(int) Math.floor(data.size() / 2)]
+    }
+    return [t: 'dynamic', v: '']
+}
+
+
+/******************************************************************************/
 /*** least returns the value that is least found a series of numeric values	***/
 /*** Usage: least(values)													***/
 /******************************************************************************/
 private func_least(rtData, params) {
 	if (!params || !(params instanceof List) || (params.size() < 1)) {
-    	return [t: "error", v: "Invalid parameters. Expecting least(values)"];
+    	return [t: "error", v: "Invalid parameters. Expecting least(value1, value2, ..., valueN)"];
     }
     Map data = [:]
     for (param in params) {
@@ -2503,7 +2521,7 @@ private func_least(rtData, params) {
 /******************************************************************************/
 private func_most(rtData, params) {
 	if (!params || !(params instanceof List) || (params.size() < 1)) {
-    	return [t: "error", v: "Invalid parameters. Expecting most(values)"];
+    	return [t: "error", v: "Invalid parameters. Expecting most(value1, value2, ..., valueN)"];
     }
     Map data = [:]
     for (param in params) {
@@ -2520,7 +2538,7 @@ private func_most(rtData, params) {
 /******************************************************************************/
 private func_sum(rtData, params) {
 	if (!params || !(params instanceof List) || (params.size() < 1)) {
-    	return [t: "error", v: "Invalid parameters. Expecting sum(values)"];
+    	return [t: "error", v: "Invalid parameters. Expecting sum(value1, value2, ..., valueN)"];
     }
     float sum = 0
     for (param in params) {
@@ -2535,7 +2553,7 @@ private func_sum(rtData, params) {
 /******************************************************************************/
 private func_variance(rtData, params) {
 	if (!params || !(params instanceof List) || (params.size() < 2)) {
-    	return [t: "error", v: "Invalid parameters. Expecting variance(value1, [..], valueN)"];
+    	return [t: "error", v: "Invalid parameters. Expecting variance(value1, value2, ..., valueN)"];
     }
     float sum = 0
     List values = []
@@ -2558,7 +2576,7 @@ private func_variance(rtData, params) {
 /******************************************************************************/
 private func_stdev(rtData, params) {
 	if (!params || !(params instanceof List) || (params.size() < 2)) {
-    	return [t: "error", v: "Invalid parameters. Expecting stdev(value1, [..], valueN)"];
+    	return [t: "error", v: "Invalid parameters. Expecting stdev(value1, value2, ..., valueN)"];
     }
     def result = func_variance(rtData, params)
     return [t: "decimal", v: Math.sqrt(result.v)]
@@ -2570,14 +2588,13 @@ private func_stdev(rtData, params) {
 /******************************************************************************/
 private func_min(rtData, params) {
 	if (!params || !(params instanceof List) || (params.size() < 1)) {
-    	return [t: "error", v: "Invalid parameters. Expecting min(values)"];
+    	return [t: "error", v: "Invalid parameters. Expecting min(value1, value2, ..., valueN)"];
     }
-    def min = null
-    for (param in params) {
-    	float value = evaluateExpression(rtData, param, 'decimal').v
-        min = (min == null) ? value : ((min > value) ? value : min)
+    List data = params.collect{ evaluateExpression(rtData, it, 'dynamic') }.sort{ it.v }
+    if (data.size()) {
+    	return data[0]
     }
-    return [t: "decimal", v: min]
+    return [t: 'dynamic', v: '']
 }
 
 /******************************************************************************/
@@ -2586,14 +2603,13 @@ private func_min(rtData, params) {
 /******************************************************************************/
 private func_max(rtData, params) {
 	if (!params || !(params instanceof List) || (params.size() < 1)) {
-    	return [t: "error", v: "Invalid parameters. Expecting max(values)"];
+    	return [t: "error", v: "Invalid parameters. Expecting max(value1, value2, ..., valueN)"];
     }
-    def max = null
-    for (param in params) {
-    	float value = evaluateExpression(rtData, param, 'decimal').v
-        max = (max == null) ? value : ((max < value) ? value : max)
+    List data = params.collect{ evaluateExpression(rtData, it, 'dynamic') }.sort{ it.v }
+    if (data.size()) {
+    	return data[data.size() - 1]
     }
-    return [t: "decimal", v: max]
+    return [t: 'dynamic', v: '']
 }
 
 
@@ -2603,7 +2619,7 @@ private func_max(rtData, params) {
 /******************************************************************************/
 private func_count(rtData, params) {
 	if (!params || !(params instanceof List) || (params.size() < 1)) {
-    	return [t: "error", v: "Invalid parameters. Expecting count(values)"];
+    	return [t: "error", v: "Invalid parameters. Expecting count(value1, value2, ..., valueN)"];
     }
     def count = 0
     for (param in params) {
@@ -2900,8 +2916,8 @@ private cast(rtData, value, dataType, srcDataType = null) {
             case {it instanceof String}: srcDataType = 'string'; break;
             case {it instanceof String}: srcDataType = 'string'; break;
             case {it instanceof Integer}: srcDataType = 'integer'; break;
-            case {it instanceof BigInteger}: srcDataType = 'integer'; break;
-            case {it instanceof Long}: srcDataType = 'integer'; break;
+            case {it instanceof BigInteger}: srcDataType = 'long'; break;
+            case {it instanceof Long}: srcDataType = 'long'; break;
             case {it instanceof Float}: srcDataType = 'decimal'; break;
             case {it instanceof BigDecimal}: srcDataType = 'decimal'; break;
             default: value = "$value".toString(); srcDataType = 'string'; break;
@@ -2912,13 +2928,11 @@ private cast(rtData, value, dataType, srcDataType = null) {
     	case 'bool': srcDataType = 'boolean'; break;
     	case 'number': srcDataType = 'decimal'; break;
     	case 'enum': srcDataType = 'string'; break;
-    	case 'long': srcDataType = 'integer'; break;
     }
     switch (dataType) {
     	case 'bool': dataType = 'boolean'; break;
     	case 'number': dataType = 'decimal'; break;
     	case 'enum': dataType = 'string'; break;
-    	case 'long': dataType = 'integer'; break;
     }
     //perform the conversion
 	switch (dataType) {
@@ -2926,7 +2940,8 @@ private cast(rtData, value, dataType, srcDataType = null) {
 		case "text":
         	switch (srcDataType) {
             	case 'boolean': return value ? "true" : "false";
-            	case 'integer': if (value > 9999999999) { return formatLocalTime(value) }; break;
+            	case 'integer':
+            	case 'long': if (value > 9999999999) { return formatLocalTime(value) }; break;
                 case 'time': return formatLocalTime(value);
                 case 'date':
                 case 'datetime': return formatLocalTime(value);
@@ -2934,6 +2949,26 @@ private cast(rtData, value, dataType, srcDataType = null) {
             }
 			return "$value".toString()
 		case "integer":
+			switch (srcDataType) {
+            	case 'string':
+                    value = value.replaceAll(/[^\d.-]/, '')
+                    if (value.isInteger())
+                        return (int) value.toInteger()
+                    if (value.isFloat())
+                        return (int) Math.floor(value.toFloat())
+                    if (value in trueStrings)
+                        return (int) 1
+                    break
+				case 'boolean': return (int) (value ? 1 : 0);
+            }
+			def result = (int) 0
+			try {
+				result = (int) value
+			} catch(all) {
+				result = (int) 0
+			}
+			return result ? result : (int) 0
+		case "long":
 			switch (srcDataType) {
             	case 'string':
                     value = value.replaceAll(/[^\d.-]/, '')
@@ -2946,7 +2981,7 @@ private cast(rtData, value, dataType, srcDataType = null) {
                     if (value in trueStrings)
                         return (long) 1
                     break
-				case 'boolean': return (int) (value ? 1 : 0);
+				case 'boolean': return (long) (value ? 1 : 0);
             }
 			def result = (long) 0
 			try {
@@ -3147,7 +3182,11 @@ private log(message, rtData = null, shift = null, err = null, cmd = null, force 
 	state.debugLevel = level
 
 	if (rtData && (rtData instanceof Map) && (rtData.logs instanceof List)) {
-    	rtData.logs.push([o: now() - rtData.timestamp, p: prefix2, m: message + (!!err ? " $err" : ""), c: cmd])
+    	message = "$message".toString().replaceAll(/(\r\n|\r|\n|\\r\\n|\\r|\\n)+/, "\r");
+    	List msgs = !err ? message.tokenize("\r") : [message]
+        for(msg in msgs) {
+    		rtData.logs.push([o: now() - rtData.timestamp, p: prefix2, m: msg + (!!err ? " $err" : ""), c: cmd])
+        }
     }
 	log."$cmd" "$prefix $message", err
 }
