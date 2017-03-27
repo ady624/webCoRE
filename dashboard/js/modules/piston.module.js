@@ -407,6 +407,10 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		
 	};
 
+	$scope.range = function(n) {
+        return new Array(n);
+    };
+
 
 
 	$scope.deleteDialog = function() {
@@ -472,7 +476,9 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 
 
 
-
+	$scope.toggleAdvancedOptions = function() {
+		$scope.designer.showAdvancedOptions = !$scope.designer.showAdvancedOptions;
+	}
 
 
 
@@ -606,18 +612,18 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		window.designer = $scope.designer;
 		$scope.designer.items = {
 			simple: [
-				{ type: 'if', name: 'IF', icon: 'code-fork', cssClass: 'btn-info' },
-				{ type: 'action', name: 'Action', icon: 'code', cssClass: 'btn-success' }
+				{ type: 'if', name: 'If block', icon: 'code-fork', cssClass: 'info', description: 'An if block allows the piston to execute different actions depending on the truth result of a comparison or set of comparisons', button: 'a condition' },
+				{ type: 'action', name: 'Action', icon: 'code', cssClass: 'success', description: 'An action allows the piston to control devices and execute tasks', button: 'an action' },
+				{ type: 'timer', name: 'Timer', icon: 'clock-o', cssClass: 'warning', description: 'A timer will trigger execution of the piston at set time intervals', button: 'a timer' }
 			],
 			advanced: [
-				{ type: 'switch', name: 'SWITCH', icon: 'code-fork', cssClass: 'btn-info' },
-				{ type: 'for', name: 'FOR loop', icon: 'circle-o-notch', cssClass: 'btn-warning' },
-				{ type: 'each', name: 'FOR EACH loop', icon: 'circle-o-notch', cssClass: 'btn-warning' },
-				{ type: 'while', name: 'WHILE loop', icon: 'circle-o-notch', cssClass: 'btn-warning' },
-				{ type: 'repeat', name: 'REPEAT loop', icon: 'circle-o-notch', cssClass: 'btn-warning' },
-				{ type: 'timer', name: 'TIMER', icon: 'clock-o', cssClass: 'btn-default' },
-				{ type: 'break', name: 'BREAK', icon: 'ban', cssClass: 'btn-danger' },
-				{ type: 'exit', name: 'EXIT', icon: 'ban', cssClass: 'btn-danger' }
+				{ type: 'switch', name: 'Switch', icon: 'code-fork', cssClass: 'info', description: 'A switch statement compares an operand against a set of values and executes statements corresponding to those matches', button: 'a switch' },
+				{ type: 'for', name: 'For loop', icon: 'circle-o-notch', cssClass: 'warning', description: 'A for loop executes child statements for a set number of iteration cycles', button: 'a for loop' },
+				{ type: 'each', name: 'For each loop', icon: 'circle-o-notch', cssClass: 'warning', description: 'An each loop executes child statements for each device in a device list', button: 'a for each loop' },
+				{ type: 'while', name: 'While loop', icon: 'circle-o-notch', cssClass: 'warning', description: 'A while loop executes child statements for as log as a condition is met', button: 'a while loop' },
+				{ type: 'repeat', name: 'Repeat loop', icon: 'circle-o-notch', cssClass: 'warning', description: 'A repeat loop executes child statements until a condition is met', button: 'a repeat loop' },
+				{ type: 'break', name: 'Break', icon: 'ban', cssClass: 'danger', description: 'A break allows the interruption of the inner most switch, for loop, for each loop, while loop, or repeat loop', button: 'a break' },
+				{ type: 'exit', name: 'Exit', icon: 'ban', cssClass: 'danger', description: 'An exit interrupts the piston execution and exits the execution', button: 'an exit' }
 			]
 		};
 		$scope.designer.ontypechanged($scope.designer, $scope.designer.type);
@@ -873,7 +879,8 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		$scope.designer.not = condition.n ? '1' : '0';
 		$scope.designer.operator = condition.o;
 		$scope.designer.comparison = {
-			left: {data: condition.lo ? $scope.copy(condition.lo) : {}, multiple: true},
+			type: 'condition',
+			left: {data: condition.lo ? $scope.copy(condition.lo) : {}, showSubDevices: true},
 			operator: condition.co,
 			right: {data: condition.ro ? $scope.copy(condition.ro) : {}},
 			right2: {data: condition.ro2 ? $scope.copy(condition.ro2) : {}},
@@ -1050,7 +1057,8 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
         $scope.designer.not = restriction.rn ? '1' : '0';
         $scope.designer.operator = restriction.rop;
         $scope.designer.comparison = {
-            left: {data: restriction.lo ? $scope.copy(restriction.lo) : {}, multiple: true},
+			type: 'restriction',
+            left: {data: restriction.lo ? $scope.copy(restriction.lo) : {}},
             operator: restriction.co,
             right: {data: restriction.ro ? $scope.copy(restriction.ro) : {}},
             right2: {data: restriction.ro2 ? $scope.copy(restriction.ro2) : {}},
@@ -1576,9 +1584,18 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		return null;
 	}
 
-	$scope.buildName = function(name, noQuotes, pedantic) {
-		if (!name) return '';
-		if (name instanceof Array) return $scope.buildNameList(name, 'or', '', '', false, noQuotes, pedantic);
+	$scope.getDeviceAttributeById = function(device, attributeId) {
+		if (!device) return null;
+		for(i in device.a) {
+			if (device.a[i].n == attributeId) return device.a[i];
+		}
+		return null;
+	}
+
+
+	$scope.buildName = function(name, noQuotes, pedantic, itemPrefix) {
+		if ((name == null) || (name == undefined)) return '';
+		if (name instanceof Array) return $scope.buildNameList(name, 'or', '', '', false, noQuotes, pedantic, itemPrefix);
 		if (pedantic || (name.length == 34)) {
 			for (deviceId in $scope.instance.virtualDevices) {
 				var device = $scope.instance.virtualDevices[deviceId];
@@ -1590,15 +1607,15 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 				}
 			}
 		}
-		return (!noQuotes ? '\'' : '') + name + (!noQuotes ? '\'' : '');
+		return (!noQuotes ? '\'' : '') + (itemPrefix ? itemPrefix : '') + name + (!noQuotes ? '\'' : '');
 	}
 
 
-	$scope.buildNameList = function(list, suffix, tag, className, possessive, noQuotes, pedantic) {
+	$scope.buildNameList = function(list, suffix, tag, className, possessive, noQuotes, pedantic, itemPrefix) {
 		var cnt = 1;
 		var result = '';
 		for (i in list) {
-			var item = $scope.buildName(list[i], noQuotes, pedantic);
+			var item = $scope.buildName(list[i], noQuotes, pedantic, itemPrefix);
 			result += '<span ' + tag + (className ? ' class="' + className + '"' : '') + '>' + item + '</span>' + (possessive ? '\'' + (item.substr(-1) == 's' ? '' : 's') : '') + (cnt < list.length ? (cnt == list.length - 1 ? (list.length > 2 ? ', ' : ' ') + suffix + ' ' : ', ') : '');
 			cnt++;
 		}
@@ -1911,6 +1928,13 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		}
 	}
 
+	$scope.objectToArray = function(object) {
+		var result = [];
+		for (property in object) {
+			result.push({v: property, n: object[property]});
+		}
+		return result;
+	}
 
 	$scope.saveStack = function(justSaved) {
 		$scope.stack.current = $scope.getStackData();
@@ -1960,7 +1984,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		operand = operand || {};
 		operand.data = operand.data || {};
 		operand.data.a = operand.data.a || '';
-		operand.data.c = operand.data.c || '';
+		operand.data.c = (operand.data.c == undefined) || (operand.data.c == null) ? '' : operand.data.c;
 		operand.data.v = operand.data.v || '';
 		operand.data.e = operand.data.e || '';
 		operand.data.x = operand.data.x || '';
@@ -1969,7 +1993,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		operand.data.f = operand.data.f || 'l';
 		operand.options = operand.options || [];
 		
-		if (!operand.initialized || reinit) {
+		if (true || !operand.initialized || reinit) {
 			var dataType = (operand.dataType || 'string').toLowerCase();
 			if (dataType == 'variables') {
 				operand.multiple = true;
@@ -1978,6 +2002,21 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 			if (dataType == 'devices') {
 				operand.multiple = true;
 				dataType = 'device';
+			}
+			if (dataType == 'modes') {
+				operand.multiple = true;
+				dataType = 'mode';
+			}
+			if (dataType == 'alarmsystemstatus') {
+				dataType = 'alarmSystemStatus';
+			}
+			if (dataType == 'alarmsystemstatuses') {
+				operand.multiple = true;
+				dataType = 'alarmSystemStatus';
+			}
+			if (dataType == 'modes') {
+				operand.multiple = true;
+				dataType = 'mode';
 			}
 			if (dataType == 'enums') {
 				operand.multiple = true;
@@ -1991,10 +2030,6 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 	
 			//if (dataType != 'enum') operand.options = null;
 	
-			if ((dataType == 'bool') || (dataType == 'boolean')) {
-				operand.options = ['false', 'true'];
-			}
-	
 			if (operand.data.t == null) {
 				var t = ''
 				if (!operand.optional) {
@@ -2003,6 +2038,8 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 				}
 				operand.data.t = t;
 			}
+
+
 			var strict = !!operand.strict;
 			operand.allowDevices = dataType == 'device';
 			operand.allowPhysical = (dataType != 'device') && (dataType != 'variable') && (!strict || (dataType != 'boolean')) && (dataType != 'duration');
@@ -2018,6 +2055,8 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 				operand.config = $scope.copy($scope.getExpressionConfig());
 				operand.config.autocomplete[5].words = [/([0-9]+)(\.[0-9]+)?/g];
 			}
+
+
 
 			operand.restrictAttribute = null;
 			operand.restrictType = null;
@@ -2043,6 +2082,18 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 
 
 		}
+
+		switch (dataType) {
+			case 'bool':
+			case 'boolean':
+				operand.options = ['false', 'true'];
+				break;
+			case 'mode':
+			case 'alarmSystemStatus':
+				operand.options = $scope.objectToArray($scope.instance.virtualDevices[dataType].o);
+				break;
+		}
+	
 
 		//default value for options
 		if ((!operand.multiple) && (operand.options) && (operand.options.length) && (operand.data.t == 'c')) {
@@ -2092,6 +2143,29 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 				}
 				if (attribute) {
 					operand.momentary = attribute.m;
+					operand.count = 0;
+					if (operand.momentary && !!attribute.s) {
+						//get the number of sub devices
+						var countAttributes = attribute.s.split(',');
+						for (deviceIndex in operand.data.d) {
+							var dev = $scope.getDeviceById(operand.data.d[deviceIndex]);
+							if (dev) {
+								for (i in countAttributes) {
+									var attr = $scope.getDeviceAttributeById(dev, countAttributes[i]);
+									if ((attr) && (!isNaN(attr.v))) {
+										c = parseInt(attr.v);
+										if (c > operand.count) {
+											operand.count = c;
+										}
+									}
+								}
+							}
+						}
+					}
+					if (operand.count && ((operand.data.i == null) || (operand.data.i == undefined))) {
+						//default sub device index
+						operand.data.i = ['1'];
+					}
 					operand.selectedDataType = attribute.t.toLowerCase();
 					operand.selectedOptions = attribute.o;
 					if (operand.momentary) {
@@ -2139,12 +2213,12 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 						operand.expressionVar = '';
 					}
 				} else {
-					if (!operand.data.c) {
+					if ((operand.data.c == null) || (operand.data.c == undefined)) {
 						operand.error = 'Invalid selection';
 						operand.expressionVar = '';
 					}
 				}				
-				operand.selectedDataType = $scope.detectDataType(operand.data.c);
+				operand.selectedDataType = operand.dataType;//$scope.detectDataType(operand.data.c);
 				break;
 			case 'e':
 				var expression = $scope.parseExpression(operand.data.e);
@@ -2167,6 +2241,10 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 			operand.error = 'Invalid duration unit';
 		}
 
+		if ((!operand.error) && operand.count && (!operand.data.i || !operand.data.i.length)) {
+			operand.error = 'Invalid sub device selection';
+		}
+
 		operand.valid = (!operand.error) && (
 			((operand.data.t=='') && (operand.optional)) ||
 			((operand.data.t=='d') && operand.data.d && operand.data.d.length) ||
@@ -2178,12 +2256,19 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		);
 
 		switch (operand.dataType) {
-			case 'duration':
 			case 'integer':
-			case 'decimal':
 				operand.inputType = 'number';
 				try {
 					operand.data.c = parseInt(operand.data.c);
+				} catch(all) {
+					operand.data.c = 0;
+				}
+				break;
+			case 'duration':
+			case 'decimal':
+				operand.inputType = 'number';
+				try {
+					operand.data.c = parseFloat(operand.data.c);
 				} catch(all) {
 					operand.data.c = 0;
 				}
@@ -2216,25 +2301,28 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 			comparison.dataType = comparison.left.selectedDataType;
 			comparison.selectedMultiple = comparison.left.selectedMultiple;
 			comparison.momentary = comparison.left.momentary;
+			var noRestrictions = comparison.type != 'restriction';
 			var optionList = [];
 			var options = [];
 			var dt = comparison.dataType == 'enum' ? 's' : comparison.dataType.substr(0, 1);
             dt = (comparison.momentary ? 'm' : ((dt == 'n' ? 'd' : dt)));
 			for(conditionId in $scope.db.comparisons.conditions) {
 				var condition = $scope.db.comparisons.conditions[conditionId];
-				if (condition.g.indexOf(dt) >= 0) {
+				if ((condition.g.indexOf(dt) >= 0) && (noRestrictions || !condition.t))  {
 					options.push({ id: conditionId, d: (comparison.selectedMultiple ? (condition.dd ? condition.dd : condition.d) : condition.d), c: 'Conditions' });
 				}
 			}
 			optionList = optionList.concat(options.sort($scope.sortByDisplay));
-			options = [];
-			for(triggerId in $scope.db.comparisons.triggers) {
-				var trigger = $scope.db.comparisons.triggers[triggerId];
-				if (trigger.g.indexOf(dt) >= 0) {
-					options.push({ id: triggerId, d: (comparison.selectedMultiple ? (trigger.dd ? trigger.dd : trigger.d) : trigger.d), c: 'Triggers' });
+			if (noRestrictions) {
+				options = [];
+				for(triggerId in $scope.db.comparisons.triggers) {
+					var trigger = $scope.db.comparisons.triggers[triggerId];
+					if (trigger.g.indexOf(dt) >= 0) {
+						options.push({ id: triggerId, d: (comparison.selectedMultiple ? (trigger.dd ? trigger.dd : trigger.d) : trigger.d), c: 'Triggers' });
+					}
 				}
+				optionList = optionList.concat(options.sort($scope.sortByDisplay));
 			}
-			optionList = optionList.concat(options.sort($scope.sortByDisplay));
 			comparison.options = optionList;
 		}
 
@@ -2250,7 +2338,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 
 		if (comparison.parameterCount > 0) {
 			comparison.right.multiple = comparison.multiple;
-			comparison.right.disableAggregation = true;
+			comparison.right.disableAggregation = comparison.multiple;
 			comparison.right.dataType = comparison.left.selectedDataType;
 			comparison.right.options = comparison.left.selectedOptions;
 			$scope.validateOperand(comparison.right, reinit, true);
@@ -2259,7 +2347,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 
 		if (comparison.parameterCount > 1) {
 			comparison.right2.multiple = comparison.multiple;
-			comparison.right2.disableAggregation = true;
+			comparison.right2.disableAggregation = comparison.multiple;
 			comparison.right2.dataType = comparison.left.selectedDataType;
 			comparison.right2.options = comparison.left.selectedOptions;
 			$scope.validateOperand(comparison.right2, reinit, true);
@@ -2270,215 +2358,6 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		$scope.refreshSelects();
 
 	}
-/*
-	$scope.validateComparison2 = function(comparison) {
-		comparison.attributes = {
-			left: $scope.listAvailableAttributes(comparison.left.d),
-			right: $scope.listAvailableAttributes(comparison.right.d),
-			right2: $scope.listAvailableAttributes(comparison.right2.d),
-		}
-		var validation = {
-			left: {
-					config: comparison.validation ? comparison.validation.left.config : $scope.copy($scope.designer.config),
-					valid: false,
-					multiple: (comparison.left.t=='p') && comparison.left.d && (comparison.left.d.length > 1) && (comparison.left.g == 'all'),
-					dataType: 'string',
-					inputType: 'text'
-				},
-			operator: {
-					valid: false
-				},
-			right: {
-					config: comparison.validation ? comparison.validation.right.config : $scope.copy($scope.designer.config),
-					valid: false
-			},
-			right2: {
-					config: comparison.validation ? comparison.validation.right2.config : $scope.copy($scope.designer.config),
-					valid: false
-			}
-		};
-		if (!comparison.validation) {
-			//fix for initial regexp that cannot be cloned via JSON
-			validation.left.config.autocomplete[5].words = [/([0-9]+)(\.[0-9]+)?/g];
-			validation.right.config.autocomplete[5].words = [/([0-9]+)(\.[0-9]+)?/g];
-			validation.right2.config.autocomplete[5].words = [/([0-9]+)(\.[0-9]+)?/g];
-		}
-		var momentary = false;
-		switch (comparison.left.t) {
-			case 'p':
-				var attribute = $scope.db.attributes[comparison.left.a];
-				if (!attribute) {
-					for (a in comparison.attributes.left) {
-						if (comparison.attributes.left[a].id == comparison.left.a) {
-							attribute = comparison.attributes.left[a];
-							break;
-						}
-					}
-				}
-				if (attribute) {
-					validation.left.dataType = attribute.t;
-					validation.left.options = attribute.o;
-					if ((validation.left.dataType == 'enum') && (!validation.left.options.length)) validation.left.dataType = 'string';
-					momentary = !!attribute.m;
-				}
-				if (comparison.left.d && (comparison.left.d.length > 1) && !(['any', 'all', 'least', 'most'].indexOf(comparison.left.g) >= 0)) {
-					validation.left.dataType = 'decimal';
-				}
-				break;
-			case 'x':
-				validation.left.dataType = 'string';
-				var variable = $scope.getVariableByName(comparison.left.x);
-				if (variable) validation.left.dataType = variable.t;
-				if (validation.left.dataType == 'boolean') {
-					validation.left.dataType = 'enum';
-					validation.left.options = ['true', 'false'];
-				}
-				break;
-			case 'c':
-				var expression = $scope.parseString(comparison.left.c);
-				validation.left.expressionError = expression.err;
-				validation.left.expressionVar = expression.var;
-				comparison.left.exp = expression;
-				validation.left.dataType = $scope.detectDataType(comparison.left.c);
-				break;
-			case 'e':
-				var expression = $scope.parseExpression(comparison.left.e);
-				validation.left.expressionError = expression.err;
-				validation.left.expressionVar = expression.var;
-				if (expression.err) {
-					var loc = (expression.loc ? expression.loc : '0:' + (expression.str.length - 1).toString()).split(':');
-					var start = parseInt(loc[0]);
-					var end = loc.length == 2 ? parseInt(loc[1]) : start;
-					validation.left.config.autocomplete[0] = {words: [new RegExp('.(?=.{' + (expression.str.length - start - 1) + '}$).{' + (end - start) + '}')], cssClass: 'hl err', title: expression.err};
-				} else {
-					validation.left.config.autocomplete[0] = {words: [], cssClass: 'hl err'};
-				}
-				comparison.left.exp = expression;
-				validation.left.dataType = 'string';
-				break;
-		}
-
-		validation.left.valid =
-			((comparison.left.t=='p') && comparison.left.d && comparison.left.d.length && !!comparison.left.a) ||
-			((comparison.left.t=='v') && !!comparison.left.v) ||
-			((comparison.left.t=='x') && !!comparison.left.x && !!comparison.left.x.length) ||
-			((comparison.left.t=='c') && !validation.left.expressionError) ||
-			((comparison.left.t=='e') && !!comparison.left.e && !!comparison.left.e.length && !validation.left.expressionError);
-
-		//rebuild the list of comparisons, but only if needed
-		if ((!comparison.validation) || (comparison.validation.left.dataType != validation.left.dataType) || (comparison.validation.left.multiple != validation.left.multiple)) {
-			var optionList = [];
-			var options = [];
-			var dt = validation.left.dataType == 'enum' ? 's' : validation.left.dataType.substr(0, 1);
-            dt = (momentary ? 'm' : ((dt == 'n' ? 'd' : dt)));
-			for(conditionId in $scope.db.comparisons.conditions) {
-				var condition = $scope.db.comparisons.conditions[conditionId];
-				if (condition.g.indexOf(dt) >= 0) {
-					options.push({ id: conditionId, d: (validation.left.multiple ? (condition.dd ? condition.dd : condition.d) : condition.d), c: 'Conditions' });
-				}
-			}
-			optionList = optionList.concat(options.sort($scope.sortByDisplay));
-			options = [];
-			for(triggerId in $scope.db.comparisons.triggers) {
-				var trigger = $scope.db.comparisons.triggers[triggerId];
-				if (trigger.g.indexOf(dt) >= 0) {
-					options.push({ id: triggerId, d: (validation.left.multiple ? (trigger.dd ? trigger.dd : trigger.d) : trigger.d), c: 'Triggers' });
-				}
-			}
-			optionList = optionList.concat(options.sort($scope.sortByDisplay));
-			comparison.options = optionList;
-		}		
-
-		var comp = $scope.db.comparisons.conditions[comparison.operator] || $scope.db.comparisons.triggers[comparison.operator];		
-		validation.operator.valid = !!comp;
-		validation.right.count = comp && comp.p ? comp.p : 0;
-		validation.right.multiple = comp && comp.m ? true : false;
-		if (validation.right.multiple && !(comparison.right.c instanceof Array)) {
-			comparison.right.c = [comparison.right.c];
-		}
-		if (!validation.right.multiple && (comparison.right.c instanceof Array)) {
-			comparison.right.c = comparison.right.c[0];
-		}
-
-		switch (comparison.right.t) {
-			case 'c':
-				var expression = $scope.parseString(comparison.right.c);
-				validation.right.expressionError = expression.err;
-				validation.right.expressionVar = expression.var;
-				comparison.right.exp = expression;
-				break;
-			case 'e':
-				var expression = $scope.parseExpression(comparison.right.e);
-				validation.right.expressionError = expression.err;
-				validation.right.expressionVar = expression.var;
-				if (expression.err) {
-					var loc = (expression.loc ? expression.loc : '0:' + (expression.str.length - 1).toString()).split(':');
-					var start = parseInt(loc[0]);
-					var end = loc.length == 2 ? parseInt(loc[1]) : start;
-					validation.right.config.autocomplete[0] = {words: [new RegExp('.(?=.{' + (expression.str.length - start - 1) + '}$).{' + (end - start) + '}')], cssClass: 'hl err', title: expression.err};
-				} else {
-					validation.right.config.autocomplete[0] = {words: ['~!~'], cssClass: 'hl err'};
-				}
-				comparison.right.exp = expression;
-				break;
-		}
-
-		validation.right.valid =
-			(validation.right.count == 0) ||
-			((comparison.right.t=='p') && !!comparison.right.d && !!comparison.right.d.length && !!comparison.right.a) ||
-			((comparison.right.t=='v') && !!comparison.right.v) ||
-			((comparison.right.t=='x') && !!comparison.right.x && !!comparison.right.x.length) ||
-			((comparison.right.t=='c') && ((validation.left.dataType!='enum') || (comparison.right.c != '')) && !validation.right.expressionError) ||
-			((comparison.right.t=='e') && !!comparison.right.e && !!comparison.right.e.length && !validation.right.expressionError);
-
-		switch (comparison.right2.t) {
-			case 'c':
-				var expression = $scope.parseString(comparison.right2.c);
-				validation.right2.expressionError = expression.err;
-				validation.right2.expressionVar = expression.var;
-				comparison.right2.exp = expression;
-				break;
-			case 'e':
-				var expression = $scope.parseExpression(comparison.right2.e);
-				validation.right2.expressionError = expression.err;
-				validation.right2.expressionVar = expression.var;
-				if (expression.err) {
-					var loc = (expression.loc ? expression.loc : '0:' + (expression.str.length - 1).toString()).split(':');
-					var start = parseInt(loc[0]);
-					var end = loc.length == 2 ? parseInt(loc[1]) : start;
-					validation.right2.config.autocomplete[0] = {words: [new RegExp('.(?=.{' + (expression.str.length - start - 1) + '}$).{' + (end - start) + '}')], cssClass: 'hl err', title: expression.err};
-				} else {
-					validation.right2.config.autocomplete[0] = {words: ['~!~'], cssClass: 'hl err'};
-				}
-				comparison.right2.exp = expression;
-				break;
-		}
-
-		validation.right2.valid =
-			(validation.right.count < 2) ||
-			((comparison.right2.t=='p') && !!comparison.right2.d && !!comparison.right2.d.length && !!comparison.right2.a) ||
-			((comparison.right2.t=='v') && !!comparison.right2.v) ||
-			((comparison.right2.t=='x') && !!comparison.right2.x && !!comparison.right2.x.length) ||
-			((comparison.right2.t=='c') && ((validation.left.dataType!='enum') || (comparison.right2.c != '')) && !validation.right2.expressionError) ||
-			((comparison.right2.t=='e') && !!comparison.right2.e && !!comparison.right2.e.length && !validation.right2.expressionError);
-
-		validation.valid = validation.left.valid && validation.operator.valid && validation.right.valid && validation.right2.valid;
-
-		switch (validation.left.dataType) {
-			case 'number':
-			case 'decimal':
-				validation.left.inputType = 'number';
-				break;
-			default:
-				validation.left.inputType = 'text';
-				break;
-		}
-
-
-		//finalize it
-		comparison.validation = validation;
-	}
-*/
 
 
 	$scope.detectDataType = function(value) {
@@ -2518,7 +2397,9 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 						break;
 					case 'c': //constant
 						var m = 'num';
-						if (isNaN(operand.c)) {
+						noQuotes = noQuotes || !isNaN(operand.c);
+						//if we still think we need quotes, let's make sure booleans don't have any
+						if (!noQuotes) {
 							if ((operand.vt == 'boolean') || (operand.vt == 'enum')) noQuotes = true;
 							m = 'lit';
 						}
@@ -2562,7 +2443,11 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 					break;
 			}
 		}
-		var result = $scope.renderOperand(l) + ' <span kwd>' + (plural ? (comparison.dd ? comparison.dd : comparison.d) : comparison.d) + '</span>' + (comparison.p > 0 ? '<span pun>&nbsp;</span>' + $scope.renderOperand(r, noQuotes, pedantic) : '') + (comparison.p > 1 ? '<span pun>&nbsp;through&nbsp;</span>' + $scope.renderOperand(r2, noQuotes, pedantic) : '')
+		var indexes = '';
+		if ((comparison.g == 'm') && l.i && l.i.length) {
+			indexes = ' <span num>' + $scope.buildNameList(l.i, 'or', null, null, false, true, false, '#') + '</span>';
+		}
+		var result = $scope.renderOperand(l) + indexes + ' <span kwd>' + (plural ? (comparison.dd ? comparison.dd : comparison.d) : comparison.d) + '</span>' + (comparison.p > 0 ? '<span pun>&nbsp;</span>' + $scope.renderOperand(r, noQuotes, pedantic) : '') + (comparison.p > 1 ? '<span pun>&nbsp;through&nbsp;</span>' + $scope.renderOperand(r2, noQuotes, pedantic) : '')
 		return $sce.trustAsHtml(result);
 	}
 
@@ -2984,6 +2869,8 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 
 	$scope.parseExpression = function(str, parseAsString) {
 		str = str ? str.toString() : "";
+		//remove \r \n
+		//str = str.replace(/[\r\n]*/g, "");
 		var i = 0;
 		var initExp = !!parseAsString ? 0 : 1;
 		var exp = initExp;
@@ -3081,6 +2968,9 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 				var c = str[i++];
 				switch(c) {
 					case ' ':
+					case '\t':
+					case '\r':
+					case '\n':
 						if (exp && !dv && !dq && !sq) {
 							addOperand();
 							startIndex = i;

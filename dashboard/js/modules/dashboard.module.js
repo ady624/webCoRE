@@ -77,7 +77,7 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 	$scope.clock = function() {
 		for(pistonIndex in $scope.instance.pistons) {
 			var piston = $scope.instance.pistons[pistonIndex];
-			piston.opacity = $scope.getOpacity(piston.meta.t);
+			piston.opacity = piston.meta ? $scope.getOpacity(piston.meta.t) : 0;
 		}
 	};
 
@@ -218,9 +218,10 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 
 
 	$scope.logOut = function() {
-		$scope.loading = true;
 		localStorage.clear();
-		window.location = '//';
+		$scope.loading = true;
+		$scope.initialized = false;
+		$location.path('register');
 	}
 
 

@@ -282,37 +282,6 @@ toggle.input-group-addon {
 	color: #fff;
 }
 
-@media only screen and (max-width: 767px) {
-	.ngdialog {
-		padding: 0px !important;
-		overflow: hidden;
-	}
-
-	.ngdialog .ngdialog-content {
-		width: 100% !important;
-		height: 100% !important;
-		border-radius: 0px !important;
-		overflow: hidden;
-		overflow-y: auto;
-	}
-
-    nav a.dropdown-toggle {
-        display: none;
-    }
-
-    nav ul.dropdown-menu {
-        position: relative;
-        display: block;
-        width: 100%;
-        border: 0;
-        border-radius: 0px;
-        background: transparent;
-        box-shadow: none;
-    }
-
-
-}
-
 loader {
 	display: block;
 	position: fixed;
@@ -689,4 +658,39 @@ designer form a-ckolor {
 
 .sa-dropdown {
 	z-index: 9999;
+}
+
+
+
+
+
+@media only screen and (max-width: 767px) {
+	.ngdialog {
+		padding: 0px !important;
+		overflow: hidden;
+	}
+
+	.ngdialog .ngdialog-content {
+		width: 100% !important;
+		height: 100% !important;
+		border-radius: 0px !important;
+		overflow: hidden;
+		overflow-y: auto;
+	}
+
+    nav a.dropdown-toggle {
+        display: none;
+    }
+
+    nav ul.dropdown-menu {
+        position: relative;
+        display: block;
+        width: 100%;
+        border: 0;
+        border-radius: 0px;
+        background: transparent;
+        box-shadow: none;
+    }
+
+
 }

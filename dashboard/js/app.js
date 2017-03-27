@@ -106,7 +106,7 @@ app.filter('orderObjectBy', function() {
 
 
 var config = app.config(['$routeProvider', '$locationProvider', '$sceDelegateProvider', 'cfpLoadingBarProvider', '$rootScopeProvider',  function ($routeProvider, $locationProvider, $sceDelegateProvider, $cfpLoadingBarProvider, $rootScopeProvider) {
-	//$rootScopeProvider.digestTtl(100); 
+	$rootScopeProvider.digestTtl(10000); 
 	$cfpLoadingBarProvider.includeSpinner = false;
     var ext = '.module.css';
     $sceDelegateProvider.resourceUrlWhitelist([
@@ -1026,4 +1026,4 @@ if (document.selection) {
 }}
 
 //navigator.registerProtocolHandler('web+core','https://' + window.location.hostname + '/handler/%s', 'webCoRE');
-version = function() { return 'v0.0.057.20170324'; };
+version = function() { return 'v0.0.059.20170327'; };

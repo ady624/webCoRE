@@ -610,31 +610,6 @@ parameter[optional=true] label.control-label::after {
 
 
 
-@media only screen 
-  and (min-device-width: 320px) 
-  and (max-device-width: 568px)
-  and (-webkit-min-device-pixel-ratio: 2) {
-
-	piston line,
-	piston line * {
-		line-height: 44px !important;
-		min-height: 44px !important;
-		font-size: 16px;
-	}
-
-	piston line::after {
-		display: block;
-		content: "";
-		margin-left: -100px;
-		height: 1px;
-		border-top: solid 1px #eee;
-	}
-
-	condition subscription,
-	statement async {
-		margin-top: 16px;
-	}
-}
 
 
 .nav.navbar-nav.btn-group {
@@ -742,3 +717,64 @@ div[taskedit] {
 	border-left: solid rgba(0, 0, 0, 0.5) 8px;
 }
 
+
+div[items] div[item] {
+	padding: 16px 16px 8px 16px;
+}
+
+div[items] div.alert span {
+	line-height: 24px;
+	font-size: 16px;
+	vertical-alignment: middle;
+}
+
+div[items] div[item] item {
+	position: relative;
+	display: block;
+	min-height: 240px;
+	background: rgba(0, 0, 0, 0.05);
+	border-radius: 8px;
+	padding: 16px;
+}
+
+div[items] div[item] item button {
+	position: absolute;
+	right: 16px;
+	bottom: 16px;
+}
+
+
+@media only screen 
+  and (min-device-width: 320px) 
+  and (max-device-width: 568px)
+  and (-webkit-min-device-pixel-ratio: 2) {
+
+	piston line,
+	piston line * {
+		line-height: 44px !important;
+		min-height: 44px !important;
+		font-size: 16px;
+	}
+
+	piston line::after {
+		display: block;
+		content: "";
+		margin-left: -100px;
+		height: 1px;
+		border-top: solid 1px #eee;
+	}
+
+	condition subscription,
+	statement async {
+		margin-top: 16px;
+	}
+}
+
+
+@media only screen and (max-width: 767px) {
+
+	div[items] div+div {
+		border-top: solid 1px #ccc;
+	}
+	
+}
