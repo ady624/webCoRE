@@ -13,8 +13,9 @@
  *  for the specific language governing permissions and limitations under the License.
  *
 */
-public static String version() { return "v0.0.058.20170325" }
+public static String version() { return "v0.0.059.20170327" }
 /*
+ *	03/27/2016 >>> v0.0.059.20170327 - ALPHA - Completed SHM status and location mode. Can get/set, can subscribe to changes, any existing condition in pistons needs to be revisited and fixed
  *	03/25/2016 >>> v0.0.058.20170325 - ALPHA - Fixes for major issues introduced due to the new comparison editor (you need to re-edit all comparisons to fix them), added log multiline support, use \r or \n or \r\n in a string
  *	03/24/2016 >>> v0.0.057.20170324 - ALPHA - Improved installation experience, preventing direct installation of child app, location mode and shm status finally working
  *	03/23/2016 >>> v0.0.056.20170323 - ALPHA - Various fixes for restrictions
@@ -344,8 +345,8 @@ def config(data) {
 def pause() {
 	state.active = false
     def rtData = getRunTimeData()
-	def msg = timer "Piston successfully stopped", rtData, -1
-    trace "Stopping piston...", rtData, 0
+	def msg = timer "Piston successfully stopped", null, -1
+    info "Stopping piston...", rtData, 0
     checkVersion(rtData)
     state.schedules = []
     rtData.stats.nextSchedule = 0
@@ -353,22 +354,20 @@ def pause() {
     unschedule()
     state.trace = [:]
     state.subscriptions = [:]
+    info msg, rtData
     updateLogs(rtData)
-    trace msg
     return rtData
 }
 
 def resume() {
 	state.active = true;
-	def tempRtData = [timestamp: now(), logs:[], logging: true]
-    def msg = timer "Piston successfully started", tempRtData,  -1
-	trace "Starting piston... (${version()})", tempRtData, 0
-    def rtData = getRunTimeData()
-    rtData.logs = rtData.logs + (rtData.logging ? tempRtData.logs : [])
+	def tempRtData = getTemporaryRunTimeData()
+    def msg = timer "Piston successfully started", null,  -1
+	info "Starting piston... (${version()})", tempRtData, 0
+    def rtData = getRunTimeData(tempRtData)
     checkVersion(rtData)
-    msg.d = rtData
     subscribeAll(rtData)    
-    trace msg
+    info msg, rtData
     updateLogs(rtData)
     rtData.result = [active: true, subscriptions: state.subscriptions]
     return rtData
@@ -378,12 +377,25 @@ def execute() {
 
 }
 
+private getTemporaryRunTimeData() {
+	return [
+    	temporary: true,
+       	timestamp: now(),
+        logs:[]
+    ]
+}
+
 private getRunTimeData(rtData = null, semaphore = null) {
 	def timestamp = rtData?.timestamp ?: now()
     def piston = state.piston
-	rtData = rtData ?: parent.getRunTimeData(semaphore && !(piston.o?.pep) ? hashId(app.id) : null)
+    def logs = rtData && rtData.temporary ? rtData.logs : null
+	rtData = rtData && !rtData.temporary ? rtData : parent.getRunTimeData(semaphore && !(piston.o?.pep) ? hashId(app.id) : null)
     rtData.timestamp = timestamp
-    rtData.logs = [[t: timestamp]]
+    rtData.logs = [[t: timestamp]]    
+    if (logs && logs.size()) {
+    	logs.removeAll{ !it.c || !rtData.logging[it.c] }
+        rtData.logs = rtData.logs + logs
+    }
     rtData.trace = [t: timestamp, points: [:]]
     rtData.id = hashId(app.id)
 	rtData.active = state.active;
@@ -443,28 +455,25 @@ def handleEvents(event) {
     state.lastExecuted = startTime
     def eventDelay = startTime - event.date.getTime()
 	def msg = timer "Event processed successfully", null, -1
-    def tempRtData = [timestamp: startTime, logs:[], logging: true]
-    trace "Received event [${event.device}].${event.name} = ${event.value} with a delay of ${eventDelay}ms", tempRtData, 0
+    def tempRtData = getTemporaryRunTimeData()
+    info "Received event [${event.device}].${event.name} = ${event.value} with a delay of ${eventDelay}ms", tempRtData, 0
     state.temp = [:]
     //todo start execution
     def ver = version()
 	def msg2 = timer "Runtime successfully initialized ($ver)"
-    Map rtData = getRunTimeData(null, true)
-    rtData.logs = rtData.logs + (rtData.logging ? tempRtData.logs : [])
-    msg.d = rtData
-    msg2.d = rtData
+    Map rtData = getRunTimeData(tempRtData, true)
     checkVersion(rtData)    
     if (rtData.semaphoreDelay) {
     	warn "Piston waited at a semaphore for ${rtData.semaphoreDelay}ms", rtData
     }
-    trace msg2
+    trace msg2, rtData
     rtData.stats.timing = [
     	t: startTime,
     	d: eventDelay > 0 ? eventDelay : 0,
         l: now() - startTime
     ]
     startTime = now()
-	msg2 = timer "Execution stage complete.", rtData, -1
+	msg2 = timer "Execution stage complete.", null, -1
     trace "Execution stage started", rtData, 1
     def success = true
     if (event.name != 'time') {
@@ -485,7 +494,7 @@ def handleEvents(event) {
         success = executeEvent(rtData, event)
     }
 	rtData.stats.timing.e = now() - startTime
-    trace msg2
+    trace msg2, rtData
     if (!success) msg.m = "Event processing failed"
     finalizeEvent(rtData, msg, success)
 }
@@ -589,7 +598,7 @@ private finalizeEvent(rtData, initialMsg, success = true) {
         def t = (next.t - now()) / 1000
         t = (t < 1 ? 1 : t)
         rtData.stats.nextSchedule = next.t
-        debug "Setting up scheduled job in ${t}s", rtData
+        trace "Setting up scheduled job in ${t}s", rtData
         runIn(t, timeHandler, [data: next])
     } else {
     	rtData.stats.nextSchedule = 0
@@ -599,7 +608,7 @@ private finalizeEvent(rtData, initialMsg, success = true) {
 
     if (initialMsg) {
     	if (success) {
-        	trace initialMsg
+        	info initialMsg, rtData
         } else {
         	error initialMsg
         }
@@ -964,13 +973,13 @@ private Boolean executeTask(rtData, devices, statement, task, async) {
     long delay = 0
     for (device in (virtualDevice ? [virtualDevice] : devices)) {
         if (!virtualDevice && device.hasCommand(task.c)) {
-            def msg = timer "Executed [$device].${task.c}", rtData
+            def msg = timer "Executed [$device].${task.c}"
         	try {
             	delay = "cmd_${task.c}"(rtData, device, params)
             } catch(all) {
 	            executePhysicalCommand(rtData, device, task.c, params)
 			}
-            debug msg
+            trace msg, rtData
         } else {
             if (vcmd) {
 	        	delay = executeVirtualCommand(rtData, vcmd.a ? devices : device, task, params)
@@ -987,12 +996,12 @@ private Boolean executeTask(rtData, devices, statement, task, async) {
     	//we're aiming at waking up with at least 10s left
     	if ((timeLeft - delay < 10000) || (delay >= 5000) || async) {
 	        //schedule a wake up
-	        debug "Requesting a wake up in ${delay}ms", rtData
+	        trace "Requesting a wake up in ${delay}ms", rtData
             tracePoint(rtData, "t:${task.$}", now() - t, -delay)
             requestWakeUp(rtData, statement, task, delay)
 	        return false
 	    } else {
-	        debug "Waiting for ${delay}ms", rtData
+	        trace "Waiting for ${delay}ms", rtData
 	        pause(delay)
 	    }
 	}
@@ -1047,15 +1056,15 @@ private long cmd_setLevel(rtData, device, params) {
 
 private long executeVirtualCommand(rtData, devices, task, params)
 {
-	def msg = timer "Executed virtual command ${devices ? (devices instanceof List ? "$devices." : "[$devices].") : ""}${task.c}", rtData
+	def msg = timer "Executed virtual command ${devices ? (devices instanceof List ? "$devices." : "[$devices].") : ""}${task.c}"
     long delay = 0
     try {
 		delay = "vcmd_${task.c}"(rtData, devices, params)
-	    debug msg
+	    trace msg, rtData
     } catch(all) {
     	msg.m = "Error executing virtual command ${devices instanceof List ? "$devices" : "[$devices]"}.${task.c}:"
         msg.e = all
-        error msg
+        error msg, rtData
     }
     return delay
 }
@@ -1074,6 +1083,28 @@ private long vcmd_setState(rtData, device, params) {
         setSystemVariableValue(rtData, '$state', rtData.state.new)        
     } else {
 	    error "Cannot set the piston state while in automatic mode. Please edit the piston settings to disable the automatic piston state if you want to manually control the state.", rtData
+    }
+    return 0
+}
+
+private long vcmd_setLocationMode(rtData, device, params) {
+	def modeIdOrName = params[0]
+    def mode = location.getModes()?.find{ (it.id == modeIdOrName) || (it.name == modeIdOrName)}
+    if (mode) {
+    	location.setMode(mode)
+    } else {
+	    error "Error setting location mode. Mode '$modeIdOrName' does not exist.", rtData
+    }
+    return 0
+}
+
+private long vcmd_setAlarmSystemStatus(rtData, device, params) {
+	def statusIdOrName = params[0]
+    def status = rtData.virtualDevices['alarmSystemStatus']?.o?.find{ (it.key == statusIdOrName) || (it.value == statusIdOrName)}.collect{ [id: it.key, name: it.value] }
+    if (status && status.size()) {
+	    sendLocationEvent(name: 'alarmSystemStatus', value: status[0].id)
+    } else {
+	    error "Error setting SmartThings Home Monitor status. Status '$statusIdOrName' does not exist.", rtData
     }
     return 0
 }
@@ -1159,7 +1190,7 @@ private long vcmd_setVariable(rtData, device, params) {
 
 private Boolean evaluateConditions(rtData, conditions, collection, async) {
 	def t = now()
-    def msg = timer '', rtData
+    def msg = timer ''
     //override condition id
     def c = rtData.stack.c    
     rtData.stack.c = conditions.$
@@ -1188,7 +1219,7 @@ private Boolean evaluateConditions(rtData, conditions, collection, async) {
     //restore condition id
     rtData.stack.c = c
     msg.m = "Condition group #${conditions.$} evaluated $result"
-    debug msg
+    debug msg, rtData
 	return result
 }
 
@@ -1198,7 +1229,7 @@ private evaluateOperand(rtData, node, operand, index = null, trigger = false) {
         case "p": //physical device
         	def j = 0;
         	for(deviceId in operand.d) {
-            	def value = [i: "${deviceId}:${operand.a}", v:getDeviceAttribute(rtData, deviceId, operand.a, trigger)]
+            	def value = [i: "${deviceId}:${operand.a}", v:getDeviceAttribute(rtData, deviceId, operand.a, operand.i, trigger)]
             	rtData.newCache[value.i] = value.v + [s: since]
 	            values.push(value)
 	            j++
@@ -1231,11 +1262,9 @@ private evaluateOperand(rtData, node, operand, index = null, trigger = false) {
             break
 		case 'v': //virtual devices
         	switch (operand.v) {
-            	case 'locationMode':
-                	values = [[i: "${node?.$}:v", v:getDeviceAttribute(rtData, rtData.locationId, 'mode')]];
-                    break;
-            	case 'shmStatus':
-                	values = [[i: "${node?.$}:v", v:getDeviceAttribute(rtData, rtData.locationId, 'shm')]];
+            	case 'mode':
+            	case 'alarmSystemStatus':
+                	values = [[i: "${node?.$}:v", v:getDeviceAttribute(rtData, rtData.locationId, operand.v)]];
                     break;
             }
             break
@@ -1261,7 +1290,7 @@ private evaluateScalarOperand(rtData, node, operand, index = null, dataType = 's
 
 private Boolean evaluateCondition(rtData, condition, collection, async) {
 	def t = now()
-    def msg = timer '', rtData
+    def msg = timer ''
     //override condition id
     def c = rtData.stack.c    
     rtData.stack.c = condition.$
@@ -1324,7 +1353,7 @@ private Boolean evaluateCondition(rtData, condition, collection, async) {
     //restore condition id
     rtData.stack.c = c
     msg.m = "Condition #${condition.$} evaluated $result"
-    debug msg
+    debug msg, rtData
     return result
 }
 
@@ -1401,6 +1430,10 @@ private cancelConditionSchedules(rtData, conditionId) {
     }
 }
 
+private Boolean matchDeviceSubIndex(list, deviceSubIndex) {
+	if (!list || !(list instanceof List)) return true
+    return list.collect{ "$it".toString() }.indexOf("$deviceSubIndex".toString()) >= 0
+}
 
 private Map valueChanged(rtData, comparisonValue) {
 	def oldValue = rtData.cache[comparisonValue.i]
@@ -1429,7 +1462,7 @@ private boolean comp_changed						(rtData, lv, rv = null, rv2 = null) { return v
 private boolean comp_did_not_change					(rtData, lv, rv = null, rv2 = null) { return !valueChanged(rtData, lv); }
 
 /*triggers*/
-private boolean comp_gets							(rtData, lv, rv = null, rv2 = null) { return cast(rtData, lv.v.v, 'string') == cast(rtData, rv.v.v, 'string') }
+private boolean comp_gets							(rtData, lv, rv = null, rv2 = null) { return (cast(rtData, lv.v.v, 'string') == cast(rtData, rv.v.v, 'string')) && matchDeviceSubIndex(lv.v.i, rtData.currentEvent.index)}
 private boolean comp_changes						(rtData, lv, rv = null, rv2 = null) { return valueChanged(rtData, lv); }
 private boolean comp_changes_to						(rtData, lv, rv = null, rv2 = null) { return valueChanged(rtData, lv) && ("${lv.v.v}" == "${rv.v.v}"); }
 private boolean comp_changes_away_from				(rtData, lv, rv = null, rv2 = null) { def oldValue = valueChanged(rtData, lv); return oldValue && ("${oldValue.v.v}" == "${rv.v.v}"); }
@@ -1544,9 +1577,8 @@ private void subscribeAll(rtData) {
     ]
 	def x = {
     }
-	def msg = timer "Finished subscribing", rtData, -1
+	def msg = timer "Finished subscribing", null, -1
 	unsubscribe()
-    msg.d = rtData
     trace "Subscribing to devices...", rtData, 1
     Map devices = [:]
     Map subscriptions = [:]
@@ -1576,6 +1608,22 @@ private void subscribeAll(rtData) {
                     }
 	                subscriptions["$deviceId${operand.a}"] = [d: deviceId, a: operand.a, t: ct , c: (subscriptions["$deviceId${operand.a}"] ? subscriptions["$deviceId${operand.a}"].c : []) + (comparisonType?[node]:[])]
 	            }
+	            break;
+            case "v": //physical device
+            	def deviceId = rtData.locationId
+                //if we have any trigger, it takes precedence over anything else
+                switch (operand.v) {
+                	case 'mode':
+                    case 'alarmSystemStatus':
+                		def ct = subscriptions["$deviceId${operand.v}"]?.t ?: null
+                        if ((ct == 'trigger') || (comparisonType == 'trigger')) {
+                            ct = 'trigger'                       
+                        } else {
+                            ct = ct ?: comparisonType
+                        }
+                        subscriptions["$deviceId${operand.v}"] = [d: deviceId, a: operand.v, t: ct , c: (subscriptions["$deviceId${operand.v}"] ? subscriptions["$deviceId${operand.v}"].c : []) + (comparisonType?[node]:[])]
+                        break;
+                }
 	            break;
             case "c": //constant
             case "e": //expression
@@ -1681,7 +1729,7 @@ private void subscribeAll(rtData) {
     for (d in devices.findAll{ it.value.c <= 0 }) {
     	def device = getDevice(rtData, d.key)
         if (device) {
-       		debug "Subscribing to $device...", rtData
+       		trace "Subscribing to $device...", rtData
 			subscribe(device, "", fakeHandler)
             ss.controls = ss.controls + 1
             if (!dds[device.id]) {
@@ -1691,7 +1739,7 @@ private void subscribeAll(rtData) {
         }
     }
     state.subscriptions = ss
-    trace msg
+    trace msg, rtData
     
     subscribe(app, appHandler)
 }
@@ -1711,16 +1759,16 @@ private getDevice(rtData, idOrName) {
     return device    
 }
 
-private Map getDeviceAttribute(rtData, deviceId, attributeName, trigger = false) {
+private Map getDeviceAttribute(rtData, deviceId, attributeName, subDeviceIndex = null, trigger = false) {
 	if (deviceId == rtData.locationId) {
     	//we have the location here
         switch (attributeName) {
         	case 'mode': 
             	def mode = location.getCurrentMode();
             	return [t: 'string', v: hashId(mode.getId()), n: mode.getName()]
-        	case 'shm': 
+        	case 'alarmSystemStatus': 
 				def v = location.currentState("alarmSystemStatus")?.value
-                def n = rtData.virtualDevices['shmStatus']?.o[v]
+                def n = rtData.virtualDevices['alarmSystemStatus']?.o[v]
 				return [t: 'string', v: v, n: n]
         }
         return [t: 'string', v: location.getName().toString()]
@@ -1732,7 +1780,7 @@ private Map getDeviceAttribute(rtData, deviceId, attributeName, trigger = false)
             attribute = [t: 'string', m: false]
         }
         //x = eXclude - if a momentary attribute is looked for and the device does not match the current device, then we must ignore this during comparisons
-		return [t: attribute.t, v: (attributeName ? cast(rtData, device.currentValue(attributeName), attribute.t) : "$device"), d: deviceId, a: attributeName, x: (!!attribute.m || !!trigger) && ((device?.id != rtData.event.device?.id) || (attributeName != rtData.event.name))]
+		return [t: attribute.t, v: (attributeName ? cast(rtData, device.currentValue(attributeName), attribute.t) : "$device"), d: deviceId, a: attributeName, i: subDeviceIndex, x: (!!attribute.m || !!trigger) && ((device?.id != rtData.event.device?.id) || (attributeName != rtData.event.name))]
     }
     return [t: "error", v: "Device '${deviceId}' not found"]
 }
@@ -2091,12 +2139,12 @@ private Map evaluateExpression(rtData, expression, dataType = null) {
     if (dataType && (dataType != 'device') && (result.t == 'device')) {
         switch (result.v.size()) {
             case 0: result = [t: 'error', v: 'Empty device list']; break;
-            case 1: result = getDeviceAttribute(rtData, result.v[0], result.a); break;
+            case 1: result = getDeviceAttribute(rtData, result.v[0], result.a, result.i); break;
             default: result = [t: 'string', v: buildDeviceAttributeList(rtData, result.v, result.a)]; break;
         }
     }
     if (dataType) {
-    	result = [t: dataType, v: cast(rtData, result.v, dataType)] + (result.a ? [a: result.a] : [:])
+    	result = [t: dataType, v: cast(rtData, result.v, dataType)] + (result.a ? [a: result.a] : [:]) + (result.i ? [a: result.i] : [:])
     }
     result.d = now() - time;
 	return result
@@ -3132,15 +3180,14 @@ private formatLocalTime(time, format = "EEE, MMM d yyyy @ h:mm a z") {
 /******************************************************************************/
 private log(message, rtData = null, shift = null, err = null, cmd = null, force = false) {
     if (cmd == "timer") {
-    	return [m: message, t: now(), d: rtData, s: shift, e: err]
+    	return [m: message, t: now(), s: shift, e: err]
     }
     if (message instanceof Map) {
-    	rtData = message.d
     	shift = message.s
         err = message.e
         message = message.m + " (${now() - message.t}ms)"
     }
-	if (!force && rtData && !rtData.logging && (cmd != "error")) {
+	if (!force && rtData && rtData.logging && !rtData.logging[cmd] && (cmd != "error")) {
 		return
 	}
 	cmd = cmd ? cmd : "debug"
@@ -3384,7 +3431,7 @@ private getSystemVariableValue(rtData, name) {
 		case "\$randomSaturation": def result = getRandomValue("\$randomSaturation") ?: (int)Math.round(50 + 50 * Math.random()); setRandomValue("\$randomSaturation", result); return result 
 		case "\$randomHue": def result = getRandomValue("\$randomHue") ?: (int)Math.round(360 * Math.random()); setRandomValue("\$randomHue", result); return result 
   		case "\$locationMode": return location.getMode()
-		case "\$shmStatus": return rtData.virtualDevices['shmStatus']?.o[location.currentState("alarmSystemStatus")?.value]
+		case "\$shmStatus": return rtData.virtualDevices['alarmSystemStatus']?.o[location.currentState("alarmSystemStatus")?.value]
     }
 }
 

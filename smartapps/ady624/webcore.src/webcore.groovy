@@ -19,8 +19,9 @@
  *  Version history
  */
 
-public static String version() { return "v0.0.058.20170325" }
+public static String version() { return "v0.0.059.20170327" }
 /*
+ *	03/27/2016 >>> v0.0.059.20170327 - ALPHA - Completed SHM status and location mode. Can get/set, can subscribe to changes, any existing condition in pistons needs to be revisited and fixed
  *	03/25/2016 >>> v0.0.058.20170325 - ALPHA - Fixes for major issues introduced due to the new comparison editor (you need to re-edit all comparisons to fix them), added log multiline support, use \r or \n or \r\n in a string
  *	03/24/2016 >>> v0.0.057.20170324 - ALPHA - Improved installation experience, preventing direct installation of child app, location mode and shm status finally working
  *	03/23/2016 >>> v0.0.056.20170323 - ALPHA - Various fixes for restrictions
@@ -306,7 +307,7 @@ def pageSettings() {
 		}
 		
 		section(title: "Logging") {
-			input "logging", "bool", title: "Enable logging", description: "Logs will be available in your dashboard if this feature is enabled", defaultValue: false, required: false
+			input "logging", "enum", title: "Logging level", options: ["None", "Minimal", "Medium", "Full"], description: "Logs will be available in your dashboard if this feature is enabled", defaultValue: "None", required: false
 		}
         
 		section("Uninstall") {
@@ -453,7 +454,7 @@ private api_get_base_result(deviceVersion = 0) {
             uri: atomicState.endpoint,
             deviceVersion: currentDeviceVersion,
             coreVersion: version(),
-            logging: !!settings.logging,
+            logging: settings.logging,
             virtualDevices: virtualDevices,
         ] + (sendDevices ? [devices: listAvailableDevices()] : [:]),
         location: [
@@ -890,6 +891,16 @@ private ping() {
 	sendLocationEvent( [name: handle(), value: 'ping', isStateChange: true, displayed: false, linkText: "${handle()} ping reply", descriptionText: "${handle()} has received a ping reply and is replying with a pong", data: [id: hashId(app.id), name: app.label]] )
 }
 
+private getLogging() {
+	def logging = settings.logging
+	return [
+        error: true,
+        warn: true,
+        info: (logging != 'None'),
+        trace: (logging == 'Medium') || (logging == 'Full'),
+        debug: (logging == 'Full')
+    ]
+}
 /******************************************************************************/
 /*** 																		***/
 /*** PUBLIC METHODS															***/
@@ -930,8 +941,8 @@ public Map getRunTimeData(semaphore) {
         waited = true
     	pause(250)
     }
-	Map result = [
-    	logging: settings.logging,
+    Map result = [
+        logging: getLogging(),
     	attributes: attributes(),
         semaphore: semaphore,
         semaphoreName: semaphoreName,
@@ -1428,6 +1439,8 @@ private virtualCommands() {
 		httpRequest			: [ n: "Make a web request",		a: true, 	i: "anchor",				d: "Make a {1} request to {0}",									        p: [[n:"URL", t:"string"],[n:"Method", t:"enum", o:["GET","POST","PUT","DELETE","HEAD"]],[n:"Content", t:"enum", o:["JSON","FORM"]],[n:"Send variables", t:"variables", d:" and data {v}"],[n:"Import response data into variables", t:"boolean"],[n:"Variable import name prefix", t:"string"]],	],
         setVariable			: [ n: "Set variable...",			a: true,	i: "superscript",			d: "Set variable {0} = {1}",											p: [[n:"Variable",t:"variable"],[n:"Value", t:"dynamic"]],	],
         setState			: [ n: "Set piston state...",		a: true,	i: "superscript",			d: "Set piston state to \"{0}\"",										p: [[n:"State",t:"string"]],	],
+		setLocationMode		: [ n: "Set location mode...",		a: true,	i: "", 						d: "Set location mode to {0}", 											p: [[n:"Mode",t:"mode"]],																														],
+		setAlarmSystemStatus: [ n: "Set Smart Home Monitor status...",	a: true, i: "",					d: "Set Smart Home Monitor status to {0}",								p: [[n:"Status", t:"alarmSystemStatus"]],																										],
 
 
 /*		[ n: "waitState",											d: "Wait for piston state change",	p: ["Change to:enum[any,false,true]"],															i: true,	l: true,						dd: "Wait for {0} state"],
@@ -1451,8 +1464,6 @@ private virtualCommands() {
 		[ n: "loadState",		d: "Load state from variable",		p: ["Attributes:attributes","Load from state variable:stateVariable","Allow translations:bool","Negate translation:bool"],								dd: "Load state of attributes {0} from variable |[{1}]|"				],
 		[ n: "loadStateLocally",	d: "Restore state from local store",	p: ["Attributes:attributes","?Empty the state:bool"],																															dd: "Restore state of attributes {0} from local store",			],
 		[ n: "loadStateGlobally",d: "Restore state from global store",	p: ["Attributes:attributes","?Empty the state:bool"],																															dd: "Restore state of attributes {0} from global store",			],
-		[ n: "setLocationMode",	d: "Set location mode",				p: [[n:"Mode",t:"mode"]],																														l: true,	dd: "Set location mode to '{0}'",		aggregated: true,	],
-		[ n: "setAlarmSystemStatus",d: "Set Smart Home Monitor status",	p: ["Status:alarmSystemStatus"],																										l: true,	dd: "Set SHM alarm to '{0}'",			aggregated: true,	],
 		[ n: "sendNotification",	d: "Send notification",				p: ["Message:text"],																													l: true,	dd: "Send notification '{0}' in notifications page",			aggregated: true,	],
 		[ n: "sendPushNotification",d: "Send Push notification",			p: ["Message:text","Show in notifications page:bool"],																							l: true,	dd: "Send Push notification '{0}'",		aggregated: true,	],
 		[ n: "sendSMSNotification",d: "Send SMS notification",			p: ["Message:text","Phone number:phone","Show in notifications page:bool"],																		l: true, dd: "Send SMS notification '{0}' to {1}",aggregated: true,	],
@@ -1643,7 +1654,7 @@ private Map getLocationModeOptions() {
 	}
 	return result
 }
-private static Map getSHMStatusOptions() {
+private static Map getAlarmSystemStatusOptions() {
 	return [
     	off:	"Disarmed",
         stay: 	"Armed/Stay",
@@ -1664,14 +1675,14 @@ private Map getRoutineOptions() {
 
 private Map virtualDevices() {
 	return [
-    	date:			[ n: 'Date'],
-    	time:			[ n: 'Time',],
-    	dateTime:		[ n: 'Date & Time',],        
-    	locationMode:	[ n: 'Location mode',				o: getLocationModeOptions(),				x: true],
-    	shmStatus:		[ n: 'Smart Home Monitor status',	o: getSHMStatusOptions(),					x: true],
-        routine:		[ n: 'Routine',						o: getRoutineOptions(),						m: true],
-        askAlexa:		[ n: 'Ask Alexa',					o: [opt1: 'Option 1', opt2: 'Option 2'],	m: true	],
-        ifttt:			[ n: 'IFTTT',						o: [opt1: 'Option 1', opt2: 'Option 2'],	m: true	],
+    	date:				[ n: 'Date'],
+    	time:				[ n: 'Time',],
+    	dateTime:			[ n: 'Date & Time',],        
+    	mode:				[ n: 'Location mode',				o: getLocationModeOptions(),				x: true],
+    	alarmSystemStatus:	[ n: 'Smart Home Monitor status',	o: getAlarmSystemStatusOptions(),					x: true],
+        routine:			[ n: 'Routine',						o: getRoutineOptions(),						m: true],
+        askAlexa:			[ n: 'Ask Alexa',					o: [opt1: 'Option 1', opt2: 'Option 2'],	m: true	],
+        ifttt:				[ n: 'IFTTT',						o: [opt1: 'Option 1', opt2: 'Option 2'],	m: true	],
     ]
 }
 
