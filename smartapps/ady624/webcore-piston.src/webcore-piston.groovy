@@ -13,8 +13,9 @@
  *  for the specific language governing permissions and limitations under the License.
  *
 */
-public static String version() { return "v0.0.059.20170327" }
+public static String version() { return "v0.0.05a.20170327" }
 /*
+ *	03/27/2016 >>> v0.0.05a.20170327 - ALPHA - Minor fixes - location events do not have a device by default, overriding with location
  *	03/27/2016 >>> v0.0.059.20170327 - ALPHA - Completed SHM status and location mode. Can get/set, can subscribe to changes, any existing condition in pistons needs to be revisited and fixed
  *	03/25/2016 >>> v0.0.058.20170325 - ALPHA - Fixes for major issues introduced due to the new comparison editor (you need to re-edit all comparisons to fix them), added log multiline support, use \r or \n or \r\n in a string
  *	03/24/2016 >>> v0.0.057.20170324 - ALPHA - Improved installation experience, preventing direct installation of child app, location mode and shm status finally working
@@ -434,7 +435,7 @@ private checkVersion(rtData) {
 /******************************************************************************/
 def fakeHandler(event) {
 	def rtData = getRunTimeData()
-	warn "Received unexpected event [${event.device}].${event.name} = ${event.value} (device has no active subscriptions)... ", rtData
+	warn "Received unexpected event [${event.device?:location}].${event.name} = ${event.value} (device has no active subscriptions)... ", rtData
     updateLogs(rtData)
 }
 
@@ -456,7 +457,7 @@ def handleEvents(event) {
     def eventDelay = startTime - event.date.getTime()
 	def msg = timer "Event processed successfully", null, -1
     def tempRtData = getTemporaryRunTimeData()
-    info "Received event [${event.device}].${event.name} = ${event.value} with a delay of ${eventDelay}ms", tempRtData, 0
+    info "Received event [${event.device?:location}].${event.name} = ${event.value} with a delay of ${eventDelay}ms", tempRtData, 0
     state.temp = [:]
     //todo start execution
     def ver = version()
@@ -516,7 +517,7 @@ private Boolean executeEvent(rtData, event) {
         rtData.currentEvent = [
             date: event.date.getTime(),
             delay: rtData.stats.timing.d,
-            device: hashId(event.device.id),
+            device: hashId((event.device?:location).id),
             name: event.name,
             value: event.value,
             unit: event.unit,
@@ -1780,7 +1781,7 @@ private Map getDeviceAttribute(rtData, deviceId, attributeName, subDeviceIndex =
             attribute = [t: 'string', m: false]
         }
         //x = eXclude - if a momentary attribute is looked for and the device does not match the current device, then we must ignore this during comparisons
-		return [t: attribute.t, v: (attributeName ? cast(rtData, device.currentValue(attributeName), attribute.t) : "$device"), d: deviceId, a: attributeName, i: subDeviceIndex, x: (!!attribute.m || !!trigger) && ((device?.id != rtData.event.device?.id) || (attributeName != rtData.event.name))]
+		return [t: attribute.t, v: (attributeName ? cast(rtData, device.currentValue(attributeName), attribute.t) : "$device"), d: deviceId, a: attributeName, i: subDeviceIndex, x: (!!attribute.m || !!trigger) && ((device?.id != (rtData.event.device?:location).id) || (attributeName != rtData.event.name))]
     }
     return [t: "error", v: "Device '${deviceId}' not found"]
 }
