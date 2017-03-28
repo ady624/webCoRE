@@ -19,8 +19,9 @@
  *  Version history
  */
 
-public static String version() { return "v0.0.05b.20170328" }
+public static String version() { return "v0.0.05c.20170328" }
 /*
+ *	03/28/2016 >>> v0.0.05c.20170328 - ALPHA - Minor fixes regarding location subscriptions
  *	03/28/2016 >>> v0.0.05b.20170328 - ALPHA - Minor fixes for setting location mode
  *	03/27/2016 >>> v0.0.05a.20170327 - ALPHA - Minor fixes - location events do not have a device by default, overriding with location
  *	03/27/2016 >>> v0.0.059.20170327 - ALPHA - Completed SHM status and location mode. Can get/set, can subscribe to changes, any existing condition in pistons needs to be revisited and fixed

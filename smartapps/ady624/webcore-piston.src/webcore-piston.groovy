@@ -13,8 +13,9 @@
  *  for the specific language governing permissions and limitations under the License.
  *
 */
-public static String version() { return "v0.0.05b.20170328" }
+public static String version() { return "v0.0.05c.20170328" }
 /*
+ *	03/28/2016 >>> v0.0.05c.20170328 - ALPHA - Minor fixes regarding location subscriptions
  *	03/28/2016 >>> v0.0.05b.20170328 - ALPHA - Minor fixes for setting location mode
  *	03/27/2016 >>> v0.0.05a.20170327 - ALPHA - Minor fixes - location events do not have a device by default, overriding with location
  *	03/27/2016 >>> v0.0.059.20170327 - ALPHA - Completed SHM status and location mode. Can get/set, can subscribe to changes, any existing condition in pistons needs to be revisited and fixed
@@ -1614,6 +1615,7 @@ private void subscribeAll(rtData) {
             case "v": //physical device
             	def deviceId = rtData.locationId
                 //if we have any trigger, it takes precedence over anything else
+                devices[deviceId] = [c: (comparisonType ? 1 : 0) + (devices[deviceId]?.c ?: 0)]
                 switch (operand.v) {
                 	case 'mode':
                     case 'alarmSystemStatus':
@@ -1730,7 +1732,7 @@ private void subscribeAll(rtData) {
     //fake subscriptions for controlled devices to force the piston being displayed in those devices' Smart Apps tabs
     for (d in devices.findAll{ it.value.c <= 0 }) {
     	def device = getDevice(rtData, d.key)
-        if (device) {
+        if (device && (device != location)) {
        		trace "Subscribing to $device...", rtData
 			subscribe(device, "", fakeHandler)
             ss.controls = ss.controls + 1
