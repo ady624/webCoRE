@@ -19,8 +19,9 @@
  *  Version history
  */
 
-public static String version() { return "v0.0.05a.20170327" }
+public static String version() { return "v0.0.05b.20170328" }
 /*
+ *	03/28/2016 >>> v0.0.05b.20170328 - ALPHA - Minor fixes for setting location mode
  *	03/27/2016 >>> v0.0.05a.20170327 - ALPHA - Minor fixes - location events do not have a device by default, overriding with location
  *	03/27/2016 >>> v0.0.059.20170327 - ALPHA - Completed SHM status and location mode. Can get/set, can subscribe to changes, any existing condition in pistons needs to be revisited and fixed
  *	03/25/2016 >>> v0.0.058.20170325 - ALPHA - Fixes for major issues introduced due to the new comparison editor (you need to re-edit all comparisons to fix them), added log multiline support, use \r or \n or \r\n in a string

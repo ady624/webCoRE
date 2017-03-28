@@ -13,8 +13,9 @@
  *  for the specific language governing permissions and limitations under the License.
  *
 */
-public static String version() { return "v0.0.05a.20170327" }
+public static String version() { return "v0.0.05b.20170328" }
 /*
+ *	03/28/2016 >>> v0.0.05b.20170328 - ALPHA - Minor fixes for setting location mode
  *	03/27/2016 >>> v0.0.05a.20170327 - ALPHA - Minor fixes - location events do not have a device by default, overriding with location
  *	03/27/2016 >>> v0.0.059.20170327 - ALPHA - Completed SHM status and location mode. Can get/set, can subscribe to changes, any existing condition in pistons needs to be revisited and fixed
  *	03/25/2016 >>> v0.0.058.20170325 - ALPHA - Fixes for major issues introduced due to the new comparison editor (you need to re-edit all comparisons to fix them), added log multiline support, use \r or \n or \r\n in a string
@@ -1090,7 +1091,7 @@ private long vcmd_setState(rtData, device, params) {
 
 private long vcmd_setLocationMode(rtData, device, params) {
 	def modeIdOrName = params[0]
-    def mode = location.getModes()?.find{ (it.id == modeIdOrName) || (it.name == modeIdOrName)}
+    def mode = location.getModes()?.find{ (hashId(it.id) == modeIdOrName) || (it.name == modeIdOrName)}
     if (mode) {
     	location.setMode(mode)
     } else {
