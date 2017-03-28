@@ -662,7 +662,12 @@ designer form a-ckolor {
 
 
 
-
+input[type="time"]  {
+	display: block;
+	-webkit-appearance: textfield;
+	-moz-appearance: textfield;
+	text-align: right;
+}
 
 @media only screen and (max-width: 767px) {
 	.ngdialog {

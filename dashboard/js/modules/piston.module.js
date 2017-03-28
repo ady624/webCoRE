@@ -590,6 +590,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 					designer.operand.dataType = 'decimal';
 					designer.operand2.dataType = 'decimal';
 					designer.operand3.dataType = 'decimal';
+					designer.operand.onlyAllowConstants = false;
 					if (designer.$new) designer.operand.data = {t: 'c'};
 					if (designer.$new) designer.operand2.data = {t: 'c'};
 					if (designer.$new) designer.operand3.data = {t: 'c'};
@@ -599,12 +600,20 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 					break;
 				case 'each':
 					designer.operand.dataType = 'devices';
+					designer.operand.onlyAllowConstants = false;
 					if (designer.$new) designer.operand.data = {t: 'd'};
 					$scope.validateOperand(designer.operand, true);
 					break;
 				case 'switch':
 					designer.operand.dataType = '';
+					designer.operand.onlyAllowConstants = false;
 					if (designer.$new) designer.operand.data = {t: 'p'};
+					$scope.validateOperand(designer.operand, true);
+					break;
+				case 'every':
+					designer.operand.dataType = 'duration';
+					designer.operand.data = {t: 'c', c: 5, vt: 'm'};
+					designer.operand.onlyAllowConstants = true;
 					$scope.validateOperand(designer.operand, true);
 					break;
 			}
@@ -614,7 +623,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 			simple: [
 				{ type: 'if', name: 'If block', icon: 'code-fork', cssClass: 'info', description: 'An if block allows the piston to execute different actions depending on the truth result of a comparison or set of comparisons', button: 'a condition' },
 				{ type: 'action', name: 'Action', icon: 'code', cssClass: 'success', description: 'An action allows the piston to control devices and execute tasks', button: 'an action' },
-				{ type: 'timer', name: 'Timer', icon: 'clock-o', cssClass: 'warning', description: 'A timer will trigger execution of the piston at set time intervals', button: 'a timer' }
+				{ type: 'every', name: 'Timer', icon: 'clock-o', cssClass: 'warning', description: 'A timer will trigger execution of the piston at set time intervals', button: 'a timer' }
 			],
 			advanced: [
 				{ type: 'switch', name: 'Switch', icon: 'code-fork', cssClass: 'info', description: 'A switch statement compares an operand against a set of values and executes statements corresponding to those matches', button: 'a switch' },
@@ -2041,14 +2050,21 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 
 
 			var strict = !!operand.strict;
-			operand.allowDevices = dataType == 'device';
-			operand.allowPhysical = (dataType != 'device') && (dataType != 'variable') && (!strict || (dataType != 'boolean')) && (dataType != 'duration');
-			operand.allowVirtual = (dataType != 'device') && (dataType != 'variable') && (dataType != 'decimal') && (dataType != 'integer') && (dataType != 'number') && (dataType != 'boolean') && (dataType != 'enum') && (dataType != 'color') && (dataType != 'duration');
-			operand.allowVariable = (dataType != 'device' || ((dataType == 'device') && operand.multiple)) && (!strict || (dataType != 'boolean'));
-			operand.allowConstant = (dataType != 'device') && (dataType != 'variable');
-			operand.allowExpression = (dataType != 'device') && (dataType != 'variable') && (dataType != 'enum') && (!strict || (dataType != 'boolean'));
-
-
+			if (operand.onlyAllowConstants) {
+				operand.allowDevices = false;
+				operand.allowPhysical = false;
+				operand.allowVirtual = false;
+				operand.allowConstant = true;
+				operand.allowVariable = false;
+				operand.allowExpression = false;
+			} else {
+				operand.allowDevices = dataType == 'device';
+				operand.allowPhysical = (dataType != 'device') && (dataType != 'variable') && (!strict || (dataType != 'boolean')) && (dataType != 'duration');
+				operand.allowVirtual = (dataType != 'device') && (dataType != 'variable') && (dataType != 'decimal') && (dataType != 'integer') && (dataType != 'number') && (dataType != 'boolean') && (dataType != 'enum') && (dataType != 'color') && (dataType != 'duration');
+				operand.allowVariable = (dataType != 'device' || ((dataType == 'device') && operand.multiple)) && (!strict || (dataType != 'boolean'));
+				operand.allowConstant = (dataType != 'device') && (dataType != 'variable');
+				operand.allowExpression = (dataType != 'device') && (dataType != 'variable') && (dataType != 'enum') && (!strict || (dataType != 'boolean'));
+			}
 			if (((operand.data.t == 'p') && (!operand.allowPhysical)) || ((operand.data.t == 'v') && (!operand.allowVirtual))) operand.data.t = 'c';
 
 			if (!operand.config) {
@@ -2077,8 +2093,8 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 			}
 			operand.dataType = dataType;
 
-			operand.durationUnit = operand.data.vt || 's';
-			operand.data.vt = dataType;
+			operand.durationUnit = operand.durationUnit || operand.data.vt || 's';
+			operand.data.vt = dataType == 'duration' ? operand.durationUnit : dataType;
 
 
 		}
@@ -2112,7 +2128,6 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		}
 	
 
-		if (operand.dataType == 'duration') operand.data.vt = operand.durationUnit;
 		operand.initialized = true;
 		operand.allowAggregation = true;
 		operand.allowAll = true;

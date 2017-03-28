@@ -492,53 +492,6 @@
 
 
 
-
-
-
-
-
-
-
-
-<!--
-<script type="text/ng-template" id="restrictions">
-	<dnd-nodrag>
-		<bar ng-if="(mode=='edit') || (collection.r && (collection.r.length > 1))"></bar>
-		<trace ng-if="(view.trace && (mode=='view') && (collection.r) && (collection.r.length > 1) && trace && trace.points && trace.points['c:' + collection.$])"><span>+{{trace.points['c:' + collection.$].o}}ms</span><span dur eval="{{trace.points['c:' + collection.$].v}}">{{trace.points['c:' + collection.$].d}}ms</span></trace>
-		<div no-drag class="no-drag" dnd-list="collection.r" dnd-allowed-types="['restriction']">
-			<line pun data-ng-if-start="collection.rn" data-ng-click="collection.t == 'group' ? editRestriction(collection, collection.$$parent.r) : editStatement(collection, statement);">not (</line>
-			<container>
-				<restriction data-ng-repeat-start="restriction in collection.r" data-ng-include="'restriction'" dnd-nodrag data-ng-model="collection" nag-init="restriction.$$parent = collection" dnd-draggable="restriction" dnd-type="'restriction'" dnd-moved="drag(collection.r, $index);" dnd-effect-allowed="copyMove"></restriction>
-				<line operator data-ng-repeat-end data-ng-click="collection.t == 'group' ? editRestriction(collection, collection.$$parent.r) : editStatement(collection, statement);">{{collection.rop}}</line>
-				<line new data-ng-click="addRestriction(collection)">+ add a new restriction</line>
-			</container>
-			<line data-ng-if-end pun ng-click="editStatement(collection, statement)">)</line>
-			<restriction data-ng-if-start="!collection.rn" data-ng-repeat-start="restriction in collection.r" data-ng-include="'restriction'" dnd-nodrag data-ng-model="collection" nag-init="restriction.$$parent = collection" dnd-draggable="restriction" dnd-type="'restriction'" dnd-moved="drag(collection.r, $index);" dnd-effect-allowed="copyMove"></restriction>
-			<line operator data-ng-if-end data-ng-repeat-end data-ng-click="collection.t == 'group' ? editRestriction(collection, collection.$$parent.r) : editStatement(collection, statement);">{{collection.rop}}</line>
-			<line new data-ng-if="!collection.rn" data-ng-click="addRestriction(collection)">+ add a new restriction</line>
-		</div>
-	</dnd-nodrag>
-</script>
-<script type="text/ng-template" id="restriction">
-	<dnd-nodrag>
-		<div>
-		<trace ng-if="(view.trace && (mode=='view') && trace && trace.points && trace.points['c:' + restriction.$])"><span>+{{trace.points['c:' + restriction.$].o}}ms</span><span dur eval="{{trace.points['c:' + restriction.$].v}}">{{trace.points['c:' + restriction.$].d}}ms</span></trace>
-		<line com ng-if="restriction.z">/* {{restriction.z}} */</line>
-		<line pun ng-if-start="restriction.r" ng-click="editRestriction(restriction, collection.r)">
-			<handle dnd-handle class="fa fa-sort"></handle>{{restriction.rn ? 'not ' : ''}}(</line>
-		<restrictions data-ng-repeat="collection in [restriction]" data-ng-include="'restrictions'" dnd-nodrag data-ng-model="restriction" dnd-draggable="restriction" dnd-type="'restriction'" dnd-moved="drag(collection.r, $index);" dnd-effect-allowed="copyMove"></restrictions>
-		<line pun ng-if-end ng-click="editRestriction(restriction, collection.r)">)</line>
-		<line cond ng-if="!restriction.r" ng-click="editRestriction(restriction, collection.r);">
-			<handle dnd-handle class="fa fa-sort"></handle><span ng-bind-html="restriction.$$html || (restriction.$$html = renderComparison(restriction.lo, restriction.co, restriction.ro, restriction.ro2))"></span>
-		</line>
-		</div>
-	</dnd-nodrag>
-</script>
-
--->
-
-
-
 <script type="text/ng-template" id="tasks">
 	<task data-ng-repeat="task in tasks" data-ng-include="'task'" dnd-nodrag dnd-draggable="task" dnd-type="'task'" dnd-moved="drag(tasks, $index);" dnd-effect-allowed="copyMove"></task>
 	<line new data-ng-click="addTask(statement)">+ add a new task</line>
@@ -553,7 +506,6 @@
 				<handle dnd-handle class="fa fa-sort"></handle>
 				<span kwd data-ng-if="(mode=='edit') && !(((statement.d) && (statement.d.length)) || ((statement.r) && (statement.r.length)) || ((statement.k) && (statement.k.length==0)))" ng-click="editStatement(statement, statements)">do</span>
 				<span tsk single="{{(mode != 'edit') && !(((statement.d) && (statement.d.length)) || ((statement.r) && (statement.r.length)) || ((statement.k) && (statement.k.length!=1)))}}" ng-click="editTask(task, statement);" ng-bind-html="task.$$html || (task.$$html = renderTask(task))"></span>
-				<!--<span pun data-ng-if="!(((statement.d) && (statement.d.length)) || ((statement.r) && (statement.r.length)) || ((statement.k) && (statement.k.length==0)))">;</span>-->
 			</line>
 		</div>
 	</dnd-nodrag>
@@ -715,6 +667,82 @@
 					</select>
 				</div>
 			</div>
+			<div class="form-group" ng-if="designer.type=='every'">
+				<info>Timers trigger piston runs at regular intervals.</info>
+				<div class="form-group">
+					<label for="devicesInput">Every...</label>
+					<operand ng-repeat="operand in [designer.operand]" ng-model="designer.operand" ng-include="'operand'"></operand>
+				</div>
+				<div class="form-group" ng-if="(designer.operand.data.vt == 'ms') || (designer.operand.data.vt == 's')">
+					<label for="devicesInput">At these minutes...</label>
+					<select selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-default" ng-model="designer.operand.data.om" data-mobile="{{mobile}}" multiple>
+						<option value="" style="display:none">Any</option>
+						<option ng-repeat="m in range(60) track by $index" value="{{$index}}">{{$index}}</option>
+					</select>
+				</div>
+				<div class="form-group" ng-if="(designer.operand.data.vt == 'ms') || (designer.operand.data.vt == 's') || (designer.operand.data.vt == 'm')">
+					<label for="devicesInput">At these hours...</label>
+					<select selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-default" ng-model="designer.operand.data.oh" data-mobile="{{mobile}}" multiple>
+						<option value="" style="display:none">Any</option>
+						<option ng-repeat="m in range(24) track by $index" value="{{$index}}">{{(!location.timeZone || location.timeZone.id.startsWith('America')) ? (($index % 12 ? $index % 12 : '12') + ($index < 12 ? 'am' : 'pm')) : ('00' + $index).substr(-2)}}</option>
+					</select>
+				</div>
+				<div class="form-group" ng-if="(designer.operand.data.vt != 'ms') && (designer.operand.data.vt != 's') && (designer.operand.data.vt != 'm') && (designer.operand.data.vt != 'h')">
+					<label for="devicesInput">At this time...</label>
+					<input type="time" class="form-control" ng-model="designer.operand.data.ot" />
+				</div>
+				<div class="form-group">
+					<label for="devicesInput">On these days of the week...</label>
+					<select selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-default" ng-model="designer.operand.data.odw" data-mobile="{{mobile}}" multiple>
+						<option value="" style="display:none">Any</option>
+						<option value="0">Sunday</option>
+						<option value="1">Monday</option>
+						<option value="2">Tuesday</option>
+						<option value="3">Wednesday</option>
+						<option value="4">Thursday</option>
+						<option value="5">Friday</option>
+						<option value="6">Saturday</option>
+					</select>
+				</div>
+				<div class="form-group">
+					<label for="devicesInput">On these weeks of the month...</label>
+					<select selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-default" ng-model="designer.operand.data.owm" data-mobile="{{mobile}}" multiple>
+						<option value="" style="display:none">Any</option>
+						<option ng-repeat="d in range(5) track by $index" value="{{$index + 1}}">{{($index + 1) + (((($index >= 3) && ($index <= 19)) || ($index % 10 > 2) || ($index == 29)) ? 'th' : ( ($index % 10 == 0 ? 'st' : ($index % 10 == 1) ? 'nd' : 'rd' )))}}</option>
+						<option value="-1">last</option>
+						<option value="-2">second-last week</option>
+						<option value="-3">third-last week</option>
+					</select>
+				</div>
+				<div class="form-group">
+					<label for="devicesInput">On these days of the month...</label>
+					<select selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-default" ng-model="designer.operand.data.odm" data-mobile="{{mobile}}" multiple>
+						<option value="" style="display:none">Any</option>
+						<option ng-repeat="d in range(31) track by $index" value="{{$index + 1}}">{{($index + 1) + (((($index >= 3) && ($index <= 19)) || ($index % 10 > 2) || ($index == 29)) ? 'th' : ( ($index % 10 == 0 ? 'st' : ($index % 10 == 1) ? 'nd' : 'rd' )))}}</option>
+						<option value="-1">last</option>
+						<option value="-2">second-last</option>
+						<option value="-3">third-last</option>
+					</select>
+				</div>
+				<div class="form-group">
+					<label for="devicesInput">On these months of the year...</label>
+					<select selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-default" ng-model="designer.operand.data.omy" data-mobile="{{mobile}}" multiple>
+						<option value="" style="display:none">Any</option>
+						<option value="1">January</option>
+						<option value="2">February</option>
+						<option value="3">March</option>
+						<option value="4">April</option>
+						<option value="5">May</option>
+						<option value="6">June</option>
+						<option value="7">July</option>
+						<option value="8">August</option>
+						<option value="9">September</option>
+						<option value="10">October</option>
+						<option value="11">November</option>
+						<option value="12">December</option>
+					</select>
+				</div>
+			</div>
 			<div ng-if="designer.showAdvancedOptions" class="form-group">
 				<div class="form-group">
 					<label for="descriptionInput">Description (optional)</label>
@@ -773,6 +801,7 @@
 			<button type="button" ng-if="(designer.type=='each' ) && (designer.$new)" class="btn btn-info pull-right" ng-disabled="!designer.type" ng-click="updateStatement(true);">Add a statement</button>
 			<button type="button" ng-if="(designer.type=='while' ) && (designer.$new)" class="btn btn-info pull-right" ng-disabled="!designer.type" ng-click="updateStatement(true);">Add a condition</button>
 			<button type="button" ng-if="(designer.type=='repeat' ) && (designer.$new)" class="btn btn-info pull-right" ng-disabled="!designer.type" ng-click="updateStatement(true);">Add a statement</button>
+			<button type="button" ng-if="(designer.type=='every' ) && (designer.$new)" class="btn btn-info pull-right" ng-disabled="!designer.type" ng-click="updateStatement(true);">Add a statement</button>
 			<button type="button" ng-if="(designer.type=='action' ) && (designer.$new)" class="btn btn-info pull-right" ng-disabled="!designer.type" ng-click="updateStatement(true);">Add a task</button>
 			<button type="button" ng-if="(designer.type=='break' ) && (designer.$new)" class="btn btn-info pull-right" ng-disabled="!designer.type" ng-click="updateStatement();">Add</button>
 			<button type="button" ng-if="(designer.type=='exit' ) && (designer.$new)" class="btn btn-info pull-right" ng-disabled="!designer.type" ng-click="updateStatement();">Add</button>
