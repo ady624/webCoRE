@@ -13,8 +13,9 @@
  *  for the specific language governing permissions and limitations under the License.
  *
 */
-public static String version() { return "v0.0.05c.20170328" }
+public static String version() { return "v0.0.05d.20170329" }
 /*
+ *	03/29/2016 >>> v0.0.05d.20170329 - ALPHA - Minor typo fixes, thanks to @rayzurbock
  *	03/28/2016 >>> v0.0.05c.20170328 - ALPHA - Minor fixes regarding location subscriptions
  *	03/28/2016 >>> v0.0.05b.20170328 - ALPHA - Minor fixes for setting location mode
  *	03/27/2016 >>> v0.0.05a.20170327 - ALPHA - Minor fixes - location events do not have a device by default, overriding with location
