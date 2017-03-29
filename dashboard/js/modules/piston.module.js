@@ -1990,18 +1990,23 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 			$scope.validateComparison($scope.designer.comparison, reinit);
 			return;
 		}
+
 		operand = operand || {};
-		operand.data = operand.data || {};
-		operand.data.a = operand.data.a || '';
-		operand.data.c = (operand.data.c == undefined) || (operand.data.c == null) ? '' : operand.data.c;
-		operand.data.v = operand.data.v || '';
-		operand.data.e = operand.data.e || '';
-		operand.data.x = operand.data.x || '';
-		operand.data.d = operand.data.d || [];
-		operand.data.g = operand.data.g || (operand.multiple ? 'any' : 'avg');
-		operand.data.f = operand.data.f || 'l';
-		operand.options = operand.options || [];
-		
+
+		if (!operand.initialized || reinit) {
+			operand.data = operand.data || {};
+			operand.data.a = operand.data.a || '';
+			operand.data.c = (operand.data.c == undefined) || (operand.data.c == null) ? '' : operand.data.c;
+			operand.data.v = operand.data.v || '';
+			operand.data.e = operand.data.e || '';
+			operand.data.x = operand.data.x || '';
+			operand.data.d = operand.data.d || [];
+			operand.data.g = operand.data.g || (operand.multiple ? 'any' : 'avg');
+			operand.data.f = operand.data.f || 'l';
+			operand.options = operand.options || [];
+		}		
+
+
 		if (true || !operand.initialized || reinit) {
 			var dataType = (operand.dataType || 'string').toLowerCase();
 			if (dataType == 'variables') {

@@ -397,7 +397,7 @@
 		<trace ng-if="(view.trace && (mode=='view') && (collection.c) && (collection.c.length > 1) && trace && trace.points && trace.points['c:' + collection.$])"><span>+{{point.o}}ms</span><span dur eval="{{trace.points['c:' + collection.$].v}}">{{point.d}}ms</span></trace>
 		<div no-drag class="no-drag" dnd-list="collection.c" dnd-allowed-types="['condition']">
 			<line com ng-if="collection.z">/* {{collection.z}} */</line>
-			<line pun data-ng-if-start="(collection.t == 'group') || !!collection.n" data-ng-click="editConditionGroup(collection, (collection.t == 'group' ? $parent.$parent.parentCollection.c : null));">{{collection.n ? 'not ' : ''}}(</line>
+			<line pun data-ng-if-start="(collection.t == 'group') || !!collection.n" data-ng-click="editConditionGroup(collection, (collection.t == 'group' ? ($parent.$parent.parentCollection ? $parent.$parent.parentCollection.c : statement.c) : null));">{{collection.n ? 'not ' : ''}}(</line>
 			<container dnd-list="collection.c" dnd-allowed-types="['condition']">
 				<condition data-ng-repeat-start="condition in collection.c" ng-init="parentCollection = collection" data-ng-include="'condition'" dnd-nodrag data-nag-model="collection.c" dnd-draggable="condition" dnd-nodrag dnd-type="'condition'" dnd-moved="drag(collection.c, $index);" dnd-effect-allowed="copyMove"></condition>
 				<line operator data-ng-repeat-end data-ng-click="editConditionGroup(collection);">{{collection.o}}</line>
@@ -440,17 +440,13 @@
 
 
 
-
-
-
-
 <script type="text/ng-template" id="restrictions">
 	<dnd-nodrag>
 		<bar ng-if="(mode=='edit') || (collection.r && (collection.r.length > 1))"></bar>
 		<trace ng-if="(view.trace && (mode=='view') && (collection.r) && (collection.r.length > 1) && trace && trace.points && trace.points['c:' + collection.$])"><span>+{{point.rop}}ms</span><span dur eval="{{trace.points['c:' + collection.$].v}}">{{point.d}}ms</span></trace>
 		<div no-drag class="no-drag" dnd-list="collection.r" dnd-allowed-types="['restriction']">
 			<line com ng-if="collection.z">/* {{collection.z}} */</line>
-			<line pun data-ng-if-start="(collection.t == 'group') || !!collection.rn" data-ng-click="editRestrictionGroup(collection, (collection.t == 'group' ? $parent.$parent.parentCollection.r : null));">{{collection.rn ? 'not ' : ''}}(</line>
+			<line pun data-ng-if-start="(collection.t == 'group') || !!collection.rn" data-ng-click="editRestrictionGroup(collection, (collection.t == 'group' ? ($parent.$parent.parentCollection ? $parent.$parent.parentCollection.r : statement.r) : null));">{{collection.rn ? 'not ' : ''}}(</line>
 			<container dnd-list="collection.r" dnd-allowed-types="['restriction']">
 				<restriction data-ng-repeat-start="restriction in collection.r" ng-init="parentCollection = collection" data-ng-include="'restriction'" dnd-nodrag data-nag-model="collection.r" dnd-draggable="restriction" dnd-nodrag dnd-type="'restriction'" dnd-moved="drag(collection.r, $index);" dnd-effect-allowed="copyMove"></restriction>
 				<line operator data-ng-repeat-end data-ng-click="editRestrictionGroup(collection);">{{collection.rop}}</line>
@@ -1190,7 +1186,7 @@
 			</select>
 			<div class="form-table input-group">
 				<div class="form-table input-group" ng-if="operand.data.t==''">
-					<label class="form-control"></label>
+					<label class="form-control btn-default"></label>
 				</div>
 				<!-- physical devices (variable) -->
 				<div class="form-table input-group" ng-if="operand.data.t=='d'">
