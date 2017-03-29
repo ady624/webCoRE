@@ -19,8 +19,9 @@
  *  Version history
  */
 
-public static String version() { return "v0.0.05d.20170329" }
+public static String version() { return "v0.0.05e.20170329" }
 /*
+ *	03/29/2016 >>> v0.0.05e.20170329 - ALPHA - Added sendEmail
  *	03/29/2016 >>> v0.0.05d.20170329 - ALPHA - Minor typo fixes, thanks to @rayzurbock
  *	03/28/2016 >>> v0.0.05c.20170328 - ALPHA - Minor fixes regarding location subscriptions
  *	03/28/2016 >>> v0.0.05b.20170328 - ALPHA - Minor fixes for setting location mode
@@ -1445,6 +1446,7 @@ private virtualCommands() {
         setState			: [ n: "Set piston state...",		a: true,	i: "superscript",			d: "Set piston state to \"{0}\"",										p: [[n:"State",t:"string"]],	],
 		setLocationMode		: [ n: "Set location mode...",		a: true,	i: "", 						d: "Set location mode to {0}", 											p: [[n:"Mode",t:"mode"]],																														],
 		setAlarmSystemStatus: [ n: "Set Smart Home Monitor status...",	a: true, i: "",					d: "Set Smart Home Monitor status to {0}",								p: [[n:"Status", t:"alarmSystemStatus"]],																										],
+		sendEmail			: [ n: "Send email...",				a: true,	i: "envelope", 				d: "Send email with subject \"{1}\" to {0}", 							p: [[n:"Recipient",t:"email"],[n:"Subject",t:"string"],[n:"Message body",t:"string"]],																														],
 
 
 /*		[ n: "waitState",											d: "Wait for piston state change",	p: ["Change to:enum[any,false,true]"],															i: true,	l: true,						dd: "Wait for {0} state"],

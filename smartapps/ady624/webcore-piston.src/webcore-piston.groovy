@@ -13,8 +13,9 @@
  *  for the specific language governing permissions and limitations under the License.
  *
 */
-public static String version() { return "v0.0.05d.20170329" }
+public static String version() { return "v0.0.05e.20170329" }
 /*
+ *	03/29/2016 >>> v0.0.05e.20170329 - ALPHA - Added sendEmail
  *	03/29/2016 >>> v0.0.05d.20170329 - ALPHA - Minor typo fixes, thanks to @rayzurbock
  *	03/28/2016 >>> v0.0.05c.20170328 - ALPHA - Minor fixes regarding location subscriptions
  *	03/28/2016 >>> v0.0.05b.20170328 - ALPHA - Minor fixes for setting location mode
@@ -1109,6 +1110,36 @@ private long vcmd_setAlarmSystemStatus(rtData, device, params) {
 	    sendLocationEvent(name: 'alarmSystemStatus', value: status[0].id)
     } else {
 	    error "Error setting SmartThings Home Monitor status. Status '$statusIdOrName' does not exist.", rtData
+    }
+    return 0
+}
+
+private long vcmd_sendEmail(rtData, device, params) {
+	def data = [
+    	i: hashId(app.id),
+        n: app.label,
+        t: params[0],
+        s: params[1],
+        m: params[2]
+    ]
+
+	def requestParams = [
+		uri:  "https://api.webcore.co/email/send/${rtData.locationId}",
+		query: null,
+		requestContentType: "application/json",
+		body: data
+	]
+    def success = false
+	httpPost(requestParams) { response ->
+    	if (response.status == 200) {
+			def jsonData = response.data instanceof Map ? response.data : new groovy.json.JsonSlurper().parseText(response.data)
+            if (jsonData && (jsonData.result == 'OK')) {
+            	success = true
+            }
+        }
+	}
+    if (!success) {
+	    error "Error sending email to ${data.t}", rtData
     }
     return 0
 }
