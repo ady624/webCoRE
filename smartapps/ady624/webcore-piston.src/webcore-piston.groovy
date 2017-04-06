@@ -13,8 +13,9 @@
  *  for the specific language governing permissions and limitations under the License.
  *
 */
-public static String version() { return "v0.0.05f.20170330" }
+public static String version() { return "v0.0.060.20170406" }
 /*
+ *	04/06/2017 >>> v0.0.060.20170406 - ALPHA - Timers for second/minute/hour/day are in. week/month/year not working yet. May be VERY quirky, still.
  *	03/30/2017 >>> v0.0.05f.20170329 - ALPHA - Attempt to fix setLocation, added Twilio integration (dialog support coming soon)
  *	03/29/2017 >>> v0.0.05e.20170329 - ALPHA - Added sendEmail
  *	03/29/2017 >>> v0.0.05d.20170329 - ALPHA - Minor typo fixes, thanks to @rayzurbock
@@ -267,6 +268,7 @@ def set(data) {
     setIds(piston)
     state.piston = piston
     state.trace = [:]
+    state.schedules = []
     state.vars = state.vars ?: [:];
     //todo replace this
     if ((state.build == 1) || (!!state.active)) {
@@ -277,7 +279,7 @@ def set(data) {
 
 
 private int setIds(node, maxId = 0, existingIds = [:], requiringIds = [], level = 0) {
-    if (node?.t in ['if', 'while', 'repeat', 'for', 'each', 'switch', 'action', 'condition', 'restriction', 'group']) {
+    if (node?.t in ['if', 'while', 'repeat', 'for', 'each', 'switch', 'action', 'every', 'condition', 'restriction', 'group']) {
         def id = node['$']
         if (!id || existingIds[id]) {
             requiringIds.push(node)
@@ -360,8 +362,11 @@ def pause() {
     unschedule()
     state.trace = [:]
     state.subscriptions = [:]
+    state.schedules = []
     info msg, rtData
     updateLogs(rtData)
+    atomicState.schedules = []
+	atomicState.active = false
     return rtData
 }
 
@@ -372,10 +377,14 @@ def resume() {
 	info "Starting piston... (${version()})", tempRtData, 0
     def rtData = getRunTimeData(tempRtData)
     checkVersion(rtData)
+    state.subscriptions = [:]
+    atomicState.schedules = []
+    state.schedules = []
     subscribeAll(rtData)    
     info msg, rtData
     updateLogs(rtData)
     rtData.result = [active: true, subscriptions: state.subscriptions]
+	atomicState.active = true
     return rtData
 }
 
@@ -392,37 +401,43 @@ private getTemporaryRunTimeData() {
 }
 
 private getRunTimeData(rtData = null, semaphore = null) {
-	def timestamp = rtData?.timestamp ?: now()
-    def piston = state.piston
-    def logs = rtData && rtData.temporary ? rtData.logs : null
-	rtData = rtData && !rtData.temporary ? rtData : parent.getRunTimeData(semaphore && !(piston.o?.pep) ? hashId(app.id) : null)
-    rtData.timestamp = timestamp
-    rtData.logs = [[t: timestamp]]    
-    if (logs && logs.size()) {
-    	logs.removeAll{ !it.c || !rtData.logging[it.c] }
-        rtData.logs = rtData.logs + logs
+	def n = now()
+	try {
+		def timestamp = rtData?.timestamp ?: now()
+	    def piston = state.piston
+        def appId = hashId(app.id)
+	    def logs = (rtData && rtData.temporary) ? rtData.logs : null
+		rtData = (rtData && !rtData.temporary) ? rtData : parent.getRunTimeData((semaphore && !(piston.o?.pep)) ? appId : null)
+	    rtData.timestamp = timestamp
+	    rtData.logs = [[t: timestamp]]    
+	    if (logs && logs.size()) {
+	    	logs.removeAll{ !it.c || !rtData.logging[it.c] }
+	        rtData.logs = rtData.logs + logs
+	    }
+	    rtData.trace = [t: timestamp, points: [:]]
+	    rtData.id = appId
+		rtData.active = state.active;
+	    rtData.stats = [nextScheduled: 0]
+	    //we're reading the cache from atomicState because we might have waited at a semaphore
+	    rtData.cache = atomicState.cache ?: [:]
+	    rtData.newCache = [:]
+	    rtData.schedules = []
+	    rtData.cancelations = [statements:[], conditions:[]]
+	    rtData.piston = piston
+	    rtData.locationId = hashId(location.id)
+	    //flow control
+	    //we're reading the old state from atomicState because we might have waited at a semaphore
+	    def oldState = atomicState.state ?: ''
+	    rtData.state = [old: oldState, new: piston.o?.mps ? oldState : 'true'];
+	    rtData.statementLevel = 0;
+	    rtData.fastForwardTo = null
+	    rtData.break = false
+	    rtData.systemVars = getSystemVariables()
+	    rtData.localVars = getLocalVariables(rtData, piston.v)
+	} catch(all) {
+    	error "Error while getting runtime data:", rtData, null, all
     }
-    rtData.trace = [t: timestamp, points: [:]]
-    rtData.id = hashId(app.id)
-	rtData.active = state.active;
-    rtData.stats = [nextScheduled: 0]
-    //we're reading the cache from atomicState because we might have waited at a semaphore
-    rtData.cache = atomicState.cache ?: [:]
-    rtData.newCache = [:]
-    rtData.schedules = []
-    rtData.cancelations = [statements:[], conditions:[]]
-    rtData.piston = piston
-    rtData.locationId = hashId(location.id)
-    //flow control
-    //we're reading the old state from atomicState because we might have waited at a semaphore
-    def oldState = atomicState.state ?: ''
-    rtData.state = [old: oldState, new: piston.o?.mps ? oldState : 'true'];
-    rtData.statementLevel = 0;
-    rtData.fastForwardTo = null
-    rtData.break = false
-    rtData.systemVars = getSystemVariables()
-    rtData.localVars = getLocalVariables(rtData, piston.v)
-    return rtData
+	return rtData    
 }
 
 private checkVersion(rtData) {
@@ -457,6 +472,7 @@ def timeHandler(event) {
 def handleEvents(event) {
 	//cancel all pending jobs, we'll handle them later
 	unschedule(timeHandler)
+    if (!state.active) return
 	def startTime = now()
     state.lastExecuted = startTime
     def eventDelay = startTime - event.date.getTime()
@@ -482,22 +498,34 @@ def handleEvents(event) {
 	msg2 = timer "Execution stage complete.", null, -1
     trace "Execution stage started", rtData, 1
     def success = true
+    def syncTime = false    
     if (event.name != 'time') {
     	success = executeEvent(rtData, event)
+        processSchedules rtData
+        syncTime = true
     }
     //process all time schedules in order
-    while (success && (20000 + rtData.timestamp - now() > 10000)) {
+    while (success && (20000 + rtData.timestamp - now() > 15000)) {
         //we only keep doing stuff if we haven't passed the 10s execution time mark
         def schedules = atomicState.schedules
         //anything less than 2 seconds in the future is considered due, we'll do some pause to sync with it
         //we're doing this because many times, the scheduler will run a job early, usually 0-1.5 seconds early...
         if (!schedules || !schedules.size()) break
-        event = [date: event.date, device: location, name: 'time', value: now(), schedule: schedules.sort{ it.t }.find{ it.t < now() + 2000 }]        
+        event = [date: event.date, device: location, name: 'time', value: now(), schedule: schedules.sort{ it.t }.find{ it.t < now() + 2000 }]
         if (!event.schedule) break
-        schedules.remove(event.schedule)
+        long threshold = now() > event.schedule.t ? now() : event.schedule.t
+        schedules.removeAll{ (it.t <= threshold) && (it.s == event.schedule.s) && (it.i == event.schedule.i) }
         atomicState.schedules = schedules
         def delay = event.schedule.t - now()
+        if (syncTime && (delay > 0)) {
+        	debug "Fast executing schedules, waiting for ${delay}ms to sync up", rtData
+        	pause delay
+        }
         success = executeEvent(rtData, event)
+        processSchedules rtData
+        syncTime = true
+        //if we waited at a semaphore, we don't want to process too many events
+        if (rtData.semaphoreDelay) break
     }
 	rtData.stats.timing.e = now() - startTime
     trace msg2, rtData
@@ -580,37 +608,7 @@ private Boolean executeEvent(rtData, event) {
 
 private finalizeEvent(rtData, initialMsg, success = true) {
 	def startTime = now()
-    //reschedule stuff
-    //todo, override tasks, if any
-    def schedules = (atomicState.schedules ?: [])
-    //cancel statements
-    schedules.removeAll{ it.s in rtData.cancelations.statements }
-    //cancel on conditions
-	for(cid in rtData.cancelations.conditions) {
-    	schedules.removeAll{ cid in it.cs }
-    }
-    rtData.cancelations = []
-    schedules = (schedules + (rtData.schedules ?: [])).sort{ it.t }
-    //add traces for all remaining schedules
-    for (schedule in schedules) {
-    	def t = now() - schedule.t
-        if ((t < 0) && !rtData.trace.points["t:${schedule.i}"]) {
-            //we enter a fake trace point to show it on the trace viewfstate
-    		tracePoint(rtData, "t:${schedule.i}", 0, t)
-        }
-    }
-    if (schedules.size()) {
-    	def next = schedules.sort{ it.t }[0]
-        def t = (next.t - now()) / 1000
-        t = (t < 1 ? 1 : t)
-        rtData.stats.nextSchedule = next.t
-        trace "Setting up scheduled job in ${t}s", rtData
-        runIn(t, timeHandler, [data: next])
-    } else {
-    	rtData.stats.nextSchedule = 0
-    }
-    atomicState.schedules = schedules
-    state.nextSchedule = rtData.stats.nextSchedule
+    processSchedules(rtData, true)
 
     if (initialMsg) {
     	if (success) {
@@ -640,6 +638,41 @@ private finalizeEvent(rtData, initialMsg, success = true) {
 	parent.updateRunTimeData(rtData)
     //overwrite state, might have changed meanwhile
     state.schedules = atomicState.schedules
+}
+
+private processSchedules(rtData, scheduleJob = false) {
+	//reschedule stuff
+    //todo, override tasks, if any
+    def schedules = (atomicState.schedules ?: [])
+    //cancel statements
+    schedules.removeAll{ it.s in rtData.cancelations.statements }
+    //cancel on conditions
+	for(cid in rtData.cancelations.conditions) {
+    	schedules.removeAll{ cid in it.cs }
+    }
+    rtData.cancelations = []
+    schedules = (schedules + (rtData.schedules ?: [])).sort{ it.t }
+    //add traces for all remaining schedules
+    for (schedule in schedules) {
+    	def t = now() - schedule.t
+        if ((t < 0) && !rtData.trace.points["t:${schedule.i}"]) {
+            //we enter a fake trace point to show it on the trace viewfstate
+    		tracePoint(rtData, "t:${schedule.i}", 0, t)
+        }
+    }
+    if (scheduleJob && schedules.size()) {
+    	def next = schedules.sort{ it.t }[0]
+        def t = (next.t - now()) / 1000
+        t = (t < 1 ? 1 : t)
+        rtData.stats.nextSchedule = next.t
+        trace "Setting up scheduled job in ${t}s", rtData
+        runIn(t, timeHandler, [data: next])
+    } else {
+    	rtData.stats.nextSchedule = 0
+    }
+    atomicState.schedules = schedules
+    state.nextSchedule = rtData.stats.nextSchedule
+    rtData.schedules = []
 }
 
 private updateLogs(rtData) {
@@ -699,7 +732,7 @@ private Boolean executeStatement(rtData, statement, async = false) {
     def parentAsync = async
     def parentIndex = getVariable(rtData, '$index').v
     def parentDevice = getVariable(rtData, '$device').v
-    async = !!async || (statement.a == "1")
+    async = !!async || (statement.a == "1") || (statement.t == 'every')
     def perform = false
     def repeat = true
     def index = null
@@ -707,6 +740,26 @@ private Boolean executeStatement(rtData, statement, async = false) {
     if (allowed || !!rtData.fastForwardTo) {
     	while (repeat) {
             switch (statement.t) {
+                case 'every':
+                	//we override current condition so that child statements can cancel on it
+                    def ownEvent = (rtData.event && (rtData.event.name == 'time') && rtData.event.schedule && (rtData.event.schedule.s == statement.$) && (rtData.event.schedule.i < 0))
+                    if (ownEvent || !state.schedules.find{ it.s == statement.$ }) {
+                    	//if the time has come for our timer, schedule the next timer
+                        //if no next time is found quick enough, a new schedule with i = -2 will be setup so that a new attempt can be made at a later time
+                    	rtData.fastForwardTo = null
+                    	scheduleTimer(rtData, statement, ownEvent ? rtData.event.schedule.t : 0)
+                    }
+	                rtData.stack.c = statement.$
+                    if (!!rtData.fastForwardTo || ownEvent) {
+                    	//we only execute the every if i = -1 (for rapid timers with large restrictions i.e. every second, but only on Mondays) we need to make sure we don't block execution while trying
+                        //to find the next execution scheduled time, so we give up after too many attempts and schedule a rerun with i = -2 to give us the chance to try again at that later time
+                    	if (rtData.event.schedule.i == -1) executeStatements(rtData, statement.s, true);
+                        //we always exit a timer, this only runs on its own schedule, nothing else is executed
+                        value = false
+                        break
+                    }
+                    value = true
+                    break
                 case 'repeat':
                 	//we override current condition so that child statements can cancel on it
 	                rtData.stack.c = statement.$
@@ -716,9 +769,9 @@ private Boolean executeStatement(rtData, statement, async = false) {
                         if (!rtData.fastForwardTo) break
                     }
                     value = true
-                    if (!rtData.fastForwardTo) break
-                    //repeat falls back on if and while
-                case 'if':
+                    perform = !evaluateConditions(rtData, statement, 'c', async)
+                    break
+				case 'if':
                 case 'while':
                     //check conditions for if and while
                     perform = evaluateConditions(rtData, statement, 'c', async)
@@ -819,13 +872,13 @@ private Boolean executeStatement(rtData, statement, async = false) {
                     }
                 	break
 				case 'switch':
-                    def values = evaluateOperand(rtData, statement, statement.lo)
                 	def lo = [operand: statement.lo, values: evaluateOperand(rtData, statement, statement.lo)]
                     //go through all cases
                     def found = false
                     def implicitBreaks = (statement.ctp == 'i')
                     def fallThrough = !implicitBreaks
                     perform = false
+                    debug "Evaluating switch with values $lo.values", rtData
                     for (_case in statement.cs) {
                     	def ro = [operand: _case.ro, values: evaluateOperand(rtData, _case, _case.ro)]
                         def ro2 = (_case.t == 'r') ? [operand: _case.ro2, values: evaluateOperand(rtData, _case, _case.ro2)] : null
@@ -1040,11 +1093,89 @@ private executePhysicalCommand(rtData, device, command, params = [], delay = nul
     }
 }
 
+
+private scheduleTimer(rtData, timer, long lastRun = 0) {
+	//complicated stuff follows...
+    def interval = evaluateOperand(rtData, null, timer.lo).v
+    if (!interval.isInteger()) return
+    interval = interval.toInteger()
+    if (interval <= 0) return
+    def intervalUnit = timer.lo.vt   
+       
+    long delta = 0
+    long time = 0
+    long date = 0
+    long lastDate = 0
+    switch (intervalUnit) {
+    	case 'ms': delta = 1; break;
+    	case 's': delta = 1000; break;
+    	case 'm': delta = 60000; break;
+    	case 'h': delta = 3600000; break;
+    }
+    if (!delta) {
+    	//let's get the offset
+        time = evaluateOperand(rtData, null, timer.lo2).v
+        if (timer.lo2.t != 'c') {
+        	def offset = evaluateOperand(rtData, null, timer.lo3)
+        	time += (long) evaluateExpression(rtData, [t: 'duration', v: offset.v, vt: offset.vt], 'long').v
+        }
+        //resulting time is in UTC
+        if (!lastRun) {
+        	//first run, just adjust the time so we're in the future
+            while (time <= now()) {
+            	//add days to bring it to next occurrence
+            	time += 86400000
+            }
+        }
+        //next date
+        lastDate = Math.floor(lastRun  / 86400000)
+        date = Math.floor(time / 86400000)
+    }    
+    delta = delta * interval
+    if (!lastRun) lastRun = now()
+    long nextSchedule = lastRun
+
+	int cycles = 100
+    while (cycles) {
+    	if (delta) {
+        	if (nextSchedule < (now() - delta)) {
+            	//we're behind, let's fast forward to where the next occurrence happens in the future
+                def count = Math.floor((now() - nextSchedule) / delta)
+                debug "Timer fell behind by $count interval${count > 1 ? 's' : ''}, catching up...", rtData
+               	nextSchedule = nextSchedule + delta * count
+            }
+	    	nextSchedule = nextSchedule + delta
+	    } else {
+	    	//the repeating interval is not necessarily constant	    
+            switch (intervalUnit) {
+            	case 'd':
+                	if (lastDate) {
+                    	//add the required number of days
+                    	nextSchedule = time + 86400000 * (interval - (date - lastDate))
+                    } else {
+                    	nextSchedule = time
+                    }
+            }
+    	}
+        //check to see if it fits the restrictions
+        if (true) {
+        	break
+        }
+        cycles -= 1
+    }
+    
+    if (nextSchedule > lastRun) {
+    	cancelStatementSchedules rtData, timer.$
+    	requestWakeUp(rtData, timer, [$: -1], nextSchedule)
+    }
+    
+}
+
 private requestWakeUp(rtData, statement, task, timeOrDelay) {
 	def time = timeOrDelay > 9999999999 ? timeOrDelay : now() + timeOrDelay
-    def cs = [] + rtData.stack.cs
+    def cs = [] + (rtData.stack?.cs ?: [])
     cs.removeAll{ it == 0 }
-    def schedule = [t: time, s: statement.$, i: task.$, cs: cs]
+    def schedule = [t: time, s: statement.$, i: task?.$, cs: cs]
     rtData.schedules.push(schedule)
 }
 
@@ -1265,7 +1396,7 @@ private evaluateOperand(rtData, node, operand, index = null, trigger = false) {
         case "p": //physical device
         	def j = 0;
         	for(deviceId in operand.d) {
-            	def value = [i: "${deviceId}:${operand.a}", v:getDeviceAttribute(rtData, deviceId, operand.a, operand.i, trigger)]
+            	def value = [i: "${deviceId}:${operand.a}", v:getDeviceAttribute(rtData, deviceId, operand.a, operand.i, trigger) + (operand.vt ? [vt: operand.vt] : [:])]
             	rtData.newCache[value.i] = value.v + [s: since]
 	            values.push(value)
 	            j++
@@ -1273,7 +1404,7 @@ private evaluateOperand(rtData, node, operand, index = null, trigger = false) {
 	        if ((values.size() > 1) && !(operand.g in ['any', 'all'])) {
 	            //if we have multiple values and a grouping other than any or all we need to apply that function
 	            try {
-	                values = [[i: "${node?.$}:$index:0", v:"func_${operand.g}"(rtData, values*.v)]]
+	                values = [[i: "${node?.$}:$index:0", v:"func_${operand.g}"(rtData, values*.v) + (operand.vt ? [vt: operand.vt] : [:])]]
 	            } catch(all) {
 	                error "Error applying grouping method ${operand.g}", rtData
 	            }
@@ -1304,12 +1435,29 @@ private evaluateOperand(rtData, node, operand, index = null, trigger = false) {
                     break;
             }
             break
+        case "s": //preset
+        	def v = 0;
+            switch (operand.s) {
+            	case 'midnight': v = getMidnightTime(rtData); break;
+            	case 'sunrise': v = getSunriseTime(rtData); break;
+            	case 'noon': v = getNoonTime(rtData); break;
+            	case 'sunset': v = getSunsetTime(rtData); break;
+            }
+	        values = [[i: "${node?.$}:$index:0", v:[t:'time', v:v]]]
+            break
         case "x": //variable
-	        values = [[i: "${node?.$}:$index:0", v:getVariable(rtData, operand.x)]]
+	        values = [[i: "${node?.$}:$index:0", v:getVariable(rtData, operand.x) + (operand.vt ? [vt: operand.vt] : [:])]]
             break
         case "c": //constant
+        	if (operand.vt == 'time') {
+            	def offset = cast(rtData, operand.c, 'integer')
+            	def v = localDate().clearTime()
+                v.set(hourOfDay: (int) Math.floor(offset / 60), minute: (int) offset.mod(60))
+		        values = [[i: "${node?.$}:$index:0", v: [t: 'time', v:localToUtcTime(v)]]]
+    	        break
+            }
         case "e": //expression
-	        values = [[i: "${node?.$}:$index:0", v: [:] + evaluateExpression(rtData, operand.exp)]]
+	        values = [[i: "${node?.$}:$index:0", v: [:] + evaluateExpression(rtData, operand.exp) + (operand.vt ? [vt: operand.vt] : [:])]]
             break
     }
     if (!node) {
@@ -1479,20 +1627,20 @@ private Map valueChanged(rtData, comparisonValue) {
 }
 
 //comparison low level functions
-private boolean comp_is								(rtData, lv, rv = null, rv2 = null) { return (cast(rtData, lv.v.v, 'string') == cast(rtData, rv.v.v, 'string')) || (lv.v.n && (cast(rtData, lv.v.n, 'string') == cast(rtData, rv.v.v, 'string'))) }
+private boolean comp_is								(rtData, lv, rv = null, rv2 = null) { return (evaluateExpression(rtData, lv.v, 'string').v == evaluateExpression(rtData, rv.v, 'string').v) || (lv.v.n && (cast(rtData, lv.v.n, 'string') == cast(rtData, rv.v.v, 'string'))) }
 private boolean comp_is_not							(rtData, lv, rv = null, rv2 = null) { return !comp_is(rtData, lv, rv, rv2) }
-private boolean comp_is_equal_to					(rtData, lv, rv = null, rv2 = null) { return cast(rtData, lv.v.v, 'decimal') == cast(rtData, rv.v.v, 'decimal') }
-private boolean comp_is_not_equal_to				(rtData, lv, rv = null, rv2 = null) { return cast(rtData, lv.v.v, 'decimal') != cast(rtData, rv.v.v, 'decimal') }
-private boolean comp_is_different_than				(rtData, lv, rv = null, rv2 = null) { return cast(rtData, lv.v.v, 'decimal') != cast(rtData, rv.v.v, 'decimal') }
-private boolean comp_is_less_than					(rtData, lv, rv = null, rv2 = null) { return cast(rtData, lv.v.v, 'decimal') < cast(rtData, rv.v.v, 'decimal') }
-private boolean comp_is_less_than_or_equal_to		(rtData, lv, rv = null, rv2 = null) { return cast(rtData, lv.v.v, 'decimal') <= cast(rtData, rv.v.v, 'decimal') }
-private boolean comp_is_greater_than				(rtData, lv, rv = null, rv2 = null) { return cast(rtData, lv.v.v, 'decimal') > cast(rtData, rv.v.v, 'decimal') }
-private boolean comp_is_greater_than_or_equal_to	(rtData, lv, rv = null, rv2 = null) { return cast(rtData, lv.v.v, 'decimal') >= cast(rtData, rv.v.v, 'decimal') }
-private boolean comp_is_even						(rtData, lv, rv = null, rv2 = null) { return cast(rtData, lv.v.v, 'integer').mod(2) == 0 }
-private boolean comp_is_odd							(rtData, lv, rv = null, rv2 = null) { return cast(rtData, lv.v.v, 'integer').mod(2) != 0 }
-private boolean comp_is_true						(rtData, lv, rv = null, rv2 = null) { return !!cast(rtData, lv.v.v, 'boolean') }
-private boolean comp_is_false						(rtData, lv, rv = null, rv2 = null) { return !cast(rtData, lv.v.v, 'boolean') }
-private boolean comp_is_inside_of_range				(rtData, lv, rv = null, rv2 = null) { def v = cast(rtData, lv.v.v, 'decimal'); def v1 = cast(rtData, rv.v.v, 'decimal'); def v2 = cast(rtData, rv2.v.v, 'decimal'); return (v1 < v2) ? ((v >= v1) && (v <= v2)) : ((v >= v2) && (v <= v1)); }
+private boolean comp_is_equal_to					(rtData, lv, rv = null, rv2 = null) { return evaluateExpression(rtData, lv.v, 'decimal').v == evaluateExpression(rtData, rv.v, 'decimal').v }
+private boolean comp_is_not_equal_to				(rtData, lv, rv = null, rv2 = null) { return evaluateExpression(rtData, lv.v, 'decimal').v != evaluateExpression(rtData, rv.v, 'decimal').v }
+private boolean comp_is_different_than				(rtData, lv, rv = null, rv2 = null) { return evaluateExpression(rtData, lv.v, 'decimal').v != evaluateExpression(rtData, rv.v, 'decimal').v }
+private boolean comp_is_less_than					(rtData, lv, rv = null, rv2 = null) { return evaluateExpression(rtData, lv.v, 'decimal').v < evaluateExpression(rtData, rv.v, 'decimal').v }
+private boolean comp_is_less_than_or_equal_to		(rtData, lv, rv = null, rv2 = null) { return evaluateExpression(rtData, lv.v, 'decimal').v <= evaluateExpression(rtData, rv.v, 'decimal').v }
+private boolean comp_is_greater_than				(rtData, lv, rv = null, rv2 = null) { return evaluateExpression(rtData, lv.v, 'decimal').v > evaluateExpression(rtData, rv.v, 'decimal').v }
+private boolean comp_is_greater_than_or_equal_to	(rtData, lv, rv = null, rv2 = null) { return evaluateExpression(rtData, lv.v, 'decimal').v >= evaluateExpression(rtData, rv.v, 'decimal').v }
+private boolean comp_is_even						(rtData, lv, rv = null, rv2 = null) { return evaluateExpression(rtData, lv.v, 'integer').v.mod(2) == 0 }
+private boolean comp_is_odd							(rtData, lv, rv = null, rv2 = null) { return evaluateExpression(rtData, lv.v, 'integer').v.mod(2) != 0 }
+private boolean comp_is_true						(rtData, lv, rv = null, rv2 = null) { return !!evaluateExpression(rtData, lv.v, 'boolean').v }
+private boolean comp_is_false						(rtData, lv, rv = null, rv2 = null) { return !evaluateExpression(rtData, lv.v, 'boolean').v }
+private boolean comp_is_inside_of_range				(rtData, lv, rv = null, rv2 = null) { def v = evaluateExpression(rtData, lv.v, 'decimal').v; def v1 = evaluateExpression(rtData, rv.v, 'decimal').v; def v2 = evaluateExpression(rtData, rv2.v, 'decimal').v; return (v1 < v2) ? ((v >= v1) && (v <= v2)) : ((v >= v2) && (v <= v1)); }
 private boolean comp_is_outside_of_range			(rtData, lv, rv = null, rv2 = null) { return !comp_is_inside_of_range(rtData, lv, rv, rv2) }
 private boolean comp_changed						(rtData, lv, rv = null, rv2 = null) { return valueChanged(rtData, lv); }
 private boolean comp_did_not_change					(rtData, lv, rv = null, rv2 = null) { return !valueChanged(rtData, lv); }
@@ -1524,25 +1672,25 @@ private boolean comp_remains_even					(rtData, lv, rv = null, rv2 = null) { def 
 private boolean comp_remains_odd					(rtData, lv, rv = null, rv2 = null) { def oldValue = valueChanged(rtData, lv); return oldValue && (cast(rtData, oldValue.v.v, 'integer').mod(2) != 0) && (cast(rtData, lv.v.v, 'integer').mod(2) != 0); }
 
 
-private traverseStatements(node, closure, parentNode = null) {
+private traverseStatements(node, closure, parentNode = null, data = null) {
     if (!node) return
 	//if a statements element, go through each item
 	if (node instanceof List) {
     	for(item in node) {
-	    	traverseStatements(item, closure, parentNode)
+	    	traverseStatements(item, closure, parentNode, data)
 	    }
         return
 	}
     //got a statement, pass it on to the closure
     if (closure instanceof Closure) {
-    	closure(node, parentNode)
+    	closure(node, parentNode, data)
     }
     //if the statements has substatements, go through them
     if (node.s instanceof List) {
-    	traverseStatements(node.s, closure, node)
+    	traverseStatements(node.s, closure, node, data)
     }
     if (node.e instanceof List) {
-    	traverseStatements(node.e, closure, node)
+    	traverseStatements(node.e, closure, node, data)
     }
 }
 
@@ -1605,180 +1753,188 @@ private traverseExpressions(node, closure, param, parentNode = null) {
 }
 
 private void subscribeAll(rtData) {
-	rtData = rtData ?: getRunTimeData()
-    def ss = [
-    	events: 0,
-        controls: 0,
-        devices: 0,
-    ]
-	def x = {
-    }
-	def msg = timer "Finished subscribing", null, -1
-	unsubscribe()
-    trace "Subscribing to devices...", rtData, 1
-    Map devices = [:]
-    Map subscriptions = [:]
-    def count = 0
-    def hasTriggers = false
-    //traverse all statements
-    //def statementTraverser
-    //def expressionTraverser
-    //def operandTraverser
-    def expressionTraverser = { expression, parentExpression, comparisonType -> 
-        if ((expression.t == 'device') && (expression.id)) {
-            devices[expression.id] = [c: (comparisonType ? 1 : 0) + (devices[expression.id]?.c ?: 0)]
-            subscriptions["${expression.id}${expression.a}"] = [d: expression.id, a: expression.a, t: comparisonType, c: (subscriptions["${expression.id}${expression.a}"] ? subscriptions["${expression.id}${expression.a}"].c : []) + [condition]]
+	try {
+        rtData = rtData ?: getRunTimeData()
+        def ss = [
+            events: 0,
+            controls: 0,
+            devices: 0,
+        ]
+        def x = {
         }
-    }    
-    def operandTraverser = { node, operand, comparisonType ->
-        switch (operand.t) {
-            case "p": //physical device
-            	for(deviceId in operand.d) {
-	                devices[deviceId] = [c: (comparisonType ? 1 : 0) + (devices[deviceId]?.c ?: 0)]
-                    //if we have any trigger, it takes precedence over anything else
-                    def ct = subscriptions["$deviceId${operand.a}"]?.t ?: null
-                    if ((ct == 'trigger') || (comparisonType == 'trigger')) {
-                    	ct = 'trigger'                       
-                    } else {
-                    	ct = ct ?: comparisonType
-                    }
-	                subscriptions["$deviceId${operand.a}"] = [d: deviceId, a: operand.a, t: ct , c: (subscriptions["$deviceId${operand.a}"] ? subscriptions["$deviceId${operand.a}"].c : []) + (comparisonType?[node]:[])]
-	            }
-	            break;
-            case "v": //physical device
-            	def deviceId = rtData.locationId
-                //if we have any trigger, it takes precedence over anything else
-                devices[deviceId] = [c: (comparisonType ? 1 : 0) + (devices[deviceId]?.c ?: 0)]
-                switch (operand.v) {
-                	case 'mode':
-                    case 'alarmSystemStatus':
-                		def ct = subscriptions["$deviceId${operand.v}"]?.t ?: null
+        def msg = timer "Finished subscribing", null, -1
+        unsubscribe()
+        trace "Subscribing to devices...", rtData, 1
+        Map devices = [:]
+        Map subscriptions = [:]
+        def count = 0
+        def hasTriggers = false
+        //traverse all statements
+        //def statementTraverser
+        //def expressionTraverser
+        //def operandTraverser
+        def expressionTraverser = { expression, parentExpression, comparisonType -> 
+            if ((expression.t == 'device') && (expression.id)) {
+                devices[expression.id] = [c: (comparisonType ? 1 : 0) + (devices[expression.id]?.c ?: 0)]
+                subscriptions["${expression.id}${expression.a}"] = [d: expression.id, a: expression.a, t: comparisonType, c: (subscriptions["${expression.id}${expression.a}"] ? subscriptions["${expression.id}${expression.a}"].c : []) + [condition]]
+            }
+        }    
+        def operandTraverser = { node, operand, comparisonType ->
+            switch (operand.t) {
+                case "p": //physical device
+                    for(deviceId in operand.d) {
+                        devices[deviceId] = [c: (comparisonType ? 1 : 0) + (devices[deviceId]?.c ?: 0)]
+                        //if we have any trigger, it takes precedence over anything else
+                        def ct = subscriptions["$deviceId${operand.a}"]?.t ?: null
                         if ((ct == 'trigger') || (comparisonType == 'trigger')) {
                             ct = 'trigger'                       
                         } else {
                             ct = ct ?: comparisonType
                         }
-                        subscriptions["$deviceId${operand.v}"] = [d: deviceId, a: operand.v, t: ct , c: (subscriptions["$deviceId${operand.v}"] ? subscriptions["$deviceId${operand.v}"].c : []) + (comparisonType?[node]:[])]
-                        break;
-                }
-	            break;
-            case "c": //constant
-            case "e": //expression
-    	        traverseExpressions(operand.exp?.i, expressionTraverser, comparisonType)
-        	    break
-        }
-    }
-    def conditionTraverser = { condition, parentCondition ->
-    	if (condition.co) {
-            def comparison = rtData.comparisons.conditions[condition.co]
-            def comparisonType = 'condition'
-            if (!comparison) {
-                hasTriggers = true
-                comparisonType = 'trigger'
-                comparison = rtData.comparisons.triggers[condition.co]                	
-            }
-            if (comparison) {
-                condition.ct = comparisonType.take(1)
-                def paramCount = comparison.p ?: 0
-                for(int i = 0; i <= paramCount; i++) {
-                    //get the operand to parse
-                    def operand = (i == 0 ? condition.lo : (i == 1 ? condition.ro : condition.ro2))
-                    operandTraverser(condition, operand, comparisonType)
-                }
+                        subscriptions["$deviceId${operand.a}"] = [d: deviceId, a: operand.a, t: ct , c: (subscriptions["$deviceId${operand.a}"] ? subscriptions["$deviceId${operand.a}"].c : []) + (comparisonType?[node]:[])]
+                    }
+                    break;
+                case "v": //physical device
+                    def deviceId = rtData.locationId
+                    //if we have any trigger, it takes precedence over anything else
+                    devices[deviceId] = [c: (comparisonType ? 1 : 0) + (devices[deviceId]?.c ?: 0)]
+                    switch (operand.v) {
+                        case 'mode':
+                        case 'alarmSystemStatus':
+                            def ct = subscriptions["$deviceId${operand.v}"]?.t ?: null
+                            if ((ct == 'trigger') || (comparisonType == 'trigger')) {
+                                ct = 'trigger'                       
+                            } else {
+                                ct = ct ?: comparisonType
+                            }
+                            subscriptions["$deviceId${operand.v}"] = [d: deviceId, a: operand.v, t: ct , c: (subscriptions["$deviceId${operand.v}"] ? subscriptions["$deviceId${operand.v}"].c : []) + (comparisonType?[node]:[])]
+                            break;
+                    }
+                    break;
+                case "c": //constant
+                case "e": //expression
+                    traverseExpressions(operand.exp?.i, expressionTraverser, comparisonType)
+                    break
             }
         }
-        if (condition.ts instanceof List) traverseStatements(condition.ts, statementTraverser)
-        if (condition.fs instanceof List) traverseStatements(condition.fs, statementTraverser)                
-    }
-    def restrictionTraverser = { restriction, parentRestriction ->
-    	if (restriction.co) {
-            def comparison = rtData.comparisons.conditions[restriction.co]
-            def comparisonType = 'condition'
-            if (!comparison) {
-                hasTriggers = true
-                comparisonType = 'trigger'
-                comparison = rtData.comparisons.triggers[restriction.co]                	
-            }
-            if (comparison) {
-                def paramCount = comparison.p ?: 0
-                for(int i = 0; i <= paramCount; i++) {
-                    //get the operand to parse
-                    def operand = (i == 0 ? restriction.lo : (i == 1 ? restriction.ro : restriction.ro2))
-                    operandTraverser(restriction, operand, null)
+        def conditionTraverser = { condition, parentCondition ->
+            if (condition.co) {
+                def comparison = rtData.comparisons.conditions[condition.co]
+                def comparisonType = 'condition'
+                if (!comparison) {
+                    hasTriggers = true
+                    comparisonType = 'trigger'
+                    comparison = rtData.comparisons.triggers[condition.co]                	
+                }
+                if (comparison) {
+                    condition.ct = comparisonType.take(1)
+                    def paramCount = comparison.p ?: 0
+                    for(int i = 0; i <= paramCount; i++) {
+                        //get the operand to parse
+                        def operand = (i == 0 ? condition.lo : (i == 1 ? condition.ro : condition.ro2))
+                        operandTraverser(condition, operand, comparisonType)
+                    }
                 }
             }
+            if (condition.ts instanceof List) traverseStatements(condition.ts, statementTraverser, condition)
+            if (condition.fs instanceof List) traverseStatements(condition.fs, statementTraverser, condition)
         }
-    }    
-    def statementTraverser = { node, parentNode ->
-    	if (node.r) traverseRestrictions(node.r, restrictionTraverser)
-    	for(deviceId in node.d) {
-        	devices[deviceId] = devices[deviceId] ?: [c: 0]
-        }
-        if (node.t in ['if', 'while', 'repeat']) {
-            traverseConditions((node.c?:[]) + (node.ei?node.ei*.c:[]), conditionTraverser)
-        }
-        if (node.t == 'switch') {
-        	operandTraverser(node, node.lo, 'condition')
-        	for (c in node.cs) {
-            	operandTraverser(c, c.ro, null)
-                //if case is a range, traverse the second operand too
-                if (c.t == 'r') operandTraverser(c, c.ro2, null)
-                if (c.s instanceof List) {
-                	traverseStatements(c.s, statementTraverser)
+        def restrictionTraverser = { restriction, parentRestriction ->
+            if (restriction.co) {
+                def comparison = rtData.comparisons.conditions[restriction.co]
+                def comparisonType = 'condition'
+                if (!comparison) {
+                    hasTriggers = true
+                    comparisonType = 'trigger'
+                    comparison = rtData.comparisons.triggers[restriction.co]                	
+                }
+                if (comparison) {
+                    def paramCount = comparison.p ?: 0
+                    for(int i = 0; i <= paramCount; i++) {
+                        //get the operand to parse
+                        def operand = (i == 0 ? restriction.lo : (i == 1 ? restriction.ro : restriction.ro2))
+                        operandTraverser(restriction, operand, null)
+                    }
                 }
             }
+        }    
+        def statementTraverser = { node, parentNode, data ->
+            if (node.r) traverseRestrictions(node.r, restrictionTraverser)
+            for(deviceId in node.d) {
+                devices[deviceId] = devices[deviceId] ?: [c: 0]
+            }
+            switch( node.t ) {
+            	case 'if':
+                	if (node.ei) traverseStatements(node.ei*.s, statementTraverser, node)
+                case 'while':
+                case 'repeat':
+                	traverseConditions((node.c?:[]) + (node.ei?node.ei*.c:[]), conditionTraverser)
+                    break;
+            	case 'switch':
+                	operandTraverser(node, node.lo, 'condition')
+                	for (c in node.cs) {
+	                    operandTraverser(c, c.ro, null)
+	                    //if case is a range, traverse the second operand too
+	                    if (c.t == 'r') operandTraverser(c, c.ro2, null)
+	                    if (c.s instanceof List) {
+	                        traverseStatements(c.s, statementTraverser, node)
+	                    }
+	                }
+					break;
+				case 'every':
+                	if (!parentNode) scheduleTimer(rtData, node);
+            }
         }
-        if (node.t == 'if') {
-        	if (node.ei) traverseStatements(node.ei*.s, statementTraverser)
+        if (rtData.piston.r) traverseRestrictions(rtData.piston.r, restrictionTraverser)
+        if (rtData.piston.s) traverseStatements(rtData.piston.s, statementTraverser)
+        //device variables
+        for(variable in rtData.piston.v.findAll{ it.t == 'device' }) {
+            for (deviceId in variable.v) {
+                devices[deviceId] = [c: 0 + (devices[deviceId]?.c ?: 0)]
+            }
         }
-        
-    }
-    if (rtData.piston.r) traverseRestrictions(rtData.piston.r, restrictionTraverser)
-    if (rtData.piston.s) traverseStatements(rtData.piston.s, statementTraverser)
-    //device variables
-	for(variable in rtData.piston.v.findAll{ it.t == 'device' }) {
-    	for (deviceId in variable.v) {
-			devices[deviceId] = [c: 0 + (devices[deviceId]?.c ?: 0)]
-        }
-    }
-    def dds = [:]
-    for (subscription in subscriptions) {
-    	for (condition in subscription.value.c) if (condition) { condition.s = false }
-    	if (subscription.value.t && ((subscription.value.t == "trigger") || (subscription.value.c.sm == "always") || (!hasTriggers && (subscription.value.c.sm != "never")))) {
-	    	def device = getDevice(rtData, subscription.value.d)
-    	    if (device) {
-        		info "Subscribing to $device.${subscription.value.a}...", rtData
-		    	for (condition in subscription.value.c) if (condition) { condition.s = (condition.ct == 't') || (condition.cm == 'always') || (!hasTriggers) }
-        		subscribe(device, subscription.value.a, deviceHandler)
-                ss.events = ss.events + 1
-                if (!dds[device.id]) {
-                	ss.devices = ss.devices + 1
-                	dds[device.id] = 1
+        def dds = [:]
+        for (subscription in subscriptions) {
+            for (condition in subscription.value.c) if (condition) { condition.s = false }
+            if (subscription.value.t && ((subscription.value.t == "trigger") || (subscription.value.c.sm == "always") || (!hasTriggers && (subscription.value.c.sm != "never")))) {
+                def device = getDevice(rtData, subscription.value.d)
+                if (device) {
+                    info "Subscribing to $device.${subscription.value.a}...", rtData
+                    for (condition in subscription.value.c) if (condition) { condition.s = (condition.ct == 't') || (condition.cm == 'always') || (!hasTriggers) }
+                    subscribe(device, subscription.value.a, deviceHandler)
+                    ss.events = ss.events + 1
+                    if (!dds[device.id]) {
+                        ss.devices = ss.devices + 1
+                        dds[device.id] = 1
+                    }
+                } else {
+                    error "Failed subscribing to $device.${subscription.value.a}, device not found", rtData
                 }
             } else {
-            	error "Failed subscribing to $device.${subscription.value.a}, device not found", rtData
-            }
-        } else {
-        	devices[subscription.value.d].c = devices[subscription.value.d].c - 1
-        }
-    }
-    //fake subscriptions for controlled devices to force the piston being displayed in those devices' Smart Apps tabs
-    for (d in devices.findAll{ it.value.c <= 0 }) {
-    	def device = getDevice(rtData, d.key)
-        if (device && (device != location)) {
-       		trace "Subscribing to $device...", rtData
-			subscribe(device, "", fakeHandler)
-            ss.controls = ss.controls + 1
-            if (!dds[device.id]) {
-                ss.devices = ss.devices + 1
-                dds[device.id] = 1
+                devices[subscription.value.d].c = devices[subscription.value.d].c - 1
             }
         }
+        //fake subscriptions for controlled devices to force the piston being displayed in those devices' Smart Apps tabs
+        for (d in devices.findAll{ (it.value.c <= 0) && (it.key != rtData.locationId) }) {
+            def device = getDevice(rtData, d.key)
+            if (device && (device != location)) {
+                trace "Subscribing to $device...", rtData
+                subscribe(device, "", fakeHandler)
+                ss.controls = ss.controls + 1
+                if (!dds[device.id]) {
+                    ss.devices = ss.devices + 1
+                    dds[device.id] = 1
+                }
+            }
+        }
+        state.subscriptions = ss
+        trace msg, rtData
+
+		processSchedules rtData, true
+        subscribe(app, appHandler)
+    } catch (all) {
+    	error "An error has occurred while subscribing: ", rtData, null, all
     }
-    state.subscriptions = ss
-    trace msg, rtData
-    
-    subscribe(app, appHandler)
 }
 
 def appHandler(evt) {
@@ -1852,7 +2008,7 @@ private getVariable(rtData, name) {
     	//we're dealing with an operand, let's parse it
         result = evaluateExpression(rtData, evaluateOperand(rtData, null, result.v), result.t)
     }
-    return result
+    return [t: result.t, v: result.v]
 }
 
 def setVariable(rtData, name, value) {
@@ -1874,6 +2030,7 @@ def setVariable(rtData, name, value) {
             	def vars = state.vars
                 vars[name] = variable.v
                 state.vars = vars
+                atomicState.vars = vars
             }
             return variable
             
@@ -2105,9 +2262,9 @@ private Map evaluateExpression(rtData, expression, dataType = null) {
                     items[idx + 1].v = v
                 } else {
                     if ((o == '*') || (o == '*') || (o == '/') || (o == '-') || (o == '^')) {
-                        if ((t1 != 'number') && (t1 != 'integer') && (t1 != 'decimal') && (t1 != 'float') && (t1 != 'time')) t1 = 'decimal'
-                        if ((t2 != 'number') && (t2 != 'integer') && (t2 != 'decimal') && (t2 != 'float') && (t2 != 'time')) t2 = 'decimal'
-                        t = (t1 == 'time') || (t2 == 'time') ? 'time' : 'decimal'
+                        if ((t1 != 'number') && (t1 != 'integer') && (t1 != 'decimal') && (t1 != 'float') && (t1 != 'datetime') && (t1 != 'date') && (t1 != 'time')) t1 = 'decimal'
+                        if ((t2 != 'number') && (t2 != 'integer') && (t2 != 'decimal') && (t2 != 'float') && (t2 != 'datetime') && (t2 != 'date') && (t2 != 'time')) t2 = 'decimal'
+                        t = (t1 == 'datetime') || (t2 == 'datetime') ? 'datetime' : ((t1 == 'date') || (t2 == 'date') ? 'date' : ((t1 == 'time') || (t2 == 'time') ? 'time' : 'decimal'))
                     }
                     if ((o == '&') || (o == '|')) {
                         t1 = 'boolean'
@@ -2124,18 +2281,19 @@ private Map evaluateExpression(rtData, expression, dataType = null) {
                         t2 = 'decimal'
                         t = 'decimal'
                     }
-                    if ((t != 'time') && ((t1 == 'integer') || (t2 == 'integer'))) {
+                    if ((t != 'datetime') && (t != 'date') && (t != 'time') && ((t1 == 'integer') || (t2 == 'integer'))) {
                         t1 = 'integer'
                         t2 = 'integer'
                         t = 'integer'
                     }
-                    if ((t != 'time') && ((t1 == 'number') || (t2 == 'number') || (t1 == 'decimal') || (t2 == 'decimal') || (t1 == 'float') || (t2 == 'float'))) {
+                    if ((t != 'datetime') && (t != 'date') && (t != 'time') && ((t1 == 'number') || (t2 == 'number') || (t1 == 'decimal') || (t2 == 'decimal') || (t1 == 'float') || (t2 == 'float'))) {
                         t1 = 'decimal'
                         t2 = 'decimal'
                         t = 'decimal'
                     }
                     v1 = evaluateExpression(rtData, items[idx], t1).v
 	                v2 = evaluateExpression(rtData, items[idx + 1], t2).v
+                    //error "Calculating ($t1) $v1 $o ($t2) $v2", rtData
     	            switch (o) {
         	            case '-':
             	        	v = v1 - v2
@@ -3139,7 +3297,11 @@ private cast(rtData, value, dataType, srcDataType = null) {
 private utcToLocalDate(dateOrTimeOrString = null) {
 	if (dateOrTimeOrString instanceof String) {
 		//get UTC time
-		dateOrTimeOrString = timeToday(dateOrTimeOrString, location.timeZone).getTime()
+        try {        
+			dateOrTimeOrString = timeToday(dateOrTimeOrString, location.timeZone).getTime()
+        } catch (all) {
+        	error "Error converting $dateOrTimeOrString to Date: ", null, null, all
+        }
 	}
 	if (dateOrTimeOrString instanceof Date) {
 		//get unix time
@@ -3319,23 +3481,53 @@ private static Map yearMonths() {
     ]
 }
 
-private getSunrise() {
-	if (!(state.sunrise instanceof Date)) {
-		def sunTimes = getSunriseAndSunset()
-		state.sunrise = utcToLocalDate(sunTimes.sunrise)
-		state.sunset = utcToLocalDate(sunTimes.sunset)
-	}
-	return state.sunrise
+private initSunriseAndSunset(rtData) {
+    def rightNow = now()
+    def sunTimes = app.getSunriseAndSunset()
+    rtData.sunrise = rightNow - rightNow.mod(86400000) + sunTimes.sunrise.time.mod(86400000)
+    rtData.sunset = rightNow - rightNow.mod(86400000) + sunTimes.sunset.time.mod(86400000)
 }
 
-private getSunset() {
-	if (!(state.sunset instanceof Date)) {
-		def sunTimes = getSunriseAndSunset()
-		state.sunrise = utcToLocalDate(sunTimes.sunrise)
-		state.sunset = utcToLocalDate(sunTimes.sunset)
-	}
-	return state.sunset
+private getSunriseTime(rtData) {
+	if (!rtData.sunrise) initSunriseAndSunset(rtData)
+	return rtData.sunrise
 }
+
+private getSunsetTime(rtData) {
+	if (!rtData.sunset) initSunriseAndSunset(rtData)
+	return rtData.sunset
+}
+
+private getNextSunriseTime(rtData) {
+	if (!(rtData.sunrise instanceof Date)) initSunriseAndSunset(rtData)
+	return rtData.sunrise + (rtData.sunrise < now() ? 86400000 : 0)
+}
+
+private getNextSunsetTime(rtData) {
+	if (!(rtData.sunset instanceof Date)) initSunriseAndSunset(rtData)
+	return rtData.sunset + (rtData.sunset < now() ? 86400000 : 0)
+}
+
+private getMidnightTime(rtData) {
+	def rightNow = localTime()
+    return localToUtcTime(rightNow - rightNow.mod(86400000))
+}
+
+private getNextMidnightTime(rtData) {
+	def rightNow = localTime()
+    return localToUtcTime(rightNow - rightNow.mod(86400000) + 86400000)
+}
+
+private getNoonTime(rtData) {
+	def rightNow = localTime()
+    return localToUtcTime(rightNow - rightNow.mod(86400000) + 43200000)
+}
+
+private getNextNoonTime(rtData) {
+	def rightNow = localTime()
+    return localToUtcTime(rightNow - rightNow.mod(86400000) + 43200000 + (rightNow.mod(86400000) >= 43200000 ? 86400000 : 0))
+}
+
 
 
 
@@ -3430,7 +3622,7 @@ private static Map getSystemVariables() {
 		"\$iftttStatusOk": [t: "boolean", v: null],
 		"\$locationMode": [t: "string", d: true],
 		"\$shmStatus": [t: "string", d: true]
-	]
+	].sort{it.key}
 }
 
 private getSystemVariableValue(rtData, name) {
@@ -3451,14 +3643,14 @@ private getSystemVariableValue(rtData, name) {
 		case "\$month": return localDate().month + 1 
 		case "\$monthName": return yearMonths()[localDate().month + 1] 
 		case "\$year": return localDate().year + 1900 
-		case "\$midnight": def rightNow = localTime(); return localToUtcTime(rightNow - rightNow.mod(86400000)) 
-		case "\$noon": def rightNow = localTime(); return localToUtcTime(rightNow - rightNow.mod(86400000) + 43200000) 
-		case "\$sunrise": def sunrise = getSunrise(); def rightNow = localTime(); return localToUtcTime(rightNow - rightNow.mod(86400000) + sunrise.hours * 3600000 + sunrise.minutes * 60000) 
-		case "\$sunset": def sunset = getSunset(); def rightNow = localTime(); return localToUtcTime(rightNow - rightNow.mod(86400000) + sunset.hours * 3600000 + sunset.minutes * 60000) 
-		case "\$nextMidnight": def rightNow = localTime(); return localToUtcTime(rightNow - rightNow.mod(86400000) + 86400000) 
-		case "\$nextNoon": def rightNow = localTime(); if (rightNow - rightNow.mod(86400000) + 43200000 < rightNow) rightNow += 86400000; return localToUtcTime(rightNow - rightNow.mod(86400000) + 43200000) 
-		case "\$nextSunrise": def sunrise = getSunrise(); def rightNow = localTime(); if (sunrise.time < rightNow) rightNow += 86400000; return localToUtcTime(rightNow - rightNow.mod(86400000) + sunrise.hours * 3600000 + sunrise.minutes * 60000)
-		case "\$nextSunset": def sunset = getSunset(); def rightNow = localTime(); if (sunset.time < rightNow) rightNow += 86400000; return localToUtcTime(rightNow - rightNow.mod(86400000) + sunset.hours * 3600000 + sunset.minutes * 60000)
+		case "\$midnight": return getMidnightTime(rtData)
+		case "\$noon": return getNoonTime(rtData)
+		case "\$sunrise": return getSunriseTime(rtData); 
+		case "\$sunset": return getSunsetTime(rtData);
+		case "\$nextMidnight":  return getNextMidnightTime(rtData);
+		case "\$nextNoon": return getNextNoonTime(rtData);
+		case "\$nextSunrise": return getNextSunriseTime(rtData);
+		case "\$nextSunset": return getNextSunsetTime(rtData);
 		case "\$time": def t = localDate(); def h = t.hours; def m = t.minutes; return (h == 0 ? 12 : (h > 12 ? h - 12 : h)) + ":" + (m < 10 ? "0$m" : "$m") + " " + (h <12 ? "A.M." : "P.M.") 
 		case "\$time24": def t = localDate(); def h = t.hours; def m = t.minutes; return h + ":" + (m < 10 ? "0$m" : "$m") 
 		case "\$random": def result = getRandomValue("\$random") ?: (float)Math.random(); setRandomValue("\$random", result); return result 

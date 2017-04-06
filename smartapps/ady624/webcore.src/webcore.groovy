@@ -19,9 +19,9 @@
  *  Version history
  */
 
-public static String version() { return "v0.0.05f.20170330" }
+public static String version() { return "v0.0.060.20170406" }
 /*
- *	03/30/2017 >>> v0.0.05f.20170329 - ALPHA - Attempt to fix setLocation, added Twilio integration (dialog support coming soon)
+ *	04/06/2017 >>> v0.0.060.20170406 - ALPHA - Timers for second/minute/hour/day are in. week/month/year not working yet. May be VERY quirky, still. *	03/30/2017 >>> v0.0.05f.20170329 - ALPHA - Attempt to fix setLocation, added Twilio integration (dialog support coming soon)
  *	03/29/2017 >>> v0.0.05e.20170329 - ALPHA - Added sendEmail
  *	03/29/2017 >>> v0.0.05d.20170329 - ALPHA - Minor typo fixes, thanks to @rayzurbock
  *	03/28/2017 >>> v0.0.05c.20170328 - ALPHA - Minor fixes regarding location subscriptions
@@ -459,24 +459,28 @@ def pageRemove() {
 
 
 private installed() {
+	log.error "installed()"
 	state.installed = true
 	initialize()
 	return true
 }
 
 private updated() {
+	log.error "updated()"
 	unsubscribe()
 	initialize()
 	return true
 }
 
 private initialize() {
+	log.error "initialize()"
 	subscribeAll()
     state.vars = state.vars ?: [:]
     ping()
 }
 
 private initializeWebCoREEndpoint() {
+	log.error "initializeWebCoREEndpoint()"
 	if (!state.endpoint) {
 		try {
 			def accessToken = createAccessToken()
@@ -491,6 +495,7 @@ private initializeWebCoREEndpoint() {
 }
 
 private subscribeAll() {
+	log.error "subscribeAll()"
 	subscribe(location, handle(), webCoREHandler)
 }
 
@@ -1017,6 +1022,7 @@ public String mem(showBytes = true) {
 }
 
 public Map getRunTimeData(semaphore) {
+	def n = now()
     def startTime = now()
     semaphore = semaphore ?: 0
     def semaphoreDelay = 0
@@ -1055,6 +1061,7 @@ public Map getRunTimeData(semaphore) {
 }
 
 public void updateRunTimeData(data) {
+	if (!data || !data.id) return
 	List events = []
 	Map vars = atomicState.vars ?: [:]
     def modified = false
@@ -1779,5 +1786,3 @@ private Map virtualDevices() {
         ifttt:				[ n: 'IFTTT',						o: [opt1: 'Option 1', opt2: 'Option 2'],	m: true	],
     ]
 }
-
-//debug
