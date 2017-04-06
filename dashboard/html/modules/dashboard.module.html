@@ -1,5 +1,5 @@
 <status ng-if="status" ng-animate ng-bind-html="status" ng-click="setStatus()"></status>
-<loader ng-if="loading" ng-animate>
+<loader ng-if="loading">
 	<ul>
 		<li></li>
 		<li></li>
@@ -47,7 +47,7 @@
         </div>
       </div>
     </nav>
-	<viewer class="dashboard" ng-if="initialized" ng-animate class="no-animate">
+	<viewer class="dashboard" ng-if="initialized" class="no-animate">
 		<div class="body container-fluid">
 			<div class="row">
 				<div class="col-sm-1 sidebar">

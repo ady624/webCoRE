@@ -670,6 +670,10 @@ input[type="time"]  {
 }
 
 @media only screen and (max-width: 767px) {
+	body > logo {
+		font-size: 80px;
+	}
+	
 	.ngdialog {
 		padding: 0px !important;
 		overflow: hidden;

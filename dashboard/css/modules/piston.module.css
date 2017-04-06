@@ -179,7 +179,7 @@ tasks {
     display: block;
     width: 100%;
     height: auto;
-    padding-left: 7px;
+    padding-left: 20px;
 	border-left: solid 8px rgba(0, 0, 0, 0.05);
 	margin: 0px;
 }
@@ -215,7 +215,7 @@ line {
 }
 
 line * {
-    display: inline-block;
+    display: inline;
     line-height: 17px !important;
 	min-height: 17px !important;
 	position: relative;
@@ -718,23 +718,31 @@ div[taskedit] {
 }
 
 
-div[items] div[item] {
-	padding: 16px 16px 8px 16px;
+div.row[items] {
+	padding: 0px 8px;
 }
 
-div[items] div.alert span {
-	line-height: 24px;
-	font-size: 16px;
-	vertical-alignment: middle;
+div[items] div[item] {
+	padding: 8px;
 }
 
 div[items] div[item] item {
 	position: relative;
 	display: block;
-	min-height: 240px;
+	min-height: 192px;
 	background: rgba(0, 0, 0, 0.05);
 	border-radius: 8px;
 	padding: 16px;
+	margin: 0px;
+}
+
+div[items] div[item] item div.title {
+	font-size: 18px;
+	margin-bottom: 8px;
+}
+
+div[items] div[item] item p {
+	text-align: justify;
 }
 
 div[items] div[item] item button {

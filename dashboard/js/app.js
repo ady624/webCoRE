@@ -1,4 +1,4 @@
-var app = angular.module('CoRE', ['ng', 'ngRoute', 'ngSanitize', 'ngResource', 'ngDialog', 'angular-loading-bar', 'angular-svg-round-progressbar', 'angular-bootstrap-select', 'aCKolor', 'dndLists', 'ui.toggle', 'chart.js', 'smartArea']);
+var app = angular.module('CoRE', ['ng', 'ngRoute', 'ngSanitize', 'ngResource', 'ngDialog', 'angular-svg-round-progressbar', 'angular-bootstrap-select', 'aCKolor', 'dndLists', 'ui.toggle', 'chart.js', 'smartArea']);
 //var cdn = 'https://core.homecloudhub.com/dashboard/';
 var cdn = '';
 var theme = '';
@@ -105,9 +105,9 @@ app.filter('orderObjectBy', function() {
 
 
 
-var config = app.config(['$routeProvider', '$locationProvider', '$sceDelegateProvider', 'cfpLoadingBarProvider', '$rootScopeProvider',  function ($routeProvider, $locationProvider, $sceDelegateProvider, $cfpLoadingBarProvider, $rootScopeProvider) {
+var config = app.config(['$routeProvider', '$locationProvider', '$sceDelegateProvider', '$rootScopeProvider',  function ($routeProvider, $locationProvider, $sceDelegateProvider,  $rootScopeProvider) {
 	$rootScopeProvider.digestTtl(10000); 
-	$cfpLoadingBarProvider.includeSpinner = false;
+	//$cfpLoadingBarProvider.includeSpinner = false;
     var ext = '.module.css';
     $sceDelegateProvider.resourceUrlWhitelist([
         'self',
@@ -345,7 +345,7 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 		return null;
 	}
 
-	dataService.loadInstance = function(inst, uri, pin) {
+	dataService.loadInstance = function(inst, uri, pin, success, error) {
 		var si = inst ? store[inst.id] : null;
 		var deviceVersion = !inst || !(inst.devices instanceof Object ) || !(Object.keys(inst.devices).length) ? 0 : (inst.deviceVersion ? inst.deviceVersion : 0);
 		if (!si) {
@@ -390,8 +390,9 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 			var error = document.getElementById('error');
 			if (error) error.parentNode.removeChild(error);
 		}
-    	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/load?callback=JSON_CALLBACK&token=' + (si && si.token ? si.token : '') + (pin ? '&pin=' + pin : '') + '&dev=' + deviceVersion)
-			.success(function(data) {
+
+    	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/load?token=' + (si && si.token ? si.token : '') + (pin ? '&pin=' + pin : '') + '&dev=' + deviceVersion, {jsonpCallbackParam: 'callback'}).then(function(response) {
+				var data = response.data;
 				if (data.now) {
 					adjustTimeOffset(data.now);
 				}
@@ -403,8 +404,13 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 				}
 				if (data.instance) {
 					setInstance(data.instance);
-				}				
-				return data;
+				}		
+				return data;	
+				if (success) {	
+					success(data);
+				}
+			}, function(response) {
+				if (error) error(response)
 			});
     };
 
@@ -423,8 +429,9 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 		var deviceVersion = !inst || !(inst.devices instanceof Object ) || !(Object.keys(inst.devices).length) ? 0 : (inst.deviceVersion ? inst.deviceVersion : 0);
         var dbVersion = readObject('db.version', _dk);
 		status('Loading piston...');
-    	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/piston/get?callback=JSON_CALLBACK&id=' + pistonId + '&db=' + dbVersion + '&token=' + (si && si.token ? si.token : '') + '&dev=' + deviceVersion)
-			.success(function(data) {
+    	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/piston/get?id=' + pistonId + '&db=' + dbVersion + '&token=' + (si && si.token ? si.token : '') + '&dev=' + deviceVersion, {jsonpCallbackParam: 'callback'})
+			.then(function(response) {
+				data = response.data;
 				if (data.now) {
 					adjustTimeOffset(data.now);
 				}
@@ -450,9 +457,9 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 		var inst = dataService.getPistonInstance(pistonId);
 		if (!inst) { inst = dataService.getInstance() };
 		si = store ? store[inst.id] : null;
-    	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/piston/activity?callback=JSON_CALLBACK&id=' + pistonId + '&log=' + (lastLogTimestamp ? lastLogTimestamp : 0) + '&token=' + (si && si.token ? si.token : ''))
-			.success(function(data) {
-				return data;
+    	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/piston/activity?id=' + pistonId + '&log=' + (lastLogTimestamp ? lastLogTimestamp : 0) + '&token=' + (si && si.token ? si.token : ''), {jsonpCallbackParam: 'callback'})
+			.then(function(response) {
+				return response.data;
 			});
     }
 
@@ -531,18 +538,18 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
     dataService.generateNewPistonName = function () {
 		var inst = dataService.getInstance();
 		si = store ? store[inst.id] : null;
-    	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/piston/new?callback=JSON_CALLBACK&token=' + (si && si.token ? si.token : ''))
-			.success(function(data) {
-				return data;
+    	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/piston/new?token=' + (si && si.token ? si.token : ''), {jsonpCallbackParam: 'callback'})
+			.then(function(response) {
+				return response.data;
 			});
     }
 
     dataService.createPiston = function (name, author, backupBin) {
 		var inst = dataService.getInstance();
 		si = store ? store[inst.id] : null;
-    	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/piston/create?callback=JSON_CALLBACK&author=' + encodeURIComponent(author) + '&name=' + encodeURIComponent(name) + '&bin=' + encodeURIComponent(backupBin ? backupBin : '')  +'&token=' + (si && si.token ? si.token : ''))
-			.success(function(data) {
-				return data;
+    	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/piston/create?author=' + encodeURIComponent(author) + '&name=' + encodeURIComponent(name) + '&bin=' + encodeURIComponent(backupBin ? backupBin : '')  +'&token=' + (si && si.token ? si.token : ''), {jsonpCallbackParam: 'callback'})
+			.then(function(response) {
+				return response.data;
 			});
     }
 
@@ -551,13 +558,13 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 	var setPistonChunk = function(si, chunks, chunk, binId) {
 		if (chunk < chunks.length) {
 			status('Saving piston chunk ' + (chunk + 1).toString() + ' of ' + chunks.length.toString() + '...');
-	    	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/piston/set.chunk?callback=JSON_CALLBACK&chunk=' + chunk.toString() + '&data=' + encodeURIComponent(chunks[chunk]) + '&token=' + (si && si.token ? si.token : ''))
+	    	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/piston/set.chunk?chunk=' + chunk.toString() + '&data=' + encodeURIComponent(chunks[chunk]) + '&token=' + (si && si.token ? si.token : ''), {jsonpCallbackParam: 'callback'})
 				.then(function(response) {
 					return setPistonChunk(si, chunks, chunk + 1, binId);
 				});
 		} else {
 			status('Finishing up...');
-	    	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/piston/set.end?callback=JSON_CALLBACK' + '&bin=' + encodeURIComponent(binId) + '&token=' + (si && si.token ? si.token : ''))
+	    	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/piston/set.end?bin=' + encodeURIComponent(binId) + '&token=' + (si && si.token ? si.token : ''), {jsonpCallbackParam: 'callback'})
 				.then(function(response) {
 					status();
 					return response;
@@ -578,7 +585,7 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 			//var chunks = data.match(/.{1,maxChunkSize}/g);
 			var chunks = [].concat.apply([],data.split('').map(function(x,i){ return i%maxChunkSize ? [] : data.slice(i,i+maxChunkSize) }, data));
 			status('Preparing to save chunked piston...');
-	    	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/piston/set.start?callback=JSON_CALLBACK&id=' + piston.id + '&chunks=' + chunks.length.toString() + '&token=' + (si && si.token ? si.token : ''))
+	    	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/piston/set.start?id=' + piston.id + '&chunks=' + chunks.length.toString() + '&token=' + (si && si.token ? si.token : ''), {jsonpCallbackParam: 'callback'})
 				.then(function(response) {
 					if (response && (response.status == 200) && response.data && (response.data.status == 'ST_READY')) {
 						return setPistonChunk(si, chunks, 0, binId);
@@ -586,7 +593,7 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 				});
 		} else {
 			status('Saving piston...');
-	    	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/piston/set?callback=JSON_CALLBACK&id=' + piston.id + '&data=' + data + '&bin=' + encodeURIComponent(binId) + '&token=' + (si && si.token ? si.token : ''))
+	    	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/piston/set?id=' + piston.id + '&data=' + data + '&bin=' + encodeURIComponent(binId) + '&token=' + (si && si.token ? si.token : ''), {jsonpCallbackParam: 'callback'})
 				.then(function(response) {
 					status();
 					return response;
@@ -600,10 +607,10 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 		if (!inst) { inst = dataService.getInstance() };
 		si = store ? store[inst.id] : null;
 		status('Pausing piston...');
-    	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/piston/pause?callback=JSON_CALLBACK&id=' + pid + '&token=' + (si && si.token ? si.token : ''))
-			.success(function(data) {
+    	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/piston/pause?id=' + pid + '&token=' + (si && si.token ? si.token : ''), {jsonpCallbackParam: 'callback'})
+			.then(function(response) {
 				status();
-				return data;
+				return response.data;
 			});
     }
 
@@ -612,10 +619,10 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 		if (!inst) { inst = dataService.getInstance() };
 		si = store ? store[inst.id] : null;
 		status('Resuming piston...');
-    	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/piston/resume?callback=JSON_CALLBACK&id=' + pid + '&token=' + (si && si.token ? si.token : ''))
-			.success(function(data) {
+    	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/piston/resume?id=' + pid + '&token=' + (si && si.token ? si.token : ''), {jsonpCallbackParam: 'callback'})
+			.then(function(response) {
 				status();
-				return data;
+				return response.data;
 			});
     }
 
@@ -623,9 +630,9 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 		var inst = dataService.getPistonInstance(pid);
 		if (!inst) { inst = dataService.getInstance() };
 		si = store ? store[inst.id] : null;
-    	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/piston/delete?callback=JSON_CALLBACK&id=' + pid + '&token=' + (si && si.token ? si.token : ''))
-			.success(function(data) {
-				return data;
+    	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/piston/delete?id=' + pid + '&token=' + (si && si.token ? si.token : ''), {jsonpCallbackParam: 'callback'})
+			.then(function(response) {
+				return response.data;
 			});
     }
 
@@ -634,16 +641,16 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 		if (!inst) { inst = dataService.getInstance() };
 		si = store ? store[inst.id] : null;
 		var data = utoa(angular.toJson(expression));
-    	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/piston/evaluate?callback=JSON_CALLBACK&id=' + pid + '&expression=' + data + '&dataType=' + (dataType ? encodeURIComponent(dataType) : '') + '&token=' + (si && si.token ? si.token : ''))
-			.success(function(data) {
-				return data;
+    	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/piston/evaluate?id=' + pid + '&expression=' + data + '&dataType=' + (dataType ? encodeURIComponent(dataType) : '') + '&token=' + (si && si.token ? si.token : ''), {jsonpCallbackParam: 'callback'})
+			.then(function(response) {
+				return response.data;
 			});
     }
 
 
     dataService.registerDashboard = function (code) {
     	return $http.post('https://api.webcore.co/dashboard/register/' + code)
-			.success(function(data) {
+			.then(function(data) {
 				return data;
 			});
     }

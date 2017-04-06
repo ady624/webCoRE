@@ -21,8 +21,7 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 		var currentRequestId = 0 + $scope.requestId;
 		$scope.loading = !$scope.initialized || !$scope.instance;
         dataService.setStatusCallback($scope.setStatus);
-		dataService.loadInstance(instance, uri, pin)
-			.success(function(data) {
+		dataService.loadInstance(instance, uri, pin).then(function(data) {
 				if ($scope.$$destroyed) return;
 				if (currentRequestId != $scope.requestId) { return };
 				if (data.error) {
@@ -52,8 +51,7 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 					$scope.clock();
 					$scope.render();
 				}
-		    })
-			.error(function(data, status, headers, config) {
+		    }, function(data, status, headers, config) {
 				if ($scope.$$destroyed) return;
 				if (status == 404) {
 					$scope.dialogDeleteInstance(instance);
@@ -137,7 +135,7 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 
 	$scope.newPiston = function() {
 		$scope.loading = true;
-		dataService.generateNewPistonName().success(function(data) {
+		dataService.generateNewPistonName().then(function(data) {
 			$scope.loading = false;
     	    $scope.designer = {};
 			$scope.designer.author = dataService.loadFromStore('author.handle');
@@ -191,11 +189,11 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 		dataService.saveToStore('backup.auto', !!$scope.designer.backup);
 		dataService.saveToStore('author.handle', $scope.designer.author);
 		if ($scope.designer.backup) {
-			dataService.generateBackupBin().success(function(binId) {
-				dataService.createPiston($scope.designer.name, $scope.designer.author, binId).success(success);
+			dataService.generateBackupBin().then(function(binId) {
+				dataService.createPiston($scope.designer.name, $scope.designer.author, binId).then(success);
 			});
 		} else {
-			dataService.createPiston($scope.designer.name, $scope.designer.author).success(success);
+			dataService.createPiston($scope.designer.name, $scope.designer.author).then(success);
 		}
     };
 
@@ -350,7 +348,7 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 	$scope.timeLeft = timeLeft;
 
 	$scope.tap = function(tapId) {
-		dataService.tap(tapId).success(function (response) {
+		dataService.tap(tapId).then(function (response) {
 		});
 	};
 
@@ -366,12 +364,12 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 				$scope.viewerPiston.app.enabled = enabled;
 			}
 			if (enabled) {
-				dataService.resumePiston(pistonId).success(function (response) {
+				dataService.resumePiston(pistonId).then(function (response) {
         		    $scope.onRefresh(response);
 		        });
 
 			} else {
-				dataService.pausePiston(pistonId).success(function (response) {
+				dataService.pausePiston(pistonId).then(function (response) {
 		            $scope.onRefresh(response);
 		        });
 			}

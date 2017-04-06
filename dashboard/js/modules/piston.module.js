@@ -22,6 +22,8 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		undo: [],
 		redo: []
 	};
+	$scope.weekDays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+	$scope.yearMonths = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
 	$scope.render = function(cancelTimer) {
 		//do nothing, but rerenders
@@ -56,7 +58,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 			tmrActivity = $timeout($scope.updateActivity, 10000);
 			return;
 		}
-		dataService.getActivity($scope.pistonId, $scope.lastLogEntry).success(function (response) {
+		dataService.getActivity($scope.pistonId, $scope.lastLogEntry).then(function (response) {
 			if ($scope.$$destroyed) return;
 			if (response.error == 'ERR_INVALID_ID') {
 				//the app has been deleted
@@ -84,7 +86,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		dataService.setStatusCallback($scope.setStatus);
 		$scope.loading = true;
 		if ($scope.piston) $scope.loading = true;
-		dataService.getPiston($scope.pistonId).success(function (response) {
+		dataService.getPiston($scope.pistonId).then(function (response) {
 			if ($scope.$$destroyed) return;
 			try {
 				var showOptions = $scope.piston ? !!$scope.showOptions : false;
@@ -134,7 +136,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 							case 'duplicate':
 								if ($scope.params.piston) {
 									$scope.loading = true;
-									dataService.getPiston($scope.params.piston).success(function (response) {
+									dataService.getPiston($scope.params.piston).then(function (response) {
 										$scope.loading = false;
 										if (response && response.data && response.data.piston) {
 											$scope.piston.o = response.data.piston.o ? response.data.piston.o : {};
@@ -153,7 +155,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 							case 'restore':
 								if ($scope.params.bin) {
 									$scope.loading = true;
-									dataService.loadFromBin($scope.params.bin).success(function (piston) {
+									dataService.loadFromBin($scope.params.bin).then(function (piston) {
 										$scope.loading = false;
 										if (piston) {
 											$scope.piston.o = piston.o ? piston.o : {};
@@ -366,7 +368,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 
 	$scope.pause = function() {
 		$scope.loading = true;
-		dataService.pausePiston($scope.pistonId).success(function(data) {
+		dataService.pausePiston($scope.pistonId).then(function(data) {
 			$scope.loading = false;
 			if (data && data.status && (data.status == 'ST_SUCCESS')) {
 				$scope.meta.active = data.active;
@@ -378,7 +380,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 
 	$scope.resume = function() {
 		$scope.loading = true;
-		dataService.resumePiston($scope.pistonId).success(function(data) {
+		dataService.resumePiston($scope.pistonId).then(function(data) {
 			$scope.loading = false;
 			if (data && data.status && (data.status == 'ST_SUCCESS')) {
 				$scope.meta.active = data.active;
@@ -390,7 +392,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 
 	$scope.del = function() {
 		$scope.loading = true;
-		dataService.deletePiston($scope.pistonId).success(function(data) {
+		dataService.deletePiston($scope.pistonId).then(function(data) {
 			$scope.closeDialog();
 			$location.path('/');
 		});
@@ -571,10 +573,9 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		$scope.designer.description = statement.z;
 		$scope.designer.parent = parent;
 		$scope.designer.devices = statement.d;
-		$scope.designer.operand = {data: statement.lo, multiple: false};
-		$scope.designer.operand2 = {data: statement.lo2, multiple: false};
-		$scope.designer.operand3 = {data: statement.lo3, multiple: false};
-		$scope.designer.operand = {data: statement.lo, multiple: false};
+		$scope.designer.operand = {data: $scope.copy(statement.lo), multiple: false};
+		$scope.designer.operand2 = {data: $scope.copy(statement.lo2), multiple: false};
+		$scope.designer.operand3 = {data: $scope.copy(statement.lo3), multiple: false};
 		$scope.designer.x = statement.x;
 		$scope.designer.autoDialogs = true;
 		//advanced options
@@ -612,27 +613,37 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 					break;
 				case 'every':
 					designer.operand.dataType = 'duration';
-					designer.operand.data = {t: 'c', c: 5, vt: 'm'};
+					if (designer.$new) designer.operand.data = {t: 'c', c: 1, vt: 'd'};
 					designer.operand.onlyAllowConstants = true;
+					designer.operand2.dataType = 'time';
+					var d = new Date();
+					d.setSeconds(0, 0);
+					if (designer.$new) designer.operand2.data = {t: 'c', c: d};
+					designer.operand3.dataType = 'duration';
+					if (designer.$new) designer.operand3.data = {t: 'c', c: 0, vt: 'm'};
+					designer.operand3.onlyAllowConstants = true;
 					$scope.validateOperand(designer.operand, true);
+					$scope.validateOperand(designer.operand2, true);
+					$scope.validateOperand(designer.operand3, true);
 					break;
 			}
+			$scope.initBootstrapSelects();
 		}
 		window.designer = $scope.designer;
 		$scope.designer.items = {
 			simple: [
-				{ type: 'if', name: 'If block', icon: 'code-fork', cssClass: 'info', description: 'An if block allows the piston to execute different actions depending on the truth result of a comparison or set of comparisons', button: 'a condition' },
+				{ type: 'if', name: 'If block', icon: 'code-fork', cssClass: 'info', description: 'An if block allows the piston to execute different actions depending on the truth result of a comparison or set of comparisons', button: 'an if' },
 				{ type: 'action', name: 'Action', icon: 'code', cssClass: 'success', description: 'An action allows the piston to control devices and execute tasks', button: 'an action' },
 				{ type: 'every', name: 'Timer', icon: 'clock-o', cssClass: 'warning', description: 'A timer will trigger execution of the piston at set time intervals', button: 'a timer' }
 			],
 			advanced: [
 				{ type: 'switch', name: 'Switch', icon: 'code-fork', cssClass: 'info', description: 'A switch statement compares an operand against a set of values and executes statements corresponding to those matches', button: 'a switch' },
-				{ type: 'for', name: 'For loop', icon: 'circle-o-notch', cssClass: 'warning', description: 'A for loop executes child statements for a set number of iteration cycles', button: 'a for loop' },
-				{ type: 'each', name: 'For each loop', icon: 'circle-o-notch', cssClass: 'warning', description: 'An each loop executes child statements for each device in a device list', button: 'a for each loop' },
-				{ type: 'while', name: 'While loop', icon: 'circle-o-notch', cssClass: 'warning', description: 'A while loop executes child statements for as log as a condition is met', button: 'a while loop' },
-				{ type: 'repeat', name: 'Repeat loop', icon: 'circle-o-notch', cssClass: 'warning', description: 'A repeat loop executes child statements until a condition is met', button: 'a repeat loop' },
+				{ type: 'for', name: 'For loop', icon: 'circle-o-notch', cssClass: 'warning', description: 'A for loop executes the same statements for a set number of iteration cycles', button: 'a for loop' },
+				{ type: 'each', name: 'For each loop', icon: 'circle-o-notch', cssClass: 'warning', description: 'An each loop executes the same statements for each device in a device list', button: 'a for each loop' },
+				{ type: 'while', name: 'While loop', icon: 'circle-o-notch', cssClass: 'warning', description: 'A while loop executes the same statements for as long as a condition is met', button: 'a while loop' },
+				{ type: 'repeat', name: 'Repeat loop', icon: 'circle-o-notch', cssClass: 'warning', description: 'A repeat loop executes the same statements until a condition is met', button: 'a repeat loop' },
 				{ type: 'break', name: 'Break', icon: 'ban', cssClass: 'danger', description: 'A break allows the interruption of the inner most switch, for loop, for each loop, while loop, or repeat loop', button: 'a break' },
-				{ type: 'exit', name: 'Exit', icon: 'ban', cssClass: 'danger', description: 'An exit interrupts the piston execution and exits the execution', button: 'an exit' }
+				{ type: 'exit', name: 'Exit', icon: 'ban', cssClass: 'danger', description: 'An exit interrupts the piston execution and exits immediately', button: 'an exit' }
 			]
 		};
 		$scope.designer.ontypechanged($scope.designer, $scope.designer.type);
@@ -692,6 +703,13 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 				statement.o = $scope.designer.operator;
 				statement.n = $scope.designer.not == '1';
 				statement.c = statement.c ? statement.c : [];
+				statement.s = statement.s ? statement.s : [];
+				break;
+			case 'every':
+				statement.lo = $scope.designer.operand.data;			
+				statement.lo2 = $scope.designer.operand2.data;
+				if (statement.lo2.c instanceof Date) statement.lo2.c = statement.lo2.c.getHours() * 60 + statement.lo2.c.getMinutes();
+				statement.lo3 = $scope.designer.operand3.data;
 				statement.s = statement.s ? statement.s : [];
 				break;
 			case 'repeat':
@@ -1443,8 +1461,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 			$scope.designer.parameters[0].linkedOperand = $scope.designer.parameters[1];
 			$scope.validateOperand($scope.designer.parameters[0]);
 		}
-		$scope.$$postDigest(initBootstrapSelect);
-		//$timeout(initBootstrapSelect, 0, false);
+		$scope.initBootstrapSelects();
 	}
 
 
@@ -1909,9 +1926,10 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 	}
 
 
-	$scope.initBootstrapSelect = function() {
-		$('select').selectpicker('refresh');
-		//setTimeout(function() {$('select').selectpicker('refresh');}, 1);
+	$scope.initBootstrapSelects = function() {
+		$scope.$$postDigest(function() {
+			$('select').selectpicker('refresh');
+		});
 	};
 
 
@@ -1985,6 +2003,10 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		}
 	}
 
+	$scope.localTimeToDate = function(time) {
+		return new Date(1970, 1, 1, time / 60, time % 60, 0, 0);
+	};
+
 	$scope.validateOperand = function(operand, reinit, managed) {
 		if (!!$scope.designer.comparison && !managed) {
 			$scope.validateComparison($scope.designer.comparison, reinit);
@@ -2053,6 +2075,10 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 				operand.data.t = t;
 			}
 
+			if ((operand.data.vt == 'time') && !(operand.data.c instanceof Date)) {
+				operand.data.c = $scope.localTimeToDate(operand.data.c);
+			}
+
 
 			var strict = !!operand.strict;
 			if (operand.onlyAllowConstants) {
@@ -2064,8 +2090,9 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 				operand.allowExpression = false;
 			} else {
 				operand.allowDevices = dataType == 'device';
-				operand.allowPhysical = (dataType != 'device') && (dataType != 'variable') && (!strict || (dataType != 'boolean')) && (dataType != 'duration');
-				operand.allowVirtual = (dataType != 'device') && (dataType != 'variable') && (dataType != 'decimal') && (dataType != 'integer') && (dataType != 'number') && (dataType != 'boolean') && (dataType != 'enum') && (dataType != 'color') && (dataType != 'duration');
+				operand.allowPhysical = (dataType != 'datetime') && (dataType != 'date') && (dataType != 'time') && (dataType != 'device') && (dataType != 'variable') && (!strict || (dataType != 'boolean')) && (dataType != 'duration');
+				operand.allowPreset = (dataType == 'datetime') || (dataType == 'time');
+				operand.allowVirtual = (dataType != 'datetime') && (dataType != 'date') && (dataType != 'time') && (dataType != 'device') && (dataType != 'variable') && (dataType != 'decimal') && (dataType != 'integer') && (dataType != 'number') && (dataType != 'boolean') && (dataType != 'enum') && (dataType != 'color') && (dataType != 'duration');
 				operand.allowVariable = (dataType != 'device' || ((dataType == 'device') && operand.multiple)) && (!strict || (dataType != 'boolean'));
 				operand.allowConstant = (dataType != 'device') && (dataType != 'variable');
 				operand.allowExpression = (dataType != 'device') && (dataType != 'variable') && (dataType != 'enum') && (!strict || (dataType != 'boolean'));
@@ -2094,7 +2121,13 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 				case 'decimal':
 					operand.restrictType = 'integer,decimal';
 					break;
-
+				case 'time':
+					operand.restrictType = 'datetime,time';
+					break;
+				case 'date':
+				case 'datetime':
+					operand.restrictType = 'datetime,date';
+					break;
 			}
 			operand.dataType = dataType;
 
@@ -2271,6 +2304,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 			((operand.data.t=='p') && operand.data.d && operand.data.d.length && !!operand.data.a) ||
 			((operand.data.t=='v') && !!operand.data.v) ||
 			((operand.data.t=='x') && !!operand.data.x && !!operand.data.x.length) ||
+			((operand.data.t=='s') && operand.data.s) ||
 			(operand.data.t=='c') ||
 			((operand.data.t=='e') && !!operand.data.e && !!operand.data.e.length)
 		);
@@ -2310,6 +2344,50 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		} else {
 			$timeout(function() {$('select').selectpicker('refresh');}, 0, false);
 		}
+	}
+
+	$scope.getOrdinalSuffix = function(value) {
+		var value100 = value % 100;
+		var value10 = value % 10;
+		if (((value100 > 3) && (value100 < 21)) || (value10 == 0) || (value10 > 3)) return 'th';
+		switch (value10) {
+			case 1: return 'st';
+			case 2: return 'nd';
+			case 3: return 'rd';
+		}
+		return 'th';
+	}
+
+	$scope.listODM = function() {
+		var result = $scope.designer.odm;
+		var sz = (!$scope.designer.operand.data.odw || ($scope.designer.operand.data.odw == 'd')) ? 31 : 5;
+		if (!result || (result.length != (sz + 3))) {
+			result = [];
+			for (i = 1; i <= sz; i++) {
+				result.push({v: i, n: i + $scope.getOrdinalSuffix(i)});
+			}	
+			result.push({v: -1, n: 'last'});
+			result.push({v: -2, n: 'second-last'});
+			result.push({v: -3, n: 'third-last'});
+			$scope.designer.odm = result;
+		}
+		return result;
+	}
+
+	$scope.listODW = function() {
+		var result = $scope.designer.odw;
+		var sz = ($scope.designer.operand.data.odm > 5) ? 0 : 7;
+		if (!result || (result.length != (sz + 1))) {
+			result = [];
+			result.push({v: 'd', n: 'day'});
+			if (sz) {
+				for(i in $scope.weekDays) {
+					result.push({v: i.toString(), n: $scope.weekDays[i]});
+				}
+			}
+			$scope.designer.odw = result;
+		}
+		return result;
 	}
 
 	$scope.validateComparison = function(comparison, reinit) {
@@ -2411,6 +2489,10 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 						var device = $scope.getVirtualDeviceById(operand.v);
 						result = '<span vdev>' + (device ? device.n : '(invalid virtual device)') + '</span>';
 						break;
+					case 's': //preset
+						if (operand.s)
+							result = '<span num>' + operand.s + '</span>';
+						break;
 					case 'x': //variable
 						if (operand.x)
 							result = '<span var>{' + operand.x + '}</span>';
@@ -2418,12 +2500,17 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 					case 'c': //constant
 						var m = 'num';
 						noQuotes = noQuotes || !isNaN(operand.c);
-						//if we still think we need quotes, let's make sure booleans don't have any
-						if (!noQuotes) {
-							if ((operand.vt == 'boolean') || (operand.vt == 'enum')) noQuotes = true;
-							m = 'lit';
+						if (noQuotes && (operand.vt == 'time')) {
+							var date = $scope.localTimeToDate(operand.c);
+							result = '<span num>' + date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) + '</span>';
+						} else {
+							//if we still think we need quotes, let's make sure booleans don't have any
+							if (!noQuotes) {
+								if ((operand.vt == 'boolean') || (operand.vt == 'enum')) noQuotes = true;
+								m = 'lit';
+							}
+							result = '<span ' + m + '>' + scope.buildName(operand.c, noQuotes, pedantic) + '</span>';
 						}
-						result = '<span ' + m + '>' + scope.buildName(operand.c, noQuotes, pedantic) + '</span>';
 						break;
 					case 'e': //expression
 						if (operand.e)
@@ -2439,13 +2526,13 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 
 	$scope.renderForOperands = function(statement) {
 		var result;
-		result = '<span var>' + (statement.x ? statement.x : '$index') + '</span><span pun>&nbsp;=&nbsp;</span><span num>' + $scope.renderOperand(statement.lo) + '<span kwd>&nbsp;to&nbsp;</span>' + $scope.renderOperand(statement.lo2) + '<span kwd>&nbsp;step&nbsp;</span>' + $scope.renderOperand(statement.lo3);
+		result = '<span var>' + (statement.x ? statement.x : '$index') + '</span> <span pun>=</span> <span num>' + $scope.renderOperand(statement.lo) + ' <span kwd>to</span> ' + $scope.renderOperand(statement.lo2) + ' <span kwd>step</span> ' + $scope.renderOperand(statement.lo3);
 		return $sce.trustAsHtml(result ? result : '(invalid operands)');
 	}
 
 	$scope.renderForEachOperands = function(statement) {
 		var result;
-		result = '<span var>' + (statement.x ? statement.x : '$device') + '</span><span pun>&nbsp;in&nbsp;</span><span num>' + $scope.renderOperand(statement.lo);
+		result = '<span var>' + (statement.x ? statement.x : '$device') + '</span> <span pun>in</span> <span num>' + $scope.renderOperand(statement.lo);
 		return $sce.trustAsHtml(result ? result : '(invalid operands)');
 	}
 
@@ -2467,10 +2554,120 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		if ((comparison.g == 'm') && l.i && l.i.length) {
 			indexes = ' <span num>' + $scope.buildNameList(l.i, 'or', null, null, false, true, false, '#') + '</span>';
 		}
-		var result = $scope.renderOperand(l) + indexes + ' <span kwd>' + (plural ? (comparison.dd ? comparison.dd : comparison.d) : comparison.d) + '</span>' + (comparison.p > 0 ? '<span pun>&nbsp;</span>' + $scope.renderOperand(r, noQuotes, pedantic) : '') + (comparison.p > 1 ? '<span pun>&nbsp;through&nbsp;</span>' + $scope.renderOperand(r2, noQuotes, pedantic) : '')
+		var result = $scope.renderOperand(l) + indexes + ' <span kwd>' + (plural ? (comparison.dd ? comparison.dd : comparison.d) : comparison.d) + '</span>' + (comparison.p > 0 ? ' ' + $scope.renderOperand(r, noQuotes, pedantic) : '') + (comparison.p > 1 ? ' <span pun>through</span> ' + $scope.renderOperand(r2, noQuotes, pedantic) : '')
 		return $sce.trustAsHtml(result);
 	}
 
+
+	$scope.getWeekDayName = function(day) {
+		switch (day) {
+			case '0':
+			case '1':
+			case '2':
+			case '3':
+			case '4':
+			case '5':
+			case '6':
+				 return $scope.weekDays[day];
+		}
+		return 'day';		
+	}
+
+	$scope.getMonthDayName = function(day) {
+		switch (day) {
+			case -1: return 'last';
+			case -2: return 'second-last';
+			case -3: return 'third-last';
+		}
+		return day + $scope.getOrdinalSuffix(day)
+	}
+
+	$scope.getMonthName = function(month) {
+		return $scope.yearMonths[month];
+	}
+
+	$scope.getDurationUnitName = function(unit, plural) {
+		var suffix = plural ? 's' : '';
+		switch(unit) {
+			case 'ms': return 'millisecond' + suffix;
+			case 's':  return 'second' + suffix;
+			case 'm':  return 'minute' + suffix;
+			case 'h':  return 'hour' + suffix;
+			case 'd':  return 'day' + suffix;
+			case 'w':  return 'week' + suffix;
+			case 'n':  return 'month' + suffix;
+			case 'y':  return 'year' + suffix;
+		}
+		return '';
+	};
+
+	$scope.renderTimer = function(timer) {
+//		window.x = (window.x ? window.x : 0) + 1;
+//		console.log(window.x);
+		var result = '';
+		var interval = timer.lo;
+		var unit = $scope.getDurationUnitName(interval.vt);
+		var unit2 = unit;
+		var level = 0;		
+		switch(interval.vt) {
+			case 'ms': level = 1; break;
+			case 's':  level = 2; break;
+			case 'm':  level = 3; break;
+			case 'h':  level = 4; break;
+			case 'd':  level = 5; break;
+			case 'w':  level = 6; unit = $scope.getWeekDayName(interval.odw); break;
+			case 'n':  level = 7; unit = $scope.getMonthDayName(interval.odm) + ' ' + $scope.getWeekDayName(interval.odw) + ' of the month'; break;
+			case 'y':  level = 8; unit = $scope.getMonthDayName(interval.odm) + ' ' + $scope.getWeekDayName(interval.odw) + ' of ' + $scope.getMonthName(interval.omy); break;
+		}
+		switch (interval.t) {
+			case 'c':
+				if (!isNaN(interval.c)) {
+					var c = parseInt(interval.c);
+					switch (c) {
+						case 1:
+							result = unit;
+							break;
+						case 2:
+							result = '<span num>other</span> ' + unit;
+							break;
+						default:
+							result = '<span num>' + c + '</span> ' + unit2 + 's';
+							switch (interval.vt) {
+								case 'n': result += ', on the ' + $scope.getMonthDayName(interval.odm) + ' ' + $scope.getWeekDayName(interval.odw) + ' of the month'; break;
+								case 'y': result += ', on the ' + $scope.getMonthDayName(interval.odm) + ' ' + $scope.getWeekDayName(interval.odw) + ' of ' + $scope.getMonthName(interval.omy); break;
+							}
+					}
+					break;
+				}
+			default:
+				result = $scope.renderOperand(interval) + ' ' + unit + 's';			
+		}
+		if (level >= 5) {
+			//higher levels require a time of day
+			result += ', <span num>at</span> ';
+			if (timer.lo2.t != 'c') {
+				//anything other than constants may have an offset
+				switch (timer.lo3.t) {
+					case 'c':
+						var offset = isNaN(timer.lo3.c) ? 0 : parseInt(timer.lo3.c);
+						if (offset == 0) {
+							result += $scope.renderOperand(timer.lo2);
+						} else if (offset < 0) {
+							result += '<span num>' + (-offset).toString() + '</span> <span lit>' + $scope.getDurationUnitName(timer.lo3.vt, (offset < -1)) + ' before</span> ' + $scope.renderOperand(timer.lo2);
+						} else {
+							result += '<span num>' + offset.toString() + '</span> <span lit>' + $scope.getDurationUnitName(timer.lo3.vt, (offset > 1)) + ' after</span> ' + $scope.renderOperand(timer.lo2);
+						}
+						break;
+					default:
+						result += $scope.renderOperand(timer.lo2) + ' <span num>±</span> ' + $scope.renderOperand(timer.lo3);
+				}
+			} else {
+				result += $scope.renderOperand(timer.lo2);
+			}
+		}
+		
+		return $sce.trustAsHtml(result);
+	};
 
 	$scope.renderTask = function(task) {
 		var command = $scope.getCommandById(task.c);
@@ -2492,17 +2689,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 					return '?';
 				var value = '';
 				if (command.p[idx].t == 'duration') {
-					var unit = '?';
-					switch(task.p[idx].vt) {
-						case 'ms': unit = 'milliseconds'; break;
-						case 's': unit = 'seconds'; break;
-						case 'm': unit = 'minutes'; break;
-						case 'h': unit = 'hours'; break;
-						case 'd': unit = 'days'; break;
-						case 'w': unit = 'weeks'; break;
-						case 'n': unit = 'months'; break;
-						case 'y': unit = 'years'; break;
-					}
+					var unit = $scope.getDurationUnitName(task.p[idx].vt, true);
 					value = $scope.renderOperand(task.p[idx], true) + ' ' + unit;
 				} else {
 					value = $scope.renderOperand(task.p[idx], true);
@@ -2514,7 +2701,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 				return value;
 			}).replace(/(\{T\})/g, '°' + $scope.location.temperatureScale);
 			var icon = command.i;
-			if (icon) display = '<span pun><i class="fa fa-' + icon + '" aria-hidden="true"></i></span>&nbsp;' + display;
+			if (icon) display = '<span pun><i class="fa fa-' + icon + '" aria-hidden="true"></i></span> ' + display;
 		}
 		display += '<span pun>;</span>';
 		return $sce.trustAsHtml(display);
@@ -2649,7 +2836,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 	$scope.currentTime = currentTime;
 
 	$scope.tap = function(tapId) {
-		dataService.tap(tapId).success(function (response) {
+		dataService.tap(tapId).then(function (response) {
 		});
 	};
 
@@ -2665,12 +2852,12 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 				$scope.viewerPiston.app.enabled = enabled;
 			}
 			if (enabled) {
-				dataService.resumePiston(pistonId).success(function (response) {
+				dataService.resumePiston(pistonId).then(function (response) {
 					$scope.onRefresh(response);
 				});
 
 			} else {
-				dataService.pausePiston(pistonId).success(function (response) {
+				dataService.pausePiston(pistonId).then(function (response) {
 					$scope.onRefresh(response);
 				});
 			}
@@ -2844,7 +3031,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		}
 		var data = (anonymize ? $scope.anonymizeObject($scope.piston) : $scope.piston);
 		$scope.loading = true;
-		dataService.generateBackupBin(data, anonymize).success(function(bin) {
+		dataService.generateBackupBin(data, anonymize).then(function(bin) {
 			var piston = document.getElementById('piston');
 			$scope.view.exportBin = bin;
 			$timeout(function() {
@@ -3181,7 +3368,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 
 
 	$scope.evaluateExpression = function(expression, dataType) {
-		dataService.evaluateExpression($scope.pistonId, expression, dataType).success(function (response) {
+		dataService.evaluateExpression($scope.pistonId, expression, dataType).then(function (response) {
 			console.log(response);
 		});
 	};
