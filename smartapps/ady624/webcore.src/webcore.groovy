@@ -19,8 +19,9 @@
  *  Version history
  */
 
-public static String version() { return "v0.0.060.20170406" }
+public static String version() { return "v0.0.061.20170407" }
 /*
+ *	04/07/2017 >>> v0.0.061.20170407 - ALPHA - Some fixes for timers (waits inside timers) and implemented weekly timers. Months/years not working yet. Should be more stable.
  *	04/06/2017 >>> v0.0.060.20170406 - ALPHA - Timers for second/minute/hour/day are in. week/month/year not working yet. May be VERY quirky, still. *	03/30/2017 >>> v0.0.05f.20170329 - ALPHA - Attempt to fix setLocation, added Twilio integration (dialog support coming soon)
  *	03/29/2017 >>> v0.0.05e.20170329 - ALPHA - Added sendEmail
  *	03/29/2017 >>> v0.0.05d.20170329 - ALPHA - Minor typo fixes, thanks to @rayzurbock
@@ -459,28 +460,24 @@ def pageRemove() {
 
 
 private installed() {
-	log.error "installed()"
 	state.installed = true
 	initialize()
 	return true
 }
 
 private updated() {
-	log.error "updated()"
 	unsubscribe()
 	initialize()
 	return true
 }
 
 private initialize() {
-	log.error "initialize()"
 	subscribeAll()
     state.vars = state.vars ?: [:]
     ping()
 }
 
 private initializeWebCoREEndpoint() {
-	log.error "initializeWebCoREEndpoint()"
 	if (!state.endpoint) {
 		try {
 			def accessToken = createAccessToken()
@@ -495,7 +492,6 @@ private initializeWebCoREEndpoint() {
 }
 
 private subscribeAll() {
-	log.error "subscribeAll()"
 	subscribe(location, handle(), webCoREHandler)
 }
 
