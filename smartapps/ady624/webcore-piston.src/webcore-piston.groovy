@@ -13,8 +13,9 @@
  *  for the specific language governing permissions and limitations under the License.
  *
 */
-public static String version() { return "v0.0.060.20170406" }
+public static String version() { return "v0.0.061.20170407" }
 /*
+ *	04/07/2017 >>> v0.0.061.20170407 - ALPHA - Some fixes for timers (waits inside timers) and implemented weekly timers. Months/years not working yet. Should be more stable.
  *	04/06/2017 >>> v0.0.060.20170406 - ALPHA - Timers for second/minute/hour/day are in. week/month/year not working yet. May be VERY quirky, still.
  *	03/30/2017 >>> v0.0.05f.20170329 - ALPHA - Attempt to fix setLocation, added Twilio integration (dialog support coming soon)
  *	03/29/2017 >>> v0.0.05e.20170329 - ALPHA - Added sendEmail
@@ -230,7 +231,6 @@ def get() {
         lastExecuted: state.lastExecuted,
         nextSchedule: state.nextSchedule,
     ]
-	
 }
 
 def activity(lastLogTimestamp) {
@@ -655,8 +655,8 @@ private processSchedules(rtData, scheduleJob = false) {
     //add traces for all remaining schedules
     for (schedule in schedules) {
     	def t = now() - schedule.t
-        if ((t < 0) && !rtData.trace.points["t:${schedule.i}"]) {
-            //we enter a fake trace point to show it on the trace viewfstate
+        if ((t < 0) && (schedule.i > 0) && !rtData.trace.points["t:${schedule.i}"]) {
+            //we enter a fake trace point to show it on the trace view
     		tracePoint(rtData, "t:${schedule.i}", 0, t)
         }
     }
@@ -671,6 +671,7 @@ private processSchedules(rtData, scheduleJob = false) {
     	rtData.stats.nextSchedule = 0
     }
     atomicState.schedules = schedules
+    state.schedules = schedules
     state.nextSchedule = rtData.stats.nextSchedule
     rtData.schedules = []
 }
@@ -753,7 +754,7 @@ private Boolean executeStatement(rtData, statement, async = false) {
                     if (!!rtData.fastForwardTo || ownEvent) {
                     	//we only execute the every if i = -1 (for rapid timers with large restrictions i.e. every second, but only on Mondays) we need to make sure we don't block execution while trying
                         //to find the next execution scheduled time, so we give up after too many attempts and schedule a rerun with i = -2 to give us the chance to try again at that later time
-                    	if (rtData.event.schedule.i == -1) executeStatements(rtData, statement.s, true);
+                    	if (!!rtData.fastForwardTo || (rtData.event.schedule.i == -1)) executeStatements(rtData, statement.s, true);
                         //we always exit a timer, this only runs on its own schedule, nothing else is executed
                         value = false
                         break
@@ -952,7 +953,15 @@ private Boolean executeStatement(rtData, statement, async = false) {
             repeat = perform && value && loop && !rtData.fastForwardTo
         }
     }
-	if (!rtData.fastForwardTo) tracePoint(rtData, "s:${statement.$}", now() - t, value)
+	if (!rtData.fastForwardTo) {
+    	def schedule = (statement.t == 'every') ? (rtData.schedules.find{ it.s == statement.$} ?: state.schedules.find{ it.s == statement.$ }) : null
+        if (schedule) {
+        	//timers need to show the remaining time
+    		tracePoint(rtData, "s:${statement.$}", now() - t, now() - schedule.t)
+        } else {
+    		tracePoint(rtData, "s:${statement.$}", now() - t, value)
+        }
+    }
 	if (statement.a == '1') {
 		//when an async action requests the thread termination, we continue to execute the parent
         //when an async action terminates as a result of a time event, we exit completely
@@ -1096,6 +1105,7 @@ private executePhysicalCommand(rtData, device, command, params = [], delay = nul
 
 private scheduleTimer(rtData, timer, long lastRun = 0) {
 	//complicated stuff follows...
+    def t = now()
     def interval = evaluateOperand(rtData, null, timer.lo).v
     if (!interval.isInteger()) return
     interval = interval.toInteger()
@@ -1104,8 +1114,6 @@ private scheduleTimer(rtData, timer, long lastRun = 0) {
        
     long delta = 0
     long time = 0
-    long date = 0
-    long lastDate = 0
     switch (intervalUnit) {
     	case 'ms': delta = 1; break;
     	case 's': delta = 1000; break;
@@ -1127,20 +1135,26 @@ private scheduleTimer(rtData, timer, long lastRun = 0) {
             	time += 86400000
             }
         }
-        //next date
-        lastDate = Math.floor(lastRun  / 86400000)
-        date = Math.floor(time / 86400000)
     }    
     delta = delta * interval
+    def priorActivity = !!lastRun
     if (!lastRun) lastRun = now()
+    
+    //switch to local date/times
+    time = utcToLocalTime(time)
+    lastRun = utcToLocalTime(lastRun)
     long nextSchedule = lastRun
+    //next date
+    long lastDate = Math.floor(lastRun / 86400000)
+    long date = Math.floor(time / 86400000)
+    long rightNow = utcToLocalTime(now())
 
 	int cycles = 100
     while (cycles) {
     	if (delta) {
-        	if (nextSchedule < (now() - delta)) {
+        	if (nextSchedule < (rightNow - delta)) {
             	//we're behind, let's fast forward to where the next occurrence happens in the future
-                def count = Math.floor((now() - nextSchedule) / delta)
+                def count = Math.floor((rightNow - nextSchedule) / delta)
                 debug "Timer fell behind by $count interval${count > 1 ? 's' : ''}, catching up...", rtData
                	nextSchedule = nextSchedule + delta * count
             }
@@ -1149,11 +1163,21 @@ private scheduleTimer(rtData, timer, long lastRun = 0) {
 	    	//the repeating interval is not necessarily constant	    
             switch (intervalUnit) {
             	case 'd':
-                	if (lastDate) {
+                	if (priorActivity) {
                     	//add the required number of days
                     	nextSchedule = time + 86400000 * (interval - (date - lastDate))
                     } else {
                     	nextSchedule = time
+                    }
+            	case 'w':
+                	//figure out the first day of the week matching the requirement
+					long currentDay = new Date(time).day
+	    			long requiredDay = cast(rtData, timer.lo.odw, 'long')
+                    if (currentDay > requiredDay) requiredDay += 7
+                    //move to first matching day
+                    nextSchedule = time + 86400000 * (requiredDay - currentDay)
+                    if (nextSchedule < rightNow) {
+                    	nextSchedule += 604800000 * interval
                     }
             }
     	}
@@ -1163,10 +1187,13 @@ private scheduleTimer(rtData, timer, long lastRun = 0) {
         }
         cycles -= 1
     }
-    
+       
     if (nextSchedule > lastRun) {
-    	cancelStatementSchedules rtData, timer.$
-    	requestWakeUp(rtData, timer, [$: -1], nextSchedule)
+    	//convert back to UTC
+    	nextSchedule = localToUtcTime(nextSchedule)
+        
+    	rtData.schedules.removeAll{ it.s == timer.$ }
+        requestWakeUp(rtData, timer, [$: -1], nextSchedule)
     }
     
 }
