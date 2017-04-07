@@ -213,7 +213,7 @@
 		</container>
 		<line kwd>end settings;</line>
 		<line ng-if-end>&nbsp;</line>
-		<trace ng-if-start="view.trace && trace && trace.t"><span>+0ms</span><span dur>0ms</span></trace>
+		<trace ng-if-start="view.trace && trace && trace.t"><span>+0ms</span><span timer>start</span></trace>
 		<line com>/* Trace started on {{utcToString(trace.t)}} (about {{timeSince(trace.t)}}) */</line>
 		<line ng-if-end>&nbsp;</line>
 		<line kwd ng-if-start="((mode=='edit') && view.variables) || (piston.v && piston.v.length)">define</line>
@@ -234,7 +234,7 @@
 		<trace ng-if="view.trace && trace && trace.points && trace.points['end']"><span>+{{trace.points['end'].o}}ms</span><span timer ok="true">done</span></trace>
 		<line kwd ng-if-end>end execute;</line>
 		<line ng-if-start="view.trace && trace && trace.t">&nbsp;</line>
-		<trace ng-if="view.trace"><span>+{{trace.d}}ms</span><span dur>0ms</span></trace>
+		<trace ng-if="view.trace"><span>+{{trace.d}}ms</span><span timer>stop</span></trace>
 		<line com ng-if-end>/* Trace ended on {{utcToString(trace.t + trace.d)}} */</line>
 	</content>
 </script>
@@ -248,7 +248,8 @@
 	<dnd-nodrag>
 		<async ng-if="(statement.a == '1')" class="fa fa-code-fork" title="This statement is executed asynchronously"></async>
 		<bar ng-if="(statement.t!='action') || ((mode=='edit') && view.movable) || ((statement.d) && (statement.d.length)) || ((statement.r) && (statement.r.length)) || ((statement.k) && ((mode=='edit') || (statement.k.length>1)))" asynch="{{statement.a == '1'}}"></bar>
-		<trace ng-if="(view.trace && (mode=='view') && trace && trace.points && trace.points['s:' + statement.$])"><span>+{{trace.points['s:' + statement.$].o}}ms</span><span dur>{{trace.points['s:' + statement.$].d}}ms</span></trace>
+<!--		<trace ng-if="(view.trace && (mode=='view') && trace && trace.points && trace.points['s:' + statement.$])"><span>+{{trace.points['s:' + statement.$].o}}ms</span><span dur>{{trace.points['s:' + statement.$].d}}ms</span></trace>-->
+		<trace ng-if="(view.trace && (mode=='view') && ((statement.t != 'action') || (statement.d && statement.d.length)) && trace && trace.points && trace.points['s:' + statement.$])"><span>+{{trace.points['s:' + statement.$].o}}ms</span><span ng-if="(trace.points['s:' + statement.$].v != null) && (trace.points['s:' + statement.$].v >= 0)" dur>{{trace.points['s:' + statement.$].d}}ms</span><span ng-if="(trace.points['s:' + statement.$].v == null) || (trace.points['s:' + statement.$].v < 0)" timer ok="{{(trace.points['s:' + statement.$].v == null) || (trace.t + trace.points['s:' + statement.$].o + trace.points['s:' + statement.$].d - trace.points['s:' + statement.$].v >= currentTime())}}">{{trace.points['s:' + statement.$].v == null ? '▼ ▼ ▼' : timeCounter(trace.t + trace.points['s:' + statement.$].o + trace.points['s:' + statement.$].d - trace.points['s:' + statement.$].v)}}</span></trace>
 		<!--action-->
 		<div no-drag class="no-drag" ng-if="statement.t=='action'" no-drag>
 			<line com ng-if="statement.z">/* {{statement.z}} */</line>

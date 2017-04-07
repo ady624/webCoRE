@@ -627,7 +627,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 					$scope.validateOperand(designer.operand3, true);
 					break;
 			}
-			$scope.initBootstrapSelects();
+			$scope.refreshSelects();
 		}
 		window.designer = $scope.designer;
 		$scope.designer.items = {
@@ -1461,7 +1461,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 			$scope.designer.parameters[0].linkedOperand = $scope.designer.parameters[1];
 			$scope.validateOperand($scope.designer.parameters[0]);
 		}
-		$scope.initBootstrapSelects();
+		$scope.refreshSelects();
 	}
 
 
@@ -1926,13 +1926,6 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 	}
 
 
-	$scope.initBootstrapSelects = function() {
-		$scope.$$postDigest(function() {
-			$('select').selectpicker('refresh');
-		});
-	};
-
-
 	$scope.getStackData = function() {
 		return {hash: $scope.md5(angular.toJson($scope.piston)), timestamp: (new Date()).getTime(), data: angular.fromJson(angular.toJson($scope.piston))};
 	}
@@ -2340,9 +2333,9 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 
 	$scope.refreshSelects = function(type) {
 		if (type) {
-			$timeout(function() {$('select[' + type + ']').selectpicker('refresh');}, 0, false);
+			$scope.$$postDigest(function() {$('select[' + type + ']').selectpicker('refresh');});
 		} else {
-			$timeout(function() {$('select').selectpicker('refresh');}, 0, false);
+			$scope.$$postDigest(function() {$('select').selectpicker('refresh');});
 		}
 	}
 
@@ -2453,7 +2446,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		}
 
 		if (comparison.timed) $scope.validateOperand(comparison.time, reinit, true);
-		$scope.refreshSelects();
+		//$scope.refreshSelects();
 
 	}
 
