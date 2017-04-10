@@ -13,8 +13,9 @@
  *  for the specific language governing permissions and limitations under the License.
  *
 */
-public static String version() { return "v0.0.061.20170407" }
+public static String version() { return "v0.0.062.20170410" }
 /*
+ *	04/10/2017 >>> v0.0.062.20170410 - ALPHA - Some fixes for timers, implemented all timers, their restrictions still not active.
  *	04/07/2017 >>> v0.0.061.20170407 - ALPHA - Some fixes for timers (waits inside timers) and implemented weekly timers. Months/years not working yet. Should be more stable.
  *	04/06/2017 >>> v0.0.060.20170406 - ALPHA - Timers for second/minute/hour/day are in. week/month/year not working yet. May be VERY quirky, still.
  *	03/30/2017 >>> v0.0.05f.20170329 - ALPHA - Attempt to fix setLocation, added Twilio integration (dialog support coming soon)
@@ -549,7 +550,7 @@ private Boolean executeEvent(rtData, event) {
         }
         rtData.currentEvent = [
             date: event.date.getTime(),
-            delay: rtData.stats.timing.d,
+            delay: rtData.stats?.timing?.d ?: 0,
             device: hashId((event.device?:location).id),
             name: event.name,
             value: event.value,
@@ -665,7 +666,7 @@ private processSchedules(rtData, scheduleJob = false) {
         def t = (next.t - now()) / 1000
         t = (t < 1 ? 1 : t)
         rtData.stats.nextSchedule = next.t
-        trace "Setting up scheduled job in ${t}s", rtData
+        trace "Setting up scheduled job for ${formatLocalTime(next.t)} (in ${t}s)", rtData
         runIn(t, timeHandler, [data: next])
     } else {
     	rtData.stats.nextSchedule = 0
@@ -1138,16 +1139,17 @@ private scheduleTimer(rtData, timer, long lastRun = 0) {
     }    
     delta = delta * interval
     def priorActivity = !!lastRun
-    if (!lastRun) lastRun = now()
     
     //switch to local date/times
     time = utcToLocalTime(time)
-    lastRun = utcToLocalTime(lastRun)
+    long rightNow = utcToLocalTime(now())
+    lastRun = lastRun ? utcToLocalTime(lastRun) : rightNow
     long nextSchedule = lastRun
     //next date
-    long lastDate = Math.floor(lastRun / 86400000)
-    long date = Math.floor(time / 86400000)
-    long rightNow = utcToLocalTime(now())
+    long lastDay = Math.floor(lastRun / 86400000)
+    //advance one day if we're in the past
+    while (time < rightNow) time += 86400000
+    long thisDay = Math.floor(time / 86400000)
 
 	int cycles = 100
     while (cycles) {
@@ -1165,10 +1167,11 @@ private scheduleTimer(rtData, timer, long lastRun = 0) {
             	case 'd':
                 	if (priorActivity) {
                     	//add the required number of days
-                    	nextSchedule = time + 86400000 * (interval - (date - lastDate))
+                    	nextSchedule = time + 86400000 * (interval - (thisDay - lastDay))
                     } else {
                     	nextSchedule = time
                     }
+                    break
             	case 'w':
                 	//figure out the first day of the week matching the requirement
 					long currentDay = new Date(time).day
@@ -1179,10 +1182,60 @@ private scheduleTimer(rtData, timer, long lastRun = 0) {
                     if (nextSchedule < rightNow) {
                     	nextSchedule += 604800000 * interval
                     }
+                    break
+            	case 'n':
+            	case 'y':
+                	//figure out the first day of the week matching the requirement
+                    int odm = timer.lo.odm.toInteger()
+                    def odw = timer.lo.odw
+                    def omy = intervalUnit == 'y' ? timer.lo.omy.toInteger() : 0
+                    int day = 0
+                    def date = new Date(time)
+                    int year = date.year
+                    int month = (intervalUnit == 'n' ? date.month : omy) + (priorActivity ? interval : ((nextSchedule < rightNow) ? 1 : 0)) * (intervalUnit == 'n' ? 1 : 12)
+                    if (month >= 12) {
+                        year += Math.floor(month / 12)
+                        month = month.mod(12)
+                    }
+                    date.setDate(1)
+                    date.setMonth(month)
+                    date.setYear(year)
+                    def lastDayOfMonth = (new Date(date.year, date.month + 1, 0)).date
+                    if (odw == 'd') {
+						if (odm > 0) {
+                        	day = (odm <= lastDayOfMonth) ? odm : 0
+                        } else {
+                        	day = lastDayOfMonth + 1 + odm
+                        	day = (day >= 1) ? day : 0
+                        }
+                    } else {
+                    	odw = odw.toInteger()
+                    	//find the nth week day of the month
+                        if (odm > 0) {
+                            //going forward
+                            def firstDayOfMonthDOW = (new Date(date.year, date.month, 1)).day
+                            //find the first matching day
+                            def firstMatch = 1 + odw - firstDayOfMonthDOW + (odw < firstDayOfMonthDOW ? 7 : 0)
+                            day = firstMatch + 7 * (odm - 1)
+                            day = (result <= lastDayOfMonth) ? day : 0
+                        } else {
+                            //going backwards
+                            def lastDayOfMonthDOW = (new Date(date.year, date.month + 1, 0)).day
+                            //find the first matching day
+                            def firstMatch = lastDayOfMonth + odw - lastDayOfMonthDOW - (odw > lastDayOfMonthDOW ? 7 : 0)
+                            day = firstMatch + 7 * (odm + 1)
+                            day = (day >= 1) ? day : 0
+                        }
+                    }
+                    if (day) {
+                    	date.setDate(day)
+                        nextSchedule = date.time
+                    }
+					break
             }
     	}
         //check to see if it fits the restrictions
-        if (true) {
+        if (nextSchedule >= rightNow) {
         	break
         }
         cycles -= 1
@@ -1191,7 +1244,6 @@ private scheduleTimer(rtData, timer, long lastRun = 0) {
     if (nextSchedule > lastRun) {
     	//convert back to UTC
     	nextSchedule = localToUtcTime(nextSchedule)
-        
     	rtData.schedules.removeAll{ it.s == timer.$ }
         requestWakeUp(rtData, timer, [$: -1], nextSchedule)
     }
@@ -1908,8 +1960,8 @@ private void subscribeAll(rtData) {
 	                    }
 	                }
 					break;
-				case 'every':
-                	if (!parentNode) scheduleTimer(rtData, node);
+				//case 'every':
+                	//if (!parentNode) scheduleTimer(rtData, node);
             }
         }
         if (rtData.piston.r) traverseRestrictions(rtData.piston.r, restrictionTraverser)
@@ -1957,6 +2009,9 @@ private void subscribeAll(rtData) {
         state.subscriptions = ss
         trace msg, rtData
 
+
+        def event = [date: new Date(), device: location, name: 'time', value: now(), schedule: [t: 0, s: 0, i: -9]]
+        executeEvent(rtData, event)
 		processSchedules rtData, true
         subscribe(app, appHandler)
     } catch (all) {
@@ -3385,7 +3440,7 @@ private localToUtcTime(dateOrTime) {
 	return null
 }
 
-private formatLocalTime(time, format = "EEE, MMM d yyyy @ h:mm a z") {
+private formatLocalTime(time, format = "EEE, MMM d yyyy @ h:mm:ss a z") {
 	if (time instanceof Long) {
 		time = new Date(time)
 	}
