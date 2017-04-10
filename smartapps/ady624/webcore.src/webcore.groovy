@@ -19,8 +19,9 @@
  *  Version history
  */
 
-public static String version() { return "v0.0.061.20170407" }
+public static String version() { return "v0.0.062.20170410" }
 /*
+ *	04/10/2017 >>> v0.0.062.20170410 - ALPHA - Some fixes for timers, implemented all timers, their restrictions still not active.
  *	04/07/2017 >>> v0.0.061.20170407 - ALPHA - Some fixes for timers (waits inside timers) and implemented weekly timers. Months/years not working yet. Should be more stable.
  *	04/06/2017 >>> v0.0.060.20170406 - ALPHA - Timers for second/minute/hour/day are in. week/month/year not working yet. May be VERY quirky, still. *	03/30/2017 >>> v0.0.05f.20170329 - ALPHA - Attempt to fix setLocation, added Twilio integration (dialog support coming soon)
  *	03/29/2017 >>> v0.0.05e.20170329 - ALPHA - Added sendEmail
