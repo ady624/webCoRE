@@ -155,7 +155,8 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 							case 'restore':
 								if ($scope.params.bin) {
 									$scope.loading = true;
-									dataService.loadFromBin($scope.params.bin).then(function (piston) {
+									dataService.loadFromBin($scope.params.bin).then(function (response) {
+										var piston = response.data;
 										$scope.loading = false;
 										if (piston) {
 											$scope.piston.o = piston.o ? piston.o : {};
@@ -3024,7 +3025,8 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		}
 		var data = (anonymize ? $scope.anonymizeObject($scope.piston) : $scope.piston);
 		$scope.loading = true;
-		dataService.generateBackupBin(data, anonymize).then(function(bin) {
+		dataService.generateBackupBin(data, anonymize).then(function(response) {
+			var bin = response.data;
 			var piston = document.getElementById('piston');
 			$scope.view.exportBin = bin;
 			$timeout(function() {
