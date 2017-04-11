@@ -13,8 +13,9 @@
  *  for the specific language governing permissions and limitations under the License.
  *
 */
-public static String version() { return "v0.0.062.20170410" }
+public static String version() { return "v0.0.063.20170411" }
 /*
+ *	04/11/2017 >>> v0.0.063.20170411 - ALPHA - Some fixes for timers, implemented all timers, implemented all timer restrictions.
  *	04/10/2017 >>> v0.0.062.20170410 - ALPHA - Some fixes for timers, implemented all timers, their restrictions still not active.
  *	04/07/2017 >>> v0.0.061.20170407 - ALPHA - Some fixes for timers (waits inside timers) and implemented weekly timers. Months/years not working yet. Should be more stable.
  *	04/06/2017 >>> v0.0.060.20170406 - ALPHA - Timers for second/minute/hour/day are in. week/month/year not working yet. May be VERY quirky, still.
@@ -1112,7 +1113,19 @@ private scheduleTimer(rtData, timer, long lastRun = 0) {
     interval = interval.toInteger()
     if (interval <= 0) return
     def intervalUnit = timer.lo.vt   
-       
+
+    int level = 0
+    switch(intervalUnit) {
+        case 'ms': level = 1; break;
+        case 's':  level = 2; break;
+        case 'm':  level = 3; break;
+        case 'h':  level = 4; break;
+        case 'd':  level = 5; break;
+        case 'w':  level = 6; break;
+        case 'n':  level = 7; break;
+        case 'y':  level = 8; break;
+    }
+
     long delta = 0
     long time = 0
     switch (intervalUnit) {
@@ -1121,6 +1134,7 @@ private scheduleTimer(rtData, timer, long lastRun = 0) {
     	case 'm': delta = 60000; break;
     	case 'h': delta = 3600000; break;
     }
+   
     if (!delta) {
     	//let's get the offset
         time = evaluateOperand(rtData, null, timer.lo2).v
@@ -1136,7 +1150,7 @@ private scheduleTimer(rtData, timer, long lastRun = 0) {
             	time += 86400000
             }
         }
-    }    
+    }
     delta = delta * interval
     def priorActivity = !!lastRun
     
@@ -1145,23 +1159,28 @@ private scheduleTimer(rtData, timer, long lastRun = 0) {
     long rightNow = utcToLocalTime(now())
     lastRun = lastRun ? utcToLocalTime(lastRun) : rightNow
     long nextSchedule = lastRun
+    
+    if ((intervalUnit == 'h') && (timer.lo?.om?.isInteger())) {    	
+    	nextSchedule = (long) 3600000 * (Math.floor(nextSchedule / 3600000) - 1) + (timer.lo.om.toInteger() * 60000)
+    }
     //next date
-    long lastDay = Math.floor(lastRun / 86400000)
-    //advance one day if we're in the past
-    while (time < rightNow) time += 86400000
-    long thisDay = Math.floor(time / 86400000)
-
 	int cycles = 100
     while (cycles) {
     	if (delta) {
         	if (nextSchedule < (rightNow - delta)) {
             	//we're behind, let's fast forward to where the next occurrence happens in the future
                 def count = Math.floor((rightNow - nextSchedule) / delta)
-                debug "Timer fell behind by $count interval${count > 1 ? 's' : ''}, catching up...", rtData
+                //debug "Timer fell behind by $count interval${count > 1 ? 's' : ''}, catching up...", rtData
                	nextSchedule = nextSchedule + delta * count
             }
 	    	nextSchedule = nextSchedule + delta
 	    } else {
+        
+            //advance one day if we're in the past
+            while (time < rightNow) time += 86400000
+            long lastDay = Math.floor(lastRun / 86400000)
+            long thisDay = Math.floor(time / 86400000)
+        
 	    	//the repeating interval is not necessarily constant	    
             switch (intervalUnit) {
             	case 'd':
@@ -1236,8 +1255,11 @@ private scheduleTimer(rtData, timer, long lastRun = 0) {
     	}
         //check to see if it fits the restrictions
         if (nextSchedule >= rightNow) {
-        	break
+        	long offset = checkTimerRestrictions(rtData, timer, nextSchedule, level, interval)
+            if (!offset) break
+            if (offset > 0) nextSchedule += offset
         }
+        time = nextSchedule
         cycles -= 1
     }
        
@@ -1249,6 +1271,131 @@ private scheduleTimer(rtData, timer, long lastRun = 0) {
     }
     
 }
+
+private Long checkTimerRestrictions(rtData, timer, long time, int level, int interval) {
+	//returns 0 if restrictions are passed
+    //returns a positive number as millisecond offset to apply to nextSchedule for fast forwarding
+    //returns a negative number as a failed restriction with no fast forwarding offset suggestion
+    
+    Map data = timer.lo
+	List om = (level <= 2) && (data.om instanceof List) && data.om.size() ? data.om : null;
+    List oh = (level <= 3) && (data.oh instanceof List) && data.oh.size() ? data.oh : null;
+    List odw = (level <= 5) && (data.odw instanceof List) && data.odw.size() ? data.odw : null;
+    List odm = (level <= 6) && (data.odm instanceof List) && data.odm.size() ? data.odm : null;
+    List owm = (level <= 6) && !odm && (data.owm instanceof List) && data.owm.size() ? data.owm : null;
+    List omy = (level <= 7) && (data.omy instanceof List) && data.omy.size() ? data.omy : null;
+
+	if (!om && !oh && !odw && !odm && !owm && !omy) return true
+
+	def date = new Date(time)   
+    long result = -1
+    
+    //month restrictions
+    if (omy && (omy.indexOf(date.month + 1) < 0)) {
+    	int month = (omy.sort{ it }.find{ it > date.month + 1 } ?: 12 + omy.sort{ it }[0]) - 1
+        int year = date.year + (month >= 12 ? 1 : 0)
+        month = (month >= 12 ? month - 12 : month)
+        def ms = (new Date(year, month, 1)).time - time
+    	switch (level) {
+        	case 2: //by second
+          	    result = interval * (Math.floor(ms / 1000 / interval) - 2) * 1000
+                break
+        	case 3: //by minute
+          	    result = interval * (Math.floor(ms / 60000 / interval) - 2) * 60000
+                break
+        }
+		return (result > 0) ? result : -1
+    }
+
+   	//week of month restrictions
+    if (owm) {
+		if (!((owm.indexOf(getWeekOfMonth(date)) >= 0) || (owm.indexOf(getWeekOfMonth(date, true)) >= 0))) {
+            switch (level) {
+                case 2: //by second
+                result = interval * (Math.floor(((7 - date.day) * 86400 - date.hours * 3600 - date.minutes * 60) / interval) - 2) * 1000
+                break
+                case 3: //by minute
+                result = interval * (Math.floor(((7 - date.day) * 1440 - date.hours * 60 - date.minutes) / interval) - 2) * 60000
+                break
+            }        
+            return (result > 0) ? result : -1
+        }
+    }
+    
+   	//day of month restrictions
+    if (odm) {
+		if (odm.indexOf(date.date) < 0) {
+            def lastDayOfMonth = (new Date(date.year, date.month + 1, 0)).date
+            if (odm.find{ it < 1 }) {
+                //we need to add the last days
+                odm = [] + odm //copy the array
+                if (odm.indexOf(-1) >= 0) odm.push(lastDayOfMonth)
+                if (odm.indexOf(-2) >= 0) odm.push(lastDayOfMonth - 1)
+                if (odm.indexOf(-3) >= 0) odm.push(lastDayOfMonth - 2)
+                odm.removeAll{ it < 1 }
+            }
+            switch (level) {
+                case 2: //by second
+                result = interval * (Math.floor((((odm.sort{ it }.find{ it > date.date } ?: lastDayOfMonth + odm.sort{ it }[0]) - date.date) * 86400 - date.hours * 3600 - date.minutes * 60) / interval) - 2) * 1000
+                break
+                case 3: //by minute
+                result = interval * (Math.floor((((odm.sort{ it }.find{ it > date.date } ?: lastDayOfMonth + odm.sort{ it }[0]) - date.date) * 1440 - date.hours * 60 - date.minutes) / interval) - 2) * 60000
+                break
+            }        
+            return (result > 0) ? result : -1
+        }
+    }
+
+	//day of week restrictions
+    if (odw && (odw.indexOf(date.day) < 0)) {
+    	switch (level) {
+        	case 2: //by second
+          	    result = interval * (Math.floor((((odw.sort{ it }.find{ it > date.day } ?: 7 + odw.sort{ it }[0]) - date.day) * 86400 - date.hours * 3600 - date.minutes * 60) / interval) - 2) * 1000
+                break
+        	case 3: //by minute
+          	    result = interval * (Math.floor((((odw.sort{ it }.find{ it > date.day } ?: 7 + odw.sort{ it }[0]) - date.day) * 1440 - date.hours * 60 - date.minutes) / interval) - 2) * 60000
+                break
+        }        
+		return (result > 0) ? result : -1
+    }
+
+    //hour restrictions
+    if (oh && (oh.indexOf(date.hours) < 0)) {
+    	switch (level) {
+        	case 2: //by second
+          	    result = interval * (Math.floor((((oh.sort{ it }.find{ it > date.hours } ?: 24 + oh.sort{ it }[0]) - date.hours) * 3600 - date.minutes * 60) / interval) - 2) * 1000
+                break
+        	case 3: //by minute
+          	    result = interval * (Math.floor((((oh.sort{ it }.find{ it > date.hours } ?: 24 + oh.sort{ it }[0]) - date.hours) * 60 - date.minutes) / interval) - 2) * 60000
+                break
+        }
+		return (result > 0) ? result : -1
+    }
+
+    //minute restrictions
+    if (om && (om.indexOf(date.minutes) < 0)) {
+    	//get the next highest minute
+        //suggest an offset to reach the next minute
+    	result = interval * (Math.floor(((om.sort{ it }.find{ it > date.minutes } ?: 60 + om.sort{ it }[0]) - date.minutes - 1) * 60 / interval) - 2) * 1000
+		return (result > 0) ? result : -1
+    }
+    return 0
+}
+
+
+//return the number of occurrences of same day of week up until the date or from the end of the month if backwards, i.e. last Sunday is -1, second-last Sunday is -2
+private int getWeekOfMonth(date = null, backwards = false) {
+	def day = date.date
+	if (backwards) {
+		def month = date.month
+		def year = date.year
+		def lastDayOfMonth = (new Date(year, month + 1, 0)).date
+		return -(1 + Math.floor((lastDayOfMonth - day) / 7))
+	} else {
+		return 1 + Math.floor((day - 1) / 7) //1 based
+	}
+}
+
 
 private requestWakeUp(rtData, statement, task, timeOrDelay) {
 	def time = timeOrDelay > 9999999999 ? timeOrDelay : now() + timeOrDelay
