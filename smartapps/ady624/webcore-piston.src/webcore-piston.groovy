@@ -1,20 +1,26 @@
-/**
- *  webCoRE Piston
- *
- *  Copyright 2016 Adrian Caramaliu
- *
- *  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
- *  in compliance with the License. You may obtain a copy of the License at:
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- *  Unless required by applicable law or agreed to in writing, software distributed under the License is distributed
- *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
- *  for the specific language governing permissions and limitations under the License.
- *
-*/
-public static String version() { return "v0.0.063.20170411" }
 /*
+ *  webCoRE - Community's own Rule Engine - Web Edition
+ *
+ *  Copyright 2016 Adrian Caramaliu <ady624("at" sign goes here)gmail.com>
+ *
+ *  This program is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ *  Version history
+*/
+public static String version() { return "v0.0.064.20170411" }
+/*
+ *	04/11/2017 >>> v0.0.064.20170411 - ALPHA - Fix for timer restrictions error
  *	04/11/2017 >>> v0.0.063.20170411 - ALPHA - Some fixes for timers, implemented all timers, implemented all timer restrictions.
  *	04/10/2017 >>> v0.0.062.20170410 - ALPHA - Some fixes for timers, implemented all timers, their restrictions still not active.
  *	04/07/2017 >>> v0.0.061.20170407 - ALPHA - Some fixes for timers (waits inside timers) and implemented weekly timers. Months/years not working yet. Should be more stable.
@@ -1285,7 +1291,7 @@ private Long checkTimerRestrictions(rtData, timer, long time, int level, int int
     List owm = (level <= 6) && !odm && (data.owm instanceof List) && data.owm.size() ? data.owm : null;
     List omy = (level <= 7) && (data.omy instanceof List) && data.omy.size() ? data.omy : null;
 
-	if (!om && !oh && !odw && !odm && !owm && !omy) return true
+	if (!om && !oh && !odw && !odm && !owm && !omy) return 0
 
 	def date = new Date(time)   
     long result = -1
