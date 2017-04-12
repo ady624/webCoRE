@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.0.064.20170411" }
+public static String version() { return "v0.0.065.20170411" }
 /*
+ *	04/11/2017 >>> v0.0.065.20170411 - ALPHA - Fix for long waits being converted to scientific notation, causing the scheduler to misunderstand them and wait 1ms instead
  *	04/11/2017 >>> v0.0.064.20170411 - ALPHA - Fix for timer restrictions error
  *	04/11/2017 >>> v0.0.063.20170411 - ALPHA - Some fixes for timers, implemented all timers, implemented all timer restrictions.
  *	04/10/2017 >>> v0.0.062.20170410 - ALPHA - Some fixes for timers, implemented all timers, their restrictions still not active.
@@ -673,7 +674,7 @@ private processSchedules(rtData, scheduleJob = false) {
         def t = (next.t - now()) / 1000
         t = (t < 1 ? 1 : t)
         rtData.stats.nextSchedule = next.t
-        trace "Setting up scheduled job for ${formatLocalTime(next.t)} (in ${t}s)", rtData
+        trace "Setting up scheduled job for ${formatLocalTime(next.t)} (in ${t}s)" + (schedules.size() > 1 ? ', with ' + (schedules.size() - 1).toString() + ' more job' + (schedules.size() > 2 ? 's' : '') + ' pending' : ''), rtData
         runIn(t, timeHandler, [data: next])
     } else {
     	rtData.stats.nextSchedule = 0
@@ -1072,7 +1073,7 @@ private Boolean executeTask(rtData, devices, statement, task, async) {
     	//we're aiming at waking up with at least 10s left
     	if ((timeLeft - delay < 10000) || (delay >= 5000) || async) {
 	        //schedule a wake up
-	        trace "Requesting a wake up in ${delay}ms", rtData
+	        trace "Requesting a wake up for ${formatLocalTime(now() + delay)} (in ${cast(rtData, delay / 1000, 'decimal')}s)", rtData
             tracePoint(rtData, "t:${task.$}", now() - t, -delay)
             requestWakeUp(rtData, statement, task, delay)
 	        return false
@@ -2327,7 +2328,7 @@ private Map evaluateExpression(rtData, expression, dataType = null) {
 			result = expression
         	break
         case "duration":
-        	def multiplier = 1
+        	long multiplier = 1
             switch (expression.vt) {
             	case 'ms': multiplier = 1; break;
             	case 's': multiplier = 1000; break;
@@ -2338,7 +2339,7 @@ private Map evaluateExpression(rtData, expression, dataType = null) {
             	case 'n': multiplier = 2592000000; break;
             	case 'y': multiplier = 31536000000; break;
             }
-        	result = [t: "long", v: cast(rtData, cast(rtData, expression.v, 'decimal') * multiplier, "long")]
+        	result = [t: "long", v: (long) cast(rtData, cast(rtData, expression.v, 'long') * multiplier, "long")]
         	break
         case "variable":
         	//get variable as {n: name, t: type, v: value}
@@ -3512,14 +3513,14 @@ private cast(rtData, value, dataType, srcDataType = null) {
 			return value instanceof String ? utcToLocalDate(value).time : cast(rtData, value, "long")
 		case "orientation":
 			return getThreeAxisOrientation(value)
-        case 'ms': return cast(rtData, value, 'decimal')
-        case 's': return cast(rtData, value, 'decimal') * 1000
-        case 'm': return cast(rtData, value, 'decimal') * 60000
-        case 'h': return cast(rtData, value, 'decimal') * 3600000
-        case 'd': return cast(rtData, value, 'decimal') * 86400000
-        case 'w': return cast(rtData, value, 'decimal') * 604800000
-        case 'n': return cast(rtData, value, 'decimal') * 2592000000
-        case 'y': return cast(rtData, value, 'decimal') * 31536000000
+        case 'ms': return (long) cast(rtData, value, 'long')
+        case 's': return (long) cast(rtData, value, 'long') * 1000
+        case 'm': return (long) cast(rtData, value, 'long') * 60000
+        case 'h': return (long) cast(rtData, value, 'long') * 3600000
+        case 'd': return (long) cast(rtData, value, 'long') * 86400000
+        case 'w': return (long) cast(rtData, value, 'long') * 604800000
+        case 'n': return (long) cast(rtData, value, 'long') * 2592000000
+        case 'y': return (long) cast(rtData, value, 'long') * 31536000000
         case 'device':
         	//device type is an array of device Ids
         	if (value instanceof List) return value;
