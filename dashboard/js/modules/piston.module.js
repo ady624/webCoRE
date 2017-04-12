@@ -587,6 +587,9 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		$scope.designer.ctp = statement.ctp || 'i';
 		$scope.designer.async = statement.a;
 		$scope.designer.ontypechanged = function(designer, type) {
+			designer.operand.allowAnyInterval = false;
+			designer.operand2.allowAnyInterval = false;
+			designer.operand3.allowAnyInterval = false;
 			switch (type) {
 				case 'for':
 					designer.operand.dataType = 'decimal';
@@ -624,7 +627,8 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 					var d = new Date();
 					d.setSeconds(0, 0);
 					if (designer.$new) designer.operand2.data = {t: 'c', c: d};
-					designer.operand3.dataType = 'duration';
+					designer.operand3.dataType = 'duration'; //offset
+					designer.operand3.allowAnyInterval = true;
 					if (designer.$new) designer.operand3.data = {t: 'c', c: 0, vt: 'm'};
 					designer.operand3.onlyAllowConstants = true;
 					$scope.validateOperand(designer.operand, true);
@@ -2312,7 +2316,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 			((operand.data.t=='v') && !!operand.data.v) ||
 			((operand.data.t=='x') && !!operand.data.x && !!operand.data.x.length) ||
 			((operand.data.t=='s') && !!operand.data.s) ||
-			((operand.data.t=='c') && !((operand.data.c == "Invalid Date") && (operand.data.c instanceof Object)) && !((dataType == 'duration') && (isNaN(operand.data.c) || (operand.data.c < 1 )))) ||
+			((operand.data.t=='c') && !((operand.data.c == "Invalid Date") && (operand.data.c instanceof Object)) && !((dataType == 'duration') && (isNaN(operand.data.c) || (!operand.allowAnyInterval && (operand.data.c < 1))))) ||
 			((operand.data.t=='e') && !!operand.data.e && !!operand.data.e.length)
 		);
 
