@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.0.065.20170411" }
+public static String version() { return "v0.0.066.20170412" }
 /*
+ *	04/12/2017 >>> v0.0.066.20170412 - ALPHA - Fixed hourly timers and implemented setInfraredLevel, setHue, setSaturation, setColorTemperature
  *	04/11/2017 >>> v0.0.065.20170411 - ALPHA - Fix for long waits being converted to scientific notation, causing the scheduler to misunderstand them and wait 1ms instead
  *	04/11/2017 >>> v0.0.064.20170411 - ALPHA - Fix for timer restrictions error
  *	04/11/2017 >>> v0.0.063.20170411 - ALPHA - Some fixes for timers, implemented all timers, implemented all timer restrictions.
@@ -1167,8 +1168,9 @@ private scheduleTimer(rtData, timer, long lastRun = 0) {
     lastRun = lastRun ? utcToLocalTime(lastRun) : rightNow
     long nextSchedule = lastRun
     
-    if ((intervalUnit == 'h') && (timer.lo?.om?.isInteger())) {    	
-    	nextSchedule = (long) 3600000 * (Math.floor(nextSchedule / 3600000) - 1) + (timer.lo.om.toInteger() * 60000)
+    if (intervalUnit == 'h') {
+    	long min = cast(rtData, timer.lo.om, 'long')
+    	nextSchedule = (long) 3600000 * (Math.floor(nextSchedule / 3600000) - 1) + (min * 60000)
     }
     //next date
 	int cycles = 100
@@ -1423,6 +1425,51 @@ private long cmd_setLevel(rtData, device, params) {
     executePhysicalCommand(rtData, device, 'setLevel', level, delay)
     return 0
 }
+
+private long cmd_setInfraredLevel(rtData, device, params) {
+	def level = params[0]
+    def state = params.size() > 1 ? params[1] : ""
+    def delay = params.size() > 2 ? params[2] : 0
+    if (state && (device.currentValue('switch') != "$state")) {
+        return 0
+    }
+    executePhysicalCommand(rtData, device, 'setInfraredLevel', level, delay)
+    return 0
+}
+
+private long cmd_setHue(rtData, device, params) {
+	int hue = cast(rtData, params[0] / 3.6, 'integer')
+    def state = params.size() > 1 ? params[1] : ""
+    def delay = params.size() > 2 ? params[2] : 0
+    if (state && (device.currentValue('switch') != "$state")) {
+        return 0
+    }
+    executePhysicalCommand(rtData, device, 'setHue', hue, delay)
+    return 0
+}
+
+private long cmd_setSaturation(rtData, device, params) {
+	def saturation = params[0]
+    def state = params.size() > 1 ? params[1] : ""
+    def delay = params.size() > 2 ? params[2] : 0
+    if (state && (device.currentValue('switch') != "$state")) {
+        return 0
+    }
+    executePhysicalCommand(rtData, device, 'setSaturation', saturation, delay)
+    return 0
+}
+
+private long cmd_setColorTemperature(rtData, device, params) {
+	def colorTemperature = params[0]
+    def state = params.size() > 1 ? params[1] : ""
+    def delay = params.size() > 2 ? params[2] : 0
+    if (state && (device.currentValue('switch') != "$state")) {
+        return 0
+    }
+    executePhysicalCommand(rtData, device, 'setColorTemperature', colorTemperature, delay)
+    return 0
+}
+
 
 private long executeVirtualCommand(rtData, devices, task, params)
 {
@@ -2209,7 +2256,11 @@ private Map getDeviceAttribute(rtData, deviceId, attributeName, subDeviceIndex =
             attribute = [t: 'string', m: false]
         }
         //x = eXclude - if a momentary attribute is looked for and the device does not match the current device, then we must ignore this during comparisons
-		return [t: attribute.t, v: (attributeName ? cast(rtData, device.currentValue(attributeName), attribute.t) : "$device"), d: deviceId, a: attributeName, i: subDeviceIndex, x: (!!attribute.m || !!trigger) && ((device?.id != (rtData.event.device?:location).id) || (attributeName != rtData.event.name))]
+        def value = cast(rtData, device.currentValue(attributeName), attribute.t)
+        if (attributeName == 'hue') {
+        	value = cast(rtData, cast(rtData, value, 'decimal') * 3.6, attribute.t)
+        }
+		return [t: attribute.t, v: (attributeName ? value : "$device"), d: deviceId, a: attributeName, i: subDeviceIndex, x: (!!attribute.m || !!trigger) && ((device?.id != (rtData.event.device?:location).id) || (attributeName != rtData.event.name))]
     }
     return [t: "error", v: "Device '${deviceId}' not found"]
 }
