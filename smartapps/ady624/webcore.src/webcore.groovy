@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.0.066.20170412" }
+public static String version() { return "v0.0.067.20170412" }
 /*
+ *	04/12/2017 >>> v0.0.067.20170412 - ALPHA - Fixed a bug introduced in 066 and implemented setColor
  *	04/12/2017 >>> v0.0.066.20170412 - ALPHA - Fixed hourly timers and implemented setInfraredLevel, setHue, setSaturation, setColorTemperature
  *	04/11/2017 >>> v0.0.065.20170411 - ALPHA - Fix for long waits being converted to scientific notation, causing the scheduler to misunderstand them and wait 1ms instead
  *	04/11/2017 >>> v0.0.064.20170411 - ALPHA - Fix for timer restrictions error

@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.0.066.20170412" }
+public static String version() { return "v0.0.067.20170412" }
 /*
+ *	04/12/2017 >>> v0.0.067.20170412 - ALPHA - Fixed a bug introduced in 066 and implemented setColor
  *	04/12/2017 >>> v0.0.066.20170412 - ALPHA - Fixed hourly timers and implemented setInfraredLevel, setHue, setSaturation, setColorTemperature
  *	04/11/2017 >>> v0.0.065.20170411 - ALPHA - Fix for long waits being converted to scientific notation, causing the scheduler to misunderstand them and wait 1ms instead
  *	04/11/2017 >>> v0.0.064.20170411 - ALPHA - Fix for timer restrictions error
@@ -1055,6 +1056,7 @@ private Boolean executeTask(rtData, devices, statement, task, async) {
         	try {
             	delay = "cmd_${task.c}"(rtData, device, params)
             } catch(all) {
+            	warn "Error:", rtData, null, all
 	            executePhysicalCommand(rtData, device, task.c, params)
 			}
             trace msg, rtData
@@ -1470,6 +1472,17 @@ private long cmd_setColorTemperature(rtData, device, params) {
     return 0
 }
 
+private long cmd_setColor(rtData, device, params) {
+    def color = colorUtil.findByName(params[0]) ?: hexToColor(params[0])
+    def state = params.size() > 1 ? params[1] : ""
+    def delay = params.size() > 2 ? params[2] : 0
+    if (state && (device.currentValue('switch') != "$state")) {
+        return 0
+    }
+    executePhysicalCommand(rtData, device, 'setColor', color, delay)
+    return 0
+}
+
 
 private long executeVirtualCommand(rtData, devices, task, params)
 {
@@ -1716,14 +1729,22 @@ private evaluateOperand(rtData, node, operand, index = null, trigger = false) {
             }
             break
         case "s": //preset
-        	def v = 0;
-            switch (operand.s) {
-            	case 'midnight': v = getMidnightTime(rtData); break;
-            	case 'sunrise': v = getSunriseTime(rtData); break;
-            	case 'noon': v = getNoonTime(rtData); break;
-            	case 'sunset': v = getSunsetTime(rtData); break;
-            }
-	        values = [[i: "${node?.$}:$index:0", v:[t:'time', v:v]]]
+        	switch (operand.vt) {
+        		case 'time':
+                case 'datetime':
+                    def v = 0;
+                    switch (operand.s) {
+                        case 'midnight': v = getMidnightTime(rtData); break;
+                        case 'sunrise': v = getSunriseTime(rtData); break;
+                        case 'noon': v = getNoonTime(rtData); break;
+                        case 'sunset': v = getSunsetTime(rtData); break;
+                    }
+                    values = [[i: "${node?.$}:$index:0", v:[t:operand.vt, v:v]]]
+					break
+				default:
+					values = [[i: "${node?.$}:$index:0", v:[t:operand.vt, v:operand.s]]]           
+					break	
+			}
             break
         case "x": //variable
 	        values = [[i: "${node?.$}:$index:0", v:getVariable(rtData, operand.x) + (operand.vt ? [vt: operand.vt] : [:])]]
@@ -2256,11 +2277,11 @@ private Map getDeviceAttribute(rtData, deviceId, attributeName, subDeviceIndex =
             attribute = [t: 'string', m: false]
         }
         //x = eXclude - if a momentary attribute is looked for and the device does not match the current device, then we must ignore this during comparisons
-        def value = cast(rtData, device.currentValue(attributeName), attribute.t)
+        def value = (attributeName ? cast(rtData, device.currentValue(attributeName), attribute.t) : "$device")
         if (attributeName == 'hue') {
         	value = cast(rtData, cast(rtData, value, 'decimal') * 3.6, attribute.t)
         }
-		return [t: attribute.t, v: (attributeName ? value : "$device"), d: deviceId, a: attributeName, i: subDeviceIndex, x: (!!attribute.m || !!trigger) && ((device?.id != (rtData.event.device?:location).id) || (attributeName != rtData.event.name))]
+		return [t: attribute.t, v: value, d: deviceId, a: attributeName, i: subDeviceIndex, x: (!!attribute.m || !!trigger) && ((device?.id != (rtData.event.device?:location).id) || (attributeName != rtData.event.name))]
     }
     return [t: "error", v: "Device '${deviceId}' not found"]
 }
@@ -3660,6 +3681,39 @@ private formatLocalTime(time, format = "EEE, MMM d yyyy @ h:mm:ss a z") {
 	formatter.setTimeZone(location.timeZone)
 	return formatter.format(time)
 }
+
+
+private Map hexToColor(hex){
+    hex = hex ? "$hex".toString() : '000000'
+    if (hex.startsWith('#')) hex = hex.substring(1)
+    if (hex.size() != 6) hex = '000000'
+    float r = Integer.parseInt(hex.substring(0, 2), 16) / 255
+    float g = Integer.parseInt(hex.substring(2, 4), 16) / 255
+    float b = Integer.parseInt(hex.substring(4, 6), 16) / 255
+    float min = Math.min(Math.min(r, g), b);
+    float max = Math.max(Math.max(r, g), b)
+    float h = (max + min) / 2.0;
+    float s = h
+    float l = s
+    if(max == min){
+        h = s = 0; // achromatic
+    }else{
+        float d = max - min;
+        s = (l > 0.5) ? d / (2 - max - min) : d / (max + min);
+        switch(max){
+            case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+            case g: h = (b - r) / d + 2; break;
+            case b: h = (r - g) / d + 4; break;
+        }
+        h = h / 6;
+    }
+    return [
+        hue: (int) Math.round(100 * h),
+        saturation: (int) Math.round(100 * s),
+        level: (int) Math.round(100 * l),
+        hex: '#' + hex
+    ];
+};
 
 /******************************************************************************/
 /*** DEBUG FUNCTIONS														***/
