@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.0.067.20170412" }
+public static String version() { return "v0.0.068.20170412" }
 /*
+ *	04/12/2017 >>> v0.0.068.20170412 - ALPHA - Fixed a bug with colors from presets
  *	04/12/2017 >>> v0.0.067.20170412 - ALPHA - Fixed a bug introduced in 066 and implemented setColor
  *	04/12/2017 >>> v0.0.066.20170412 - ALPHA - Fixed hourly timers and implemented setInfraredLevel, setHue, setSaturation, setColorTemperature
  *	04/11/2017 >>> v0.0.065.20170411 - ALPHA - Fix for long waits being converted to scientific notation, causing the scheduler to misunderstand them and wait 1ms instead
@@ -1056,7 +1057,6 @@ private Boolean executeTask(rtData, devices, statement, task, async) {
         	try {
             	delay = "cmd_${task.c}"(rtData, device, params)
             } catch(all) {
-            	warn "Error:", rtData, null, all
 	            executePhysicalCommand(rtData, device, task.c, params)
 			}
             trace msg, rtData
@@ -1474,6 +1474,12 @@ private long cmd_setColorTemperature(rtData, device, params) {
 
 private long cmd_setColor(rtData, device, params) {
     def color = colorUtil.findByName(params[0]) ?: hexToColor(params[0])
+    color = [
+        hex: color.hex ?: color.rgb,
+        hue: color.hue ?: color.h,
+        saturation: color.saturation ?: color.s,
+        level: color.level ?: color.l
+    ]
     def state = params.size() > 1 ? params[1] : ""
     def delay = params.size() > 2 ? params[2] : 0
     if (state && (device.currentValue('switch') != "$state")) {
