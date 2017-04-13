@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.0.068.20170412" }
+public static String version() { return "v0.0.069.20170413" }
 /*
+ *	04/13/2017 >>> v0.0.069.20170413 - ALPHA - Various bug fixes and improvements
  *	04/12/2017 >>> v0.0.068.20170412 - ALPHA - Fixed a bug with colors from presets
  *	04/12/2017 >>> v0.0.067.20170412 - ALPHA - Fixed a bug introduced in 066 and implemented setColor
  *	04/12/2017 >>> v0.0.066.20170412 - ALPHA - Fixed hourly timers and implemented setInfraredLevel, setHue, setSaturation, setColorTemperature

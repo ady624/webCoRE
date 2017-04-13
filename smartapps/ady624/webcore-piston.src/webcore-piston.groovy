@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.0.068.20170412" }
+public static String version() { return "v0.0.069.20170413" }
 /*
+ *	04/13/2017 >>> v0.0.069.20170413 - ALPHA - Various bug fixes and improvements
  *	04/12/2017 >>> v0.0.068.20170412 - ALPHA - Fixed a bug with colors from presets
  *	04/12/2017 >>> v0.0.067.20170412 - ALPHA - Fixed a bug introduced in 066 and implemented setColor
  *	04/12/2017 >>> v0.0.066.20170412 - ALPHA - Fixed hourly timers and implemented setInfraredLevel, setHue, setSaturation, setColorTemperature
@@ -232,7 +233,7 @@ def get() {
 	    	active: state.active
 		],
         piston: state.piston,
-        systemVars: getSystemVariables(),
+        systemVars: getSystemVariablesAndValues(),
         subscriptions: state.subscriptions,     
 	    stats: state.stats,
         state: state.state,
@@ -2083,7 +2084,13 @@ private void subscribeAll(rtData) {
         def expressionTraverser = { expression, parentExpression, comparisonType -> 
             if ((expression.t == 'device') && (expression.id)) {
                 devices[expression.id] = [c: (comparisonType ? 1 : 0) + (devices[expression.id]?.c ?: 0)]
-                subscriptions["${expression.id}${expression.a}"] = [d: expression.id, a: expression.a, t: comparisonType, c: (subscriptions["${expression.id}${expression.a}"] ? subscriptions["${expression.id}${expression.a}"].c : []) + [condition]]
+                def ct = subscriptions["${expression.id}${expression.a}"]?.t ?: null
+                if ((ct == 'trigger') || (comparisonType == 'trigger')) {
+                    ct = 'trigger'                       
+                } else {
+                    ct = ct ?: comparisonType
+                }
+                subscriptions["${expression.id}${expression.a}"] = [d: expression.id, a: expression.a, t: ct, c: (subscriptions["${expression.id}${expression.a}"] ? subscriptions["${expression.id}${expression.a}"].c : []) + [condition]]
             }
         }    
         def operandTraverser = { node, operand, comparisonType ->
@@ -3897,6 +3904,14 @@ private Map getLocalVariables(rtData, vars) {
     return result    
 }
 
+def Map getSystemVariablesAndValues(rtData) {
+	rtData = rtData ?: [:]
+	Map result = getSystemVariables()
+    for(variable in result) {
+    	if (variable.value.d) variable.value.v = getSystemVariableValue(rtData, variable.key)
+    }
+    return result
+}
 
 private static Map getSystemVariables() {
 	return [
@@ -4007,7 +4022,7 @@ private getSystemVariableValue(rtData, name) {
 		case "\$randomSaturation": def result = getRandomValue("\$randomSaturation") ?: (int)Math.round(50 + 50 * Math.random()); setRandomValue("\$randomSaturation", result); return result 
 		case "\$randomHue": def result = getRandomValue("\$randomHue") ?: (int)Math.round(360 * Math.random()); setRandomValue("\$randomHue", result); return result 
   		case "\$locationMode": return location.getMode()
-		case "\$shmStatus": return rtData.virtualDevices['alarmSystemStatus']?.o[location.currentState("alarmSystemStatus")?.value]
+		case "\$shmStatus": switch (location.currentState("alarmSystemStatus")?.value) { case 'off': return 'Disarmed'; case 'stay': return 'Armed/Stay'; case 'away': return 'Armed/Away'; }; return null;
     }
 }
 
