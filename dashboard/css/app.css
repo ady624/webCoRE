@@ -141,6 +141,10 @@ footer button.btn + button.btn {
 	width: 768px;
 }
 
+.ngdialog.ngdialog-wiki .ngdialog-content {
+	height: 100%;
+}
+
 .ngdialog.ngdialog-auto-size {
 	text-align: center;
 }
@@ -148,6 +152,12 @@ footer button.btn + button.btn {
 .ngdialog.ngdialog-auto-size .ngdialog-content {
 	width: auto;
 	display: inline-block;
+}
+
+.ngdialog-wiki iframe {
+	border: 0;
+	width: 100%;
+	height: 100%;
 }
 
 a-ckolor .c-ckolor__input-wrapper {
@@ -280,6 +290,17 @@ toggle.input-group-addon {
 }
 .bin[reveal=true] {
 	color: #fff;
+}
+
+
+wiki {
+	padding-left: 4px;
+	color: #acf;
+	cursor: pointer;
+}
+
+wiki:hover {
+	color: #444;
 }
 
 loader {

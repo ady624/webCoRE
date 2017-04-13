@@ -89,6 +89,19 @@ app.directive('textcomplete', ['Textcomplete', function(Textcomplete) {
 }]);
 
 
+
+app.directive('help', function($compile) {
+	return function(scope, element, attrs) {
+		var data = attrs['help'] ? attrs['help'] : element.text();		
+		var el = angular.element('<wiki ng-click="wiki(\'' + data + '\')" class="fa fa-info-circle"></wiki>');
+		element.append($compile(el)(scope));
+//		el.bind('click', function(){
+//			console.log('here');
+//		});
+	};
+});
+
+
 app.filter('orderObjectBy', function() {
   return function(items, field, reverse) {
     var filtered = [];
@@ -1033,4 +1046,4 @@ if (document.selection) {
 }}
 
 //navigator.registerProtocolHandler('web+core','https://' + window.location.hostname + '/handler/%s', 'webCoRE');
-version = function() { return 'v0.0.066.20170412'; };
+version = function() { return 'v0.0.069.20170413'; };

@@ -367,6 +367,16 @@ span.varval {
 	padding: 0px 8px;
 }
 
+span.color {
+	display: inline-block;
+	float: left;
+	background: red;
+	width: 24px;
+	height: 14px;
+	margin: 3px 8px 0px 0px;
+	border-radius: 6px;
+	box-shadow: 1px 1px 3px black;
+}
 
 
 span[tsk][single=true] {
@@ -752,6 +762,46 @@ div[items] div[item] item button {
 }
 
 
+div[multicolumn] {
+	column-count: 2;
+	-webkit-column-count: 2;
+	-moz-column-count: 2;	
+}
+
+div[multicolumn] {
+    -webkit-column-rule: solid 1px #eee; /* Chrome, Safari, Opera */
+    -moz-column-rule:solid 1px #eee; /* Firefox */
+    column-rule: solid 1px #eee;
+}
+
+
+div[var] {
+	overflow: hidden;
+}
+
+div[var] span {
+	font-size: 10px;
+	line-height: 18px;
+	vertical-align: middle;
+}
+
+div[var] > span {
+	display: inline-block;
+	width: 50%;
+	text-align: right;
+}
+
+div[var] > span + span {
+	text-align: left;
+	padding-left: 8px;
+	color: #2b91af;
+}
+
+span.notset {
+	color: #ccc !important;
+}
+
+
 @media only screen 
   and (min-device-width: 320px) 
   and (max-device-width: 568px)
@@ -785,4 +835,15 @@ div[items] div[item] item button {
 		border-top: solid 1px #ccc;
 	}
 	
+
+
+	div[multicolumn] {
+		column-count: 1;
+		-webkit-column-count: 1;
+		-moz-column-count: 1;	
+	}
+
 }
+
+
+

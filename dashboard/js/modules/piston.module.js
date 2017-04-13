@@ -415,6 +415,28 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
     };
 
 
+	$scope.wiki = function(item) {
+		$scope.wikiUrl = $sce.trustAsUrl('https://wiki.webcore.co/' + item + '?content-only');
+		$window.mydialog = ngDialog.open({
+			template: 'dialog-wiki',
+			className: 'ngdialog-theme-default ngdialog-large ngdialog-wiki',
+			closeByDocument: true,
+			disableAnimation: true,
+			scope: $scope
+		});
+	};
+
+	$scope.formatVariableValue = function(variable) {
+		if (variable.v == null) return '(not set)';
+		switch (variable.t) {
+			case 'time':
+			case 'date':
+			case 'datetime':
+				return utcToString(variable.v);
+			default:
+				return variable.v;
+		}
+	}
 
 	$scope.deleteDialog = function() {
 		$scope.designer.dialog = ngDialog.open({
@@ -641,16 +663,16 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		window.designer = $scope.designer;
 		$scope.designer.items = {
 			simple: [
-				{ type: 'if', name: 'If block', icon: 'code-fork', cssClass: 'info', description: 'An if block allows the piston to execute different actions depending on the truth result of a comparison or set of comparisons', button: 'an if' },
+				{ type: 'if', name: 'If Block', icon: 'code-fork', cssClass: 'info', description: 'An if block allows the piston to execute different actions depending on the truth result of a comparison or set of comparisons', button: 'an if' },
 				{ type: 'action', name: 'Action', icon: 'code', cssClass: 'success', description: 'An action allows the piston to control devices and execute tasks', button: 'an action' },
 				{ type: 'every', name: 'Timer', icon: 'clock-o', cssClass: 'warning', description: 'A timer will trigger execution of the piston at set time intervals', button: 'a timer' }
 			],
 			advanced: [
 				{ type: 'switch', name: 'Switch', icon: 'code-fork', cssClass: 'info', description: 'A switch statement compares an operand against a set of values and executes statements corresponding to those matches', button: 'a switch' },
-				{ type: 'for', name: 'For loop', icon: 'circle-o-notch', cssClass: 'warning', description: 'A for loop executes the same statements for a set number of iteration cycles', button: 'a for loop' },
-				{ type: 'each', name: 'For each loop', icon: 'circle-o-notch', cssClass: 'warning', description: 'An each loop executes the same statements for each device in a device list', button: 'a for each loop' },
-				{ type: 'while', name: 'While loop', icon: 'circle-o-notch', cssClass: 'warning', description: 'A while loop executes the same statements for as long as a condition is met', button: 'a while loop' },
-				{ type: 'repeat', name: 'Repeat loop', icon: 'circle-o-notch', cssClass: 'warning', description: 'A repeat loop executes the same statements until a condition is met', button: 'a repeat loop' },
+				{ type: 'for', name: 'For Loop', icon: 'circle-o-notch', cssClass: 'warning', description: 'A for loop executes the same statements for a set number of iteration cycles', button: 'a for loop' },
+				{ type: 'each', name: 'For Each Loop', icon: 'circle-o-notch', cssClass: 'warning', description: 'An each loop executes the same statements for each device in a device list', button: 'a for each loop' },
+				{ type: 'while', name: 'While Loop', icon: 'circle-o-notch', cssClass: 'warning', description: 'A while loop executes the same statements for as long as a condition is met', button: 'a while loop' },
+				{ type: 'repeat', name: 'Repeat Loop', icon: 'circle-o-notch', cssClass: 'warning', description: 'A repeat loop executes the same statements until a condition is met', button: 'a repeat loop' },
 				{ type: 'break', name: 'Break', icon: 'ban', cssClass: 'danger', description: 'A break allows the interruption of the inner most switch, for loop, for each loop, while loop, or repeat loop', button: 'a break' },
 				{ type: 'exit', name: 'Exit', icon: 'ban', cssClass: 'danger', description: 'An exit interrupts the piston execution and exits immediately', button: 'an exit' }
 			]
@@ -2102,7 +2124,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 			} else {
 				operand.allowDevices = dataType == 'device';
 				operand.allowPhysical = (dataType != 'datetime') && (dataType != 'date') && (dataType != 'time') && (dataType != 'device') && (dataType != 'variable') && (!strict || (dataType != 'boolean')) && (dataType != 'duration');
-				operand.allowPreset = (dataType == 'datetime') || (dataType == 'time');
+				operand.allowPreset = (dataType == 'datetime') || (dataType == 'time') || (dataType == 'color');
 				operand.allowVirtual = (dataType != 'datetime') && (dataType != 'date') && (dataType != 'time') && (dataType != 'device') && (dataType != 'variable') && (dataType != 'decimal') && (dataType != 'integer') && (dataType != 'number') && (dataType != 'boolean') && (dataType != 'enum') && (dataType != 'color') && (dataType != 'duration');
 				operand.allowVariable = (dataType != 'device' || ((dataType == 'device') && operand.multiple)) && (!strict || (dataType != 'boolean'));
 				operand.allowConstant = (dataType != 'device') && (dataType != 'variable');
@@ -3461,6 +3483,34 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		return expression.ok;
 	}
 
+
+
+	$scope.hexToHsl = function(hex){
+		var rgb = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+		if (!rgb) return {h: 0, s: 0, l: 0};
+	    var r = 0.0 + parseInt(rgb[1], 16) / 255;
+		var g = 0.0 + parseInt(rgb[2], 16) / 255;
+		var b = 0.0 + parseInt(rgb[3], 16) / 255;
+	    var max = Math.max(r, g, b), min = Math.min(r, g, b);
+	    var h, s, l = (max + min) / 2.0;
+	    if(max == min){
+	        h = s = 0; // achromatic
+	    }else{
+	        var d = max - min;
+	        s = (l > 0.5) ? d / (2 - max - min) : d / (max + min);
+	        switch(max){
+	            case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+	            case g: h = (b - r) / d + 2; break;
+	            case b: h = (r - g) / d + 4; break;
+	        }
+	        h = h / 6;
+	    }
+	    return {
+			h: Math.round(360 * h),
+			s: Math.round(100 * s),
+			l: Math.round(100 * l)
+		};
+	};
 
 	$scope.evaluateExpression = function(expression, dataType) {
 		dataService.evaluateExpression($scope.pistonId, expression, dataType).then(function (response) {

@@ -189,7 +189,8 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 		dataService.saveToStore('backup.auto', !!$scope.designer.backup);
 		dataService.saveToStore('author.handle', $scope.designer.author);
 		if ($scope.designer.backup) {
-			dataService.generateBackupBin().then(function(binId) {
+			dataService.generateBackupBin().then(function(response) {
+				var binId = response.data;
 				dataService.createPiston($scope.designer.name, $scope.designer.author, binId).then(success);
 			});
 		} else {
