@@ -259,7 +259,7 @@
 <!--		<trace ng-if="(view.trace && (mode=='view') && trace && trace.points && trace.points['s:' + statement.$])"><span>+{{trace.points['s:' + statement.$].o}}ms</span><span dur>{{trace.points['s:' + statement.$].d}}ms</span></trace>-->
 		<trace ng-if="(view.trace && (mode=='view') && ((statement.t != 'action') || (statement.d && statement.d.length)) && trace && trace.points && trace.points['s:' + statement.$])"><span>+{{trace.points['s:' + statement.$].o}}ms</span><span ng-if="(trace.points['s:' + statement.$].v != null) && (trace.points['s:' + statement.$].v >= 0)" dur>{{trace.points['s:' + statement.$].d}}ms</span><span ng-if="(trace.points['s:' + statement.$].v == null) || (trace.points['s:' + statement.$].v < 0)" timer ok="{{(trace.points['s:' + statement.$].v == null) || (trace.t + trace.points['s:' + statement.$].o + trace.points['s:' + statement.$].d - trace.points['s:' + statement.$].v >= currentTime())}}">{{trace.points['s:' + statement.$].v == null ? '▼ ▼ ▼' : timeCounter(trace.t + trace.points['s:' + statement.$].o + trace.points['s:' + statement.$].d - trace.points['s:' + statement.$].v)}}</span></trace>
 		<!--action-->
-		<div no-drag class="no-drag" ng-if="statement.t=='action'" no-drag>
+		<div no-drag class="no-drag" ng-if="statement.t=='action'" no-drag><span>{{statement.$}}</span>
 			<line com ng-if="statement.z">/* {{statement.z}} */</line>
 			<line kwd ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)">only when</line>
 			<restrictions ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)" data-ng-repeat="collection in [statement]" data-ng-include="'restrictions'" dnd-nodrag data-nag-model="statement"></restrictions>

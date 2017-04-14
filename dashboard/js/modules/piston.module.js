@@ -2484,7 +2484,10 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 			comparison.right.multiple = comparison.multiple;
 			comparison.right.disableAggregation = comparison.multiple;
 			comparison.right.dataType = comparison.left.selectedDataType;
-			comparison.right.options = comparison.left.selectedOptions;
+			if (angular.toJson(comparison.right.options) != angular.toJson(comparison.left.selectedOptions)) {
+				//avoid angular circus
+				comparison.right.options = comparison.left.selectedOptions;
+			}
 			$scope.validateOperand(comparison.right, reinit, true);
 			comparison.valid = comparison.valid && comparison.right.valid;
 		}
@@ -2493,7 +2496,10 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 			comparison.right2.multiple = comparison.multiple;
 			comparison.right2.disableAggregation = comparison.multiple;
 			comparison.right2.dataType = comparison.left.selectedDataType;
-			comparison.right2.options = comparison.left.selectedOptions;
+			if (angular.toJson(comparison.right2.options) != angular.toJson(comparison.left.selectedOptions)) {
+				//avoid angular circus
+				comparison.right2.options = comparison.left.selectedOptions;
+			}
 			$scope.validateOperand(comparison.right2, reinit, true);
 			comparison.valid = comparison.valid && comparison.right2.valid;
 		}
@@ -3081,8 +3087,8 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 
 	$scope.anonymizeObject = function(object, returnAsString) {
 		var data = $scope.serializeObject(object);
-//		var matches = data.match(/(:[a-f0-9]{32}:)/g).filter((x, i, a) => a.indexOf(x) == i);
-		var matches = data.match(/(:[a-f0-9]{32}:)/g).unique();
+		var matches = data.match(/(:[a-f0-9]{32}:)/g);
+		if (matches) matches = matches.unique();
 		for(i in matches) {
 			data = data.replace(new RegExp(matches[i], 'g'), ('xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx' + i).substr(-32));
 		}
