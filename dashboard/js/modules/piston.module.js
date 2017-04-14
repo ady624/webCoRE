@@ -2319,7 +2319,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 					operand.config.autocomplete[0] = {words: [], cssClass: 'hl err'};
 				}
 				operand.data.exp = expression;
-				operand.selectedDataType = 'string';
+				operand.selectedDataType = 'dynamic';
 				break;
 		}
 
@@ -2448,11 +2448,11 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 			var noRestrictions = comparison.type != 'restriction';
 			var optionList = [];
 			var options = [];
-			var dt = comparison.dataType == 'enum' ? 's' : comparison.dataType.substr(0, 1);
+			var dt = comparison.dataType == 'enum' ? 's' : (comparison.dataType == 'dynamic' ? '' : comparison.dataType.substr(0, 1));
             dt = (comparison.momentary ? 'm' : ((dt == 'n' ? 'd' : dt)));
 			for(conditionId in $scope.db.comparisons.conditions) {
 				var condition = $scope.db.comparisons.conditions[conditionId];
-				if ((condition.g.indexOf(dt) >= 0) && (noRestrictions || !condition.t))  {
+				if ((!dt || (condition.g.indexOf(dt) >= 0)) && (noRestrictions || !condition.t))  {
 					options.push({ id: conditionId, d: (comparison.selectedMultiple ? (condition.dd ? condition.dd : condition.d) : condition.d), c: 'Conditions' });
 				}
 			}
