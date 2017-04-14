@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.0.069.20170413" }
+public static String version() { return "v0.0.06a.20170414" }
 /*
+ *	04/13/2017 >>> v0.0.06a.20170414 - ALPHA - Fixed a bug where multiple timers would cancel each other's actions out, implemented (not extensively tested yet) the TCP and TEP
  *	04/13/2017 >>> v0.0.069.20170413 - ALPHA - Various bug fixes and improvements
  *	04/12/2017 >>> v0.0.068.20170412 - ALPHA - Fixed a bug with colors from presets
  *	04/12/2017 >>> v0.0.067.20170412 - ALPHA - Fixed a bug introduced in 066 and implemented setColor
@@ -234,7 +235,7 @@ def get() {
 		],
         piston: state.piston,
         systemVars: getSystemVariablesAndValues(),
-        subscriptions: state.subscriptions,     
+        subscriptions: state.subscriptions,
 	    stats: state.stats,
         state: state.state,
         logs: state.logs,
@@ -243,6 +244,7 @@ def get() {
         memory: mem(),
         lastExecuted: state.lastExecuted,
         nextSchedule: state.nextSchedule,
+        schedules: state.schedules
     ]
 }
 
@@ -260,6 +262,7 @@ def activity(lastLogTimestamp) {
         memory: mem(),
         lastExecuted: state.lastExecuted,
         nextSchedule: state.nextSchedule,
+        schedules: state.schedules
     ]    
 }
 
@@ -590,6 +593,8 @@ private Boolean executeEvent(rtData, event) {
         setSystemVariableValue(rtData, '$currentEventValue', rtData.currentEvent.value ?: '')
         setSystemVariableValue(rtData, '$currentEventUnit', rtData.currentEvent.unit ?: '')
         setSystemVariableValue(rtData, '$currentEventDevicePhysical', !!rtData.currentEvent.physical)
+        rtData.conditionStateChanged = false
+        rtData.pistonStateChanged = false
         rtData.fastForwardTo = null
         if (event.name == 'time') {
         	rtData.fastForwardTo = event.schedule.i
@@ -656,12 +661,18 @@ private finalizeEvent(rtData, initialMsg, success = true) {
 private processSchedules(rtData, scheduleJob = false) {
 	//reschedule stuff
     //todo, override tasks, if any
+    boolean pistonStateChanged = rtData.state.old != rtData.state.new
+    rtData.state.old = rtData.state.new
     def schedules = (atomicState.schedules ?: [])
     //cancel statements
     schedules.removeAll{ it.s in rtData.cancelations.statements }
     //cancel on conditions
 	for(cid in rtData.cancelations.conditions) {
     	schedules.removeAll{ cid in it.cs }
+    }
+    //cancel on piston state change
+    if (pistonStateChanged) {
+    	schedules.removeAll{ !!it.ps }
     }
     rtData.cancelations = []
     schedules = (schedules + (rtData.schedules ?: [])).sort{ it.t }
@@ -734,6 +745,13 @@ private Boolean executeStatement(rtData, statement, async = false) {
 	//if rtData.fastForwardTo is a positive, non-zero number, we need to fast forward through all
     //branches until we find the task with an id equal to that number, then we play nicely after that
 	if (!statement) return false
+    if (!rtData.fastForwardTo) {
+    	switch (statement.tep) {
+        	case 'c': if (!rtData.conditionStateChanged) return; break;
+        	case 'p': if (!rtData.pistonStateChanged) return; break;
+        	case 'b': if ((!rtData.conditionStateChanged) && (!rtData.pistonStateChanged)) return; break;
+        }
+    }
     rtData.stack.ss.push(rtData.stack.s)
     rtData.stack.s = statement.$
     def t = now()
@@ -743,6 +761,7 @@ private Boolean executeStatement(rtData, statement, async = false) {
     if (stacked) {
     	rtData.stack.cs.push(c)
     }
+    def parentConditionStateChanged = rtData.conditionStateChanged
     def parentAsync = async
     def parentIndex = getVariable(rtData, '$index').v
     def parentDevice = getVariable(rtData, '$device').v
@@ -792,8 +811,9 @@ private Boolean executeStatement(rtData, statement, async = false) {
                 	//we override current condition so that child statements can cancel on it
 	                rtData.stack.c = statement.$
                     if (!rtData.fastForwardTo && (!rtData.piston.o?.mps) && (statement.t == 'if') && (rtData.statementLevel == 1)) {
-                        //automatic piston state
+                        //automatic piston state                        
                         rtData.state.new = 'true';
+				    	rtData.pistonStateChanged = rtData.pistonStateChanged || (rtData.state.old != rtData.state.new)
                     }
                     
                     if (perform || !!rtData.fastForwardTo) {
@@ -825,6 +845,7 @@ private Boolean executeStatement(rtData, statement, async = false) {
                             if (!rtData.fastForwardTo && (!rtData.piston.o?.mps) && (rtData.statementLevel == 1)) {
                             	//automatic piston state
                                 rtData.state.new = 'false';
+						    	rtData.pistonStateChanged = rtData.pistonStateChanged || (rtData.state.old != rtData.state.new)
                             }
                             if ((!perform || !!rtData.fastForwardTo) && !executeStatements(rtData, statement.e, async)) {
                                 //stop processing
@@ -988,6 +1009,7 @@ private Boolean executeStatement(rtData, statement, async = false) {
     rtData.stack.s = rtData.stack.ss.pop()
     setSystemVariableValue(rtData, '$index', parentIndex)
     setSystemVariableValue(rtData, '$device', parentDevice)
+    rtData.conditionStateChanged = parentConditionStateChanged
 	return value || !!rtData.fastForwardTo
 }
 
@@ -997,7 +1019,9 @@ private Boolean executeAction(rtData, statement, async) {
 	def devices = []
     def deviceIds = []
     //if override
-    cancelStatementSchedules(rtData, statement.$)
+    if (!rtData.fastForwardTo) {
+    	cancelStatementSchedules(rtData, statement.$)
+    }
     def result = true
     for (d in statement.d) {
     	if (d.startsWith(':')) {
@@ -1411,9 +1435,10 @@ private int getWeekOfMonth(date = null, backwards = false) {
 
 private requestWakeUp(rtData, statement, task, timeOrDelay) {
 	def time = timeOrDelay > 9999999999 ? timeOrDelay : now() + timeOrDelay
-    def cs = [] + (rtData.stack?.cs ?: [])
+    def cs = [] + ((statement.tcp == 'b') || (statement.tcp == 'c') ? (rtData.stack?.cs ?: []) : [])
+    def ps = (statement.tcp == 'b') || (statement.tcp == 'p') ? 1 : 0
     cs.removeAll{ it == 0 }
-    def schedule = [t: time, s: statement.$, i: task?.$, cs: cs]
+    def schedule = [t: time, s: statement.$, i: task?.$, cs: cs, ps: ps]
     rtData.schedules.push(schedule)
 }
 
@@ -1517,6 +1542,7 @@ private long vcmd_setState(rtData, device, params) {
 	def value = params[0]
     if (rtData.piston.o?.mps) {
     	rtData.state.new = value
+    	rtData.pistonStateChanged = rtData.pistonStateChanged || (rtData.state.old != rtData.state.new)
         setSystemVariableValue(rtData, '$state', rtData.state.new)        
     } else {
 	    error "Cannot set the piston state while in automatic mode. Please edit the piston settings to disable the automatic piston state if you want to manually control the state.", rtData
@@ -1673,7 +1699,8 @@ private Boolean evaluateConditions(rtData, conditions, collection, async) {
     def result = not ? !value : !!value
     if (!rtData.fastForwardTo) tracePoint(rtData, "c:${conditions.$}", now() - t, result)
     def oldResult = !!rtData.cache["c:${conditions.$}"];
-    if (oldResult != result) {  
+    rtData.conditionStateChanged = (oldResult != result)
+    if (rtData.conditionStateChanged) {  
     	//condition change
         cancelConditionSchedules(rtData, conditions.$)
     }
@@ -1834,7 +1861,8 @@ private Boolean evaluateCondition(rtData, condition, collection, async) {
             }
         }
     }
-    if (rtData.cache["c:${condition.$}"] != result) {
+    rtData.conditionStateChanged = rtData.cache["c:${condition.$}"] != result
+    if (rtData.conditionStateChanged) {
     	//condition change
         cancelConditionSchedules(rtData, condition.$)
     }

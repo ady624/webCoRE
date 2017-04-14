@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.0.069.20170413" }
+public static String version() { return "v0.0.06a.20170414" }
 /*
+ *	04/13/2017 >>> v0.0.06a.20170414 - ALPHA - Fixed a bug where multiple timers would cancel each other's actions out, implemented (not extensively tested yet) the TCP and TEP
  *	04/13/2017 >>> v0.0.069.20170413 - ALPHA - Various bug fixes and improvements
  *	04/12/2017 >>> v0.0.068.20170412 - ALPHA - Fixed a bug with colors from presets
  *	04/12/2017 >>> v0.0.067.20170412 - ALPHA - Fixed a bug introduced in 066 and implemented setColor
