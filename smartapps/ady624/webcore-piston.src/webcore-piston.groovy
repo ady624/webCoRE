@@ -3468,7 +3468,7 @@ private func_if(rtData, params) {
     	return [t: "error", v: "Invalid parameters. Expecting if(condition, valueIfTrue, valueIfFalse)"];
     }
     boolean value = evaluateExpression(rtData, params[0], 'boolean').v
-    return [t: "dynamic", v: value ? evaluateExpression(rtData, params[1]) : evaluateExpression(rtData, params[2])]
+    return value ? evaluateExpression(rtData, params[1]) : evaluateExpression(rtData, params[2])
 }
 
 /******************************************************************************/
