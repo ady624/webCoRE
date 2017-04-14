@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.0.06a.20170414" }
+public static String version() { return "v0.0.06b.20170414" }
 /*
+ *	04/13/2017 >>> v0.0.06b.20170414 - ALPHA - Added more functions: date(value), time(value), if(condition, valueIfTrue, valueIfFalse), not(value), isEmpty(value), addSeconds(dateTime, seconds), addMinutes(dateTime, minutes), addHours(dateTime, hours), addDays(dateTime, days), addWeeks(dateTime, weeks)
  *	04/13/2017 >>> v0.0.06a.20170414 - ALPHA - Fixed a bug where multiple timers would cancel each other's actions out, implemented (not extensively tested yet) the TCP and TEP
  *	04/13/2017 >>> v0.0.069.20170413 - ALPHA - Various bug fixes and improvements
  *	04/12/2017 >>> v0.0.068.20170412 - ALPHA - Fixed a bug with colors from presets
@@ -1735,7 +1736,16 @@ private static Map functions() {
         le				: [ t: "boolean",						],
         gt				: [ t: "boolean",						],
         ge				: [ t: "boolean",						],
-        
+        not				: [ t: "boolean",						],
+        isempty			: [ t: "boolean",	d: "isEmpty",		],
+        if				: [ t: "dynamic",						],
+        date			: [ t: "date",							],
+        time			: [ t: "time",							],
+        addseconds		: [ t: "datetime",	d: "addSeconds"		],
+        addminutes		: [ t: "datetime",	d: "addMinutes"		],
+        addhours		: [ t: "datetime",	d: "addHours"		],
+        adddays			: [ t: "datetime",	d: "addDays"		],
+        addweeks		: [ t: "datetime",	d: "addWeeks"		],
 	]
 }
 

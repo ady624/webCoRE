@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.0.06a.20170414" }
+public static String version() { return "v0.0.06b.20170414" }
 /*
+ *	04/13/2017 >>> v0.0.06b.20170414 - ALPHA - Added more functions: date(value), time(value), if(condition, valueIfTrue, valueIfFalse), not(value), isEmpty(value), addSeconds(dateTime, seconds), addMinutes(dateTime, minutes), addHours(dateTime, hours), addDays(dateTime, days), addWeeks(dateTime, weeks)
  *	04/13/2017 >>> v0.0.06a.20170414 - ALPHA - Fixed a bug where multiple timers would cancel each other's actions out, implemented (not extensively tested yet) the TCP and TEP
  *	04/13/2017 >>> v0.0.069.20170413 - ALPHA - Various bug fixes and improvements
  *	04/12/2017 >>> v0.0.068.20170412 - ALPHA - Fixed a bug with colors from presets
@@ -3441,13 +3442,136 @@ private func_ge(rtData, params) {
 	if (!params || !(params instanceof List) || (params.size() != 2)) {
     	return [t: "error", v: "Invalid parameters. Expecting ge(value1, value2)"];
     }
-    def value1 = evaluateExpression(rtData, params[0])
-    def value2 = evaluateExpression(rtData, params[1], value1.t)
+    Map value1 = evaluateExpression(rtData, params[0])
+    Map value2 = evaluateExpression(rtData, params[1], value1.t)
     return [t: "boolean", v: value1.v >= value2.v]
 }
 
+/******************************************************************************/
+/*** not returns the negative boolean value 								***/
+/*** Usage: not(value)														***/
+/******************************************************************************/
+private func_not(rtData, params) {
+	if (!params || !(params instanceof List) || (params.size() != 1)) {
+    	return [t: "error", v: "Invalid parameters. Expecting not(value)"];
+    }
+    boolean value = evaluateExpression(rtData, params[0], 'boolean').v
+    return [t: "boolean", v: !value]
+}
 
+/******************************************************************************/
+/*** if evaluates a boolean and returns value1 if true, or value2 otherwise ***/
+/*** Usage: if(condition, valueIfTrue, valueIfFalse)						***/
+/******************************************************************************/
+private func_if(rtData, params) {
+	if (!params || !(params instanceof List) || (params.size() != 3)) {
+    	return [t: "error", v: "Invalid parameters. Expecting if(condition, valueIfTrue, valueIfFalse)"];
+    }
+    boolean value = evaluateExpression(rtData, params[0], 'boolean').v
+    return [t: "dynamic", v: value ? evaluateExpression(rtData, params[1]) : evaluateExpression(rtData, params[2])]
+}
 
+/******************************************************************************/
+/*** isEmpty returns true if the value is empty								***/
+/*** Usage: isEmpty(value)													***/
+/******************************************************************************/
+private func_isempty(rtData, params) {
+	if (!params || !(params instanceof List) || (params.size() != 1)) {
+    	return [t: "error", v: "Invalid parameters. Expecting isEmpty(value)"];
+    }
+    def value = evaluateExpression(rtData, params[0])
+    boolean result = (value.v instanceof List ? (value.v == [null]) || (value.v == []) || (value.v == ['null']) : false) || (value.v == null) || (value.t == 'error') || (value.v == 'null') || (cast(rtData, value.v, 'string') == '')
+    return [t: "boolean", v: result]
+}
+
+/******************************************************************************/
+/*** date returns the value as a date type									***/
+/*** Usage: date(value)														***/
+/******************************************************************************/
+private func_date(rtData, params) {
+	if (!params || !(params instanceof List) || (params.size() != 1)) {
+    	return [t: "error", v: "Invalid parameters. Expecting date(value)"];
+    }
+    long value = evaluateExpression(rtData, params[0], 'date').v
+    return [t: "date", v: value]
+}
+
+/******************************************************************************/
+/*** time returns the value as a time type									***/
+/*** Usage: time(value)														***/
+/******************************************************************************/
+private func_time(rtData, params) {
+	if (!params || !(params instanceof List) || (params.size() != 1)) {
+    	return [t: "error", v: "Invalid parameters. Expecting time(value)"];
+    }
+    long value = evaluateExpression(rtData, params[0], 'time').v
+    return [t: "time", v: value]
+}
+
+/******************************************************************************/
+/*** addSeconds returns the value as a time type							***/
+/*** Usage: addSeconds(dateTime, seconds)									***/
+/******************************************************************************/
+private func_addseconds(rtData, params) {
+	if (!params || !(params instanceof List) || (params.size() != 2)) {
+    	return [t: "error", v: "Invalid parameters. Expecting addSeconds(dateTime, seconds)"];
+    }
+    long value = evaluateExpression(rtData, params[0], 'datetime').v
+    long delta = evaluateExpression(rtData, params[1], 'long').v * 1000
+    return [t: "datetime", v: value + delta]
+}
+
+/******************************************************************************/
+/*** addMinutes returns the value as a time type							***/
+/*** Usage: addMinutes(dateTime, minutes)									***/
+/******************************************************************************/
+private func_addminutes(rtData, params) {
+	if (!params || !(params instanceof List) || (params.size() != 2)) {
+    	return [t: "error", v: "Invalid parameters. Expecting addMinutes(dateTime, minutes)"];
+    }
+    long value = evaluateExpression(rtData, params[0], 'datetime').v
+    long delta = evaluateExpression(rtData, params[1], 'long').v * 60000
+    return [t: "datetime", v: value + delta]
+}
+
+/******************************************************************************/
+/*** addHours returns the value as a time type								***/
+/*** Usage: addHours(dateTime, hours)										***/
+/******************************************************************************/
+private func_addhours(rtData, params) {
+	if (!params || !(params instanceof List) || (params.size() != 2)) {
+    	return [t: "error", v: "Invalid parameters. Expecting addHours(dateTime, hours)"];
+    }
+    long value = evaluateExpression(rtData, params[0], 'datetime').v
+    long delta = evaluateExpression(rtData, params[1], 'long').v * 3600000
+    return [t: "datetime", v: value + delta]
+}
+
+/******************************************************************************/
+/*** addDays returns the value as a time type								***/
+/*** Usage: addDays(dateTime, days)											***/
+/******************************************************************************/
+private func_adddays(rtData, params) {
+	if (!params || !(params instanceof List) || (params.size() != 2)) {
+    	return [t: "error", v: "Invalid parameters. Expecting addDays(dateTime, days)"];
+    }
+    long value = evaluateExpression(rtData, params[0], 'datetime').v
+    long delta = evaluateExpression(rtData, params[1], 'long').v * 86400000
+    return [t: "datetime", v: value + delta]
+}
+
+/******************************************************************************/
+/*** addWeeks returns the value as a time type								***/
+/*** Usage: addWeeks(dateTime, weeks)										***/
+/******************************************************************************/
+private func_addweeks(rtData, params) {
+	if (!params || !(params instanceof List) || (params.size() != 2)) {
+    	return [t: "error", v: "Invalid parameters. Expecting addWeeks(dateTime, weeks)"];
+    }
+    long value = evaluateExpression(rtData, params[0], 'datetime').v
+    long delta = evaluateExpression(rtData, params[1], 'long').v * 604800000
+    return [t: "datetime", v: value + delta]
+}
 
 
 
