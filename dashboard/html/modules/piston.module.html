@@ -492,16 +492,6 @@
 		<line cond ng-if="!restriction.r" ng-click="editRestriction(restriction, collection.r);">
 			<handle dnd-handle class="fa fa-sort"></handle><span ng-bind-html="restriction.$$html || (restriction.$$html = renderComparison(restriction.lo, restriction.co, restriction.ro, restriction.ro2))"></span>
 		</line>
-		<container ng-if="((mode=='edit') && view.whens) || (restriction.ts && restriction.ts.length) || (restriction.fs && restriction.fs.length)">
-			<line pun>{</line>
-			<container>
-				<line kwd when ng-if-start="view.whens || (restriction.ts && restriction.ts.length)">when true</line>
-				<statements ng-if-end dnd-list="restriction.ts" dnd-allowed-types="['statement']" data-ng-repeat="statements in [restriction.ts]" data-ng-include="'statements'" dnd-nodrag data-nag-model="restriction.ts"></statements>
-				<line kwd when ng-if-start="view.whens || (restriction.fs && restriction.fs.length)">when false</line>
-				<statements ng-if-end dnd-list="restriction.fs" dnd-allowed-types="['statement']" data-ng-repeat="statements in [restriction.fs]" data-ng-include="'statements'" dnd-nodrag data-nag-model="restriction.fs"></statements>
-			</container>
-			<line pun>}</line>
-		</container>
 		</div>	
 	</dnd-nodrag>
 </script>
@@ -1301,7 +1291,7 @@
 						<optgroup label="Global variables">
 							<option ng-repeat="(name, variable) in globalVars" value="{{name}}" ng-if="!operand.restrictType || (operand.restrictType.indexOf(variable.t) >= 0)" data-content="<span class='vartype'>{{variable.t}}</span>{{name}}">{{name}} ({{variable.t}})</option>
 						</optgroup>
-						<optgroup label="System variables" ng-if="operand.dataType != 'variable'">
+						<optgroup label="System variables">
 							<option ng-repeat="name in systemVarNames" value="{{name}}" ng-if="!operand.restrictType || (operand.restrictType.indexOf(systemVars[name].t) >= 0)" data-content="<span class='vartype'>{{systemVars[name].t}}</span>{{name}}<span class='varval'>{{systemVars[name].v}}</span>">{{name}} ({{systemVars[name].t}})</option>
 						</optgroup>
 					</select>

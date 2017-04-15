@@ -50,6 +50,35 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		}
 	}
 
+    $scope.listAllPistons = function() {
+        var result = [];
+        var locations = dataService.listLocations();
+        for (l in locations) {
+            var instances = dataService.listInstances(locations[l].id);
+            for (i in instances) {
+				for (p in instances[i].pistons) {
+	                result.push({ v: instances[i].pistons[p].id, n: locations[l].name + ' \\ ' + instances[i].name + ' \\ ' + instances[i].pistons[p].name });
+				}
+            }
+        }
+        return result;
+    };
+
+    $scope.getPistonName = function(pistonId) {
+        var locations = dataService.listLocations();
+        for (l in locations) {
+            var instances = dataService.listInstances(locations[l].id);
+            for (i in instances) {
+				for (p in instances[i].pistons) {
+					if (instances[i].pistons[p].id == pistonId) {
+						return locations[l].name + ' \\ ' + instances[i].name + ' \\ ' + instances[i].pistons[p].name;
+					}
+				}
+            }
+        }
+        return pistonId;
+    };
+
 	$scope.updateActivity = function(init) {	
 		if ($scope.$$destroyed) return;	
 		if ($scope.mode != 'view') return;
@@ -1293,6 +1322,9 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 			task.p = [];
 			for (parameterIndex in $scope.designer.parameters) {
 				var param = $scope.designer.parameters[parameterIndex].data;
+				if ((param.t == 'c') && (param.vt == 'time')) {
+					param.c = param.c.getHours() * 60 + param.c.getMinutes();
+				}
 				task.p.push(param);
 			}
 			if ($scope.designer.$new) {
@@ -2072,6 +2104,14 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 				operand.multiple = true;
 				dataType = 'device';
 			}
+			if (dataType == 'pistons') {
+				operand.multiple = true;
+				dataType = 'piston';
+			}
+			if (dataType == 'routines') {
+				operand.multiple = true;
+				dataType = 'routine';
+			}
 			if (dataType == 'modes') {
 				operand.multiple = true;
 				dataType = 'mode';
@@ -2112,6 +2152,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 				operand.data.c = $scope.localTimeToDate(operand.data.c);
 			}
 
+			operand.onlyAllowConstants = operand.onlyAllowConstants || (dataType == 'piston') || (dataType == 'routine') || (dataType == 'askAlexaMacro')
 
 			var strict = !!operand.strict;
 			if (operand.onlyAllowConstants) {
@@ -2178,6 +2219,9 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 			case 'mode':
 			case 'alarmSystemStatus':
 				operand.options = $scope.objectToArray($scope.instance.virtualDevices[dataType].o);
+				break;
+			case 'piston':
+				operand.options = $scope.listAllPistons();
 				break;
 		}
 	
@@ -2281,11 +2325,19 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 				}
 				break;
 			case 'x':
-				var variable = $scope.getVariableByName(operand.data.x);
-				if (variable) {
-					operand.selectedDataType = variable.t;
+				if (operand.data.x instanceof Array) {
+					if (operand.data.x.length) {
+						operand.selectedDataType = 'dynamic';
+					} else {
+						operand.error = "Invalid list of variables";
+					}
 				} else {
-					operand.error = "Invalid variable";
+					var variable = $scope.getVariableByName(operand.data.x);
+					if (variable) {
+						operand.selectedDataType = variable.t;
+					} else {
+						operand.error = "Invalid variable";
+					}
 				}
 				break;
 			case 'c':
@@ -2452,7 +2504,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
             dt = (comparison.momentary ? 'm' : ((dt == 'n' ? 'd' : dt)));
 			for(conditionId in $scope.db.comparisons.conditions) {
 				var condition = $scope.db.comparisons.conditions[conditionId];
-				if ((!dt || (condition.g.indexOf(dt) >= 0)) && (noRestrictions || !condition.t))  {
+				if (((!dt && (condition.g != 'm')) || (condition.g.indexOf(dt) >= 0)) && (noRestrictions || !condition.t))  {
 					options.push({ id: conditionId, d: (comparison.selectedMultiple ? (condition.dd ? condition.dd : condition.d) : condition.d), c: 'Conditions' });
 				}
 			}
@@ -2552,16 +2604,21 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 					case 'c': //constant
 						var m = 'num';
 						noQuotes = noQuotes || !isNaN(operand.c);
-						if (noQuotes && (operand.vt == 'time')) {
-							var date = $scope.localTimeToDate(operand.c);
-							result = '<span num>' + date.toLocaleTimeString({hour: '2-digit', minute:'2-digit'}) + '</span>';
-						} else {
-							//if we still think we need quotes, let's make sure booleans don't have any
-							if (!noQuotes) {
-								if ((operand.vt == 'boolean') || (operand.vt == 'enum')) noQuotes = true;
-								m = 'lit';
-							}
-							result = '<span ' + m + '>' + scope.buildName(operand.c, noQuotes, pedantic) + '</span>';
+						switch (operand.vt) {
+							case 'time':
+								var date = $scope.localTimeToDate(operand.c);
+								result = '<span num>' + date.toLocaleTimeString({hour: '2-digit', minute:'2-digit'}) + '</span>';
+								break;
+							case 'piston':
+								result = '<span lit>' + $scope.getPistonName(operand.c) + '</span>';
+								break;
+							default:
+								//if we still think we need quotes, let's make sure booleans don't have any
+								if (!noQuotes) {
+									if ((operand.vt == 'boolean') || (operand.vt == 'enum')) noQuotes = true;
+									m = 'lit';
+								}
+								result = '<span ' + m + '>' + scope.buildName(operand.c, noQuotes, pedantic) + '</span>';
 						}
 						break;
 					case 'e': //expression
