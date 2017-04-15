@@ -604,9 +604,11 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 			statement.rop = 'and'; //restriction operator
 			statement.rn = false; //restriction negation
 			statement.a = '0'; //async
-			statement.p = 'none'; //tcp
-			statement.pr = 'none'; //tcpr
-			statement.pv = ''; //tcpv
+			statement.tcp = 'c'; //tcp - cancel on condition state change
+			statement.tep = ''; //tep always
+			statement.ctp = 'i';
+			//statement.pr = 'none'; //tcpr
+			//statement.pv = ''; //tcpv
 			statement.s = 'local'; //tos
 			statement.z = ''; //desc
 		}
@@ -631,10 +633,11 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		$scope.designer.x = statement.x;
 		$scope.designer.autoDialogs = true;
 		//advanced options
-		$scope.designer.tcp = statement.p;
-		$scope.designer.tcpr = statement.pr;
-		$scope.designer.tcpv = statement.pv;
-		$scope.designer.tos = statement.os;
+		$scope.designer.tcp = statement.tcp;
+		$scope.designer.tep = statement.tep;
+		//$scope.designer.tcpr = statement.pr;
+		//$scope.designer.tcpv = statement.pv;
+		//$scope.designer.tos = statement.os;
 		$scope.designer.ctp = statement.ctp || 'i';
 		$scope.designer.async = statement.a;
 		$scope.designer.ontypechanged = function(designer, type) {
@@ -720,7 +723,8 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		$scope.autoSave();
 		var statement = $scope.designer.$new ? {t: $scope.designer.type} : $scope.designer.$statement;
 		statement.a = $scope.designer.async;
-		statement.p = $scope.designer.tcp;
+		statement.tcp = $scope.designer.tcp;
+		statement.tep = $scope.designer.tep;
 		statement.pr = $scope.designer.tcpr;
 		statement.pv = $scope.designer.tcpv;
 		statement.os = $scope.designer.tos;
@@ -1322,8 +1326,18 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 			task.p = [];
 			for (parameterIndex in $scope.designer.parameters) {
 				var param = $scope.designer.parameters[parameterIndex].data;
-				if ((param.t == 'c') && (param.vt == 'time')) {
-					param.c = param.c.getHours() * 60 + param.c.getMinutes();
+				if (param.t == 'c') {
+					switch (param.vt) {
+						case 'time':
+							param.c = param.c.getHours() * 60 + param.c.getMinutes();
+							break;
+						case 'date':
+							param.c = param.c.getTime() - param.c.getTime().mod(86400000);
+							break;
+						case 'datetime':
+							param.c = param.c.getTime();
+							break;
+					}
 				}
 				task.p.push(param);
 			}
@@ -2151,6 +2165,12 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 			if ((operand.data.vt == 'time') && !(operand.data.c instanceof Date)) {
 				operand.data.c = $scope.localTimeToDate(operand.data.c);
 			}
+			if ((operand.data.vt == 'date') && !(operand.data.c instanceof Date)) {
+				operand.data.c = $scope.localTimeToDate(operand.data.c);
+			}
+			if ((operand.data.vt == 'datetime') && !(operand.data.c instanceof Date)) {
+				operand.data.c = $scope.localTimeToDate(operand.data.c);
+			}
 
 			operand.onlyAllowConstants = operand.onlyAllowConstants || (dataType == 'piston') || (dataType == 'routine') || (dataType == 'askAlexaMacro')
 
@@ -2608,6 +2628,12 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 							case 'time':
 								var date = $scope.localTimeToDate(operand.c);
 								result = '<span num>' + date.toLocaleTimeString({hour: '2-digit', minute:'2-digit'}) + '</span>';
+								break;
+							case 'date':
+								result = '<span num>' + utcToString(operand.c) + '</span>';
+								break;
+							case 'datetime':
+								result = '<span num>' + utcToString(operand.c) + '</span>';
 								break;
 							case 'piston':
 								result = '<span lit>' + $scope.getPistonName(operand.c) + '</span>';
