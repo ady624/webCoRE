@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.0.06d.20170415" }
+public static String version() { return "v0.0.06e.20170415" }
 /*
+ *	04/15/2017 >>> v0.0.06e.20170415 - ALPHA - Attempt to fix a race condition where device value would change before we even executed - using event's value instead
  *	04/15/2017 >>> v0.0.06d.20170415 - ALPHA - Various fixes and improvements, added the ability to execute pistons in the same location (arguments not working yet)
  *	04/15/2017 >>> v0.0.06c.20170415 - ALPHA - Fixed a bug with daily timers and day of week restrictions
  *	04/14/2017 >>> v0.0.06b.20170414 - ALPHA - Added more functions: date(value), time(value), if(condition, valueIfTrue, valueIfFalse), not(value), isEmpty(value), addSeconds(dateTime, seconds), addMinutes(dateTime, minutes), addHours(dateTime, hours), addDays(dateTime, days), addWeeks(dateTime, weeks)
@@ -1469,7 +1470,7 @@ private long cmd_setLevel(rtData, device, params) {
 	def level = params[0]
     def state = params.size() > 1 ? params[1] : ""
     def delay = params.size() > 2 ? params[2] : 0
-    if (state && (device.currentValue('switch') != "$state")) {
+    if (state && (getDeviceAttributeValue(rtData, device, 'switch') != "$state")) {
         return 0
     }
     executePhysicalCommand(rtData, device, 'setLevel', level, delay)
@@ -1480,7 +1481,7 @@ private long cmd_setInfraredLevel(rtData, device, params) {
 	def level = params[0]
     def state = params.size() > 1 ? params[1] : ""
     def delay = params.size() > 2 ? params[2] : 0
-    if (state && (device.currentValue('switch') != "$state")) {
+    if (state && (getDeviceAttributeValue(rtData, device, 'switch') != "$state")) {
         return 0
     }
     executePhysicalCommand(rtData, device, 'setInfraredLevel', level, delay)
@@ -1491,7 +1492,7 @@ private long cmd_setHue(rtData, device, params) {
 	int hue = cast(rtData, params[0] / 3.6, 'integer')
     def state = params.size() > 1 ? params[1] : ""
     def delay = params.size() > 2 ? params[2] : 0
-    if (state && (device.currentValue('switch') != "$state")) {
+    if (state && (getDeviceAttributeValue(rtData, device, 'switch') != "$state")) {
         return 0
     }
     executePhysicalCommand(rtData, device, 'setHue', hue, delay)
@@ -1502,7 +1503,7 @@ private long cmd_setSaturation(rtData, device, params) {
 	def saturation = params[0]
     def state = params.size() > 1 ? params[1] : ""
     def delay = params.size() > 2 ? params[2] : 0
-    if (state && (device.currentValue('switch') != "$state")) {
+    if (state && (getDeviceAttributeValue(rtData, device, 'switch') != "$state")) {
         return 0
     }
     executePhysicalCommand(rtData, device, 'setSaturation', saturation, delay)
@@ -1513,7 +1514,7 @@ private long cmd_setColorTemperature(rtData, device, params) {
 	def colorTemperature = params[0]
     def state = params.size() > 1 ? params[1] : ""
     def delay = params.size() > 2 ? params[2] : 0
-    if (state && (device.currentValue('switch') != "$state")) {
+    if (state && (getDeviceAttributeValue(rtData, device, 'switch') != "$state")) {
         return 0
     }
     executePhysicalCommand(rtData, device, 'setColorTemperature', colorTemperature, delay)
@@ -1530,7 +1531,7 @@ private long cmd_setColor(rtData, device, params) {
     ]
     def state = params.size() > 1 ? params[1] : ""
     def delay = params.size() > 2 ? params[2] : 0
-    if (state && (device.currentValue('switch') != "$state")) {
+    if (state && (getDeviceAttributeValue(rtData, device, 'switch') != "$state")) {
         return 0
     }
     executePhysicalCommand(rtData, device, 'setColor', color, delay)
@@ -1658,7 +1659,7 @@ private long vcmd_waitForDateTime(rtData, device, params) {
 }
 
 private long vcmd_toggle(rtData, device, params) {
-	if (device.currentValue('switch') == 'off') {
+	if (getDeviceAttributeValue(rtData, device, 'switch') == 'off') {
 	    executePhysicalCommand(rtData, device, 'on')
     } else {
 	    executePhysicalCommand(rtData, device, 'off')
@@ -1668,7 +1669,7 @@ private long vcmd_toggle(rtData, device, params) {
 
 private long vcmd_toggleLevel(rtData, device, params) {
 	def level = params[0]
-	if (device.currentValue('level') == level) {
+	if (getDeviceAttributeValue(rtData, device, 'level') == level) {
 	    executePhysicalCommand(rtData, device, 'setLevel', 0)
     } else {
 	    executePhysicalCommand(rtData, device, 'setLevel', level)
@@ -2001,6 +2002,7 @@ private cancelStatementSchedules(rtData, statementId) {
 
 private cancelConditionSchedules(rtData, conditionId) {
 	//cancel all schedules that are pending for condition conditionId
+    error "REQUESTING CANCEL OF CONDITION ID $conditionId", rtData
     if (!(conditionId in rtData.cancelations.conditions)) {
     	rtData.cancelations.conditions.push(conditionId)
     }
@@ -2354,6 +2356,14 @@ private getDevice(rtData, idOrName) {
     return device    
 }
 
+private getDeviceAttributeValue(rtData, device, attributeName) {
+	if ((rtData.event.name == attributeName) && (rtData.event.device.id == device.id)) {
+    	return rtData.event.value;
+    } else {
+		return device.currentValue(attributeName)
+    }
+}
+
 private Map getDeviceAttribute(rtData, deviceId, attributeName, subDeviceIndex = null, trigger = false) {
 	if (deviceId == rtData.locationId) {
     	//we have the location here
@@ -2375,7 +2385,7 @@ private Map getDeviceAttribute(rtData, deviceId, attributeName, subDeviceIndex =
             attribute = [t: 'string', m: false]
         }
         //x = eXclude - if a momentary attribute is looked for and the device does not match the current device, then we must ignore this during comparisons
-        def value = (attributeName ? cast(rtData, device.currentValue(attributeName), attribute.t) : "$device")
+        def value = (attributeName ? cast(rtData, getDeviceAttributeValue(rtData, device, attributeName), attribute.t) : "$device")
         if (attributeName == 'hue') {
         	value = cast(rtData, cast(rtData, value, 'decimal') * 3.6, attribute.t)
         }
