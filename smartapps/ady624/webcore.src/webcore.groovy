@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.0.06c.20170415" }
+public static String version() { return "v0.0.06d.20170415" }
 /*
+ *	04/15/2017 >>> v0.0.06d.20170415 - ALPHA - Various fixes and improvements, added the ability to execute pistons in the same location (arguments not working yet)
  *	04/15/2017 >>> v0.0.06c.20170415 - ALPHA - Fixed a bug with daily timers and day of week restrictions
  *	04/14/2017 >>> v0.0.06b.20170414 - ALPHA - Added more functions: date(value), time(value), if(condition, valueIfTrue, valueIfFalse), not(value), isEmpty(value), addSeconds(dateTime, seconds), addMinutes(dateTime, minutes), addHours(dateTime, hours), addDays(dateTime, days), addWeeks(dateTime, weeks)
  *	04/14/2017 >>> v0.0.06a.20170414 - ALPHA - Fixed a bug where multiple timers would cancel each other's actions out, implemented (not extensively tested yet) the TCP and TEP
@@ -1545,6 +1546,9 @@ private virtualCommands() {
 		noop				: [	n: "No operation",				a: true,	i: 'circle',				d: "No operation",																										],
 		wait				: [	n: "Wait...", 					a: true,	i: "clock-o",				d: "Wait {0}",															p: [[n:"Duration", t:"duration"]],				],
 		waitRandom			: [ n: "Wait randomly...",			a: true,	i: "clock-o",				d: "Wait randomly between {0} and {1}",									p: [[n:"At least", t:"duration"],[n:"At most", t:"duration"]],	],
+		waitForTime			: [ n: "Wait for time...",			a: true,	i: "clock-o",				d: "Wait for {0}",														p: [[n:"Time", t:"time"]],	],
+		waitForDateTime		: [ n: "Wait for date & time...",	a: true,	i: "clock-o",				d: "Wait for {0}",														p: [[n:"Date & Time", t:"datetime"]],	],
+		executePiston		: [ n: "Execute piston...",			a: true,	i: "clock-o",				d: "Execute piston \"{0}\"{1}",											p: [[n:"Piston", t:"piston"], [n:"Arguments", t:"variables", d:" with arguments {v}"]],	],
 		toggle				: [ n: "Toggle", r: ["on", "off"], 				i: "toggle-on"																				],
 		toggleLevel			: [ n: "Toggle level...", 						i: "toggle-off",			d: "Toggle level between 0% and {0}%",	r: ["on", "off", "setLevel"],	p: [[n:"Level", t:"level"]],																																	],
 		sendNotification	: [ n: "Send notification...",		a: true,	i: "commenting-o",			d: "Send notification \"{0}\"",											p: [[n:"Message", t:"string"]],												],
@@ -1755,6 +1759,7 @@ private static Map functions() {
         addhours		: [ t: "datetime",	d: "addHours"		],
         adddays			: [ t: "datetime",	d: "addDays"		],
         addweeks		: [ t: "datetime",	d: "addWeeks"		],
+        isbetween		: [ t: "boolean",	d: "isBetween"		],
 	]
 }
 

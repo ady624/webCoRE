@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.0.06c.20170415" }
+public static String version() { return "v0.0.06d.20170415" }
 /*
+ *	04/15/2017 >>> v0.0.06d.20170415 - ALPHA - Various fixes and improvements, added the ability to execute pistons in the same location (arguments not working yet)
  *	04/15/2017 >>> v0.0.06c.20170415 - ALPHA - Fixed a bug with daily timers and day of week restrictions
  *	04/14/2017 >>> v0.0.06b.20170414 - ALPHA - Added more functions: date(value), time(value), if(condition, valueIfTrue, valueIfFalse), not(value), isEmpty(value), addSeconds(dateTime, seconds), addMinutes(dateTime, minutes), addHours(dateTime, hours), addDays(dateTime, days), addWeeks(dateTime, weeks)
  *	04/14/2017 >>> v0.0.06a.20170414 - ALPHA - Fixed a bug where multiple timers would cancel each other's actions out, implemented (not extensively tested yet) the TCP and TEP
@@ -486,11 +487,19 @@ def timeHandler(event) {
 	handleEvents([date: new Date(event.t), device: location, name: 'time', value: event.t, schedule: event])
 }
 
+def timeRecoveryHandler(event) {
+	timeHandler(event)
+}
+
+def executeHandler(event) {
+	handleEvents([date: event.date, device: location, name: 'execute', value: event.value])
+}
 
 //entry point for all events
 def handleEvents(event) {
 	//cancel all pending jobs, we'll handle them later
 	unschedule(timeHandler)
+	unschedule(timeRecoveryHandler)
     if (!state.active) return
 	def startTime = now()
     state.lastExecuted = startTime
@@ -566,19 +575,26 @@ private Boolean executeEvent(rtData, event) {
             }
             if (!index) index = 1
         }
+        def srcEvent = event && (event.name == 'time') && event.schedule && event.schedule.evt ? event.schedule.evt : null
         rtData.currentEvent = [
             date: event.date.getTime(),
             delay: rtData.stats?.timing?.d ?: 0,
-            device: hashId((event.device?:location).id),
-            name: event.name,
-            value: event.value,
-            unit: event.unit,
-            physical: !!event.physical,
+            device: srcEvent ? srcEvent.device : hashId((event.device?:location).id),
+            name: srcEvent ? srcEvent.name : event.name,
+            value: srcEvent ? srcEvent.value : event.value,
+            unit: srcEvent ? srcEvent.unit : event.unit,
+            physical: srcEvent ? srcEvent.physical : !!event.physical,
             index: index
         ]
         state.lastEvent = rtData.currentEvent
         //previous variables
-        setSystemVariableValue(rtData, '$state', rtData.state.new)
+        rtData.conditionStateChanged = false
+        rtData.pistonStateChanged = false
+        rtData.fastForwardTo = null
+        if (event.name == 'time') {
+        	rtData.fastForwardTo = event.schedule.i
+        }
+		setSystemVariableValue(rtData, '$state', rtData.state.new)
         setSystemVariableValue(rtData, '$previousEventDate', rtData.previousEvent?.date ?: now())
         setSystemVariableValue(rtData, '$previousEventDelay', rtData.previousEvent?.delay ?: 0)
         setSystemVariableValue(rtData, '$previousEventDevice', rtData.previousEvent?.device)
@@ -596,12 +612,6 @@ private Boolean executeEvent(rtData, event) {
         setSystemVariableValue(rtData, '$currentEventValue', rtData.currentEvent.value ?: '')
         setSystemVariableValue(rtData, '$currentEventUnit', rtData.currentEvent.unit ?: '')
         setSystemVariableValue(rtData, '$currentEventDevicePhysical', !!rtData.currentEvent.physical)
-        rtData.conditionStateChanged = false
-        rtData.pistonStateChanged = false
-        rtData.fastForwardTo = null
-        if (event.name == 'time') {
-        	rtData.fastForwardTo = event.schedule.i
-        }
 		//todo - check restrictions
         rtData.stack = [c: 0, s: 0, cs:[], ss:[]]
         def ended = false
@@ -694,6 +704,7 @@ private processSchedules(rtData, scheduleJob = false) {
         rtData.stats.nextSchedule = next.t
         trace "Setting up scheduled job for ${formatLocalTime(next.t)} (in ${t}s)" + (schedules.size() > 1 ? ', with ' + (schedules.size() - 1).toString() + ' more job' + (schedules.size() > 2 ? 's' : '') + ' pending' : ''), rtData
         runIn(t, timeHandler, [data: next])
+        runIn(t + 30000, timeRecoveryHandler, [data: next])
     } else {
     	rtData.stats.nextSchedule = 0
     }
@@ -1077,6 +1088,7 @@ private Boolean executeTask(rtData, devices, statement, task, async) {
         //ensure value type is successfuly passed through
 		params.push p
     }
+
  	def vcmd = rtData.commands.virtual[task.c]
     long delay = 0
     for (device in (virtualDevice ? [virtualDevice] : devices)) {
@@ -1441,7 +1453,14 @@ private requestWakeUp(rtData, statement, task, timeOrDelay) {
     def cs = [] + ((statement.tcp == 'b') || (statement.tcp == 'c') ? (rtData.stack?.cs ?: []) : [])
     def ps = (statement.tcp == 'b') || (statement.tcp == 'p') ? 1 : 0
     cs.removeAll{ it == 0 }
-    def schedule = [t: time, s: statement.$, i: task?.$, cs: cs, ps: ps]
+    def schedule = [
+    	t: time,
+        s: statement.$,
+        i: task?.$,
+        cs: cs,
+        ps: ps,
+        evt: rtData.currentEvent
+    ]
     rtData.schedules.push(schedule)
 }
 
@@ -1624,6 +1643,20 @@ private long vcmd_waitRandom(rtData, device, params) {
 	return min + (int)Math.round((max - min) * Math.random())
 }
 
+private long vcmd_waitForTime(rtData, device, params) {
+	long time = now()
+    time = time - (time % 86400000) + cast(rtData, params[0], 'time')
+    long rightNow = now()
+    while (time < rightNow) time += 86400000
+    return time - rightNow
+}
+
+private long vcmd_waitForDateTime(rtData, device, params) {
+	long time = cast(rtData, params[0], 'datetime')
+    long rightNow = now()
+    return (time > rightNow) ? time - rightNow : 0
+}
+
 private long vcmd_toggle(rtData, device, params) {
 	if (device.currentValue('switch') == 'off') {
 	    executePhysicalCommand(rtData, device, 'on')
@@ -1682,6 +1715,26 @@ private long vcmd_setVariable(rtData, device, params) {
 	setVariable(rtData, name, value)
     return 0
 }
+
+private long vcmd_executePiston(rtData, device, params) {
+	def selfId = hashId(app.id)
+	def pistonId = params[0]
+    def arguments = params[2]
+    def description = "webCoRE: Piston $app.label requested execution of piston $pistonId"
+    sendLocationEvent(name: pistonId, value: selfId, isStateChange: true, displayed: false, linkText: description, descriptionText: description)
+    return 0
+}
+
+
+
+
+
+
+
+
+
+
+
 
 
 private Boolean evaluateConditions(rtData, conditions, collection, async) {
@@ -2280,6 +2333,7 @@ private void subscribeAll(rtData) {
         executeEvent(rtData, event)
 		processSchedules rtData, true
         subscribe(app, appHandler)
+        subscribe(location, hashId(app.id), executeHandler)
     } catch (all) {
     	error "An error has occurred while subscribing: ", rtData, null, all
     }
@@ -3575,7 +3629,19 @@ private func_addweeks(rtData, params) {
     return [t: "datetime", v: value + delta]
 }
 
-
+/******************************************************************************/
+/*** isBetween returns true if value >= startValue and value <= endValue	***/
+/*** Usage: isBetween(value, startValue, endValue)							***/
+/******************************************************************************/
+private func_isBetween(rtData, params) {
+	if (!params || !(params instanceof List) || (params.size() != 2)) {
+    	return [t: "error", v: "Invalid parameters. Expecting isBetween(value, startValue, endValue)"];
+    }
+    def value = evaluateExpression(rtData, params[0])
+    def startValue = evaluateExpression(rtData, params[1], value.t)
+    def endValue = evaluateExpression(rtData, params[2], value.t)
+    return [t: "boolean", v: (value.v >= startValue.v) && (value.v <= endValue.v)]
+}
 
 
 
