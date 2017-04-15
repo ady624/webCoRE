@@ -18,10 +18,11 @@
  *
  *  Version history
 */
-public static String version() { return "v0.0.06b.20170414" }
+public static String version() { return "v0.0.06c.20170415" }
 /*
- *	04/13/2017 >>> v0.0.06b.20170414 - ALPHA - Added more functions: date(value), time(value), if(condition, valueIfTrue, valueIfFalse), not(value), isEmpty(value), addSeconds(dateTime, seconds), addMinutes(dateTime, minutes), addHours(dateTime, hours), addDays(dateTime, days), addWeeks(dateTime, weeks)
- *	04/13/2017 >>> v0.0.06a.20170414 - ALPHA - Fixed a bug where multiple timers would cancel each other's actions out, implemented (not extensively tested yet) the TCP and TEP
+ *	04/15/2017 >>> v0.0.06c.20170415 - ALPHA - Fixed a bug with daily timers and day of week restrictions
+ *	04/14/2017 >>> v0.0.06b.20170414 - ALPHA - Added more functions: date(value), time(value), if(condition, valueIfTrue, valueIfFalse), not(value), isEmpty(value), addSeconds(dateTime, seconds), addMinutes(dateTime, minutes), addHours(dateTime, hours), addDays(dateTime, days), addWeeks(dateTime, weeks)
+ *	04/14/2017 >>> v0.0.06a.20170414 - ALPHA - Fixed a bug where multiple timers would cancel each other's actions out, implemented (not extensively tested yet) the TCP and TEP
  *	04/13/2017 >>> v0.0.069.20170413 - ALPHA - Various bug fixes and improvements
  *	04/12/2017 >>> v0.0.068.20170412 - ALPHA - Fixed a bug with colors from presets
  *	04/12/2017 >>> v0.0.067.20170412 - ALPHA - Fixed a bug introduced in 066 and implemented setColor
@@ -686,8 +687,12 @@ private api_intf_dashboard_piston_set() {
 	if (verifySecurityToken(params.token)) {
     	def data = params?.data
         //save the piston here
-        def saved = api_intf_dashboard_piston_set_save(params?.id, data)
+        def saved = api_intf_dashboard_piston_set_save(params?.id, data)   
         if (saved) {
+        	if (saved.rtData) {
+            	updateRunTimeData(saved.rtData)
+                saved.rtData = null
+            }
             result = [status: "ST_SUCCESS"] + saved
         } else {
             result = [status: "ST_ERROR", error: "ERR_UNKNOWN"]
@@ -762,6 +767,10 @@ private api_intf_dashboard_piston_set_end() {
                 //save the piston here
                 def saved = api_intf_dashboard_piston_set_save(chunks.id, data)
                 if (saved) {
+                    if (saved.rtData) {
+                        updateRunTimeData(saved.rtData)
+                        saved.rtData = null
+                    }
 	        		result = [status: "ST_SUCCESS"] + saved
                 } else {
 	        		result = [status: "ST_ERROR", error: "ERR_UNKNOWN"]

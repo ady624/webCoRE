@@ -18,10 +18,11 @@
  *
  *  Version history
 */
-public static String version() { return "v0.0.06b.20170414" }
+public static String version() { return "v0.0.06c.20170415" }
 /*
- *	04/13/2017 >>> v0.0.06b.20170414 - ALPHA - Added more functions: date(value), time(value), if(condition, valueIfTrue, valueIfFalse), not(value), isEmpty(value), addSeconds(dateTime, seconds), addMinutes(dateTime, minutes), addHours(dateTime, hours), addDays(dateTime, days), addWeeks(dateTime, weeks)
- *	04/13/2017 >>> v0.0.06a.20170414 - ALPHA - Fixed a bug where multiple timers would cancel each other's actions out, implemented (not extensively tested yet) the TCP and TEP
+ *	04/15/2017 >>> v0.0.06c.20170415 - ALPHA - Fixed a bug with daily timers and day of week restrictions
+ *	04/14/2017 >>> v0.0.06b.20170414 - ALPHA - Added more functions: date(value), time(value), if(condition, valueIfTrue, valueIfFalse), not(value), isEmpty(value), addSeconds(dateTime, seconds), addMinutes(dateTime, minutes), addHours(dateTime, hours), addDays(dateTime, days), addWeeks(dateTime, weeks)
+ *	04/14/2017 >>> v0.0.06a.20170414 - ALPHA - Fixed a bug where multiple timers would cancel each other's actions out, implemented (not extensively tested yet) the TCP and TEP
  *	04/13/2017 >>> v0.0.069.20170413 - ALPHA - Various bug fixes and improvements
  *	04/12/2017 >>> v0.0.068.20170412 - ALPHA - Fixed a bug with colors from presets
  *	04/12/2017 >>> v0.0.067.20170412 - ALPHA - Fixed a bug introduced in 066 and implemented setColor
@@ -288,10 +289,11 @@ def set(data) {
     state.schedules = []
     state.vars = state.vars ?: [:];
     //todo replace this
+    Map rtData
     if ((state.build == 1) || (!!state.active)) {
-    	resume()
+    	rtData = resume()
     }
-    return [active: state.active, build: state.build, modified: state.modified]
+    return [active: state.active, build: state.build, modified: state.modified, rtData: rtData]
 }
 
 
@@ -1215,7 +1217,7 @@ private scheduleTimer(rtData, timer, long lastRun = 0) {
         
             //advance one day if we're in the past
             while (time < rightNow) time += 86400000
-            long lastDay = Math.floor(lastRun / 86400000)
+            long lastDay = Math.floor(nextSchedule / 86400000)
             long thisDay = Math.floor(time / 86400000)
         
 	    	//the repeating interval is not necessarily constant	    
@@ -1297,6 +1299,7 @@ private scheduleTimer(rtData, timer, long lastRun = 0) {
             if (offset > 0) nextSchedule += offset
         }
         time = nextSchedule
+        priorActivity = true
         cycles -= 1
     }
        
@@ -1323,7 +1326,6 @@ private Long checkTimerRestrictions(rtData, timer, long time, int level, int int
     List omy = (level <= 7) && (data.omy instanceof List) && data.omy.size() ? data.omy : null;
 
 	if (!om && !oh && !odw && !odm && !owm && !omy) return 0
-
 	def date = new Date(time)   
     long result = -1
     
