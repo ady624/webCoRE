@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.0.06e.20170415" }
+public static String version() { return "v0.0.06f.20170415" }
 /*
+ *	04/15/2017 >>> v0.0.06f.20170415 - ALPHA - Fix for wait for date&time
  *	04/15/2017 >>> v0.0.06e.20170415 - ALPHA - Attempt to fix a race condition where device value would change before we even executed - using event's value instead
  *	04/15/2017 >>> v0.0.06d.20170415 - ALPHA - Various fixes and improvements, added the ability to execute pistons in the same location (arguments not working yet)
  *	04/15/2017 >>> v0.0.06c.20170415 - ALPHA - Fixed a bug with daily timers and day of week restrictions
@@ -1841,13 +1842,19 @@ private evaluateOperand(rtData, node, operand, index = null, trigger = false) {
 	        values = [[i: "${node?.$}:$index:0", v:getVariable(rtData, operand.x) + (operand.vt ? [vt: operand.vt] : [:])]]
             break
         case "c": //constant
-        	if (operand.vt == 'time') {
-            	def offset = cast(rtData, operand.c, 'integer')
-            	def v = localDate().clearTime()
-                v.set(hourOfDay: (int) Math.floor(offset / 60), minute: (int) offset.mod(60))
-		        values = [[i: "${node?.$}:$index:0", v: [t: 'time', v:localToUtcTime(v)]]]
-    	        break
+        	switch (operand.vt) {
+            	case 'time':
+                    def offset = cast(rtData, operand.c, 'integer')
+                    def v = localDate().clearTime()
+                    v.set(hourOfDay: (int) Math.floor(offset / 60), minute: (int) offset.mod(60))
+                    values = [[i: "${node?.$}:$index:0", v: [t: 'time', v:localToUtcTime(v)]]]
+                    break
+            	case 'date':
+            	case 'datetime':
+                    values = [[i: "${node?.$}:$index:0", v: [t: operand.vt, v:operand.c]]]
+                    break
             }
+            if (values.size()) break
         case "e": //expression
 	        values = [[i: "${node?.$}:$index:0", v: [:] + evaluateExpression(rtData, operand.exp) + (operand.vt ? [vt: operand.vt] : [:])]]
             break
@@ -2002,7 +2009,6 @@ private cancelStatementSchedules(rtData, statementId) {
 
 private cancelConditionSchedules(rtData, conditionId) {
 	//cancel all schedules that are pending for condition conditionId
-    error "REQUESTING CANCEL OF CONDITION ID $conditionId", rtData
     if (!(conditionId in rtData.cancelations.conditions)) {
     	rtData.cancelations.conditions.push(conditionId)
     }

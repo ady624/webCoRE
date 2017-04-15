@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.0.06e.20170415" }
+public static String version() { return "v0.0.06f.20170415" }
 /*
+ *	04/15/2017 >>> v0.0.06f.20170415 - ALPHA - Fix for wait for date&time
  *	04/15/2017 >>> v0.0.06e.20170415 - ALPHA - Attempt to fix a race condition where device value would change before we even executed - using event's value instead
  *	04/15/2017 >>> v0.0.06d.20170415 - ALPHA - Various fixes and improvements, added the ability to execute pistons in the same location (arguments not working yet)
  *	04/15/2017 >>> v0.0.06c.20170415 - ALPHA - Fixed a bug with daily timers and day of week restrictions
