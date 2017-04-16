@@ -103,6 +103,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 				if (response.activity.memory) $scope.memory = response.activity.memory;
 				if (response.activity.lastExecuted) $scope.lastExecuted = response.activity.lastExecuted;
 				if (response.activity.nextSchedule) $scope.nextSchedule = response.activity.nextSchedule;
+				if (response.activity.schedules) $scope.schedules = response.activity.schedules;
 				if (response.activity.name) $scope.meta.name = response.activity.name;
 				if ($scope.logs && $scope.logs.length) $scope.lastLogEntry =$scope.logs[0].t;
 			}
@@ -146,6 +147,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 				$scope.memory = response.data.memory ? response.data.memory : 0;
 				$scope.lastExecuted = response.data.lastExecuted;
 				$scope.nextSchedule = response.data.nextSchedule;
+				$scope.schedules = response.data.schedules;
 				
 				$scope.initChart();
 				$scope.devices = $scope.listAvailableDevices();
@@ -556,9 +558,10 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		$scope.designer = {
 			name: $scope.meta.name,
 			description: $scope.piston.z,
-			automaticState: $scope.piston.o.mps ? '1' : '0',
-			conditionOptimizations: $scope.piston.o.cto ? '1' : '0',
-			executionParallelism: $scope.piston.o.pep ? '1' : '0',
+			automaticState: $scope.piston.o.mps ? 1 : 0,
+			conditionOptimizations: $scope.piston.o.cto ? 1 : 0,
+			executionParallelism: $scope.piston.o.pep ? 1 : 0,
+			eventSubscriptions: $scope.piston.o.des ? 1 : 0,
 			commandDelay: $scope.piston.o.ced ? $scope.piston.o.ced : 0
 		};
 		window.designer = $scope.designer;
@@ -574,9 +577,10 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 	$scope.updateSettings = function() {
 		$scope.meta.name = $scope.designer.name;
 		$scope.piston.z = $scope.designer.description;
-		$scope.piston.o.mps = $scope.designer.automaticState == '1' ? 1 : 0;
-		$scope.piston.o.pep = $scope.designer.executionParallelism == '1' ? 1 : 0;
-		$scope.piston.o.cto = $scope.designer.conditionOptimizations == '1' ? 1 : 0;
+		$scope.piston.o.mps = $scope.designer.automaticState ? 1 : 0;
+		$scope.piston.o.pep = $scope.designer.executionParallelism ? 1 : 0;
+		$scope.piston.o.cto = $scope.designer.conditionOptimizations ? 1 : 0;
+		$scope.piston.o.des = $scope.designer.eventSubscriptions ? 1 : 0;
 		$scope.piston.o.ced = isNaN($scope.designer.commandDelay) ? 0 : parseInt($scope.designer.commandDelay);
 		$scope.closeDialog();
 	}
@@ -1508,7 +1512,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		$scope.designer.parameters = [];
 		if (command) {
 			for (parameterIndex in command.p) {
-				var parameter = command.p[parameterIndex];
+				var parameter = $scope.copy(command.p[parameterIndex]);
 				var p = {
 					data: {},
 					name: parameter.n,
@@ -1526,7 +1530,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 					p.options = attribute.o;
 				}
 				if (task && task.p && (task.p.length > parameterIndex)) {
-					p.data = task.p[parameterIndex];
+					p.data = $scope.copy(task.p[parameterIndex]);
 				}
 				$scope.validateOperand(p);
 				$scope.designer.parameters.push(p);
@@ -2166,10 +2170,10 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 				operand.data.c = $scope.localTimeToDate(operand.data.c);
 			}
 			if ((operand.data.vt == 'date') && !(operand.data.c instanceof Date)) {
-				operand.data.c = $scope.localTimeToDate(operand.data.c);
+				operand.data.c = new Date(operand.data.c);
 			}
 			if ((operand.data.vt == 'datetime') && !(operand.data.c instanceof Date)) {
-				operand.data.c = $scope.localTimeToDate(operand.data.c);
+				operand.data.c = new Date(operand.data.c);
 			}
 
 			operand.onlyAllowConstants = operand.onlyAllowConstants || (dataType == 'piston') || (dataType == 'routine') || (dataType == 'askAlexaMacro')
