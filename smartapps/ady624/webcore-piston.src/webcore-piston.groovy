@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.0.070.20170416" }
+public static String version() { return "v0.0.071.20170416" }
 /*
+ *	04/16/2017 >>> v0.0.071.20170416 - ALPHA - Added the ability to execute routines
  *	04/16/2017 >>> v0.0.070.20170416 - ALPHA - Added support for multiple-choice comparisons (any of), added more improvements like the ability to disable event subscriptions (follow up pistons)
  *	04/15/2017 >>> v0.0.06f.20170415 - ALPHA - Fix for wait for date&time
  *	04/15/2017 >>> v0.0.06e.20170415 - ALPHA - Attempt to fix a race condition where device value would change before we even executed - using event's value instead
@@ -1725,6 +1726,15 @@ private long vcmd_executePiston(rtData, device, params) {
     def arguments = params[2]
     def description = "webCoRE: Piston $app.label requested execution of piston $pistonId"
     sendLocationEvent(name: pistonId, value: selfId, isStateChange: true, displayed: false, linkText: description, descriptionText: description)
+    return 0
+}
+
+private long vcmd_executeRoutine(rtData, device, params) {
+	def routineId = params[0]
+    def routine = location.helloHome?.getPhrases().find{ hashId(it.id) == routineId }
+    if (routine) {
+	    location.helloHome?.execute(routine.label)
+    }
     return 0
 }
 

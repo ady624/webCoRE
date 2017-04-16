@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.0.070.20170416" }
+public static String version() { return "v0.0.071.20170416" }
 /*
+ *	04/16/2017 >>> v0.0.071.20170416 - ALPHA - Added the ability to execute routines
  *	04/16/2017 >>> v0.0.070.20170416 - ALPHA - Added support for multiple-choice comparisons (any of), added more improvements like the ability to disable event subscriptions (follow up pistons)
  *	04/15/2017 >>> v0.0.06f.20170415 - ALPHA - Fix for wait for date&time
  *	04/15/2017 >>> v0.0.06e.20170415 - ALPHA - Attempt to fix a race condition where device value would change before we even executed - using event's value instead
@@ -1552,6 +1553,7 @@ private virtualCommands() {
 		waitForTime			: [ n: "Wait for time...",			a: true,	i: "clock-o",				d: "Wait for {0}",														p: [[n:"Time", t:"time"]],	],
 		waitForDateTime		: [ n: "Wait for date & time...",	a: true,	i: "clock-o",				d: "Wait for {0}",														p: [[n:"Date & Time", t:"datetime"]],	],
 		executePiston		: [ n: "Execute piston...",			a: true,	i: "clock-o",				d: "Execute piston \"{0}\"{1}",											p: [[n:"Piston", t:"piston"], [n:"Arguments", t:"variables", d:" with arguments {v}"]],	],
+		executeRoutine		: [ n: "Execute routine...",		a: true,	i: "clock-o",				d: "Execute routine \"{0}\"",											p: [[n:"Routine", t:"routine"]],	],
 		toggle				: [ n: "Toggle", r: ["on", "off"], 				i: "toggle-on"																				],
 		toggleLevel			: [ n: "Toggle level...", 						i: "toggle-off",			d: "Toggle level between 0% and {0}%",	r: ["on", "off", "setLevel"],	p: [[n:"Level", t:"level"]],																																	],
 		sendNotification	: [ n: "Send notification...",		a: true,	i: "commenting-o",			d: "Send notification \"{0}\"",											p: [[n:"Message", t:"string"]],												],
