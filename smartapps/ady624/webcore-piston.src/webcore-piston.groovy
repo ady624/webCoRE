@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.0.06f.20170415" }
+public static String version() { return "v0.0.070.20170416" }
 /*
+ *	04/16/2017 >>> v0.0.070.20170416 - ALPHA - Added support for multiple-choice comparisons (any of), added more improvements like the ability to disable event subscriptions (follow up pistons)
  *	04/15/2017 >>> v0.0.06f.20170415 - ALPHA - Fix for wait for date&time
  *	04/15/2017 >>> v0.0.06e.20170415 - ALPHA - Attempt to fix a race condition where device value would change before we even executed - using event's value instead
  *	04/15/2017 >>> v0.0.06d.20170415 - ALPHA - Various fixes and improvements, added the ability to execute pistons in the same location (arguments not working yet)
@@ -2045,6 +2046,9 @@ private boolean comp_is_outside_of_range			(rtData, lv, rv = null, rv2 = null) {
 private boolean comp_changed						(rtData, lv, rv = null, rv2 = null) { return valueChanged(rtData, lv); }
 private boolean comp_did_not_change					(rtData, lv, rv = null, rv2 = null) { return !valueChanged(rtData, lv); }
 
+private boolean comp_is_any_of						(rtData, lv, rv = null, rv2 = null) { def v = evaluateExpression(rtData, lv.v, 'string').v; for (vi in rv.v.v.tokenize(',')) { if (v == evaluateExpression(rtData, [t: rv.v.t, v: "$vi".toString().trim(), i: rv.v.i, a: rv.v.a, vt: rv.v.vt], 'string').v) return true; }; return false;}
+private boolean comp_is_not_any_of					(rtData, lv, rv = null, rv2 = null) { return !comp_is_any_of(rtData, lv, rv, rv2); }
+
 /*triggers*/
 private boolean comp_gets							(rtData, lv, rv = null, rv2 = null) { return (cast(rtData, lv.v.v, 'string') == cast(rtData, rv.v.v, 'string')) && matchDeviceSubIndex(lv.v.i, rtData.currentEvent.index)}
 private boolean comp_changes						(rtData, lv, rv = null, rv2 = null) { return valueChanged(rtData, lv); }
@@ -2070,6 +2074,9 @@ private boolean comp_becomes_even					(rtData, lv, rv = null, rv2 = null) { def 
 private boolean comp_becomes_odd					(rtData, lv, rv = null, rv2 = null) { def oldValue = valueChanged(rtData, lv); return oldValue && (cast(rtData, oldValue.v.v, 'integer').mod(2) == 0) && (cast(rtData, lv.v.v, 'integer').mod(2) != 0); }
 private boolean comp_remains_even					(rtData, lv, rv = null, rv2 = null) { def oldValue = valueChanged(rtData, lv); return oldValue && (cast(rtData, oldValue.v.v, 'integer').mod(2) == 0) && (cast(rtData, lv.v.v, 'integer').mod(2) == 0); }
 private boolean comp_remains_odd					(rtData, lv, rv = null, rv2 = null) { def oldValue = valueChanged(rtData, lv); return oldValue && (cast(rtData, oldValue.v.v, 'integer').mod(2) != 0) && (cast(rtData, lv.v.v, 'integer').mod(2) != 0); }
+
+private boolean comp_changes_to_any_of				(rtData, lv, rv = null, rv2 = null) { return !!valueChanged(rtData, lv) && comp_is_any_of(rtData, lv, rv, rv2); }
+private boolean comp_changes_away_from_any_of		(rtData, lv, rv = null, rv2 = null) { def oldValue = valueChanged(rtData, lv); return !!oldValue && comp_is_any_of(rtData, oldValue, rv, rv2); }
 
 
 private traverseStatements(node, closure, parentNode = null, data = null) {
@@ -2302,7 +2309,7 @@ private void subscribeAll(rtData) {
         def dds = [:]
         for (subscription in subscriptions) {
             for (condition in subscription.value.c) if (condition) { condition.s = false }
-            if (subscription.value.t && ((subscription.value.t == "trigger") || (subscription.value.c.sm == "always") || (!hasTriggers && (subscription.value.c.sm != "never")))) {
+            if (!rtData.piston.o.des && subscription.value.t && ((subscription.value.t == "trigger") || (subscription.value.c.sm == "always") || (!hasTriggers && (subscription.value.c.sm != "never")))) {
                 def device = getDevice(rtData, subscription.value.d)
                 if (device) {
                     info "Subscribing to $device.${subscription.value.a}...", rtData
@@ -2317,11 +2324,12 @@ private void subscribeAll(rtData) {
                     error "Failed subscribing to $device.${subscription.value.a}, device not found", rtData
                 }
             } else {
+				for (condition in subscription.value.c) if (condition) { condition.s = false }
                 devices[subscription.value.d].c = devices[subscription.value.d].c - 1
             }
         }
         //fake subscriptions for controlled devices to force the piston being displayed in those devices' Smart Apps tabs
-        for (d in devices.findAll{ (it.value.c <= 0) && (it.key != rtData.locationId) }) {
+        for (d in devices.findAll{ ((it.value.c <= 0) || (rtData.piston.o.des)) && (it.key != rtData.locationId) }) {
             def device = getDevice(rtData, d.key)
             if (device && (device != location)) {
                 trace "Subscribing to $device...", rtData
