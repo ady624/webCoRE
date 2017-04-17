@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.0.072.20170416" }
+public static String version() { return "v0.0.073.20170417" }
 /*
+ *	04/17/2017 >>> v0.0.073.20170417 - ALPHA - isBetween fix - use three params, not two, thanks to @c1arkbar
  *	04/16/2017 >>> v0.0.072.20170416 - ALPHA - Quick fix for isBetween
  *	04/16/2017 >>> v0.0.071.20170416 - ALPHA - Added the ability to execute routines
  *	04/16/2017 >>> v0.0.070.20170416 - ALPHA - Added support for multiple-choice comparisons (any of), added more improvements like the ability to disable event subscriptions (follow up pistons)
