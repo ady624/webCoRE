@@ -257,8 +257,12 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 		writeObject('instances', instances);
 		writeObject('store', store);
 		writeObject('instance', instance.id, _dk);
-		if ((instance.coreVersion) && (version() > instance.coreVersion)) {
-			status('A newer SmartApp version (' + version() + ') is available, please update and publish both the parent and the child SmartApp in the SmartThings IDE.');
+		if ((instance.coreVersion) && (version() != instance.coreVersion)) {
+			if (version() > instance.coreVersion) {
+				status('A newer SmartApp version (' + version() + ') is available, please update and publish both the parent and the child SmartApp in the SmartThings IDE.');
+			} else {
+				status('A newer UI version (' + version() + ') is available, please hard reload this web page to get the newest version.');
+			}
 		}
 	};
 
@@ -1046,4 +1050,4 @@ if (document.selection) {
 }}
 
 //navigator.registerProtocolHandler('web+core','https://' + window.location.hostname + '/handler/%s', 'webCoRE');
-version = function() { return 'v0.0.070.20170416'; };
+version = function() { return 'v0.0.072.20170416'; };

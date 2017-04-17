@@ -2242,6 +2242,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 				break;
 			case 'mode':
 			case 'alarmSystemStatus':
+			case 'routine':
 				operand.options = $scope.objectToArray($scope.instance.virtualDevices[dataType].o);
 				break;
 			case 'piston':
