@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.0.073.20170417" }
+public static String version() { return "v0.0.074.20170417" }
 /*
+ *	04/17/2017 >>> v0.0.074.20170417 - ALPHA - implemented HTTP requests, importing response data not working yet, need to figure out a way to specify what data goes into which variables
  *	04/17/2017 >>> v0.0.073.20170417 - ALPHA - isBetween fix - use three params, not two, thanks to @c1arkbar
  *	04/16/2017 >>> v0.0.072.20170416 - ALPHA - Quick fix for isBetween
  *	04/16/2017 >>> v0.0.071.20170416 - ALPHA - Added the ability to execute routines
@@ -1562,7 +1563,7 @@ private virtualCommands() {
 		sendPushNotification: [ n: "Send PUSH notification...",	a: true,	i: "commenting-o",			d: "Send PUSH notification \"{0}\"{1}",									p: [[n:"Message", t:"string"],[n:"Store in Messages", t:"boolean", d:" and store in Messages", s:1]],	],
 		sendSMSNotification	: [ n: "Send SMS notification...",	a: true,	i: "commenting-o",			d: "Send SMS notification \"{0}\" to {1}{2}",							p: [[n:"Message", t:"string"],[n:"Phone number",t:"phone"],[n:"Store in Messages", t:"boolean", d:" and store in Messages", s:1]],	],
 		log					: [ n: "Log to console...",			a: true,	i: "bug",					d: "Log {0} \"{1}\"",													p: [[n:"Log type", t:"enum", o:["info","trace","debug","warn","error"]],[n:"Message",t:"string"]],	],
-		httpRequest			: [ n: "Make a web request",		a: true, 	i: "anchor",				d: "Make a {1} request to {0}",									        p: [[n:"URL", t:"string"],[n:"Method", t:"enum", o:["GET","POST","PUT","DELETE","HEAD"]],[n:"Content", t:"enum", o:["JSON","FORM"]],[n:"Send variables", t:"variables", d:" and data {v}"],[n:"Import response data into variables", t:"boolean"],[n:"Variable import name prefix", t:"string"]],	],
+		httpRequest			: [ n: "Make a web request",		a: true, 	i: "anchor",				d: "Make a {1} request to {0} with type {2}{3}",				        p: [[n:"URL", t:"string"],[n:"Method", t:"enum", o:["GET","POST","PUT","DELETE","HEAD"]],[n:"Content Type", t:"enum", o:["JSON","FORM"]],[n:"Send variables", t:"variables", d:" and data {v}"]],	],
         setVariable			: [ n: "Set variable...",			a: true,	i: "superscript",			d: "Set variable {0} = {1}",											p: [[n:"Variable",t:"variable"],[n:"Value", t:"dynamic"]],	],
         setState			: [ n: "Set piston state...",		a: true,	i: "superscript",			d: "Set piston state to \"{0}\"",										p: [[n:"State",t:"string"]],	],
 		setLocationMode		: [ n: "Set location mode...",		a: true,	i: "", 						d: "Set location mode to {0}", 											p: [[n:"Mode",t:"mode"]],																														],

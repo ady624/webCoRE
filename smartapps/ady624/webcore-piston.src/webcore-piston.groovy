@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.0.073.20170417" }
+public static String version() { return "v0.0.074.20170417" }
 /*
+ *	04/17/2017 >>> v0.0.074.20170417 - ALPHA - implemented HTTP requests, importing response data not working yet, need to figure out a way to specify what data goes into which variables
  *	04/17/2017 >>> v0.0.073.20170417 - ALPHA - isBetween fix - use three params, not two, thanks to @c1arkbar
  *	04/16/2017 >>> v0.0.072.20170416 - ALPHA - Quick fix for isBetween
  *	04/16/2017 >>> v0.0.071.20170416 - ALPHA - Added the ability to execute routines
@@ -1741,7 +1742,98 @@ private long vcmd_executeRoutine(rtData, device, params) {
 }
 
 
-
+private long vcmd_httpRequest(rtData, device, params) {
+	def uri = params[0].replace(" ", "%20")
+	def method = params[1]
+	def contentType = params[2]
+	def variables = params[3]
+    if (!uri) return false
+	def protocol = "https"
+	def uriParts = uri.split("://").toList()
+	if (uriParts.size() > 2) {
+		warn "Invalid URI for web request: $uri", rtData
+		return false
+	}
+	if (uriParts.size() == 2) {
+		//remove the httpX:// from the uri
+		protocol = uriParts[0].toLowerCase()
+		uri = uriParts[1]
+	}
+	def internal = uri.startsWith("10.") || uri.startsWith("192.168.")
+	if ((!internal) && uri.startsWith("172.")) {
+		//check for the 172.16.x.x/12 class
+		def b = uri.substring(4,2)
+		if (b.isInteger()) {
+			b = b.toInteger()
+			internal = (b >= 16) && (b <= 31)
+		}
+	}
+	def data = [:]
+	for(variable in variables) {
+		data[variable] = getVariable(rtData, variable).v
+	}
+	if (internal) {
+		try {
+			debug "Sending internal web request to: $uri", rtData
+			sendHubCommand(new physicalgraph.device.HubAction(
+				method: method,
+				path: (uri.indexOf("/") > 0) ? uri.substring(uri.indexOf("/")) : "",
+				headers: [
+					HOST: (uri.indexOf("/") > 0) ? uri.substring(0, uri.indexOf("/")) : uri,
+				],
+				query: method == "GET" ? data : null, //thank you @destructure00
+				body: method != "GET" ? data : null //thank you @destructure00    
+			))
+		} catch (all) {
+			error "Error executing internal web request: ", rtData, null, all
+		}
+	} else {
+		try {
+			debug "Sending external web request to: $uri", rtData
+			def requestParams = [
+				uri:  "${protocol}://${uri}",
+				query: method == "GET" ? data : null,
+				requestContentType: (method != "GET") && (contentType == "JSON") ? "application/json" : "application/x-www-form-urlencoded",
+				body: method != "GET" ? data : null
+			]
+			def func = ""
+			switch(method) {
+				case "GET":
+					func = "httpGet"
+					break
+				case "POST":
+					func = "httpPost"
+					break
+				case "PUT":
+					func = "httpPut"
+					break
+				case "DELETE":
+					func = "httpDelete"
+					break
+				case "HEAD":
+					func = "httpHead"
+					break
+			}
+			if (func) {
+				"$func"(requestParams) { response ->
+					setSystemVariableValue(rtData, "\$httpStatusCode", response.status)
+					setSystemVariableValue(rtData, "\$httpStatusOk", response.status == 200)
+					/*if (importData && (response.status == 200) && response.data) {
+						try {
+							def jsonData = response.data instanceof Map ? response.data : new groovy.json.JsonSlurper().parseText(response.data)
+							importVariables(jsonData, importPrefix)
+						} catch (all) {
+							debug "Error parsing JSON response for web request: $all", null, "error"
+						}
+					}*/
+				}
+			}
+		} catch (all) {
+			error "Error executing external web request: ", rtData, null, all
+		}
+	}
+	return 0
+}
 
 
 
@@ -2420,7 +2512,7 @@ private Map getDeviceAttribute(rtData, deviceId, attributeName, subDeviceIndex =
     return [t: "error", v: "Device '${deviceId}' not found"]
 }
 
-private getVariable(rtData, name) {
+private Map getVariable(rtData, name) {
 	name = sanitizeVariableName(name)
 	if (!name) return [t: "error", v: "Invalid empty variable name"]
     def result
