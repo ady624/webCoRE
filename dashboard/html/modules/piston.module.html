@@ -1188,6 +1188,51 @@
 		</div>
 		<operand ng-repeat="operand in [designer.comparison.time]" ng-model="designer.comparison.time" ng-include="'operand'"></operand>
 	</div>
+	<div class="form-group" ng-if="(['time', 'date', 'datetime'].indexOf(designer.comparison.left.selectedDataType) >= 0)">
+		<label for="devicesInput">Only on these days of the week...</label>
+		<select name="dow" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-warning" ng-model="designer.comparison.left.data.odw" data-mobile="{{mobile}}" multiple>
+			<option value="" style="display:none">Any</option>
+			<option ng-repeat="day in weekDays track by $index" ng-value="$index">{{day}}</option>
+		</select>
+	</div>
+	<div class="form-group" ng-if="(['time', 'date', 'datetime'].indexOf(designer.comparison.left.selectedDataType) >= 0) && (!designer.comparison.left.data.owm || !designer.comparison.left.data.owm.length)">
+		<label for="devicesInput">Only on these days of the month...</label>
+		<select name="dom" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-warning" ng-model="designer.comparison.left.data.odm" data-mobile="{{mobile}}" multiple>
+			<option value="" style="display:none">Any</option>
+			<option ng-repeat="d in range(31) track by $index" ng-value="$index + 1">{{getOrdinal($index + 1)}}</option>
+			<option ng-value="-1">last</option>
+			<option ng-value="-2">second-last</option>
+			<option ng-value="-3">third-last</option>
+		</select>
+	</div>
+	<div class="form-group" ng-if="(['time', 'date', 'datetime'].indexOf(designer.comparison.left.selectedDataType) >= 0) && (!designer.comparison.left.data.odm || !designer.comparison.left.data.odm.length)">
+		<label for="devicesInput">Only on these weeks of the month...</label>
+		<select name="wom" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-warning" ng-model="designer.comparison.left.data.owm" data-mobile="{{mobile}}" multiple>
+			<option value="" style="display:none">Any</option>
+			<option ng-repeat="d in range(5) track by $index" ng-value="$index + 1">{{getOrdinal($index + 1)}}</option>
+			<option ng-value="-1">last</option>
+			<option ng-value="-2">second-last</option>
+			<option ng-value="-3">third-last</option>
+		</select>
+	</div>
+	<div class="form-group" ng-if="(['time', 'date', 'datetime'].indexOf(designer.comparison.left.selectedDataType) >= 0)">
+		<label for="devicesInput">Only on these months of the year...</label>
+		<select name="moy" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-warning" ng-model="designer.comparison.left.data.omy" data-mobile="{{mobile}}" multiple>
+			<option value="" style="display:none">Any</option>
+			<option ng-value="1">January</option>
+			<option ng-value="2">February</option>
+			<option ng-value="3">March</option>
+			<option ng-value="4">April</option>
+			<option ng-value="5">May</option>
+			<option ng-value="6">June</option>
+			<option ng-value="7">July</option>
+			<option ng-value="8">August</option>
+			<option ng-value="9">September</option>
+			<option ng-value="10">October</option>
+			<option ng-value="11">November</option>
+			<option ng-value="12">December</option>
+		</select>
+	</div>
 </script>
 
 
