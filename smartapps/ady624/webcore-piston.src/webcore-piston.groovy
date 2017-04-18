@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.0.077.20170418" }
+public static String version() { return "v0.0.078.20170418" }
 /*
+ *	04/18/2017 >>> v0.0.078.20170418 - ALPHA - Time conditions now subscribe for time events - added restrictions to UI dialog, but not yet implemented
  *	04/18/2017 >>> v0.0.077.20170418 - ALPHA - Implemented time conditions - no date or datetime yet, also, no subscriptions for time events yet
  *	04/18/2017 >>> v0.0.076.20170418 - ALPHA - Implemented task mode restrictions and added setColor using HSL
  *	04/17/2017 >>> v0.0.075.20170417 - ALPHA - Fixed a problem with $sunrise and $sunset pointing to the wrong date
@@ -1341,6 +1342,24 @@ private scheduleTimer(rtData, timer, long lastRun = 0) {
     
 }
 
+
+private scheduleTimeCondition(rtData, condition) {
+	def comparison = rtData.comparisons.conditions[condition.co]
+    if (!comparison) return
+    def v1 = evaluateExpression(rtData, evaluateOperand(rtData, null, condition.ro), 'datetime').v
+    def v2 = comparison.p > 1 ? evaluateExpression(rtData, evaluateOperand(rtData, null, condition.ro2, null, false, true), 'datetime').v : getMidnightTime(rtData)
+    def n = now() + 2000
+    if (condition.lo.v == 'time') {
+	    while (v1 < n) v1 += 86400000
+    	while (v2 < n) v2 += 86400000
+    }
+    cancelStatementSchedules(rtData, condition.$)
+    n = v1 < v2 ? v1 : v2
+    if (n > now()) {
+	    requestWakeUp(rtData, condition, [$:0], n)
+    }
+}
+
 private Long checkTimerRestrictions(rtData, timer, long time, int level, int interval) {
 	//returns 0 if restrictions are passed
     //returns a positive number as millisecond offset to apply to nextSchedule for fast forwarding
@@ -2075,6 +2094,15 @@ private Boolean evaluateCondition(rtData, condition, collection, async) {
     rtData.stack.c = c
     msg.m = "Condition #${condition.$} evaluated $result"
     debug msg, rtData
+    if ((condition.t == 'condition') && condition.lo && condition.lo.t == 'v') {
+    	switch (condition.lo.v) {
+        	case 'time':
+            case 'date':
+            case 'datetime':
+	            scheduleTimeCondition(rtData, condition);
+            	break;
+        }
+    }
     return result
 }
 
@@ -2187,7 +2215,8 @@ private boolean comp_is_not_any_of					(rtData, lv, rv = null, rv2 = null) { ret
 
 private boolean comp_is_before						(rtData, lv, rv = null, rv2 = null) { return evaluateExpression(rtData, lv.v, 'datetime').v + 2000 < evaluateExpression(rtData, rv.v, 'datetime').v; }
 private boolean comp_is_after						(rtData, lv, rv = null, rv2 = null) { return evaluateExpression(rtData, lv.v, 'datetime').v + 2000 >= evaluateExpression(rtData, rv.v, 'datetime').v; }
-private boolean comp_is_between						(rtData, lv, rv = null, rv2 = null) { long v = evaluateExpression(rtData, lv.v, 'datetime').v + 2000; long v1 = evaluateExpression(rtData, rv.v, 'datetime').v; long v2 = evaluateExpression(rtData, rv2.v, 'datetime').v; error "$v1 < $v < $v2", rtData; return (v1 < v2) ? (v >= v1) && (v < v2) : (v < v2) || (v >= v1); }
+private boolean comp_is_between						(rtData, lv, rv = null, rv2 = null) { long v = evaluateExpression(rtData, lv.v, 'datetime').v + 2000; long v1 = evaluateExpression(rtData, rv.v, 'datetime').v; long v2 = evaluateExpression(rtData, rv2.v, 'datetime').v; return (v1 < v2) ? (v >= v1) && (v < v2) : (v < v2) || (v >= v1); }
+private boolean comp_is_not_between					(rtData, lv, rv = null, rv2 = null) { return !comp_is_between(rtData, lv, rv, rv2); }
 
 /*triggers*/
 private boolean comp_gets							(rtData, lv, rv = null, rv2 = null) { return (cast(rtData, lv.v.v, 'string') == cast(rtData, rv.v.v, 'string')) && matchDeviceSubIndex(lv.v.i, rtData.currentEvent.index)}
@@ -2352,6 +2381,9 @@ private void subscribeAll(rtData) {
                     //if we have any trigger, it takes precedence over anything else
                     devices[deviceId] = [c: (comparisonType ? 1 : 0) + (devices[deviceId]?.c ?: 0)]
                     switch (operand.v) {
+						case 'time':
+                        case 'date':
+                        case 'datetime':
                         case 'mode':
                         case 'alarmSystemStatus':
                             def ct = subscriptions["$deviceId${operand.v}"]?.t ?: null
@@ -2434,8 +2466,6 @@ private void subscribeAll(rtData) {
 	                    }
 	                }
 					break;
-				//case 'every':
-                	//if (!parentNode) scheduleTimer(rtData, node);
             }
         }
         if (rtData.piston.r) traverseRestrictions(rtData.piston.r, restrictionTraverser)
@@ -2452,13 +2482,21 @@ private void subscribeAll(rtData) {
             if (!rtData.piston.o.des && subscription.value.t && ((subscription.value.t == "trigger") || (subscription.value.c.sm == "always") || (!hasTriggers && (subscription.value.c.sm != "never")))) {
                 def device = getDevice(rtData, subscription.value.d)
                 if (device) {
-                    info "Subscribing to $device.${subscription.value.a}...", rtData
-                    for (condition in subscription.value.c) if (condition) { condition.s = (condition.ct == 't') || (condition.cm == 'always') || (!hasTriggers) }
-                    subscribe(device, subscription.value.a, deviceHandler)
-                    ss.events = ss.events + 1
-                    if (!dds[device.id]) {
-                        ss.devices = ss.devices + 1
-                        dds[device.id] = 1
+					for (condition in subscription.value.c) if (condition) { condition.s = (condition.ct == 't') || (condition.cm == 'always') || (!hasTriggers) }
+                	switch (subscription.value.a) {
+                    	case 'time':
+                        case 'date':
+                        case 'datetime':
+                        	for (condition in subscription.value.c) if (condition && condition.s) { scheduleTimeCondition(rtData, condition) }
+                        	break;
+						default:
+                            info "Subscribing to $device.${subscription.value.a}...", rtData
+                            subscribe(device, subscription.value.a, deviceHandler)
+                            ss.events = ss.events + 1
+                            if (!dds[device.id]) {
+                                ss.devices = ss.devices + 1
+                                dds[device.id] = 1
+                            }
                     }
                 } else {
                     error "Failed subscribing to $device.${subscription.value.a}, device not found", rtData
