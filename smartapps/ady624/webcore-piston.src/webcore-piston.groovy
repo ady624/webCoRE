@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.0.075.20170417" }
+public static String version() { return "v0.0.076.20170418" }
 /*
+ *	04/18/2017 >>> v0.0.076.20170418 - ALPHA - Implemented task mode restrictions and added setColor using HSL
  *	04/17/2017 >>> v0.0.075.20170417 - ALPHA - Fixed a problem with $sunrise and $sunset pointing to the wrong date
  *	04/17/2017 >>> v0.0.074.20170417 - ALPHA - Implemented HTTP requests, importing response data not working yet, need to figure out a way to specify what data goes into which variables
  *	04/17/2017 >>> v0.0.073.20170417 - ALPHA - isBetween fix - use three params, not two, thanks to @c1arkbar
@@ -453,6 +454,7 @@ private getRunTimeData(rtData = null, semaphore = null) {
 	    rtData.cancelations = [statements:[], conditions:[]]
 	    rtData.piston = piston
 	    rtData.locationId = hashId(location.id)
+        rtData.locationModeId = hashId(location.getCurrentMode().id)
 	    //flow control
 	    //we're reading the old state from atomicState because we might have waited at a semaphore
 	    def oldState = atomicState.state ?: ''
@@ -1089,6 +1091,12 @@ private Boolean executeTask(rtData, devices, statement, task, async) {
         }
        	//we're not doing anything, we're fast forwarding...        
        	return true
+    }
+    if (task.m && (task.m instanceof List) && (task.m.size())) {
+    	if (!(rtData.locationModeId in task.m)) {
+        	debug "Skipping task ${task.$} because of mode restrictions", rtData
+        	return true;
+        }
     }
     def params = []
     for (param in task.p) {
@@ -1742,6 +1750,23 @@ private long vcmd_executeRoutine(rtData, device, params) {
     return 0
 }
 
+private long vcmd_setHSLColor(rtData, device, params) {
+    def hue = cast(rtData, params[0] / 3.6, 'integer')
+    def saturation = params[1]
+    def level = params[2]
+    def color = [
+        hue: hue,
+        saturation: saturation,
+        level: level
+    ]
+    def state = params.size() > 3 ? params[3] : ""
+    def delay = params.size() > 4 ? params[4] : 0
+    if (state && (getDeviceAttributeValue(rtData, device, 'switch') != "$state")) {
+        return 0
+    }
+    executePhysicalCommand(rtData, device, 'setColor', color, delay)
+    return 0
+}
 
 private long vcmd_httpRequest(rtData, device, params) {
 	def uri = params[0].replace(" ", "%20")
