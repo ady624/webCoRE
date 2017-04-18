@@ -18,9 +18,10 @@
  *
  *  Version history
 */
-public static String version() { return "v0.0.074.20170417" }
+public static String version() { return "v0.0.075.20170417" }
 /*
- *	04/17/2017 >>> v0.0.074.20170417 - ALPHA - implemented HTTP requests, importing response data not working yet, need to figure out a way to specify what data goes into which variables
+ *	04/17/2017 >>> v0.0.075.20170417 - ALPHA - Fixed a problem with $sunrise and $sunset pointing to the wrong date
+ *	04/17/2017 >>> v0.0.074.20170417 - ALPHA - Implemented HTTP requests, importing response data not working yet, need to figure out a way to specify what data goes into which variables
  *	04/17/2017 >>> v0.0.073.20170417 - ALPHA - isBetween fix - use three params, not two, thanks to @c1arkbar
  *	04/16/2017 >>> v0.0.072.20170416 - ALPHA - Quick fix for isBetween
  *	04/16/2017 >>> v0.0.071.20170416 - ALPHA - Added the ability to execute routines
@@ -711,7 +712,7 @@ private processSchedules(rtData, scheduleJob = false) {
         rtData.stats.nextSchedule = next.t
         trace "Setting up scheduled job for ${formatLocalTime(next.t)} (in ${t}s)" + (schedules.size() > 1 ? ', with ' + (schedules.size() - 1).toString() + ' more job' + (schedules.size() > 2 ? 's' : '') + ' pending' : ''), rtData
         runIn(t, timeHandler, [data: next])
-        runIn(t + 30000, timeRecoveryHandler, [data: next])
+        runIn(t + 30, timeRecoveryHandler, [data: next])
     } else {
     	rtData.stats.nextSchedule = 0
     }
@@ -4184,10 +4185,10 @@ private static Map yearMonths() {
 }
 
 private initSunriseAndSunset(rtData) {
-    def rightNow = now()
+    def rightNow = localTime()
     def sunTimes = app.getSunriseAndSunset()
-    rtData.sunrise = rightNow - rightNow.mod(86400000) + sunTimes.sunrise.time.mod(86400000)
-    rtData.sunset = rightNow - rightNow.mod(86400000) + sunTimes.sunset.time.mod(86400000)
+    rtData.sunrise = localToUtcTime(rightNow - rightNow.mod(86400000) + utcToLocalTime(sunTimes.sunrise.time).mod(86400000))
+    rtData.sunset = localToUtcTime(rightNow - rightNow.mod(86400000) + utcToLocalTime(sunTimes.sunset.time).mod(86400000))
 }
 
 private getSunriseTime(rtData) {

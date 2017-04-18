@@ -18,9 +18,10 @@
  *
  *  Version history
 */
-public static String version() { return "v0.0.074.20170417" }
+public static String version() { return "v0.0.075.20170417" }
 /*
- *	04/17/2017 >>> v0.0.074.20170417 - ALPHA - implemented HTTP requests, importing response data not working yet, need to figure out a way to specify what data goes into which variables
+ *	04/17/2017 >>> v0.0.075.20170417 - ALPHA - Fixed a problem with $sunrise and $sunset pointing to the wrong date
+ *	04/17/2017 >>> v0.0.074.20170417 - ALPHA - Implemented HTTP requests, importing response data not working yet, need to figure out a way to specify what data goes into which variables
  *	04/17/2017 >>> v0.0.073.20170417 - ALPHA - isBetween fix - use three params, not two, thanks to @c1arkbar
  *	04/16/2017 >>> v0.0.072.20170416 - ALPHA - Quick fix for isBetween
  *	04/16/2017 >>> v0.0.071.20170416 - ALPHA - Added the ability to execute routines
