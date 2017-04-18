@@ -2054,13 +2054,32 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		$scope.stack.undo = ($scope.stack.undo instanceof Array ? $scope.stack.undo : []);
 		$scope.stack.redo = ($scope.stack.redo instanceof Array ? $scope.stack.redo : []);
 		if ($scope.stack.current instanceof Object && $scope.stack.current.data && ($scope.stack.build == $scope.meta.build) && ($scope.meta.modified < $scope.stack.current.timestamp)) {
-			$scope.setStatus("A newer, locally saved copy of this piston has been loaded")
-			$scope.piston = $scope.stack.current.data;
+			$scope.setStatus();
+			$scope.dialogChooseVersion();
 		} else {
 			$scope.stack.current = $scope.getStackData();
 			$scope.stack.undo = [];
 			$scope.stack.redo = [];
 		}
+	}
+
+	$scope.dialogChooseVersion = function() {
+        $scope.designer.dialog = ngDialog.open({
+            template: 'dialog-choose-version',
+            className: 'ngdialog-theme-default ngdialog-large',
+            closeByDocument: false,
+            disableAnimation: true,
+            scope: $scope
+        });
+	}
+
+	$scope.chooseVersion = function(keepLocal) {
+		if (keepLocal) {
+			$scope.piston = $scope.stack.current.data;
+		} else {
+			$scope.autoSave();
+		}
+		$scope.closeDialog();
 	}
 
 	$scope.undo = function() {

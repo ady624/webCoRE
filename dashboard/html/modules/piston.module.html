@@ -1658,3 +1658,21 @@
 <script type="text/ng-template" id="dialog-wiki">
 	<iframe border="0" src="{{wikiUrl}}">Loading, please wait...</iframe>
 </script>
+
+<script type="text/ng-template" id="dialog-choose-version">
+	<designer>
+		<header>
+			<label>A local, newer, version of this piston was found</label>
+		</header>
+		<form>
+			<div class="form-group">
+				<label>It looks like you have been working on this piston and did not save the changes, which caused a local version of the piston to exist that is not the same as the current running piston. Please select which version of the piston you would like to work on.</label>
+				<label class="danger">Selecting the current version will delete the locally stored version and will revert to the piston version that is currently running. The local version will be forever lost.</label>
+			</div>
+		</form>
+		<footer>
+			<button type="button" class="btn btn-success pull-right" ng-click="chooseVersion(true);">Use the locally saved version</button>
+			<button type="button" class="btn btn-danger" ng-click="chooseVersion(false);">Use the current version</button>
+		</footer>
+	</designer>	
+</script>
