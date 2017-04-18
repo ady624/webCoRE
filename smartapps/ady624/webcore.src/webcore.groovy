@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.0.076.20170418" }
+public static String version() { return "v0.0.077.20170418" }
 /*
+ *	04/18/2017 >>> v0.0.077.20170418 - ALPHA - Implemented time conditions - no date or datetime yet, also, no subscriptions for time events yet
  *	04/18/2017 >>> v0.0.076.20170418 - ALPHA - Implemented task mode restrictions and added setColor using HSL
  *	04/17/2017 >>> v0.0.075.20170417 - ALPHA - Fixed a problem with $sunrise and $sunset pointing to the wrong date
  *	04/17/2017 >>> v0.0.074.20170417 - ALPHA - Implemented HTTP requests, importing response data not working yet, need to figure out a way to specify what data goes into which variables
@@ -1657,6 +1658,10 @@ private static Map comparisons() {
 			was_outside_of_range 			: [ d: "was outside of range",				dd: "were outside of range",			g:"di",		p: 2,				t: 2,	],
     		was_even						: [ d: "was even",							dd: "were even",						g:"di",							t: 2,	],
     		was_odd							: [ d: "was odd",							dd: "were odd",							g:"di",							t: 2,	],
+			is_before						: [ d: "is before",																	g:"t",		p: 1						],
+			is_after						: [ d: "is after",																	g:"t",		p: 1						],
+			is_between						: [ d: "is between",																g:"t",		p: 2						],
+			is_not_between					: [ d: "is not between",															g:"t",		p: 2						],
     	],
         triggers: [
     		gets							: [ d: "gets",																		g:"m",		p: 1						],
@@ -1816,13 +1821,13 @@ private Map getRoutineOptions() {
 
 private Map virtualDevices() {
 	return [
-    	date:				[ n: 'Date'],
-    	time:				[ n: 'Time',],
-    	dateTime:			[ n: 'Date & Time',],        
-    	mode:				[ n: 'Location mode',				o: getLocationModeOptions(),				x: true],
-    	alarmSystemStatus:	[ n: 'Smart Home Monitor status',	o: getAlarmSystemStatusOptions(),					x: true],
-        routine:			[ n: 'Routine',						o: getRoutineOptions(),						m: true],
-        askAlexa:			[ n: 'Ask Alexa',					o: [opt1: 'Option 1', opt2: 'Option 2'],	m: true	],
-        ifttt:				[ n: 'IFTTT',						o: [opt1: 'Option 1', opt2: 'Option 2'],	m: true	],
+    	date:				[ n: 'Date',						t: 'date',		],
+    	time:				[ n: 'Time',						t: 'time',		],
+    	dateTime:			[ n: 'Date & Time',					t: 'datetime',	],        
+    	mode:				[ n: 'Location mode',				t: 'string', 	o: getLocationModeOptions(),				x: true],
+    	alarmSystemStatus:	[ n: 'Smart Home Monitor status',	t: 'string',	o: getAlarmSystemStatusOptions(),			x: true],
+        routine:			[ n: 'Routine',						t: 'string',	o: getRoutineOptions(),						m: true],
+        askAlexa:			[ n: 'Ask Alexa',					t: 'string',	o: [opt1: 'Option 1', opt2: 'Option 2'],	m: true	],
+        ifttt:				[ n: 'IFTTT',						t: 'string',	o: [opt1: 'Option 1', opt2: 'Option 2'],	m: true	],
     ]
 }

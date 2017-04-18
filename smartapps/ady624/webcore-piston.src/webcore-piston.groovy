@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.0.076.20170418" }
+public static String version() { return "v0.0.077.20170418" }
 /*
+ *	04/18/2017 >>> v0.0.077.20170418 - ALPHA - Implemented time conditions - no date or datetime yet, also, no subscriptions for time events yet
  *	04/18/2017 >>> v0.0.076.20170418 - ALPHA - Implemented task mode restrictions and added setColor using HSL
  *	04/17/2017 >>> v0.0.075.20170417 - ALPHA - Fixed a problem with $sunrise and $sunset pointing to the wrong date
  *	04/17/2017 >>> v0.0.074.20170417 - ALPHA - Implemented HTTP requests, importing response data not working yet, need to figure out a way to specify what data goes into which variables
@@ -940,7 +941,7 @@ private Boolean executeStatement(rtData, statement, async = false) {
                     debug "Evaluating switch with values $lo.values", rtData
                     for (_case in statement.cs) {
                     	def ro = [operand: _case.ro, values: evaluateOperand(rtData, _case, _case.ro)]
-                        def ro2 = (_case.t == 'r') ? [operand: _case.ro2, values: evaluateOperand(rtData, _case, _case.ro2)] : null
+                        def ro2 = (_case.t == 'r') ? [operand: _case.ro2, values: evaluateOperand(rtData, _case, _case.ro2, null, false, true)] : null
                         perform = perform || evaluateComparison(rtData, (_case.t == 'r' ? 'is_inside_of_range' : 'is'), lo, ro, ro2)
                         found = found || perform
                         if (perform || (found && fallThrough) || !!rtData.fastForwardTo) {
@@ -1661,7 +1662,7 @@ private long vcmd_waitRandom(rtData, device, params) {
 
 private long vcmd_waitForTime(rtData, device, params) {
 	long time = now()
-    time = time - (time % 86400000) + cast(rtData, params[0], 'time')
+    time = cast(rtData, params[0], 'time')
     long rightNow = now()
     while (time < rightNow) time += 86400000
     return time - rightNow
@@ -1906,7 +1907,7 @@ private Boolean evaluateConditions(rtData, conditions, collection, async) {
 	return result
 }
 
-private evaluateOperand(rtData, node, operand, index = null, trigger = false) {
+private evaluateOperand(rtData, node, operand, index = null, trigger = false, nextMidnight = false) {
 	def values = []
     switch (operand.t) {
         case "p": //physical device
@@ -1949,6 +1950,11 @@ private evaluateOperand(rtData, node, operand, index = null, trigger = false) {
             	case 'alarmSystemStatus':
                 	values = [[i: "${node?.$}:v", v:getDeviceAttribute(rtData, rtData.locationId, operand.v)]];
                     break;
+				case 'time':
+				case 'date':
+				case 'datetime':
+                	values = [[i: "${node?.$}:v", v:[t: operand.v, v: cast(rtData, now(), operand.v)]]];
+                    break;
             }
             break
         case "s": //preset
@@ -1957,7 +1963,7 @@ private evaluateOperand(rtData, node, operand, index = null, trigger = false) {
                 case 'datetime':
                     def v = 0;
                     switch (operand.s) {
-                        case 'midnight': v = getMidnightTime(rtData); break;
+                        case 'midnight': v = nextMidnight ? getNextMidnightTime(rtData) : getMidnightTime(rtData); break;
                         case 'sunrise': v = getSunriseTime(rtData); break;
                         case 'noon': v = getNoonTime(rtData); break;
                         case 'sunset': v = getSunsetTime(rtData); break;
@@ -2178,6 +2184,10 @@ private boolean comp_did_not_change					(rtData, lv, rv = null, rv2 = null) { re
 
 private boolean comp_is_any_of						(rtData, lv, rv = null, rv2 = null) { def v = evaluateExpression(rtData, lv.v, 'string').v; for (vi in rv.v.v.tokenize(',')) { if (v == evaluateExpression(rtData, [t: rv.v.t, v: "$vi".toString().trim(), i: rv.v.i, a: rv.v.a, vt: rv.v.vt], 'string').v) return true; }; return false;}
 private boolean comp_is_not_any_of					(rtData, lv, rv = null, rv2 = null) { return !comp_is_any_of(rtData, lv, rv, rv2); }
+
+private boolean comp_is_before						(rtData, lv, rv = null, rv2 = null) { return evaluateExpression(rtData, lv.v, 'datetime').v + 2000 < evaluateExpression(rtData, rv.v, 'datetime').v; }
+private boolean comp_is_after						(rtData, lv, rv = null, rv2 = null) { return evaluateExpression(rtData, lv.v, 'datetime').v + 2000 >= evaluateExpression(rtData, rv.v, 'datetime').v; }
+private boolean comp_is_between						(rtData, lv, rv = null, rv2 = null) { long v = evaluateExpression(rtData, lv.v, 'datetime').v + 2000; long v1 = evaluateExpression(rtData, rv.v, 'datetime').v; long v2 = evaluateExpression(rtData, rv2.v, 'datetime').v; error "$v1 < $v < $v2", rtData; return (v1 < v2) ? (v >= v1) && (v < v2) : (v < v2) || (v >= v1); }
 
 /*triggers*/
 private boolean comp_gets							(rtData, lv, rv = null, rv2 = null) { return (cast(rtData, lv.v.v, 'string') == cast(rtData, rv.v.v, 'string')) && matchDeviceSubIndex(lv.v.i, rtData.currentEvent.index)}
@@ -3962,10 +3972,11 @@ private cast(rtData, value, dataType, srcDataType = null) {
             }
 			return !!value
 		case "time":
-			return ((srcDataType == 'string') ? utcToLocalDate(value).time : cast(rtData, value, "long")) % 86400000
+        	def n = localTime()
+			return localToUtcTime(n - (n % 86400000) + (utcToLocalTime((srcDataType == 'string') ? utcToLocalDate(value).time : cast(rtData, value, "long")) % 86400000))
 		case "date":
-			def d = ((srcDataType == 'string') ? utcToLocalDate(value).time : cast(rtData, value, "long"))
-            return d - (d % 864000000)
+			def d = utcToLocalTime((srcDataType == 'string') ? utcToLocalDate(value).time : cast(rtData, value, "long"))
+            return localToUtcTime(d - (d % 864000000))
 		case "datetime":
 			return ((srcDataType == 'string') ? utcToLocalDate(value).time : cast(rtData, value, "long"))
 		case "vector3":
