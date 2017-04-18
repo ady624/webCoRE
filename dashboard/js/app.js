@@ -725,10 +725,8 @@ app.run(['$rootScope', '$window', '$location', function($rootScope, $window, $lo
 			path = '/init';
 		}
 		if (path.startsWith('/piston/')) {
-			//path = '/piston/:xxxxxxxxxxxxxxxx' + path.substr(25);
 			path = '/piston';
 		}
-		console.log("Path is " + path);
 	    $window.ga('send', 'pageview', { page: path });
 	});
 
@@ -1063,4 +1061,4 @@ if (document.selection) {
 }}
 
 //navigator.registerProtocolHandler('web+core','https://' + window.location.hostname + '/handler/%s', 'webCoRE');
-version = function() { return 'v0.0.076.20170418'; };
+version = function() { return 'v0.0.077.20170418'; };

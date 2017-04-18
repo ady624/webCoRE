@@ -1008,16 +1008,32 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 			scope: $scope
 		});
 	};
+	
+	$scope.fixOperand = function(data) {
+		switch (data.vt) {
+			case 'time':
+				data.c = data.c.getHours() * 60 + data.c.getMinutes();
+				break;
+			case 'date':
+				data.c = data.c.getTime() - data.c.getTime().mod(86400000);
+				break;
+			case 'datetime':
+				data.c =data.c.getTime();
+				break;
+		}
+		return data;
+	}
+
 
 	$scope.updateCondition = function(nextDialog) {
 		$scope.autoSave();
 		var condition = $scope.designer.$new ? {t: $scope.designer.type} : $scope.designer.$condition;
 		switch (condition.t) {
 			case 'condition':
-				condition.lo = $scope.designer.comparison.left.data;
+				condition.lo = $scope.fixOperand($scope.designer.comparison.left.data);
 				condition.co = $scope.designer.comparison.operator;
-				condition.ro = $scope.designer.comparison.right.data;
-				condition.ro2 = $scope.designer.comparison.right2.data;
+				condition.ro = $scope.fixOperand($scope.designer.comparison.right.data);
+				condition.ro2 = $scope.fixOperand($scope.designer.comparison.right2.data);
 				condition.to = $scope.designer.comparison.time.data;
 				break;
 			case 'group':
@@ -1192,10 +1208,10 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
         var restriction = $scope.designer.$new ? {t: $scope.designer.type} : $scope.designer.$restriction;
         switch (restriction.t) {
             case 'restriction':
-                restriction.lo = $scope.designer.comparison.left.data;
+                restriction.lo = $scope.fixOperand($$scope.designer.comparison.left.data);
                 restriction.co = $scope.designer.comparison.operator;
-                restriction.ro = $scope.designer.comparison.right.data;
-                restriction.ro2 = $scope.designer.comparison.right2.data;
+                restriction.ro = $scope.fixOperand($$scope.designer.comparison.right.data);
+                restriction.ro2 = $scope.fixOperand($$scope.designer.comparison.right2.data);
                 restriction.to = $scope.designer.comparison.time.data;
                 break;
             case 'group':
@@ -2388,7 +2404,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 				break;
 			case 'v':
 				var virtualDevice = $scope.instance.virtualDevices[operand.data.v];
-				operand.selectedDataType = 'string';
+				operand.selectedDataType = (!!virtualDevice && !!virtualDevice.t) ? virtualDevice.t : 'string';
 				if (virtualDevice) {
 					//save the options
 					for (o in virtualDevice.o) {
@@ -2572,7 +2588,21 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 			var noRestrictions = comparison.type != 'restriction';
 			var optionList = [];
 			var options = [];
-			var dt = comparison.dataType == 'enum' ? 's' : (comparison.dataType == 'dynamic' ? '' : comparison.dataType.substr(0, 1));
+			switch (comparison.dataType) {
+				case 'enum':
+					dt = '';
+					break;
+				case 'dynamic':
+					dt = '';
+					break;
+				case 'time':
+				case 'date':
+				case 'datetime':
+					dt = 't';
+					break;
+				default:
+					dt = comparison.comparison.dataType.substr(0, 1);
+			}
             dt = (comparison.momentary ? 'm' : ((dt == 'n' ? 'd' : dt)));
 			for(conditionId in $scope.db.comparisons.conditions) {
 				var condition = $scope.db.comparisons.conditions[conditionId];
@@ -2741,7 +2771,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		if ((comparison.g == 'm') && l.i && l.i.length) {
 			indexes = ' <span num>' + $scope.buildNameList(l.i, 'or', null, null, false, true, false, '#') + '</span>';
 		}
-		var result = $scope.renderOperand(l) + indexes + ' <span kwd>' + (plural ? (comparison.dd ? comparison.dd : comparison.d) : comparison.d) + '</span>' + (comparison.p > 0 ? ' ' + $scope.renderOperand(r, noQuotes, pedantic) : '') + (comparison.p > 1 ? ' <span pun>through</span> ' + $scope.renderOperand(r2, noQuotes, pedantic) : '')
+		var result = $scope.renderOperand(l) + indexes + ' <span kwd>' + (plural ? (comparison.dd ? comparison.dd : comparison.d) : comparison.d) + '</span>' + (comparison.p > 0 ? ' ' + $scope.renderOperand(r, noQuotes, pedantic) : '') + (comparison.p > 1 ? ' <span pun>' + (comparison.d.indexOf('between') ? 'and' : 'through') + '</span> ' + $scope.renderOperand(r2, noQuotes, pedantic) : '')
 		return $sce.trustAsHtml(result);
 	}
 
