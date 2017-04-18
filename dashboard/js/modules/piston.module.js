@@ -79,6 +79,15 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
         return pistonId;
     };
 
+	$scope.getModeName = function(modeId) {
+		for(modeIndex in $scope.location.modes) {
+			if ($scope.location.modes[modeIndex].id == modeId) {
+				return $scope.location.modes[modeIndex].name;
+			}
+		}
+		return modeId;
+	}
+
 	$scope.updateActivity = function(init) {	
 		if ($scope.$$destroyed) return;	
 		if ($scope.mode != 'view') return;
@@ -1291,6 +1300,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 			task = {};
 			task.c = '';
 			task.a = '0';
+			task.m = '';
 			task.z = '';
 		}
 		$scope.designer = {};
@@ -1304,6 +1314,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		$scope.designer.page = 0;
 		$scope.designer.parent = parent;
 		$scope.designer.command = task.c;
+		$scope.designer.mode = task.m;
 		$scope.designer.description = task.z;
 		$scope.prepareParameters(task);
 		window.designer = $scope.designer;
@@ -1325,6 +1336,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		task.c = $scope.designer.command;
 		task.a = $scope.designer.async;
 		task.z = $scope.designer.description;
+		task.m = $scope.designer.mode;
 		if (task.c) {
 			task.$$html = null;
 			task.p = [];
@@ -1729,6 +1741,20 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		return result.trim();
 	}
 
+	$scope.buildLocationModeNameList = function(modes) {
+		var modeNames = [];
+		if (modes instanceof Array) {
+			for (modeIndex in modes) {
+				modeNames.push($scope.getModeName(modes[modeIndex]));
+			}
+			if (modeNames.length) {
+				return $scope.buildNameList(modeNames, 'or', 'lit', '', false, true);
+			}
+		}
+		return '';
+	};
+
+
 	$scope.buildDeviceNameList = function(devices) {
 		var deviceNames = [];
 		if (devices instanceof Array) {
@@ -1749,6 +1775,8 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		}
 		return 'Location';
 	};
+
+
 
 	$scope.formatHour = function(hour) {
 		return (!location.timeZone || location.timeZone.id.startsWith('America')) ? ((hour % 12 ?hour % 12 : '12') + (hour < 12 ? 'am' : 'pm')) : ('00' + hour).substr(-2);
@@ -2931,6 +2959,9 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 			}).replace(/(\{T\})/g, '°' + $scope.location.temperatureScale);
 			var icon = command.i;
 			if (icon) display = '<span pun><i class="fa fa-' + icon + '" aria-hidden="true"></i></span> ' + display;
+		}
+		if (task.m) {
+			display += ' <span pun><i>(only while ' + $scope.buildLocationModeNameList(task.m) + ')</i></span>';
 		}
 		display += '<span pun>;</span>';
 		return $sce.trustAsHtml(display);

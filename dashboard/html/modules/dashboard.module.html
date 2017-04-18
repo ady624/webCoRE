@@ -66,7 +66,7 @@
 						<table class="table table-striped">
 							<tbody>
 								<tr ng-repeat="piston in instance.pistons" ng-click="openPiston(piston.id);" active="true" ng-if="piston.meta && piston.meta.a" title="{{piston.meta.t ? 'Executed ' + timeSince(piston.meta.t) : 'Never executed'}}">
-									<td><i star class="fa fa-gears" ng-style="{opacity: piston.opacity}" aria-hidden="true"></i><span>{{piston.name}}</span><span ng-if="piston.meta.s && piston.meta.s.new" state="{{piston.meta.s.new}}">{{piston.meta.s.new}}</span></td>
+									<td state="{{piston.meta.s.new}}"><i star class="fa fa-circle" ng-style="{opacity: piston.opacity}" aria-hidden="true"></i>{{piston.name}}<!--<span ng-if="piston.meta.s && piston.meta.s.new" state="{{piston.meta.s.new}}">{{piston.meta.s.new}}</span>--></td>
 									<td dur class="col-md-1 text-right">{{piston.meta.n ? timeCounter(piston.meta.n) : ''}}</td>
 								</tr>
 							</tbody>

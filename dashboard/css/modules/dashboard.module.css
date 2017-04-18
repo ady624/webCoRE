@@ -113,6 +113,9 @@ li[instance] {
     border-bottom: 1px solid #ddd;
 }
 
+table {
+	table-layout: fixed
+}
 
 .table-responsive tr:hover {
 	cursor: pointer;
@@ -129,16 +132,20 @@ tr[active=false] {
 	color: #369;
 }
 
-
-td i[star] {
-	margin-left: -4px;
-	margin-right: 4px;
+td i[star] {	
+	display: inline-block;
 	color: #369;
+	font-size: 8px;
+	margin-top: -4px;
+	padding: 0px 4px 0px 0px;
+	vertical-align: middle;
 }
 
 
 td[dur] {
-	font-size: 14px;
+	font-size: 12px;
+	width: 64px;
+	overflow: visible;
 }
 
 
@@ -154,27 +161,29 @@ div[lonely] i {
 	color: #ccc;
 }
 
+td {
+	white-space: nowrap;
+	text-overflow: ellipsis;
+	overflow: hidden;
+	max-width: 25%;
+}
 
-span[state] {
-	margin-left: 8px;
+td[state]::after {
+	content: attr(state);
+	display: inline-block;
 	font-size: 12px;
 	padding: 0px 8px;
 	color: #aaa;
-	background: rgba(0, 0, 0, 0.05);
-	border: solid 1px rgba(0, 0, 0, 0.1);
-	border-radius: 4px;
 	line-height: 17px;
 }
 
 
-span[state=true] {
+td[state=true]::after {
 	color: #aca;
-	background: rgba(0, 255, 0, 0.05);
 }
 
-span[state=false] {
+td[state=false]::after {
 	color: #caa;
-	background: rgba(255, 0, 0, 0.05);
 }
 
 @media (min-width: 768px) {
@@ -223,11 +232,13 @@ span[state=false] {
 
 	.table-responsive {
     	width: 100%;
+    	overflow: hidden;
     	overflow-y: hidden;
+    	white-space: nowrap;
     	-ms-overflow-style: -ms-autohiding-scrollbar;
-		border: 0 !important;
+    	border: 0 !important;
     	line-height: 44px;
-	}
+ }
 
 	.table-responsive td {
 		line-height: 44px !important;

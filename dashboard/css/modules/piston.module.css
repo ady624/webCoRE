@@ -377,6 +377,8 @@ span.color {
 	margin: 3px 8px 0px 0px;
 	border-radius: 6px;
 	box-shadow: 1px 1px 3px black;
+	font-size: 11px;
+	text-align: center;
 }
 
 

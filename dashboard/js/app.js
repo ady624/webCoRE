@@ -703,7 +703,7 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 
 
 
-app.run(['$rootScope', '$window', function($rootScope, $window) {
+app.run(['$rootScope', '$window', '$location', function($rootScope, $window, $location) {
     $rootScope.getTime = function (date) {
         if (date) {
             return date.format('h:mmtt');                
@@ -718,6 +718,19 @@ app.run(['$rootScope', '$window', function($rootScope, $window) {
 	} catch(e) {
 		console.log("ERROR: " + e);
 	}
+
+	$rootScope.$on('$viewContentLoaded', function(event) {
+		var path = $location.path();
+		if (path.startsWith('/init/')) {
+			path = '/init';
+		}
+		if (path.startsWith('/piston/')) {
+			//path = '/piston/:xxxxxxxxxxxxxxxx' + path.substr(25);
+			path = '/piston';
+		}
+		console.log("Path is " + path);
+	    $window.ga('send', 'pageview', { page: path });
+	});
 
     $rootScope.bytesToSize = function(bytes) {
         var sizes = ['bytes', 'kB', 'MB', 'GB', 'TB'];
@@ -1050,4 +1063,4 @@ if (document.selection) {
 }}
 
 //navigator.registerProtocolHandler('web+core','https://' + window.location.hostname + '/handler/%s', 'webCoRE');
-version = function() { return 'v0.0.075.20170417'; };
+version = function() { return 'v0.0.076.20170418'; };
