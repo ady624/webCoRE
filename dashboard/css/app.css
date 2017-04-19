@@ -670,6 +670,14 @@ designer form a-ckolor {
 	transition: none !important;
 }
 
+.ngdialog {
+	background: rgba(0, 0, 0, 0.25);
+}
+
+.ngdialog .ngdialog-overlay {
+	display: none !important;
+}
+
 
 .ellipsis {
     white-space: nowrap;

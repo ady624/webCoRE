@@ -1749,7 +1749,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		var result = '';
 		for (i in list) {
 			var item = $scope.buildName(list[i], noQuotes, pedantic, itemPrefix);
-			result += '<span ' + tag + (className ? ' class="' + className + '"' : '') + '>' + item + '</span>' + (possessive ? '\'' + (item.substr(-1) == 's' ? '' : 's') : '') + (cnt < list.length ? (cnt == list.length - 1 ? (list.length > 2 ? ', ' : ' ') + suffix + ' ' : ', ') : '');
+			result += '<span ' + tag + (className ? ' class="' + className + '"' : '') + '>' + item + '</span>' + (possessive ? '\'' + (item.substr(-1) == 's' ? '' : 's') : '') + (cnt < list.length ? ' <span pun>' + (cnt == list.length - 1 ? (list.length > 2 ? ', ' : '') + suffix : ',') + '</span> ' : '');
 			cnt++;
 		}
 		return result.trim();
@@ -2756,7 +2756,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		return $sce.trustAsHtml(result ? result : '(invalid operands)');
 	}
 
-	$scope.renderComparison = function(l, o, r, r2) {
+	$scope.renderComparison = function(l, o, r, r2, to) {
 		var comparison = $scope.db.comparisons.conditions[o] || $scope.db.comparisons.triggers[o];
 		if (!comparison) return '[ERROR: Invalid comparison]';
 		var pedantic = l.t == 'v';
@@ -2776,7 +2776,14 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		}
 		var result = $scope.renderOperand(l) + indexes + ' <span pun>' + (plural ? (comparison.dd ? comparison.dd : comparison.d) : comparison.d) + '</span>' + (comparison.p > 0 ? ' ' + $scope.renderOperand(r, noQuotes, pedantic) : '') + (comparison.p > 1 ? ' <span pun>' + (comparison.d.indexOf('between') ? 'and' : 'through') + '</span> ' + $scope.renderOperand(r2, noQuotes, pedantic) : '')
 
-
+		switch (comparison.t) {
+			case 1:
+				result += ' <span pun>in the last</span> ' + $scope.renderOperand(to) + ' <span lit>' + $scope.getDurationUnitName(to.vt, !((to.t == 'c') && (!isNaN(to.c)) && (parseInt(to.c) == 1))) + '</span>';
+				break;
+			case 2:
+				result += ' <span pun>for ' + (to.f == 'g' ? 'at least' : 'less than') + '</span> ' + $scope.renderOperand(to) + ' <span lit>' + $scope.getDurationUnitName(to.vt, !((to.t == 'c') && (!isNaN(to.c)) && (parseInt(to.c) == 1))) + '</span>';
+				break;
+		}
 
 
 		if ((l.t == 'v') && (['time', 'date', 'datetime'].indexOf(l.v) >= 0)) {

@@ -264,7 +264,15 @@
 			<line com ng-if="statement.z">/* {{statement.z}} */</line>
 			<line kwd ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)">only when</line>
 			<restrictions ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)" data-ng-repeat="collection in [statement]" data-ng-include="'restrictions'" dnd-nodrag data-nag-model="statement"></restrictions>
-			<line ng-if-start="((mode=='edit') && view.movable) || ((statement.d) && (statement.d.length)) || ((statement.r) && (statement.r.length)) || ((statement.k) && (statement.k.length==0))" kwd ng-click="editStatement(statement, statements)"><handle dnd-handle class="fa fa-sort"></handle>with</line>
+			<line ng-if-start="((mode=='edit') && view.movable) || ((statement.d) && (statement.d.length)) || ((statement.r) && (statement.r.length)) || ((statement.k) && (statement.k.length==0))" kwd ng-click="editStatement(statement, statements)">
+				<handle dnd-handle class="fa fa-sort"></handle><span ng-if="statement.a == '1'" kwd>async </span>with
+				<badge green ng-if="(statement.tep == 'c')" badge="C" title="Only execute on condition state change"></badge>
+				<badge green ng-if="(statement.tep == 'p')" badge="P" title="Only execute on piston state change"></badge>
+				<badge green ng-if="(statement.tep == 'b')" badge="C|P" title="Only execute on condition or piston state change"></badge>
+				<badge red ng-if="(statement.tcp != 'c') && (statement.tcp != 'p') && (statement.tcp != 'b')" badge="N" title="Never cancel"></badge>
+				<badge red ng-if="(statement.tcp == 'p')" badge="P" title="Cancel on piston state change"></badge>
+				<badge red ng-if="(statement.tcp == 'b')" badge="C|P" title="Cancel on condition or piston state change"></badge>
+			</line>
 			<container>
 				<line pun ng-click="editStatement(statement, statements);" ng-attr-invalid="{{(!statement.d) || (!statement.d.length)}}" ng-bind-html="renderDeviceNameList(statement.d)"></line>
 			</container>
@@ -281,7 +289,14 @@
 			<line kwd ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)">only when</line>
 			<restrictions ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)" data-ng-repeat="collection in [statement]" data-ng-include="'restrictions'" dnd-nodrag data-nag-model="statement"></restrictions>
 			<line kwd ng-click="editStatement(statement, statements)">
-				<handle dnd-handle class="fa fa-sort"></handle>if</line>
+				<handle dnd-handle class="fa fa-sort"></handle><span ng-if="statement.a == '1'" kwd>async </span>if
+				<badge green ng-if="(statement.tep == 'c')" badge="C" title="Only execute on condition state change"></badge>
+				<badge green ng-if="(statement.tep == 'p')" badge="P" title="Only execute on piston state change"></badge>
+				<badge green ng-if="(statement.tep == 'b')" badge="C|P" title="Only execute on condition or piston state change"></badge>
+				<badge red ng-if="(statement.tcp != 'c') && (statement.tcp != 'p') && (statement.tcp != 'b')" badge="N" title="Never cancel"></badge>
+				<badge red ng-if="(statement.tcp == 'p')" badge="P" title="Cancel on piston state change"></badge>
+				<badge red ng-if="(statement.tcp == 'b')" badge="C|P" title="Cancel on condition or piston state change"></badge>
+			</line>
 			<conditions data-ng-repeat="collection in [statement]" data-ng-include="'conditions'" dnd-nodrag data-nag-model="statement" eval="{{statement && trace && trace.points && trace.points['c:' + statement.$] ? trace.points['c:' + statement.$].v : ''}}"></conditions>
 			<line kwd ng-if="(mode=='edit') || (statement.s && statement.s.length)">then</line>
 			<statements ng-if="(mode=='edit') || (statement.s && statement.s.length)" dnd-list="statement.s" dnd-allowed-types="['statement']" data-ng-repeat="statements in [statement.s]" data-ng-include="'statements'" dnd-nodrag data-nag-model="statement.s" exec="{{statement && statement.s && statement.s.length && trace && trace.points && !!trace.points['s:' + statement.s[0].$]}}"></statements>
@@ -304,7 +319,13 @@
 			<line kwd ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)">only when</line>
 			<restrictions ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)" data-ng-repeat="collection in [statement]" data-ng-include="'restrictions'" dnd-nodrag data-nag-model="statement"></restrictions>
 			<line kwd ng-click="editStatement(statement, statements)">
-				<handle dnd-handle class="fa fa-sort"></handle>switch <span pun> (</span><span ng-bind-html="statement.$$html || (statement.$$html = renderOperand(statement.lo))"></span><span pun>)</span><span pun title="Fall-through mode" ng-if="statement.ctp == 'e'"><i class="fa fa-sort-amount-asc" aria-hidden="true"></i></span>
+				<handle dnd-handle class="fa fa-sort"></handle><span ng-if="statement.a == '1'" kwd>async </span>switch <span pun> (</span><span ng-bind-html="statement.$$html || (statement.$$html = renderOperand(statement.lo))"></span><span pun>)</span><span pun title="Fall-through mode" ng-if="statement.ctp == 'e'"><i class="fa fa-sort-amount-asc" aria-hidden="true"></i></span>
+				<badge green ng-if="(statement.tep == 'c')" badge="C" title="Only execute on condition state change"></badge>
+				<badge green ng-if="(statement.tep == 'p')" badge="P" title="Only execute on piston state change"></badge>
+				<badge green ng-if="(statement.tep == 'b')" badge="C|P" title="Only execute on condition or piston state change"></badge>
+				<badge red ng-if="(statement.tcp != 'c') && (statement.tcp != 'p') && (statement.tcp != 'b')" badge="N" title="Never cancel"></badge>
+				<badge red ng-if="(statement.tcp == 'p')" badge="P" title="Cancel on piston state change"></badge>
+				<badge red ng-if="(statement.tcp == 'b')" badge="C|P" title="Cancel on condition or piston state change"></badge>
 			</line>
 			<container>
 				<cases>
@@ -327,7 +348,13 @@
 			<line kwd ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)">only when</line>
 			<restrictions ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)" data-ng-repeat="collection in [statement]" data-ng-include="'restrictions'" dnd-nodrag data-nag-model="statement"></restrictions>
 			<line kwd ng-click="editStatement(statement, statements)">
-				<handle dnd-handle class="fa fa-sort"></handle>for<span pun>&nbsp;(</span><span ng-bind-html="statement.$$html || (statement.$$html = renderForOperands(statement))"></span><span pun>)</span>
+				<handle dnd-handle class="fa fa-sort"></handle><span ng-if="statement.a == '1'" kwd>async </span>for<span pun>&nbsp;(</span><span ng-bind-html="statement.$$html || (statement.$$html = renderForOperands(statement))"></span><span pun>)</span>
+				<badge green ng-if="(statement.tep == 'c')" badge="C" title="Only execute on condition state change"></badge>
+				<badge green ng-if="(statement.tep == 'p')" badge="P" title="Only execute on piston state change"></badge>
+				<badge green ng-if="(statement.tep == 'b')" badge="C|P" title="Only execute on condition or piston state change"></badge>
+				<badge red ng-if="(statement.tcp != 'c') && (statement.tcp != 'p') && (statement.tcp != 'b')" badge="N" title="Never cancel"></badge>
+				<badge red ng-if="(statement.tcp == 'p')" badge="P" title="Cancel on piston state change"></badge>
+				<badge red ng-if="(statement.tcp == 'b')" badge="C|P" title="Cancel on condition or piston state change"></badge>
 			</line>
 			<line kwd>do</line>
 			<statements dnd-list="statement.s" dnd-allowed-types="['statement']" data-ng-repeat="statements in [statement.s]" data-ng-include="'statements'" dnd-nodrag data-nag-model="statement.s"></statements>
@@ -340,7 +367,13 @@
 			<line kwd ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)">only when</line>
 			<restrictions ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)" data-ng-repeat="collection in [statement]" data-ng-include="'restrictions'" dnd-nodrag data-nag-model="statement"></restrictions>
 			<line kwd ng-click="editStatement(statement, statements)">
-				<handle dnd-handle class="fa fa-sort"></handle>for each<span pun>&nbsp;(</span><span ng-bind-html="statement.$$html || (statement.$$html = renderForEachOperands(statement))"></span><span pun>)</span>
+				<handle dnd-handle class="fa fa-sort"></handle><span ng-if="statement.a == '1'" kwd>async </span>for each<span pun>&nbsp;(</span><span ng-bind-html="statement.$$html || (statement.$$html = renderForEachOperands(statement))"></span><span pun>)</span>
+				<badge green ng-if="(statement.tep == 'c')" badge="C" title="Only execute on condition state change"></badge>
+				<badge green ng-if="(statement.tep == 'p')" badge="P" title="Only execute on piston state change"></badge>
+				<badge green ng-if="(statement.tep == 'b')" badge="C|P" title="Only execute on condition or piston state change"></badge>
+				<badge red ng-if="(statement.tcp != 'c') && (statement.tcp != 'p') && (statement.tcp != 'b')" badge="N" title="Never cancel"></badge>
+				<badge red ng-if="(statement.tcp == 'p')" badge="P" title="Cancel on piston state change"></badge>
+				<badge red ng-if="(statement.tcp == 'b')" badge="C|P" title="Cancel on condition or piston state change"></badge>
 			</line>
 			<line kwd>do</line>
 			<statements dnd-list="statement.s" dnd-allowed-types="['statement']" data-ng-repeat="statements in [statement.s]" data-ng-include="'statements'" dnd-nodrag data-nag-model="statement.s"></statements>
@@ -353,7 +386,13 @@
 			<line kwd ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)">only when</line>
 			<restrictions ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)" data-ng-repeat="collection in [statement]" data-ng-include="'restrictions'" dnd-nodrag data-nag-model="statement"></restrictions>
 			<line kwd ng-click="editStatement(statement, statements)">
-				<handle dnd-handle class="fa fa-sort"></handle>while
+				<handle dnd-handle class="fa fa-sort"></handle><span ng-if="statement.a == '1'" kwd>async </span>while
+				<badge green ng-if="(statement.tep == 'c')" badge="C" title="Only execute on condition state change"></badge>
+				<badge green ng-if="(statement.tep == 'p')" badge="P" title="Only execute on piston state change"></badge>
+				<badge green ng-if="(statement.tep == 'b')" badge="C|P" title="Only execute on condition or piston state change"></badge>
+				<badge red ng-if="(statement.tcp != 'c') && (statement.tcp != 'p') && (statement.tcp != 'b')" badge="N" title="Never cancel"></badge>
+				<badge red ng-if="(statement.tcp == 'p')" badge="P" title="Cancel on piston state change"></badge>
+				<badge red ng-if="(statement.tcp == 'b')" badge="C|P" title="Cancel on condition or piston state change"></badge>
 			</line>
 			<conditions data-ng-repeat="collection in [statement]" data-ng-include="'conditions'" dnd-nodrag data-nag-model="statement"></conditions>
 			<line kwd>do</line>
@@ -367,7 +406,13 @@
 			<line kwd ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)">only when</line>
 			<restrictions ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)" data-ng-repeat="collection in [statement]" data-ng-include="'restrictions'" dnd-nodrag data-nag-model="statement"></restrictions>
 			<line ng-click="editStatement(statement, statements)">
-				<handle dnd-handle class="fa fa-sort"></handle>repeat</line>
+				<handle dnd-handle class="fa fa-sort"></handle><span ng-if="statement.a == '1'" kwd>async </span>repeat</line>
+				<badge green ng-if="(statement.tep == 'c')" badge="C" title="Only execute on condition state change"></badge>
+				<badge green ng-if="(statement.tep == 'p')" badge="P" title="Only execute on piston state change"></badge>
+				<badge green ng-if="(statement.tep == 'b')" badge="C|P" title="Only execute on condition or piston state change"></badge>
+				<badge red ng-if="(statement.tcp != 'c') && (statement.tcp != 'p') && (statement.tcp != 'b')" badge="N" title="Never cancel"></badge>
+				<badge red ng-if="(statement.tcp == 'p')" badge="P" title="Cancel on piston state change"></badge>
+				<badge red ng-if="(statement.tcp == 'b')" badge="C|P" title="Cancel on condition or piston state change"></badge>
 			<line kwd>do</line>
 			<statements dnd-list="statement.s" dnd-allowed-types="['statement']" data-ng-repeat="statements in [statement.s]" data-ng-include="'statements'" dnd-nodrag data-nag-model="statement.s"></statements>
 			<line kwd>until</line>
@@ -382,6 +427,12 @@
 			<restrictions ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)" data-ng-repeat="collection in [statement]" data-ng-include="'restrictions'" dnd-nodrag data-nag-model="statement"></restrictions>
 			<line kwd ng-click="editStatement(statement, statements)">
 				<handle dnd-handle class="fa fa-sort"></handle><span kwd>every</span> <span lit ng-bind-html="renderTimer(statement);"></span>
+				<badge green ng-if="(statement.tep == 'c')" badge="C" title="Only execute on condition state change"></badge>
+				<badge green ng-if="(statement.tep == 'p')" badge="P" title="Only execute on piston state change"></badge>
+				<badge green ng-if="(statement.tep == 'b')" badge="C|P" title="Only execute on condition or piston state change"></badge>
+				<badge red ng-if="(statement.tcp != 'c') && (statement.tcp != 'p') && (statement.tcp != 'b')" badge="N" title="Never cancel"></badge>
+				<badge red ng-if="(statement.tcp == 'p')" badge="P" title="Cancel on piston state change"></badge>
+				<badge red ng-if="(statement.tcp == 'b')" badge="C|P" title="Cancel on condition or piston state change"></badge>
 			</line>
 			<line kwd>do</line>
 			<statements dnd-list="statement.s" dnd-allowed-types="['statement']" data-ng-repeat="statements in [statement.s]" data-ng-include="'statements'" dnd-nodrag data-nag-model="statement.s"></statements>
@@ -441,7 +492,7 @@
 		<conditions ng-if="condition.c" ng-repeat="collection in [condition]" data-ng-include="'conditions'" dnd-nodrag data-nag-model="condition" dnd-draggable="condition" dnd-type="'condition'" dnd-moved="drag(collection.c, $index);" dnd-effect-allowed="copyMove" eval="{{collection && trace && trace.points && trace.points['c:' + collection.$] ? trace.points['c:' + collection.$].v : ''}}"></conditions>
 		<line com ng-if="!condition.c && !!condition.z">/* {{condition.z}} */</line>
 		<line cond ng-if="!condition.c" ng-click="editCondition(condition, collection.c);">
-			<handle dnd-handle class="fa fa-sort"></handle><span ng-bind-html="condition.$$html || (condition.$$html = renderComparison(condition.lo, condition.co, condition.ro, condition.ro2))"></span>
+			<handle dnd-handle class="fa fa-sort"></handle><span ng-bind-html="condition.$$html || (condition.$$html = renderComparison(condition.lo, condition.co, condition.ro, condition.ro2, condition.to))"></span>
 		</line>
 		<container ng-if="((mode=='edit') && view.whens) || (condition.ts && condition.ts.length) || (condition.fs && condition.fs.length)">
 			<line pun>{</line>
@@ -491,7 +542,7 @@
 		<restrictions ng-if="restriction.r" data-ng-repeat="collection in [restriction]" data-ng-include="'restrictions'" dnd-nodrag data-nag-model="restriction" dnd-draggable="restriction" dnd-type="'restriction'" dnd-moved="drag(collection.r, $index);" dnd-effect-allowed="copyMove" eval="{{collection && trace && trace.points && trace.points['c:' + collection.$] ? trace.points['c:' + collection.$].v : ''}}"></restrictions>
 		<line com ng-if="!restriction.r && !!restriction.z">/* {{restriction.z}} */</line>
 		<line cond ng-if="!restriction.r" ng-click="editRestriction(restriction, collection.r);">
-			<handle dnd-handle class="fa fa-sort"></handle><span ng-bind-html="restriction.$$html || (restriction.$$html = renderComparison(restriction.lo, restriction.co, restriction.ro, restriction.ro2))"></span>
+			<handle dnd-handle class="fa fa-sort"></handle><span ng-bind-html="restriction.$$html || (restriction.$$html = renderComparison(restriction.lo, restriction.co, restriction.ro, restriction.ro2, restriction.to))"></span>
 		</line>
 		</div>	
 	</dnd-nodrag>

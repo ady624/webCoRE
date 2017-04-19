@@ -805,6 +805,32 @@ span.notset {
 }
 
 
+badge {
+	display: inline;	
+	background: rgba(0, 0, 0, 0.1);
+	padding: 0px 4px;
+	border-radius: 8px;
+	font-size: 10px;
+	color: white;
+}
+
+badge[red] {
+	background: rgba(128, 0, 0, 0.5);
+}
+
+badge[green] {
+	background: rgba(0, 64, 0, 0.5);
+}
+
+badge[blue] {
+	background: rgba(0, 0, 128, 0.5);
+}
+
+badge::after {
+	content: attr(badge);
+}
+
+
 @media only screen 
   and (min-device-width: 320px) 
   and (max-device-width: 568px)
