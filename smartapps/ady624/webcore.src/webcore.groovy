@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.0.07a.20170419" }
+public static String version() { return "v0.0.07b.20170419" }
 /*
+ *	04/19/2017 >>> v0.0.07b.20170419 - ALPHA - First attempt to get 'was' conditions up and running
  *	04/19/2017 >>> v0.0.07a.20170419 - ALPHA - Minor bug fixes, triggers inside timers no longer subscribe to events (the timer is a trigger itself) - triggers should not normally be used inside timers
  *	04/19/2017 >>> v0.0.079.20170419 - ALPHA - Time condition restrictions are now working, added date and date&time conditions, offsets still missing
  *	04/18/2017 >>> v0.0.078.20170418 - ALPHA - Time conditions now subscribe for time events - added restrictions to UI dialog, but not yet implemented
@@ -1637,8 +1638,8 @@ private static Map comparisons() {
     		is_not	 						: [ d: "is not",							dd: "are not",							g:"bs",		p: 1						],
     		is_any_of 						: [ d: "is any of",							dd: "are any of",						g:"s",		p: 1,	m: true,			],
     		is_not_any_of 					: [ d: "is not any of",						dd: "are not any of",					g:"s",		p: 1,	m: true,			],
-    		is_equal_to						: [ d: "is equal to",						dd: "are equal to",						g:"bdi",	p: 1						],
-    		is_different_than				: [ d: "is different than",					dd: "are different than",				g:"bdi",	p: 1						],
+    		is_equal_to						: [ d: "is equal to",						dd: "are equal to",						g:"di",		p: 1						],
+    		is_different_than				: [ d: "is different than",					dd: "are different than",				g:"di",		p: 1						],
     		is_less_than					: [ d: "is less than",						dd: "are less than",					g:"di",		p: 1						],
     		is_less_than_or_equal_to		: [ d: "is less than or equal to",			dd: "are less than or equal to",		g:"di",		p: 1						],
     		is_greater_than					: [ d: "is greater than",					dd: "are greater than",					g:"di",		p: 1						],
@@ -1649,8 +1650,8 @@ private static Map comparisons() {
 			is_odd							: [ d: "is odd",							dd: "are odd",							g:"di",									],
     		was 							: [ d: "was",								dd: "were",								g:"bs",		p: 1,				t: 2,	],
     		was_not 						: [ d: "was not",							dd: "were not",							g:"bs",		p: 1,				t: 2,	],
-    		was_any_of 						: [ d: "was any of",						dd: "were any of",						g:"bs",		p: 1,	m: true,	t: 2,	],
-    		was_not_any_of 					: [ d: "was not any of",					dd: "were not any of",					g:"bs",		p: 1,	m: true,	t: 2,	],
+    		was_any_of 						: [ d: "was any of",						dd: "were any of",						g:"s",		p: 1,	m: true,	t: 2,	],
+    		was_not_any_of 					: [ d: "was not any of",					dd: "were not any of",					g:"s",		p: 1,	m: true,	t: 2,	],
 			was_equal_to 					: [ d: "was equal to",						dd: "were equal to",					g:"di",		p: 1,				t: 2,	],
 			was_different_than 				: [ d: "was different than",				dd: "were different than",				g:"di",		p: 1,				t: 2,	],
 			was_less_than 					: [ d: "was less than",						dd: "were less than",					g:"di",		p: 1,				t: 2,	],

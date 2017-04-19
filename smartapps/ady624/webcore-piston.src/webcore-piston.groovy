@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.0.07a.20170419" }
+public static String version() { return "v0.0.07b.20170419" }
 /*
+ *	04/19/2017 >>> v0.0.07b.20170419 - ALPHA - First attempt to get 'was' conditions up and running
  *	04/19/2017 >>> v0.0.07a.20170419 - ALPHA - Minor bug fixes, triggers inside timers no longer subscribe to events (the timer is a trigger itself) - triggers should not normally be used inside timers
  *	04/19/2017 >>> v0.0.079.20170419 - ALPHA - Time condition restrictions are now working, added date and date&time conditions, offsets still missing
  *	04/18/2017 >>> v0.0.078.20170418 - ALPHA - Time conditions now subscribe for time events - added restrictions to UI dialog, but not yet implemented
@@ -1373,6 +1374,7 @@ private scheduleTimeCondition(rtData, condition) {
    	n = v1 < v2 ? v1 : v2
     cancelStatementSchedules(rtData, condition.$)
     if (n > now()) {
+    	debug "Requesting time schedule wake up at ${formatLocalTime(n)}", rtData
 	    requestWakeUp(rtData, condition, [$:0], n)
     }
 }
@@ -1936,8 +1938,10 @@ private Boolean evaluateConditions(rtData, conditions, collection, async) {
     }
     //restore condition id
     rtData.stack.c = c
-    msg.m = "Condition group #${conditions.$} evaluated $result"
-    debug msg, rtData
+    if (!rtData.fastForwardTo) {
+    	msg.m = "Condition group #${conditions.$} evaluated $result"
+    	debug msg, rtData
+    }
 	return result
 }
 
@@ -1948,7 +1952,7 @@ private evaluateOperand(rtData, node, operand, index = null, trigger = false, ne
         	def j = 0;
         	for(deviceId in operand.d) {
             	def value = [i: "${deviceId}:${operand.a}", v:getDeviceAttribute(rtData, deviceId, operand.a, operand.i, trigger) + (operand.vt ? [vt: operand.vt] : [:])]
-            	rtData.newCache[value.i] = value.v + [s: since]
+                updateCache(rtData, value)
 	            values.push(value)
 	            j++
 			}
@@ -2082,13 +2086,12 @@ private Boolean evaluateCondition(rtData, condition, collection, async) {
 
                 //we now have all the operands, their values, and the comparison, let's get to work
                 def options = [smatches: true]
-                result = evaluateComparison(rtData, condition.co, lo, ro, ro2, options)
+                result = evaluateComparison(rtData, condition.co, lo, ro, ro2, [operand: condition.to, values: evaluateOperand(rtData, null, condition.to)], options)
                 result = not ? !result : !!result
                 //save new values to cache
-                def since = now()
-                if (lo) for (value in lo.values) rtData.newCache[value.i] = value.v + [s: since]
-                if (ro) for (value in ro.values) rtData.newCache[value.i] = value.v + [s: since]
-                if (ro2) for (value in ro2.values) rtData.newCache[value.i] = value.v + [s: since]
+                if (lo) for (value in lo.values) updateCache(rtData, value)
+                if (ro) for (value in ro.values) updateCache(rtData, value)
+                if (ro2) for (value in ro2.values) updateCache(rtData, value)
 
 				if (!rtData.fastForwardTo) tracePoint(rtData, "c:${condition.$}", now() - t, result)
             } else {
@@ -2107,9 +2110,11 @@ private Boolean evaluateCondition(rtData, condition, collection, async) {
     if ((!result || rtData.fastForwardTo) && condition.fs && condition.fs.length) executeStatements(rtData, condition.fs, async)
     //restore condition id
     rtData.stack.c = c
-    msg.m = "Condition #${condition.$} evaluated $result"
-    debug msg, rtData
-    if (condition.s && (condition.t == 'condition') && condition.lo && condition.lo.t == 'v') {
+    if (!rtData.fastForwardTo) {
+	    msg.m = "Condition #${condition.$} evaluated $result"
+	    debug msg, rtData
+    }
+    if ((rtData.fastForwardTo <= 0) && condition.s && (condition.t == 'condition') && condition.lo && condition.lo.t == 'v') {
     	switch (condition.lo.v) {
         	case 'time':
             case 'date':
@@ -2121,7 +2126,19 @@ private Boolean evaluateCondition(rtData, condition, collection, async) {
     return result
 }
 
-private Boolean evaluateComparison(rtData, comparison, lo, ro = null, ro2 = null, options = null) {
+private updateCache(rtData, value) {
+    def oldValue = rtData.cache[value.i]
+    if (!oldValue || (oldValue.t != value.v.t) || (oldValue.v != value.v.v)) {
+        //debug "Updating value", rtData
+        rtData.newCache[value.i] = value.v + [s: now()]
+    } else {
+        //debug "Not updating value", rtData
+    }
+}
+
+private Boolean evaluateComparison(rtData, comparison, lo, ro = null, ro2 = null, to = null, options = null) {
+		boolean timed = comparison.startsWith('was')
+        if (timed) comparison = comparison.replace('was', 'is')
 		def fn = "comp_${comparison}"
         def result = (lo.operand.g == 'any' ? false : true)
         if (options?.matches) {
@@ -2129,8 +2146,29 @@ private Boolean evaluateComparison(rtData, comparison, lo, ro = null, ro2 = null
         }
         //if multiple left values, go through each
         for(value in lo.values) {
+        	//was conditions look at the current value and see how long it's been there
+        	if (timed) {
+            	boolean passed = false
+            	value = [i: value.i, v:rtData.cache[value.i]]
+                if (value.v && value.v.s && to && to.values) {
+                	//check timing
+                    long duration = now() - value.v.s
+                    long threshold = evaluateExpression(rtData, [t: 'duration', v: to.values.v, vt: to.values.vt], 'long').v
+                    switch (to.operand?.f) {
+                    	case 'l':
+                        	passed = duration < threshold
+                            break
+                    	case 'g':
+                        	passed = duration >= threshold
+                            break
+                    }
+                }
+                if (!passed) {
+                	value.v = null
+                }
+        	}
         	def res = false
-            if (!value.v.x) {
+            if (value && value.v && !value.v.x) {
                 try {
                     if (!ro) {
                         res = "$fn"(rtData, value)
