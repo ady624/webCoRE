@@ -845,6 +845,14 @@ function utcToString(timestamp) {
 	return (new Date(timestamp)).toLocaleString();
 }
 
+function utcToTimeString(timestamp) {
+	return (new Date(timestamp)).toLocaleTimeString();
+}
+
+function utcToDateString(timestamp) {
+	return (new Date(timestamp)).toLocaleDateString();
+}
+
 function timeSince(time){
 	if (!time) return "never";
 	switch (typeof time) {
@@ -1061,4 +1069,4 @@ if (document.selection) {
 }}
 
 //navigator.registerProtocolHandler('web+core','https://' + window.location.hostname + '/handler/%s', 'webCoRE');
-version = function() { return 'v0.0.077.20170418'; };
+version = function() { return 'v0.0.078.20170418'; };

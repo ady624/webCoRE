@@ -470,9 +470,11 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		if (variable.v == null) return '(not set)';
 		switch (variable.t) {
 			case 'time':
-			case 'date':
+				return utcToTimeString(variable.v);
 			case 'datetime':
 				return utcToString(variable.v);
+			case 'date':
+				return utcToDateString(variable.v);
 			default:
 				return variable.v;
 		}
@@ -1012,13 +1014,11 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 	$scope.fixOperand = function(data) {
 		switch (data.vt) {
 			case 'time':
-				data.c = data.c.getHours() * 60 + data.c.getMinutes();
+				data.c = data.c instanceof Date ? data.c.getHours() * 60 + data.c.getMinutes() : data.c;
 				break;
 			case 'date':
-				data.c = data.c.getTime() - data.c.getTime().mod(86400000);
-				break;
 			case 'datetime':
-				data.c =data.c.getTime();
+				data.c = data.c instanceof Date ? data.c.getTime() : (new Date(data.c)).getTime();
 				break;
 		}
 		return data;
@@ -1208,10 +1208,10 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
         var restriction = $scope.designer.$new ? {t: $scope.designer.type} : $scope.designer.$restriction;
         switch (restriction.t) {
             case 'restriction':
-                restriction.lo = $scope.fixOperand($$scope.designer.comparison.left.data);
+                restriction.lo = $scope.fixOperand($scope.designer.comparison.left.data);
                 restriction.co = $scope.designer.comparison.operator;
-                restriction.ro = $scope.fixOperand($$scope.designer.comparison.right.data);
-                restriction.ro2 = $scope.fixOperand($$scope.designer.comparison.right2.data);
+                restriction.ro = $scope.fixOperand($scope.designer.comparison.right.data);
+                restriction.ro2 = $scope.fixOperand($scope.designer.comparison.right2.data);
                 restriction.to = $scope.designer.comparison.time.data;
                 break;
             case 'group':
@@ -1361,13 +1361,11 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 				if (param.t == 'c') {
 					switch (param.vt) {
 						case 'time':
-							param.c = param.c.getHours() * 60 + param.c.getMinutes();
+							param.c = param.c instanceof Date ? param.c.getHours() * 60 + param.c.getMinutes() : param.c;
 							break;
 						case 'date':
-							param.c = param.c.getTime() - param.c.getTime().mod(86400000);
-							break;
 						case 'datetime':
-							param.c = param.c.getTime();
+							param.c = param.c instanceof Date ? param.c.getTime() : (new Date(param.c)).getTime();
 							break;
 					}
 				}
@@ -2229,14 +2227,19 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 				operand.data.t = t;
 			}
 
-			if ((operand.data.vt == 'time') && !(operand.data.c instanceof Date)) {
-				operand.data.c = $scope.localTimeToDate(operand.data.c);
-			}
-			if ((operand.data.vt == 'date') && !(operand.data.c instanceof Date)) {
-				operand.data.c = new Date(operand.data.c);
-			}
-			if ((operand.data.vt == 'datetime') && !(operand.data.c instanceof Date)) {
-				operand.data.c = new Date(operand.data.c);
+			switch (operand.data.vt) {
+				case 'time':
+					if (!(operand.data.c instanceof Date)) {
+						operand.data.c = $scope.localTimeToDate(operand.data.c);
+					}
+					break;
+				case 'date':
+				case 'datetime':
+					if (!(operand.data.c instanceof Date)) {
+						operand.data.c = new Date(operand.data.c);
+						if (operand.data.c == 'Invalid Date') operand.data.c = new Date();
+					}
+					break;
 			}
 
 			operand.onlyAllowConstants = operand.onlyAllowConstants || (dataType == 'piston') || (dataType == 'routine') || (dataType == 'askAlexaMacro')
@@ -2590,7 +2593,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 			var options = [];
 			switch (comparison.dataType) {
 				case 'enum':
-					dt = '';
+					dt = 's';
 					break;
 				case 'dynamic':
 					dt = '';
@@ -2712,7 +2715,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 								result = '<span num>' + date.toLocaleTimeString({hour: '2-digit', minute:'2-digit'}) + '</span>';
 								break;
 							case 'date':
-								result = '<span num>' + utcToString(operand.c) + '</span>';
+								result = '<span num>' + utcToDateString(operand.c) + '</span>';
 								break;
 							case 'datetime':
 								result = '<span num>' + utcToString(operand.c) + '</span>';
@@ -2772,6 +2775,65 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 			indexes = ' <span num>' + $scope.buildNameList(l.i, 'or', null, null, false, true, false, '#') + '</span>';
 		}
 		var result = $scope.renderOperand(l) + indexes + ' <span pun>' + (plural ? (comparison.dd ? comparison.dd : comparison.d) : comparison.d) + '</span>' + (comparison.p > 0 ? ' ' + $scope.renderOperand(r, noQuotes, pedantic) : '') + (comparison.p > 1 ? ' <span pun>' + (comparison.d.indexOf('between') ? 'and' : 'through') + '</span> ' + $scope.renderOperand(r2, noQuotes, pedantic) : '')
+
+
+
+
+		if ((l.t == 'v') && (['time', 'date', 'datetime'].indexOf(l.v) >= 0)) {
+			var odw = (l.odw instanceof Array) && l.odw.length ? l.odw : null;
+			var odm = (l.odm instanceof Array) && l.odm.length ? l.odm : null;
+			var owm = !odm && (l.owm instanceof Array) && l.owm.length ? l.owm : null;
+			var omy = (l.omy instanceof Array) && l.omy.length ? l.omy : null;
+		
+			if (!!odw || !!odm || !!owm || !!omy) {
+				//we have restrictions
+				var rCount = 0;
+				result += '<span pun>,</span> <span pun>but only</span>';
+				var odwString = '';
+				if (odw) {
+					for(i in odw) {
+						if ((i > 0) && (odw.length > 2)) odwString += '<span pun>,</span> ';
+						if ((i > 0) && (i == odw.length - 1)) odwString += ' <span pun>or</span> ';
+						odwString += '<span lit>' + $scope.weekDays[odw[i]] + 's</span>';
+					}
+					rCount++;
+				}
+				if (owm) {
+					result += (rCount ? '<span pun>,</span>' : '') + ' <span pun>on the</span> ';
+					for(i in owm) {
+						if ((i > 0) && (owm.length > 2)) result += '<span pun>,</span> ';
+						if ((i > 0) && (i == owm.length - 1)) result += ' <span pun>or</span> ';
+						result += '<span num>' + $scope.getOrdinal(owm[i]) + '</span>';
+					}
+					result += ' ' + (odwString ? odwString : '<span pun>week' + (owm.length > 1 ? 's' : '') + '</span>') + (omy ? '' : ' <span pun>of the month</span>');
+					rCount++;
+				} else {
+					if (odwString) {
+						result += (rCount > 1 ? '<span pun>,</span>' : '') + ' <span pun>on</span> ' + odwString;
+					}
+				}
+				if (odm) {
+					result += (rCount ? '<span pun>,</span>' : '') + ' <span pun>on the</span> ';
+					for(i in odm) {
+						if ((i > 0) && (odm.length > 2)) result += '<span pun>,</span> ';
+						if ((i > 0) && (i == odm.length - 1)) result += ' <span pun>or</span> ';
+						result += '<span num>' + $scope.getOrdinal(odm[i]) + '</span>';
+					}
+					result += ' day' + (odm.length > 1 ? 's' : '') + (omy ? '' : ' <span pun>of the month</span>');
+					rCount++;
+				}
+				if (omy) {
+					result += ' <span pun>' + (owm || odm ? 'of' : 'in') + '</span> ';
+					for(i in omy) {
+						if ((i > 0) && (omy.length > 2)) result += '<span pun>,</span> ';
+						if ((i > 0) && (i == omy.length - 1)) result += ' <span pun>or</span> ';
+						result += '<span lit>' + $scope.yearMonths[omy[i] - 1] + '</span>';
+					}
+					rCount++;
+				}
+			}
+		}
+
 		return $sce.trustAsHtml(result);
 	}
 
@@ -2850,11 +2912,11 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		}
 		if (level == 4) {
 			var m = ('00' + timer.lo.om).substr(-2);
-			result += ', <span lit>at <span num>:' + m + '</span> <span lit>past the hour</span>';
+			result += ', <span pun>at <span num>:' + m + '</span> <span pun>past the hour</span>';
 		}
 		if (level >= 5) {
 			//higher levels require a time of day
-			result += ', <span lit>at</span> ';
+			result += ', <span pun>at</span> ';
 			if (timer.lo2.t != 'c') {
 				//anything other than constants may have an offset
 				switch (timer.lo3.t) {
@@ -2863,9 +2925,9 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 						if (offset == 0) {
 							result += $scope.renderOperand(timer.lo2);
 						} else if (offset < 0) {
-							result += '<span num>' + (-offset).toString() + '</span> <span lit>' + $scope.getDurationUnitName(timer.lo3.vt, (offset < -1)) + ' before</span> ' + $scope.renderOperand(timer.lo2);
+							result += '<span num>' + (-offset).toString() + '</span> <span lit>' + $scope.getDurationUnitName(timer.lo3.vt, (offset < -1)) + '</span> <span pun>before</span> ' + $scope.renderOperand(timer.lo2);
 						} else {
-							result += '<span num>' + offset.toString() + '</span> <span lit>' + $scope.getDurationUnitName(timer.lo3.vt, (offset > 1)) + ' after</span> ' + $scope.renderOperand(timer.lo2);
+							result += '<span num>' + offset.toString() + '</span> <span lit>' + $scope.getDurationUnitName(timer.lo3.vt, (offset > 1)) + '</span> <span pun>after</span> ' + $scope.renderOperand(timer.lo2);
 						}
 						break;
 					default:
@@ -2888,65 +2950,65 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		if (!!om || !!oh || !!odw || !!odm || !!owm || !!omy) {
 			//we have restrictions
 			var rCount = 0;
-			result += '<span lit>,</span> <span lit>but only</span>';
+			result += '<span pun>,</span> <span pun>but only</span>';
 			if (om) {
-				result += ' <span lit>at</span> ';
+				result += ' <span pun>at</span> ';
 				for(i in om) {
-					if ((i > 0) && (om.length > 2)) result += '<span lit>,</span> ';
-					if ((i > 0) && (i == om.length - 1)) result += ' <span lit>or</span> ';
+					if ((i > 0) && (om.length > 2)) result += '<span pun>,</span> ';
+					if ((i > 0) && (i == om.length - 1)) result += ' <span pun>or</span> ';
 					result += '<span num>:' + ('00' + om[i]).substr(-2) + '</span>';
 				}
-				result += ' <span lit>minutes past the hour</span>';
+				result += ' <span pun>minutes past the hour</span>';
 				rCount++;
 			}
 			if (oh) {
-				result += (rCount ? '<span lit>,</span>' : '') + ' <span lit>during the</span> ';
+				result += (rCount ? '<span pun>,</span>' : '') + ' <span pun>during the</span> ';
 				for(i in oh) {
-					if ((i > 0) && (oh.length > 2)) result += '<span lit>,</span> ';
-					if ((i > 0) && (i == oh.length - 1)) result += ' <span lit>or</span> ';
+					if ((i > 0) && (oh.length > 2)) result += '<span pun>,</span> ';
+					if ((i > 0) && (i == oh.length - 1)) result += ' <span pun>or</span> ';
 					result += '<span num>' + $scope.formatHour(oh[i]) + '</span>';
 				}
-				result += ' <span lit>hour' + (oh.length > 1 ? 's' : '') + '</span>';
+				result += ' <span pun>hour' + (oh.length > 1 ? 's' : '') + '</span>';
 				rCount++;
 			}
 			var odwString = '';
 			if (odw) {
 				for(i in odw) {
-					if ((i > 0) && (odw.length > 2)) odwString += '<span lit>,</span> ';
-					if ((i > 0) && (i == odw.length - 1)) odwString += ' <span lit>or</span> ';
+					if ((i > 0) && (odw.length > 2)) odwString += '<span pun>,</span> ';
+					if ((i > 0) && (i == odw.length - 1)) odwString += ' <span pun>or</span> ';
 					odwString += '<span lit>' + $scope.weekDays[odw[i]] + 's</span>';
 				}
 				rCount++;
 			}
 			if (owm) {
-				result += (rCount ? '<span lit>,</span>' : '') + ' <span lit>on the</span> ';
+				result += (rCount ? '<span pun>,</span>' : '') + ' <span pun>on the</span> ';
 				for(i in owm) {
-					if ((i > 0) && (owm.length > 2)) result += '<span lit>,</span> ';
-					if ((i > 0) && (i == owm.length - 1)) result += '<span lit>or</span> ';
+					if ((i > 0) && (owm.length > 2)) result += '<span pun>,</span> ';
+					if ((i > 0) && (i == owm.length - 1)) result += ' <span pun>or</span> ';
 					result += '<span num>' + $scope.getOrdinal(owm[i]) + '</span>';
 				}
-				result += ' ' + (odwString ? odwString : '<span lit>week' + (owm.length > 1 ? 's' : '') + '</span>') + (omy ? '' : ' <span lit>of the month</span>');
+				result += ' ' + (odwString ? odwString : '<span pun>week' + (owm.length > 1 ? 's' : '') + '</span>') + (omy ? '' : ' <span pun>of the month</span>');
 				rCount++;
 			} else {
 				if (odwString) {
-					result += (rCount > 1 ? '<span lit>,</span>' : '') + ' <span lit>on</span> ' + odwString;
+					result += (rCount > 1 ? '<span pun>,</span>' : '') + ' <span pun>on</span> ' + odwString;
 				}
 			}
 			if (odm) {
-				result += (rCount ? '<span lit>,</span>' : '') + ' <span lit>on the</span> ';
+				result += (rCount ? '<span pun>,</span>' : '') + ' <span pun>on the</span> ';
 				for(i in odm) {
-					if ((i > 0) && (odm.length > 2)) result += '<span lit>,</span> ';
-					if ((i > 0) && (i == odm.length - 1)) result += '<span lit>or</span> ';
+					if ((i > 0) && (odm.length > 2)) result += '<span pun>,</span> ';
+					if ((i > 0) && (i == odm.length - 1)) result += ' <span pun>or</span> ';
 					result += '<span num>' + $scope.getOrdinal(odm[i]) + '</span>';
 				}
-				result += ' day' + (odm.length > 1 ? 's' : '') + (omy ? '' : ' <span lit>of the month</span>');
+				result += ' day' + (odm.length > 1 ? 's' : '') + (omy ? '' : ' <span pun>of the month</span>');
 				rCount++;
 			}
 			if (omy) {
-				result += ' <span lit>' + (owm || odm ? 'of' : 'in') + '</span> ';
+				result += ' <span pun>' + (owm || odm ? 'of' : 'in') + '</span> ';
 				for(i in omy) {
-					if ((i > 0) && (omy.length > 2)) result += '<span lit>,</span> ';
-					if ((i > 0) && (i == omy.length - 1)) result += ' <span lit>or</span> ';
+					if ((i > 0) && (omy.length > 2)) result += '<span pun>,</span> ';
+					if ((i > 0) && (i == omy.length - 1)) result += ' <span pun>or</span> ';
 					result += '<span lit>' + $scope.yearMonths[omy[i] - 1] + '</span>';
 				}
 				rCount++;
@@ -3703,6 +3765,8 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 	$scope.tablet = (!$scope.mobile) && (window.mobileOrTabletCheck());
 	$scope.formatTime = window.formatTime
 	$scope.utcToString = utcToString;
+	$scope.utcToTimeString = utcToTimeString;
+	$scope.utcToDateString = utcToDateString;
 	$scope.formatLogTime = function(timestamp, offset) { return utcToString(timestamp) + '+' + offset; };
 	$scope.md5 = window.md5;
 }]);

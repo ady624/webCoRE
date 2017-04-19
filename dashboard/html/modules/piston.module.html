@@ -1188,14 +1188,14 @@
 		</div>
 		<operand ng-repeat="operand in [designer.comparison.time]" ng-model="designer.comparison.time" ng-include="'operand'"></operand>
 	</div>
-	<div class="form-group" ng-if="(['time', 'date', 'datetime'].indexOf(designer.comparison.left.selectedDataType) >= 0)">
+	<div class="form-group" ng-if="designer.comparison.left.selectedDataType == 'time'">
 		<label for="devicesInput">Only on these days of the week...</label>
 		<select name="dow" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-warning" ng-model="designer.comparison.left.data.odw" data-mobile="{{mobile}}" multiple>
 			<option value="" style="display:none">Any</option>
 			<option ng-repeat="day in weekDays track by $index" ng-value="$index">{{day}}</option>
 		</select>
 	</div>
-	<div class="form-group" ng-if="(['time', 'date', 'datetime'].indexOf(designer.comparison.left.selectedDataType) >= 0) && (!designer.comparison.left.data.owm || !designer.comparison.left.data.owm.length)">
+	<div class="form-group" ng-if="(designer.comparison.left.selectedDataType == 'time') && (!designer.comparison.left.data.owm || !designer.comparison.left.data.owm.length)">
 		<label for="devicesInput">Only on these days of the month...</label>
 		<select name="dom" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-warning" ng-model="designer.comparison.left.data.odm" data-mobile="{{mobile}}" multiple>
 			<option value="" style="display:none">Any</option>
@@ -1205,7 +1205,7 @@
 			<option ng-value="-3">third-last</option>
 		</select>
 	</div>
-	<div class="form-group" ng-if="(['time', 'date', 'datetime'].indexOf(designer.comparison.left.selectedDataType) >= 0) && (!designer.comparison.left.data.odm || !designer.comparison.left.data.odm.length)">
+	<div class="form-group" ng-if="(designer.comparison.left.selectedDataType == 'time') && (!designer.comparison.left.data.odm || !designer.comparison.left.data.odm.length)">
 		<label for="devicesInput">Only on these weeks of the month...</label>
 		<select name="wom" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-warning" ng-model="designer.comparison.left.data.owm" data-mobile="{{mobile}}" multiple>
 			<option value="" style="display:none">Any</option>
@@ -1215,7 +1215,7 @@
 			<option ng-value="-3">third-last</option>
 		</select>
 	</div>
-	<div class="form-group" ng-if="(['time', 'date', 'datetime'].indexOf(designer.comparison.left.selectedDataType) >= 0)">
+	<div class="form-group" ng-if="designer.comparison.left.selectedDataType == 'time'">
 		<label for="devicesInput">Only on these months of the year...</label>
 		<select name="moy" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-warning" ng-model="designer.comparison.left.data.omy" data-mobile="{{mobile}}" multiple>
 			<option value="" style="display:none">Any</option>
@@ -1361,7 +1361,10 @@
 				</div>
 				<!-- constant -->
 				<div class="form-table input-group pull-left" ng-if="(operand.data.t=='c') && (!operand.options.length)" style="width:{{operand.dataType == 'duration' ? '75' : '100'}}%">
-					<input class="form-control" ng-model="operand.data.c" type="{{operand.inputType}}{{operand.inputType=='datetime'?'-local':''}}" ng-change="validateOperand(operand)" ng-min="(operand.dataType == 'duration') && (!operand.allowAnyInterval) ? 1 : null" required/>
+					<input ng-if="['time', 'date', 'datetime'].indexOf(operand.inputType) < 0" class="form-control" ng-model="operand.data.c" type="{{operand.inputType}}" ng-change="validateOperand(operand)" ng-min="(operand.dataType == 'duration') && (!operand.allowAnyInterval) ? 1 : null" required/>
+					<input ng-if="operand.inputType == 'time'" class="form-control" ng-model="operand.data.c" type="time" ng-change="validateOperand(operand)" ng-min="(operand.dataType == 'duration') && (!operand.allowAnyInterval) ? 1 : null" required/>
+					<input ng-if="operand.inputType == 'date'" class="form-control" ng-model="operand.data.c" type="date" ng-change="validateOperand(operand)" ng-min="(operand.dataType == 'duration') && (!operand.allowAnyInterval) ? 1 : null" required/>
+					<input ng-if="operand.inputType == 'datetime'" class="form-control" ng-model="operand.data.c" type="datetime-local" ng-change="validateOperand(operand)" ng-min="(operand.dataType == 'duration') && (!operand.allowAnyInterval) ? 1 : null" required/>
 				</div>
 				<div class="form-table input-group pull-left" ng-if="(operand.data.t=='c') && (operand.options.length) && (!operand.multiple)" style="width:{{operand.dataType == 'duration' ? '75' : '100'}}%">
 					<select selectpicker class="selectpicker show-tick no-border-radius" data-width="75%" data-style="btn-default" ng-model="operand.data.c" data-mobile="{{mobile}}" ng-change="validateOperand(operand)">
