@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.0.078.20170418" }
+public static String version() { return "v0.0.079.20170419" }
 /*
+ *	04/19/2017 >>> v0.0.079.20170419 - ALPHA - Time condition restrictions are now working, added date and date&time conditions, offsets still missing
  *	04/18/2017 >>> v0.0.078.20170418 - ALPHA - Time conditions now subscribe for time events - added restrictions to UI dialog, but not yet implemented
  *	04/18/2017 >>> v0.0.077.20170418 - ALPHA - Implemented time conditions - no date or datetime yet, also, no subscriptions for time events yet
  *	04/18/2017 >>> v0.0.076.20170418 - ALPHA - Implemented task mode restrictions and added setColor using HSL
@@ -1659,6 +1660,7 @@ private static Map comparisons() {
 			was_outside_of_range 			: [ d: "was outside of range",				dd: "were outside of range",			g:"di",		p: 2,				t: 2,	],
     		was_even						: [ d: "was even",							dd: "were even",						g:"di",							t: 2,	],
     		was_odd							: [ d: "was odd",							dd: "were odd",							g:"di",							t: 2,	],
+			is_any							: [ d: "is any",																	g:"t",		p: 0						],
 			is_before						: [ d: "is before",																	g:"t",		p: 1						],
 			is_after						: [ d: "is after",																	g:"t",		p: 1						],
 			is_between						: [ d: "is between",																g:"t",		p: 2						],
@@ -1824,7 +1826,7 @@ private Map virtualDevices() {
 	return [
     	date:				[ n: 'Date',						t: 'date',		],
     	time:				[ n: 'Time',						t: 'time',		],
-    	dateTime:			[ n: 'Date & Time',					t: 'datetime',	],        
+    	datetime:			[ n: 'Date & Time',					t: 'datetime',	],        
     	mode:				[ n: 'Location mode',				t: 'string', 	o: getLocationModeOptions(),				x: true],
     	alarmSystemStatus:	[ n: 'Smart Home Monitor status',	t: 'string',	o: getAlarmSystemStatusOptions(),			x: true],
         routine:			[ n: 'Routine',						t: 'string',	o: getRoutineOptions(),						m: true],

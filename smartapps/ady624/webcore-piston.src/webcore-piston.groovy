@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.0.078.20170418" }
+public static String version() { return "v0.0.079.20170419" }
 /*
+ *	04/19/2017 >>> v0.0.079.20170419 - ALPHA - Time condition restrictions are now working, added date and date&time conditions, offsets still missing
  *	04/18/2017 >>> v0.0.078.20170418 - ALPHA - Time conditions now subscribe for time events - added restrictions to UI dialog, but not yet implemented
  *	04/18/2017 >>> v0.0.077.20170418 - ALPHA - Implemented time conditions - no date or datetime yet, also, no subscriptions for time events yet
  *	04/18/2017 >>> v0.0.076.20170418 - ALPHA - Implemented task mode restrictions and added setColor using HSL
@@ -1324,7 +1325,7 @@ private scheduleTimer(rtData, timer, long lastRun = 0) {
     	}
         //check to see if it fits the restrictions
         if (nextSchedule >= rightNow) {
-        	long offset = checkTimerRestrictions(rtData, timer, nextSchedule, level, interval)
+        	long offset = checkTimeRestrictions(rtData, timer.lo, nextSchedule, level, interval)
             if (!offset) break
             if (offset > 0) nextSchedule += offset
         }
@@ -1347,36 +1348,49 @@ private scheduleTimeCondition(rtData, condition) {
 	def comparison = rtData.comparisons.conditions[condition.co]
     if (!comparison) return
     def v1 = evaluateExpression(rtData, evaluateOperand(rtData, null, condition.ro), 'datetime').v
-    def v2 = comparison.p > 1 ? evaluateExpression(rtData, evaluateOperand(rtData, null, condition.ro2, null, false, true), 'datetime').v : getMidnightTime(rtData)
+    def v2 = comparison.p > 1 ? evaluateExpression(rtData, evaluateOperand(rtData, null, condition.ro2, null, false, true), 'datetime').v : (condition.lo.v == 'time' ? getMidnightTime(rtData) : v1)
     def n = now() + 2000
     if (condition.lo.v == 'time') {
 	    while (v1 < n) v1 += 86400000
     	while (v2 < n) v2 += 86400000
+/*        int cnt = 100
+        error "checking restrictions for $condition.lo", rtData
+        while (cnt) {
+        	//repeat until we find a day that's matching the restrictions
+	    	n = v1 < v2 ? v1 : v2
+			if (checkTimeRestrictions(rtData, condition.lo, n, 5, 1) == 0) break
+            long n2 = localToUtcTime(utcToLocalTime(n) + 86400000)
+            error "adding a day, $n >>> $n2", rtData
+            v1 = (v1 == n) ? n2 : v1
+            v2 = (v2 == n) ? n2 : v2
+            cnt = cnt - 1
+        }*/
     }
+    //figure out the next time
+    v1 = (v1 < n) ? v2 : v1
+    v2 = (v2 < n) ? v1 : v2
+   	n = v1 < v2 ? v1 : v2
     cancelStatementSchedules(rtData, condition.$)
-    n = v1 < v2 ? v1 : v2
     if (n > now()) {
 	    requestWakeUp(rtData, condition, [$:0], n)
     }
 }
 
-private Long checkTimerRestrictions(rtData, timer, long time, int level, int interval) {
+private Long checkTimeRestrictions(Map rtData, Map operand, long time, int level, int interval) {
 	//returns 0 if restrictions are passed
     //returns a positive number as millisecond offset to apply to nextSchedule for fast forwarding
     //returns a negative number as a failed restriction with no fast forwarding offset suggestion
     
-    Map data = timer.lo
-	List om = (level <= 2) && (data.om instanceof List) && data.om.size() ? data.om : null;
-    List oh = (level <= 3) && (data.oh instanceof List) && data.oh.size() ? data.oh : null;
-    List odw = (level <= 5) && (data.odw instanceof List) && data.odw.size() ? data.odw : null;
-    List odm = (level <= 6) && (data.odm instanceof List) && data.odm.size() ? data.odm : null;
-    List owm = (level <= 6) && !odm && (data.owm instanceof List) && data.owm.size() ? data.owm : null;
-    List omy = (level <= 7) && (data.omy instanceof List) && data.omy.size() ? data.omy : null;
+	List om = (level <= 2) && (operand.om instanceof List) && operand.om.size() ? operand.om : null;
+    List oh = (level <= 3) && (operand.oh instanceof List) && operand.oh.size() ? operand.oh : null;
+    List odw = (level <= 5) && (operand.odw instanceof List) && operand.odw.size() ? operand.odw : null;
+    List odm = (level <= 6) && (operand.odm instanceof List) && operand.odm.size() ? operand.odm : null;
+    List owm = (level <= 6) && !odm && (operand.owm instanceof List) && operand.owm.size() ? operand.owm : null;
+    List omy = (level <= 7) && (operand.omy instanceof List) && operand.omy.size() ? operand.omy : null;
 
 	if (!om && !oh && !odw && !odm && !owm && !omy) return 0
 	def date = new Date(time)   
     long result = -1
-    
     //month restrictions
     if (omy && (omy.indexOf(date.month + 1) < 0)) {
     	int month = (omy.sort{ it }.find{ it > date.month + 1 } ?: 12 + omy.sort{ it }[0]) - 1
@@ -2094,7 +2108,7 @@ private Boolean evaluateCondition(rtData, condition, collection, async) {
     rtData.stack.c = c
     msg.m = "Condition #${condition.$} evaluated $result"
     debug msg, rtData
-    if ((condition.t == 'condition') && condition.lo && condition.lo.t == 'v') {
+    if (condition.s && (condition.t == 'condition') && condition.lo && condition.lo.t == 'v') {
     	switch (condition.lo.v) {
         	case 'time':
             case 'date':
@@ -2143,7 +2157,15 @@ private Boolean evaluateComparison(rtData, comparison, lo, ro = null, ro2 = null
                 } catch(all) {
                     error "Error calling comparison $fn:", rtData, null, all
                     res = false
-                }            
+                }
+                if (lo.operand.t == 'v') {
+                	switch (lo.operand.v) {
+                    	case 'time':
+                        case 'date':
+                        case 'datetime':
+                        	if (checkTimeRestrictions(rtData, lo.operand, now(), 5, 1)) res = false;
+                    }
+                }
             }
             result = (lo.operand.g == 'any' ? result || res : result && res)
             if (options?.matches && value.v.d) {
@@ -2213,6 +2235,7 @@ private boolean comp_did_not_change					(rtData, lv, rv = null, rv2 = null) { re
 private boolean comp_is_any_of						(rtData, lv, rv = null, rv2 = null) { def v = evaluateExpression(rtData, lv.v, 'string').v; for (vi in rv.v.v.tokenize(',')) { if (v == evaluateExpression(rtData, [t: rv.v.t, v: "$vi".toString().trim(), i: rv.v.i, a: rv.v.a, vt: rv.v.vt], 'string').v) return true; }; return false;}
 private boolean comp_is_not_any_of					(rtData, lv, rv = null, rv2 = null) { return !comp_is_any_of(rtData, lv, rv, rv2); }
 
+private boolean comp_is_any							(rtData, lv, rv = null, rv2 = null) { return true; }
 private boolean comp_is_before						(rtData, lv, rv = null, rv2 = null) { return evaluateExpression(rtData, lv.v, 'datetime').v + 2000 < evaluateExpression(rtData, rv.v, 'datetime').v; }
 private boolean comp_is_after						(rtData, lv, rv = null, rv2 = null) { return evaluateExpression(rtData, lv.v, 'datetime').v + 2000 >= evaluateExpression(rtData, rv.v, 'datetime').v; }
 private boolean comp_is_between						(rtData, lv, rv = null, rv2 = null) { long v = evaluateExpression(rtData, lv.v, 'datetime').v + 2000; long v1 = evaluateExpression(rtData, rv.v, 'datetime').v; long v2 = evaluateExpression(rtData, rv2.v, 'datetime').v; return (v1 < v2) ? (v >= v1) && (v < v2) : (v < v2) || (v >= v1); }
@@ -2487,7 +2510,6 @@ private void subscribeAll(rtData) {
                     	case 'time':
                         case 'date':
                         case 'datetime':
-                        	for (condition in subscription.value.c) if (condition && condition.s) { scheduleTimeCondition(rtData, condition) }
                         	break;
 						default:
                             info "Subscribing to $device.${subscription.value.a}...", rtData
@@ -4014,7 +4036,7 @@ private cast(rtData, value, dataType, srcDataType = null) {
 			return localToUtcTime(n - (n % 86400000) + (utcToLocalTime((srcDataType == 'string') ? utcToLocalDate(value).time : cast(rtData, value, "long")) % 86400000))
 		case "date":
 			def d = utcToLocalTime((srcDataType == 'string') ? utcToLocalDate(value).time : cast(rtData, value, "long"))
-            return localToUtcTime(d - (d % 864000000))
+            return localToUtcTime(d - (d % 86400000))
 		case "datetime":
 			return ((srcDataType == 'string') ? utcToLocalDate(value).time : cast(rtData, value, "long"))
 		case "vector3":
