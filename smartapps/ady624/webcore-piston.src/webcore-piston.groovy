@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.0.079.20170419" }
+public static String version() { return "v0.0.07a.20170419" }
 /*
+ *	04/19/2017 >>> v0.0.07a.20170419 - ALPHA - Minor bug fixes, triggers inside timers no longer subscribe to events (the timer is a trigger itself) - triggers should not normally be used inside timers
  *	04/19/2017 >>> v0.0.079.20170419 - ALPHA - Time condition restrictions are now working, added date and date&time conditions, offsets still missing
  *	04/18/2017 >>> v0.0.078.20170418 - ALPHA - Time conditions now subscribe for time events - added restrictions to UI dialog, but not yet implemented
  *	04/18/2017 >>> v0.0.077.20170418 - ALPHA - Implemented time conditions - no date or datetime yet, also, no subscriptions for time events yet
@@ -2050,7 +2051,7 @@ private Boolean evaluateCondition(rtData, condition, collection, async) {
     def not = false
     def result = false
     if (condition.t == 'group') {
-    	result = evaluateConditions(rtData, condition, collection, async)
+    	return evaluateConditions(rtData, condition, collection, async)
     } else {
         not = !!condition.n
         def comparison = rtData.comparisons.triggers[condition.co]
@@ -2276,14 +2277,23 @@ private traverseStatements(node, closure, parentNode = null, data = null) {
 	//if a statements element, go through each item
 	if (node instanceof List) {
     	for(item in node) {
+            boolean lastTimer = (data && data.timer)
+            if (data && (item.t == 'every')) {
+                data.timer = true
+            }
 	    	traverseStatements(item, closure, parentNode, data)
+            if (data) {
+                data.timer = lastTimer
+            }
 	    }
         return
-	}
+	}   
+    
     //got a statement, pass it on to the closure
     if (closure instanceof Closure) {
     	closure(node, parentNode, data)
     }
+    
     //if the statements has substatements, go through them
     if (node.s instanceof List) {
     	traverseStatements(node.s, closure, node, data)
@@ -2359,8 +2369,7 @@ private void subscribeAll(rtData) {
             controls: 0,
             devices: 0,
         ]
-        def x = {
-        }
+        def statementData = [timer: false]
         def msg = timer "Finished subscribing", null, -1
         unsubscribe()
         trace "Subscribing to devices...", rtData, 1
@@ -2368,6 +2377,7 @@ private void subscribeAll(rtData) {
         Map subscriptions = [:]
         def count = 0
         def hasTriggers = false
+        def downgradeTriggers = false
         //traverse all statements
         //def statementTraverser
         //def expressionTraverser
@@ -2431,7 +2441,7 @@ private void subscribeAll(rtData) {
                 def comparisonType = 'condition'
                 if (!comparison) {
                     hasTriggers = true
-                    comparisonType = 'trigger'
+                    comparisonType = downgradeTriggers ? 'condition' : 'trigger'
                     comparison = rtData.comparisons.triggers[condition.co]                	
                 }
                 if (comparison) {
@@ -2444,8 +2454,8 @@ private void subscribeAll(rtData) {
                     }
                 }
             }
-            if (condition.ts instanceof List) traverseStatements(condition.ts, statementTraverser, condition)
-            if (condition.fs instanceof List) traverseStatements(condition.fs, statementTraverser, condition)
+            if (condition.ts instanceof List) traverseStatements(condition.ts, statementTraverser, condition, statementData)
+            if (condition.fs instanceof List) traverseStatements(condition.fs, statementTraverser, condition, statementData)
         }
         def restrictionTraverser = { restriction, parentRestriction ->
             if (restriction.co) {
@@ -2453,7 +2463,7 @@ private void subscribeAll(rtData) {
                 def comparisonType = 'condition'
                 if (!comparison) {
                     hasTriggers = true
-                    comparisonType = 'trigger'
+                    comparisonType = downgradeTriggers ? 'condition' : 'trigger'
                     comparison = rtData.comparisons.triggers[restriction.co]                	
                 }
                 if (comparison) {
@@ -2467,13 +2477,14 @@ private void subscribeAll(rtData) {
             }
         }    
         def statementTraverser = { node, parentNode, data ->
+        	downgradeTriggers = data && data.timer
             if (node.r) traverseRestrictions(node.r, restrictionTraverser)
             for(deviceId in node.d) {
                 devices[deviceId] = devices[deviceId] ?: [c: 0]
             }
             switch( node.t ) {
             	case 'if':
-                	if (node.ei) traverseStatements(node.ei*.s, statementTraverser, node)
+                	if (node.ei) traverseStatements(node.ei*.s, statementTraverser, node, data)
                 case 'while':
                 case 'repeat':
                 	traverseConditions((node.c?:[]) + (node.ei?node.ei*.c:[]), conditionTraverser)
@@ -2485,14 +2496,17 @@ private void subscribeAll(rtData) {
 	                    //if case is a range, traverse the second operand too
 	                    if (c.t == 'r') operandTraverser(c, c.ro2, null)
 	                    if (c.s instanceof List) {
-	                        traverseStatements(c.s, statementTraverser, node)
+	                        traverseStatements(c.s, statementTraverser, node, data)
 	                    }
 	                }
 					break;
+				case 'every':
+                	hasTriggers = true;
+                    break;
             }
         }
         if (rtData.piston.r) traverseRestrictions(rtData.piston.r, restrictionTraverser)
-        if (rtData.piston.s) traverseStatements(rtData.piston.s, statementTraverser)
+        if (rtData.piston.s) traverseStatements(rtData.piston.s, statementTraverser, null, statementData)
         //device variables
         for(variable in rtData.piston.v.findAll{ it.t == 'device' }) {
             for (deviceId in variable.v) {
