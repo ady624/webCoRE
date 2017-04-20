@@ -2588,7 +2588,9 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 			comparison.dataType = comparison.left.selectedDataType;
 			comparison.selectedMultiple = comparison.left.selectedMultiple;
 			comparison.momentary = comparison.left.momentary;
-			var noRestrictions = comparison.type != 'restriction';
+			//timed conditions are disabled if not comparing physical devices, or if applying an aggregation function
+			var disableTimedComparisons = (comparison.left.data.t != 'p') || ((comparison.left.data.g != 'any') && (comparison.left.data.g != 'all'));
+			var disableTriggers = (comparison.type == 'restriction');
 			var optionList = [];
 			var options = [];
 			switch (comparison.dataType) {
@@ -2609,12 +2611,12 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
             dt = (comparison.momentary ? 'm' : ((dt == 'n' ? 'd' : dt)));
 			for(conditionId in $scope.db.comparisons.conditions) {
 				var condition = $scope.db.comparisons.conditions[conditionId];
-				if (((!dt && (condition.g != 'm')) || (condition.g.indexOf(dt) >= 0)) && (noRestrictions || !condition.t))  {
+				if (((!dt && (condition.g != 'm')) || (condition.g.indexOf(dt) >= 0)) && (!disableTimedComparisons || !condition.t))  {
 					options.push({ id: conditionId, d: (comparison.selectedMultiple ? (condition.dd ? condition.dd : condition.d) : condition.d), c: 'Conditions' });
 				}
 			}
 			optionList = optionList.concat(options.sort($scope.sortByDisplay));
-			if (noRestrictions) {
+			if (!disableTriggers) {
 				options = [];
 				for(triggerId in $scope.db.comparisons.triggers) {
 					var trigger = $scope.db.comparisons.triggers[triggerId];
