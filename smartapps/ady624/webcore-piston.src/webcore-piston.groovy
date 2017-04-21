@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.0.07c.20170420" }
+public static String version() { return "v0.0.07d.20170421" }
 /*
+ *	04/21/2017 >>> v0.0.07d.20170421 - ALPHA - Lots of improvements for device variables
  *	04/20/2017 >>> v0.0.07c.20170420 - ALPHA - Timed conditions are finally working (was* and changed/not changed), basic tests performed
  *	04/19/2017 >>> v0.0.07b.20170419 - ALPHA - First attempt to get 'was' conditions up and running
  *	04/19/2017 >>> v0.0.07a.20170419 - ALPHA - Minor bug fixes, triggers inside timers no longer subscribe to events (the timer is a trigger itself) - triggers should not normally be used inside timers
@@ -545,7 +546,6 @@ def handleEvents(event) {
     def syncTime = false    
     if (event.name != 'time') {
     	success = executeEvent(rtData, event)
-        processSchedules rtData
         syncTime = true
     }
     //process all time schedules in order
@@ -558,15 +558,15 @@ def handleEvents(event) {
         event = [date: event.date, device: location, name: 'time', value: now(), schedule: schedules.sort{ it.t }.find{ it.t < now() + 2000 }]
         if (!event.schedule) break
         long threshold = now() > event.schedule.t ? now() : event.schedule.t
-        schedules.removeAll{ (it.t <= threshold) && (it.s == event.schedule.s) && (it.i == event.schedule.i) }
+        //schedules.removeAll{ (it.t <= threshold) && (it.s == event.schedule.s) && (it.i == event.schedule.i) }
+        schedules.remove(event.schedule)
         atomicState.schedules = schedules
         def delay = event.schedule.t - now()
         if (syncTime && (delay > 0)) {
         	debug "Fast executing schedules, waiting for ${delay}ms to sync up", rtData
         	pause delay
         }
-        success = executeEvent(rtData, event)
-        processSchedules rtData
+        success = executeEvent(rtData, event)	
         syncTime = true
         //if we waited at a semaphore, we don't want to process too many events
         if (rtData.semaphoreDelay) break
@@ -645,11 +645,12 @@ private Boolean executeEvent(rtData, event) {
         } catch (all) {
         	error "An error occurred while executing the event: ", rtData, null, all
         }
-        
+        processSchedules rtData
 		return true
     } catch(all) {
     	error "An error occurred within executeEvent: ", rtData, null, all
     }
+    processSchedules rtData
     return false
 }
 
@@ -690,9 +691,16 @@ private finalizeEvent(rtData, initialMsg, success = true) {
 private processSchedules(rtData, scheduleJob = false) {
 	//reschedule stuff
     //todo, override tasks, if any
+    def schedules = (atomicState.schedules ?: [])
+    for (timer in rtData.piston.s.findAll{ it.t == 'every' }) {
+    	if (!schedules.find{ it.s == timer.$ } && !rtData.schedules.find{ it.s == timer.$ }) {
+        	debug "Rescheduling missing timer ${timer.$}", rtData
+    		scheduleTimer(rtData, timer, 0)
+        }
+    }
     boolean pistonStateChanged = rtData.state.old != rtData.state.new
     rtData.state.old = rtData.state.new
-    def schedules = (atomicState.schedules ?: [])
+    schedules = (atomicState.schedules ?: [])
     //cancel statements
     schedules.removeAll{ it.s in rtData.cancelations.statements }
     //cancel on conditions
@@ -706,13 +714,13 @@ private processSchedules(rtData, scheduleJob = false) {
     rtData.cancelations = []
     schedules = (schedules + (rtData.schedules ?: [])).sort{ it.t }
     //add traces for all remaining schedules
-    for (schedule in schedules) {
+    /*for (schedule in schedules) {
     	def t = now() - schedule.t
         if ((t < 0) && (schedule.i > 0) && !rtData.trace.points["t:${schedule.i}"]) {
             //we enter a fake trace point to show it on the trace view
     		tracePoint(rtData, "t:${schedule.i}", 0, t)
         }
-    }
+    }*/
     if (scheduleJob && schedules.size()) {
     	def next = schedules.sort{ it.t }[0]
         def t = (next.t - now()) / 1000
@@ -1049,7 +1057,7 @@ private Boolean executeAction(rtData, statement, async) {
 	def devices = []
     def deviceIds = []
     //if override
-    if (!rtData.fastForwardTo) {
+    if (!rtData.fastForwardTo && (statement.tsp != 'a')) {
     	cancelStatementSchedules(rtData, statement.$)
     }
     def result = true
@@ -1178,6 +1186,8 @@ private executePhysicalCommand(rtData, device, command, params = [], delay = nul
 
 
 private scheduleTimer(rtData, timer, long lastRun = 0) {
+	//if already scheduled once during this run, don't do it again
+    if (rtData.schedules.find{ it.s == timer.$ }) return
 	//complicated stuff follows...
     def t = now()
     def interval = evaluateOperand(rtData, null, timer.lo).v
@@ -1348,6 +1358,8 @@ private scheduleTimer(rtData, timer, long lastRun = 0) {
 
 
 private scheduleTimeCondition(rtData, condition) {
+	//if already scheduled once during this run, don't do it again
+    if (rtData.schedules.find{ (it.s == condition.$) && (it.i == 0) }) return
 	def comparison = rtData.comparisons.conditions[condition.co]
     if (!comparison) return
     def v1 = evaluateExpression(rtData, evaluateOperand(rtData, null, condition.ro), 'datetime').v
@@ -1766,7 +1778,7 @@ private long vcmd_sendSMSNotification(rtData, device, params) {
 private long vcmd_setVariable(rtData, device, params) {
 	def name = params[0]
     def value = params[1]
-	setVariable(rtData, name, value)
+	setVariable(rtData, name, value)    
     return 0
 }
 
@@ -2875,7 +2887,7 @@ private Map evaluateExpression(rtData, expression, dataType = null) {
                 if (expression.i && expression.i.size()) {
                     for (i in expression.i) {
                     	def param = simplifyExpression(i)
-                        if (param.t == 'device') {
+                        if ((param.t == 'device') || (param.t == 'variable')) {
                         	//if multiple devices involved, we need to spread the param into multiple params
                             param = evaluateExpression(rtData, param)
                             switch (param.v.size()) {
@@ -3070,7 +3082,7 @@ private Map evaluateExpression(rtData, expression, dataType = null) {
     //return the value, either directly or via cast, if certain data type is requested
   	//when dealing with devices, they need to be "converted" unless the request is to return devices
     if (dataType && (dataType != 'device') && (result.t == 'device')) {
-        switch (result.v.size()) {
+        switch (result.v.size()) {        	
             case 0: result = [t: 'error', v: 'Empty device list']; break;
             case 1: result = getDeviceAttribute(rtData, result.v[0], result.a, result.i); break;
             default: result = [t: 'string', v: buildDeviceAttributeList(rtData, result.v, result.a)]; break;
@@ -4161,8 +4173,14 @@ private cast(rtData, value, dataType, srcDataType = null) {
         case 'y': return (long) cast(rtData, value, 'long') * 31536000000
         case 'device':
         	//device type is an array of device Ids
-        	if (value instanceof List) return value;
-            return [cast(rtData, value, 'string')]
+        	if (value instanceof List) {
+            	def x = value.size()
+            	value.removeAll{ !it }
+                return value
+            }
+            def v = cast(rtData, value, 'string')
+            if (v) return [v]
+            return []
 	}
 	//anything else...
 	return value
@@ -4449,7 +4467,8 @@ private Map getLocalVariables(rtData, vars) {
     def values = atomicState.vars
 	for (var in vars) {
     	def variable = [t: var.t, v: var.v ?: cast(rtData, values[var.n], var.t), f: !!var.v] //f means fixed value - we won't save this to the state
-        if (rtData && var.v && (var.a == 's')) {
+        if (rtData && var.v && ((var.t == 'device') || (var.a == 's'))) {
+//        	variable.v = evaluateExpression(rtData, evaluateOperand(rtData, null, var.v), var.t).v
         	variable.v = cast(rtData, evaluateOperand(rtData, null, var.v).v, var.t)
         }
         result[var.n] = variable

@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.0.07c.20170420" }
+public static String version() { return "v0.0.07d.20170421" }
 /*
+ *	04/21/2017 >>> v0.0.07d.20170421 - ALPHA - Lots of improvements for device variables
  *	04/20/2017 >>> v0.0.07c.20170420 - ALPHA - Timed conditions are finally working (was* and changed/not changed), basic tests performed
  *	04/19/2017 >>> v0.0.07b.20170419 - ALPHA - First attempt to get 'was' conditions up and running
  *	04/19/2017 >>> v0.0.07a.20170419 - ALPHA - Minor bug fixes, triggers inside timers no longer subscribe to events (the timer is a trigger itself) - triggers should not normally be used inside timers
