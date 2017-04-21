@@ -4243,19 +4243,21 @@ private localToUtcDate(dateOrTime) {
 	return null
 }
 
-private localToUtcTime(dateOrTime) {
-	if (dateOrTime instanceof Date) {
+private localToUtcTime(dateOrTimeOrString) {
+	if (dateOrTimeOrString instanceof Date) {
 		//get unix time
-		dateOrTime = dateOrTime.getTime()
+		dateOrTimeOrString = dateOrTimeOrString.getTime()
 	}
-	if (dateOrTime instanceof Long) {
-		return dateOrTime - location.timeZone.getOffset(dateOrTime)
+	if (dateOrTimeOrString instanceof Long) {
+		return dateOrTimeOrString - location.timeZone.getOffset(dateOrTimeOrString)
 	}
-	if (dateOrTime instanceof String) {
+	if (dateOrTimeOrString instanceof String) {
 		//get unix time
         try {
-			return new Date(dateOrTime).getTime()
-		} catch (all) {}
+			return timeToday(dateOrTimeOrString, location.timeZone).getTime()
+		} catch (all) {
+        	error "Error converting '$dateOrTimeOrString' to date/time: ", rtData, null, all
+        }
 	}
 	return null
 }
