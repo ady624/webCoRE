@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.0.07e.20170421" }
+public static String version() { return "v0.0.07f.20170421" }
 /*
+ *	04/21/2017 >>> v0.0.07f.20170421 - ALPHA - Fixed an inconsistency in setting device variable (array) - this was in the UI and may require resetting the variables
  *	04/21/2017 >>> v0.0.07e.20170421 - ALPHA - Fixed a bug with local variables introduced in 07d
  *	04/21/2017 >>> v0.0.07d.20170421 - ALPHA - Lots of improvements for device variables
  *	04/20/2017 >>> v0.0.07c.20170420 - ALPHA - Timed conditions are finally working (was* and changed/not changed), basic tests performed
@@ -2748,7 +2749,7 @@ private Map getVariable(rtData, name) {
             if (!(result instanceof Map)) result = [t: "error", v: "Variable '$name' not found"]
 		}
 	}
-    if (result && (result.t == 'device')) {
+    if (result && (result.t == 'dev55ice')) {
 	   	def deviceIds = []
         def devices = []
         for(deviceId in ((result.v instanceof List) ? result.v : [result.v])) {
@@ -4468,9 +4469,8 @@ private Map getLocalVariables(rtData, vars) {
     def values = atomicState.vars
 	for (var in vars) {
     	def variable = [t: var.t, v: var.v ?: cast(rtData, values[var.n], var.t), f: !!var.v] //f means fixed value - we won't save this to the state
-        if (rtData && var.v && ((var.t == 'device') || (var.a == 's'))) {
-//        	variable.v = evaluateExpression(rtData, evaluateOperand(rtData, null, var.v), var.t).v
-        	variable.v = cast(rtData, evaluateOperand(rtData, null, var).v, var.t)
+        if (rtData && var.v && (var.a == 's')) {
+        	variable.v = evaluateExpression(rtData, evaluateOperand(rtData, null, var), var.t).v
         }
         result[var.n] = variable
     }

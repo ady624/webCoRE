@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.0.07e.20170421" }
+public static String version() { return "v0.0.07f.20170421" }
 /*
+ *	04/21/2017 >>> v0.0.07f.20170421 - ALPHA - Fixed an inconsistency in setting device variable (array) - this was in the UI and may require resetting the variables
  *	04/21/2017 >>> v0.0.07e.20170421 - ALPHA - Fixed a bug with local variables introduced in 07d
  *	04/21/2017 >>> v0.0.07d.20170421 - ALPHA - Lots of improvements for device variables
  *	04/20/2017 >>> v0.0.07c.20170420 - ALPHA - Timed conditions are finally working (was* and changed/not changed), basic tests performed
