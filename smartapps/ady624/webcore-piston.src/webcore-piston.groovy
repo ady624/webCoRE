@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.0.07f.20170421" }
+public static String version() { return "v0.0.080.20170421" }
 /*
+ *	04/21/2017 >>> v0.0.080.20170421 - ALPHA - Fixed a newly introduced bug where function parameters were parsed as strings, also fixed functions time, date, and datetime's timezone
  *	04/21/2017 >>> v0.0.07f.20170421 - ALPHA - Fixed an inconsistency in setting device variable (array) - this was in the UI and may require resetting the variables
  *	04/21/2017 >>> v0.0.07e.20170421 - ALPHA - Fixed a bug with local variables introduced in 07d
  *	04/21/2017 >>> v0.0.07d.20170421 - ALPHA - Lots of improvements for device variables
@@ -2892,7 +2893,8 @@ private Map evaluateExpression(rtData, expression, dataType = null) {
                         if ((param.t == 'device') || (param.t == 'variable')) {
                         	//if multiple devices involved, we need to spread the param into multiple params
                             param = evaluateExpression(rtData, param)
-                            switch (param.v.size()) {
+                            def sz = param.v instanceof List ? param.v.size() : 1
+                            switch (sz) {
                             	case 0: break;
                             	case 1: params.push(param); break;
                                 default:
@@ -4155,14 +4157,14 @@ private cast(rtData, value, dataType, srcDataType = null) {
 			return !!value
 		case "time":
         	def n = localTime()
-			return localToUtcTime(n - (n % 86400000) + (utcToLocalTime((srcDataType == 'string') ? utcToLocalDate(value).time : cast(rtData, value, "long")) % 86400000))
+			return localToUtcTime(n - (n % 86400000) + (utcToLocalTime((srcDataType == 'string') ? localToUtcTime(value) : cast(rtData, value, "long")) % 86400000))
 		case "date":
-			def d = utcToLocalTime((srcDataType == 'string') ? utcToLocalDate(value).time : cast(rtData, value, "long"))
+			def d = utcToLocalTime((srcDataType == 'string') ? localToUtcTime(value) : cast(rtData, value, "long"))
             return localToUtcTime(d - (d % 86400000))
 		case "datetime":
-			return ((srcDataType == 'string') ? utcToLocalDate(value).time : cast(rtData, value, "long"))
+			return ((srcDataType == 'string') ? localToUtcTime(value) : cast(rtData, value, "long"))
 		case "vector3":
-			return value instanceof String ? utcToLocalDate(value).time : cast(rtData, value, "long")
+			return value instanceof String ? 0 : cast(rtData, value, "long")
 		case "orientation":
 			return getThreeAxisOrientation(value)
         case 'ms': return (long) cast(rtData, value, 'long')
@@ -4248,6 +4250,12 @@ private localToUtcTime(dateOrTime) {
 	}
 	if (dateOrTime instanceof Long) {
 		return dateOrTime - location.timeZone.getOffset(dateOrTime)
+	}
+	if (dateOrTime instanceof String) {
+		//get unix time
+        try {
+			return new Date(dateOrTime).getTime()
+		} catch (all) {}
 	}
 	return null
 }
