@@ -621,9 +621,8 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 			statement.a = '0'; //async
 			statement.tcp = 'c'; //tcp - cancel on condition state change
 			statement.tep = ''; //tep always
+			statement.tsp = ''; //tsp override
 			statement.ctp = 'i';
-			//statement.pr = 'none'; //tcpr
-			//statement.pv = ''; //tcpv
 			statement.s = 'local'; //tos
 			statement.z = ''; //desc
 		}
@@ -650,6 +649,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		//advanced options
 		$scope.designer.tcp = statement.tcp;
 		$scope.designer.tep = statement.tep;
+		$scope.designer.tsp = statement.tsp;
 		//$scope.designer.tcpr = statement.pr;
 		//$scope.designer.tcpv = statement.pv;
 		//$scope.designer.tos = statement.os;
@@ -740,9 +740,10 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		statement.a = $scope.designer.async;
 		statement.tcp = $scope.designer.tcp;
 		statement.tep = $scope.designer.tep;
-		statement.pr = $scope.designer.tcpr;
-		statement.pv = $scope.designer.tcpv;
-		statement.os = $scope.designer.tos;
+		statement.tsp = $scope.designer.tsp;
+//		statement.pr = $scope.designer.tcpr;
+//		statement.pv = $scope.designer.tcpv;
+//		statement.os = $scope.designer.tos;
 		statement.z = $scope.designer.description;
 		statement.r = statement.r ? statement.r : [];
 		statement.rop = $scope.designer.roperator;
@@ -2099,9 +2100,9 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 			$scope.setStatus();
 			$scope.dialogChooseVersion();
 		} else {
-			$scope.stack.current = $scope.getStackData();
-			$scope.stack.undo = [];
-			$scope.stack.redo = [];
+			//$scope.stack.current = $scope.getStackData();
+			//$scope.stack.undo = [];
+			//$scope.stack.redo = [];
 		}
 	}
 
@@ -2259,7 +2260,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 				operand.allowVirtual = (dataType != 'datetime') && (dataType != 'date') && (dataType != 'time') && (dataType != 'device') && (dataType != 'variable') && (dataType != 'decimal') && (dataType != 'integer') && (dataType != 'number') && (dataType != 'boolean') && (dataType != 'enum') && (dataType != 'color') && (dataType != 'duration');
 				operand.allowVariable = (dataType != 'device' || ((dataType == 'device') && operand.multiple)) && (!strict || (dataType != 'boolean'));
 				operand.allowConstant = (dataType != 'device') && (dataType != 'variable');
-				operand.allowExpression = (dataType != 'device') && (dataType != 'variable') && (dataType != 'enum') && (!strict || (dataType != 'boolean'));
+				operand.allowExpression = /*(dataType != 'device') && */(dataType != 'variable') && (dataType != 'enum') && (!strict || (dataType != 'boolean'));
 			}
 			if (((operand.data.t == 'p') && (!operand.allowPhysical)) || ((operand.data.t == 'v') && (!operand.allowVirtual))) operand.data.t = 'c';
 
@@ -2511,14 +2512,17 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 			operand.linkedOperand.dataType = operand.selectedDataType;
 			operand.linkedOperand.options = operand.selectedOptions;
 			$scope.validateOperand(operand.linkedOperand, true);
+			$scope.refreshSelects();
 		}
 	};
 
 	$scope.refreshSelects = function(type) {
 		if (type) {
 			$scope.$$postDigest(function() {$('select[' + type + ']').selectpicker('refresh');});
+			$timeout(function() {$('select[' + type + ']').selectpicker('refresh');}, 0, false);
 		} else {
 			$scope.$$postDigest(function() {$('select').selectpicker('refresh');});
+			$timeout(function() {$('select').selectpicker('refresh');}, 0, false);
 		}
 	}
 
@@ -2741,7 +2745,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 				}
 			}
 		}
-		result = result ? result : '(invalid operand)';
+		result = result ? result : '<span dis>(empty)</span>';
 		return (result instanceof String) ? $sce.trustAsHtml(result) : result;
 	}
 

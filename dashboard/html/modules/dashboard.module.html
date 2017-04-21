@@ -1,13 +1,13 @@
-<status ng-if="status" ng-animate ng-bind-html="status" ng-click="setStatus()"></status>
-<loader ng-if="loading">
-	<ul>
-		<li></li>
-		<li></li>
-		<li></li>
-		<li></li>
-	</ul>
-</loader>
-	<nav ng-if="initialized" class="navbar navbar-default navbar-fixed-topw">
+	<status ng-if="status" ng-animate ng-bind-html="status" ng-click="setStatus()"></status>
+	<loader ng-if="loading">
+		<ul>
+			<li></li>
+			<li></li>
+			<li></li>
+			<li></li>
+		</ul>
+	</loader>
+	<nav ng-if="initialized && (view == 'piston')" class="navbar navbar-default navbar-fixed-topw">
       <div class="container-fluid">
         <div class="navbar-header">
           <button id="navbar-btn" type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
@@ -35,6 +35,8 @@
                     <li class="dropdown">
                         <a id="options" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false"><i class="fa fa-cog" aria-hidden="true"></i> Options<span class="caret"></span></a>
                         <ul class="dropdown-menu btn btn-default">
+							<li><a href="" ng-click="showDashboard();">Go to dashboard</a></li>
+                            <li role="separator" class="divider"></li>
                             <li ng-click="newPiston();"><a>Add a new piston</a></li>
                             <li ng-if="instanceCount > 1" ng-click="movePiston();"><a>Move piston(s)</a></li>
                             <li role="separator" class="divider"></li>
@@ -47,16 +49,34 @@
         </div>
       </div>
     </nav>
-	<viewer class="dashboard" ng-if="initialized" class="no-animate">
+
+
+	<viewer class="dashboard animated noPreventDefault {{dropDownMenu ? 'reveal' : ''}}" ng-if="initialized && (view == 'dashboard')">
+		<nav fixed class="navbar navbar-default navbar-fixed-topw" ng-if="initialized && (view == 'dashboard')">
+			<div class="container-fluid">
+				<ul class="nav navbar-nav navbar-right">
+					<li class="dropdown">
+						<a target="_blank" href="" class="" role="button" aria-haspopup="true" aria-expanded="false" ng-click="hideDashboard()">Close</a>
+					</li>
+				</ul>
+			</div>
+		</nav>
+		<tiles masonry='{"transitionDuration": "0s", "itemSelector": "tile"}' class="noPreventDefault" ng-wheel="onWheel($event)" ng-swipe-up="onSwipe($event, 'up')" ng-swipe-down="onSwipe($event, 'down')">
+			<tile ng-repeat="device in devices" class="col-lg-1 col-md-1 col-sm-2 col-xs-3" tile-height="{{determineDeviceType(device) == 'presenceSensor' ? 2 : 1}}"><content>{{device.n}}<br/><br/>{{determineDeviceType(device)}}</content></tile>
+		</tiles>
+	</viewer>
+
+	<viewer class="pistons" ng-if="initialized && (view == 'piston')" class="no-animate">
 		<div class="body container-fluid">
 			<div class="row">
-				<div class="col-sm-1 sidebar">
+				<div class="sidebar">
 					<ul class="nav nav-sidebar">
+						<li><a href="" ng-click="showDashboard();">Go to dashboard</a></li>
 						<li><a href="" ng-click="newPiston();">Add a new piston</a></li>
 						<li ng-if="instanceCount > 1"><a href="" ng-click="movePiston();">Move piston(s)</a></li>
 					</ul>
 				</div>
-				<div class="col-sm-11 col-sm-offset-1 main">
+				<div class="main">
 					<div lonely ng-if="!activePistons && !pausedPistons">
 						<i class="fa fa-frown-o" aria-hidden="true"></i>
 						<div>It's kinda lonely in here...<br/>How about <a ng-click="newPiston();">creating a piston</a>?</div>

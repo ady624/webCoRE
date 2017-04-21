@@ -297,6 +297,13 @@ span.hl.com {
 	white-space: pre;
 }
 
+
+line[dis],
+span[dis],
+span.hl.dis {
+    color: #ccc;
+}
+
 line[com][exportBin]::after {
 	position: absolute;
 	content: attr(exportBin);

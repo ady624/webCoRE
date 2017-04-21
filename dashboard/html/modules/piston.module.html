@@ -272,6 +272,7 @@
 				<badge red ng-if="(statement.tcp != 'c') && (statement.tcp != 'p') && (statement.tcp != 'b')" badge="N" title="Never cancel"></badge>
 				<badge red ng-if="(statement.tcp == 'p')" badge="P" title="Cancel on piston state change"></badge>
 				<badge red ng-if="(statement.tcp == 'b')" badge="C|P" title="Cancel on condition or piston state change"></badge>
+				<badge blue ng-if="statement.tsp == 'a'" badge="A" title="Allow multiple schedules"></badge>
 			</line>
 			<container>
 				<line pun ng-click="editStatement(statement, statements);" ng-attr-invalid="{{(!statement.d) || (!statement.d.length)}}" ng-bind-html="renderDeviceNameList(statement.d)"></line>
@@ -296,6 +297,7 @@
 				<badge red ng-if="(statement.tcp != 'c') && (statement.tcp != 'p') && (statement.tcp != 'b')" badge="N" title="Never cancel"></badge>
 				<badge red ng-if="(statement.tcp == 'p')" badge="P" title="Cancel on piston state change"></badge>
 				<badge red ng-if="(statement.tcp == 'b')" badge="C|P" title="Cancel on condition or piston state change"></badge>
+				<badge blue ng-if="statement.tsp == 'a'" badge="A" title="Allow multiple schedules"></badge>
 			</line>
 			<conditions data-ng-repeat="collection in [statement]" data-ng-include="'conditions'" dnd-nodrag data-nag-model="statement" eval="{{statement && trace && trace.points && trace.points['c:' + statement.$] ? trace.points['c:' + statement.$].v : ''}}"></conditions>
 			<line kwd ng-if="(mode=='edit') || (statement.s && statement.s.length)">then</line>
@@ -326,6 +328,7 @@
 				<badge red ng-if="(statement.tcp != 'c') && (statement.tcp != 'p') && (statement.tcp != 'b')" badge="N" title="Never cancel"></badge>
 				<badge red ng-if="(statement.tcp == 'p')" badge="P" title="Cancel on piston state change"></badge>
 				<badge red ng-if="(statement.tcp == 'b')" badge="C|P" title="Cancel on condition or piston state change"></badge>
+				<badge blue ng-if="statement.tsp == 'a'" badge="A" title="Allow multiple schedules"></badge>
 			</line>
 			<container>
 				<cases>
@@ -355,6 +358,7 @@
 				<badge red ng-if="(statement.tcp != 'c') && (statement.tcp != 'p') && (statement.tcp != 'b')" badge="N" title="Never cancel"></badge>
 				<badge red ng-if="(statement.tcp == 'p')" badge="P" title="Cancel on piston state change"></badge>
 				<badge red ng-if="(statement.tcp == 'b')" badge="C|P" title="Cancel on condition or piston state change"></badge>
+				<badge blue ng-if="statement.tsp == 'a'" badge="A" title="Allow multiple schedules"></badge>
 			</line>
 			<line kwd>do</line>
 			<statements dnd-list="statement.s" dnd-allowed-types="['statement']" data-ng-repeat="statements in [statement.s]" data-ng-include="'statements'" dnd-nodrag data-nag-model="statement.s"></statements>
@@ -374,6 +378,7 @@
 				<badge red ng-if="(statement.tcp != 'c') && (statement.tcp != 'p') && (statement.tcp != 'b')" badge="N" title="Never cancel"></badge>
 				<badge red ng-if="(statement.tcp == 'p')" badge="P" title="Cancel on piston state change"></badge>
 				<badge red ng-if="(statement.tcp == 'b')" badge="C|P" title="Cancel on condition or piston state change"></badge>
+				<badge blue ng-if="statement.tsp == 'a'" badge="A" title="Allow multiple schedules"></badge>
 			</line>
 			<line kwd>do</line>
 			<statements dnd-list="statement.s" dnd-allowed-types="['statement']" data-ng-repeat="statements in [statement.s]" data-ng-include="'statements'" dnd-nodrag data-nag-model="statement.s"></statements>
@@ -393,6 +398,7 @@
 				<badge red ng-if="(statement.tcp != 'c') && (statement.tcp != 'p') && (statement.tcp != 'b')" badge="N" title="Never cancel"></badge>
 				<badge red ng-if="(statement.tcp == 'p')" badge="P" title="Cancel on piston state change"></badge>
 				<badge red ng-if="(statement.tcp == 'b')" badge="C|P" title="Cancel on condition or piston state change"></badge>
+				<badge blue ng-if="statement.tsp == 'a'" badge="A" title="Allow multiple schedules"></badge>
 			</line>
 			<conditions data-ng-repeat="collection in [statement]" data-ng-include="'conditions'" dnd-nodrag data-nag-model="statement"></conditions>
 			<line kwd>do</line>
@@ -413,6 +419,7 @@
 				<badge red ng-if="(statement.tcp != 'c') && (statement.tcp != 'p') && (statement.tcp != 'b')" badge="N" title="Never cancel"></badge>
 				<badge red ng-if="(statement.tcp == 'p')" badge="P" title="Cancel on piston state change"></badge>
 				<badge red ng-if="(statement.tcp == 'b')" badge="C|P" title="Cancel on condition or piston state change"></badge>
+				<badge blue ng-if="statement.tsp == 'a'" badge="A" title="Allow multiple schedules"></badge>
 			<line kwd>do</line>
 			<statements dnd-list="statement.s" dnd-allowed-types="['statement']" data-ng-repeat="statements in [statement.s]" data-ng-include="'statements'" dnd-nodrag data-nag-model="statement.s"></statements>
 			<line kwd>until</line>
@@ -433,6 +440,7 @@
 				<badge red ng-if="(statement.tcp != 'c') && (statement.tcp != 'p') && (statement.tcp != 'b')" badge="N" title="Never cancel"></badge>
 				<badge red ng-if="(statement.tcp == 'p')" badge="P" title="Cancel on piston state change"></badge>
 				<badge red ng-if="(statement.tcp == 'b')" badge="C|P" title="Cancel on condition or piston state change"></badge>
+				<badge blue ng-if="statement.tsp == 'a'" badge="A" title="Allow multiple schedules"></badge>
 			</line>
 			<line kwd>do</line>
 			<statements dnd-list="statement.s" dnd-allowed-types="['statement']" data-ng-repeat="statements in [statement.s]" data-ng-include="'statements'" dnd-nodrag data-nag-model="statement.s"></statements>
@@ -855,6 +863,13 @@
 						<option value="c">Cancel tasks on condition state change</option>
 						<option value="p">Cancel tasks on piston state change</option>
 						<option value="b">Cancel tasks on condition or piston state change</option>
+					</select>
+				</div>
+				<div class="form-group" ng-if="designer.type == 'action'">
+					<label for="tsp" help>Task Scheduling Policy</label>
+					<select name="tsp" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-default" ng-model="designer.tsp" data-mobile="{{mobile}}">
+						<option value="">Override any existing scheduled tasks</option>
+						<option value="a">Allow multiple scheduled tasks</option>
 					</select>
 				</div>
 <!--				<div class="form-group" ng-if="(designer.type=='action' ) && (designer.tcp !='none')">

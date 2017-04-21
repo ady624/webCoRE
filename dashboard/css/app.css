@@ -545,6 +545,7 @@ label > input {
     background-color: #ccc;
 }
 
+
 input[type=number] {
 	text-align: right;
 }
@@ -716,11 +717,11 @@ input[type="time"]  {
 		overflow-y: auto;
 	}
 
-    nav a.dropdown-toggle {
+    nav:not([fixed]) a.dropdown-toggle {
         display: none;
     }
 
-    nav ul.dropdown-menu {
+    nav:not([fixed]) ul.dropdown-menu {
         position: relative;
         display: block;
         width: 100%;
@@ -730,5 +731,56 @@ input[type="time"]  {
         box-shadow: none;
     }
 
+
+	nav:not([fixed]) li a.dropdown-toggle,
+	nav:not([fixed]) li[role=separator]:not(.dropdown-header) {		
+		display: none !important;
+	}
+
+	nav:not([fixed]) ul {
+		margin-top: 0px !important;
+		margin-bottom: 0px !important;
+		padding: 0px !important;
+	}
+
+
+	nav:not([fixed]) ul.navbar-right {
+		margin-top: 32px !important;
+	}
+	
+	nav:not([fixed]) ul.dropdown-menu > li {
+		padding: 0px;
+	}
+
+	nav:not([fixed]) ul.dropdown-menu > li > a,
+	nav:not([fixed]) li.dropdown > a {
+		display: block;
+		padding: 8px 20px;
+		clear: both;
+		font-weight: 400;
+		height:44px;
+		line-height: 28px;
+		color: #333 !important;
+		white-space: nowrap;
+		font-size: 14px;
+		border-bottom: solid 1px #ccc;
+	}
+
+	.active-tick a::before {
+		line-height: 28px;
+	}
+
+	li.dropdown-header {
+		padding: 8px 20px !important;
+		border-bottom: solid 1px #ccc;
+		
+	}
+
+	ul:active {
+		background: none !important;		
+	}
+	a:hover {
+		background: #eee !important;
+	}	
 
 }

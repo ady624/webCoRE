@@ -12,6 +12,8 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 	$scope.requestId = 0;
 	$scope.activePistons = 0;
 	$scope.pausedPistons = 0;
+	$scope.dropDownMenu = false;
+	$scope.view = 'piston';
 
 	$scope.init = function(instance, uri, pin) {
 		if ($scope.$$destroyed) return;
@@ -36,6 +38,8 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 					$scope.instance = dataService.getInstance();
 					$scope.currentInstanceId = $scope.instance.id;
 					$scope.instanceCount = dataService.getInstanceCount();
+    	            if (!$scope.devices) $scope.devices = $scope.listAvailableDevices();
+	                if (!$scope.virtualDevices) $scope.virtualDevices = $scope.listAvailableVirtualDevices();
 					window.scope = $scope;
 					$scope.loading = false;
 					$scope.activePistons = 0;
@@ -88,6 +92,26 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
         }
     }
 
+	$scope.showDashboard = function() {
+		$scope.view = 'dashboard';
+		$scope.dropDownMenu = false;
+	}
+
+	$scope.hideDashboard = function() {
+		$scope.view = 'piston';
+		$scope.dropDownMenu = false;
+	}
+
+	$scope.onWheel = function(event) {
+		$scope.dropDownMenu = event && event.originalEvent && (event.currentTarget.scrollTop == 0) && (event.originalEvent.deltaY < 0);
+		return true;
+	}
+
+	$scope.onSwipe = function(event, direction) {
+		$scope.dropDownMenu = (event.currentTarget.scrollTop == 0) && (direction == 'down');
+		return true;
+	}
+
 	$scope.listLocations = function() {
 		return dataService.listLocations();
 	};
@@ -107,6 +131,33 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 		}
 		return result;
 	};
+
+    $scope.listAvailableDevices = function() {
+        var result = [];
+        for(deviceIndex in $scope.instance.devices) {
+            var device = $scope.instance.devices[deviceIndex];
+            result.push(mergeObjects({id: deviceIndex}, device));
+        }
+        return result.sort($scope.sortByName);
+    }
+
+    $scope.listAvailableVirtualDevices = function() {
+        var result = [];
+        for(deviceIndex in $scope.instance.virtualDevices) {
+            var device = $scope.instance.virtualDevices[deviceIndex];
+            result.push(mergeObjects({id: deviceIndex}, device));
+        }
+        return result.sort($scope.sortByName);
+    }
+
+    $scope.sortByDisplay = function(a,b) {
+        return (a.d > b.d) ? 1 : ((b.d > a.d) ? -1 : 0);
+    }
+
+    $scope.sortByName = function(a,b) {
+        return (a.n > b.n) ? 1 : ((b.n > a.n) ? -1 : 0);
+    }
+
 
 	$scope.switchInstance = function(instanceId) {
 		if (instanceId != $scope.instance.id) {
@@ -493,6 +544,26 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 	}
 
 
+
+
+	$scope.determineDeviceType = function(device) {
+		if (device.cn.indexOf('Water Sensor') >= 0) return 'waterSensor';
+		if (device.cn.indexOf('Contact Sensor') >= 0) return 'contactSensor';
+		if (device.cn.indexOf('Thermostat') >= 0) return 'thermostat';
+		if (device.cn.indexOf('Garage Door Control') >= 0) return 'garageDoor';
+		if (device.cn.indexOf('Music Player') >= 0) return 'musicPlayer';
+		if (device.cn.indexOf('Door Control') >= 0) return 'door';
+		if (device.cn.indexOf('Presence Sensor') >= 0) return 'presenceSensor';
+		if (device.cn.indexOf('Motion Sensor') >= 0) return 'motionSensor';
+		if (device.cn.indexOf('Color Control') >= 0) return 'rgbBulb';
+		if (device.cn.indexOf('Color Temperature') >= 0) return 'whiteBulb';
+		if (device.cn.indexOf('Switch Level') >= 0) return 'dimmer';
+		if (device.cn.indexOf('Switch') >= 0) return 'switch';
+		if (device.cn.indexOf('Lock') >= 0) return 'lock';
+		if ((device.cn.indexOf('Button') >= 0) && (device.cn.indexOf('Button') >= 0)) return 'keypad';
+		if (device.cn.indexOf('Button') >= 0) return 'button';
+		if (device.cn.indexOf('Temperature Measurement') > 0) return 'temperatureSensor';
+	};
 
 
     //init

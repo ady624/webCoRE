@@ -8,10 +8,53 @@ ng-view {
  */
 
 /* Move down content because we have a fixed navbar that is 50px tall */
-viewer {
+viewer.pistons {
 	top: 50px;
 	overflow-y: auto;
 	padding: 16px;
+}
+
+viewer.dashboard {
+	background: transparent;
+	top: 0px;
+	overflow: hidden;
+	padding: 0px;
+	z-index: 101;
+}
+
+viewer.dashboard nav {
+	margin-top: -50px;
+	box-shadow: none;
+}
+
+viewer.dashboard.reveal {
+	padding-top: 50px;
+}
+
+viewer.dashboard.reveal nav {
+	box-shadow: 1px 1px 5px rgba(0, 0, 0, 0.25);
+}
+
+
+tiles {
+	display: block;
+	height: 100% !important;
+	overflow: hidden;
+	overflow-y: auto;
+}
+
+tiles tile {
+	display: block;
+	padding: 2px !important;
+	margin: 0px;
+}
+
+tiles tile content {
+	display: block;
+	overflow: hidden;
+	width: 100% !important;
+	height: 100% !important;
+	background: rgba(0, 0, 0, 0.1);
 }
 
 /*
@@ -31,6 +74,16 @@ viewer {
   border: 0;
 }
 
+nav[fixed] .navbar-right {
+	float: right !important;
+	margin: 0px;
+}
+
+nav[fixed] a {
+    padding-top: 15px;
+    padding-bottom: 15px;
+}
+
 /*
  * Sidebar
  */
@@ -38,7 +91,10 @@ viewer {
 /* Hide for mobile, show later */
 .sidebar {
   display: none;
+  width: 160px;
+  float: left;
 }
+
 .navbar-brand {
 	font-size: 12px;
 }
@@ -214,7 +270,7 @@ td[state=false]::after {
 
   .sidebar {
     position: fixed;
-    top: 51px;
+    top: 50px;
     bottom: 0;
     left: 0;
     z-index: 2;
@@ -224,7 +280,12 @@ td[state=false]::after {
     overflow-y: auto; /* Scrollable contents if viewport is shorter than content. */
     background-color: #f5f5f5;
     border-right: 1px solid #eee;
+    box-shadow: 1px 1px 5px rgba(0, 0, 0, 0.3);
   }
+
+	.main {
+		padding-left: 168px !important;
+	}
 
 }
 
@@ -252,7 +313,7 @@ td[state=false]::after {
 		min-height: 1280px;
 	}
 
-	viewer {
+	viewer.pistons {
 		padding: 0px;
 	}
 

@@ -1,4 +1,4 @@
-var app = angular.module('CoRE', ['ng', 'ngRoute', 'ngSanitize', 'ngResource', 'ngDialog', 'angular-svg-round-progressbar', 'angular-bootstrap-select', 'aCKolor', 'dndLists', 'ui.toggle', 'chart.js', 'smartArea']);
+var app = angular.module('CoRE', ['ng', 'ngRoute', 'ngSanitize', 'ngResource', 'ngDialog', 'ngAnimate', 'angular-svg-round-progressbar', 'angular-bootstrap-select', 'swipe', 'dndLists', 'ui.toggle', 'chart.js', 'smartArea']);
 //var cdn = 'https://core.homecloudhub.com/dashboard/';
 var cdn = '';
 var theme = '';
@@ -35,6 +35,19 @@ app.directive('head', ['$rootScope', '$compile',
     }
 ]);
 
+
+app.directive('ngWheel', ['$parse', function($parse) {
+		return function(scope, element, attr) {
+			var fn = $parse(attr.ngWheel);
+			element.bind('wheel', function(event) {
+				scope.$apply(function() {
+					fn(scope, {
+						$event: event
+					});
+				});
+			});
+		};
+	}]);
 
 
 app.directive('textcomplete', ['Textcomplete', function(Textcomplete) {
@@ -88,6 +101,83 @@ app.directive('textcomplete', ['Textcomplete', function(Textcomplete) {
     }
 }]);
 
+app.directive('masonry', function ($parse) {
+    return {
+        restrict: 'AC',
+        link: function (scope, elem, attrs) {
+            scope.items = [];
+            var container = elem[0];
+            var options = angular.extend({
+                itemSelector: 'tile'
+            }, JSON.parse(attrs.masonry));
+
+            var masonry = scope.masonry = new Masonry(container, options);
+
+            var debounceTimeout = 0;
+            scope.update = function () {
+                if (debounceTimeout) {
+                    window.clearTimeout(debounceTimeout);
+                }
+                debounceTimeout = window.setTimeout(function () {
+                    debounceTimeout = 0;
+
+                    masonry.reloadItems();
+                    masonry.layout();
+
+                    elem.children(options.itemSelector).css('visibility', 'visible');
+                }, 120);
+            };
+			scope.update();
+        }
+    };
+}).directive('masonryTile', function () {
+    return {
+        restrict: 'AC',
+        link: function (scope, elem) {
+            elem.css('visibility', 'hidden');
+            var master = elem.parent('*[masonry]:first').scope(),
+                update = master.update;
+
+            imagesLoaded(elem.get(0), update);
+            elem.ready(update);
+        }
+    };
+});
+
+
+
+app.directive('tileHeight', function(){
+    var directive = {
+        restrict: 'A',
+        link: function (scope, instanceElement, instanceAttributes, controller, transclude) {
+            var heightFactor = 1;
+
+            if (instanceAttributes['tileHeight']) {
+                heightFactor = instanceAttributes['tileHeight'];
+            }
+
+            var updateHeight = function () {
+				var h = instanceElement[0].parentElement.offsetWidth / Math.round(instanceElement[0].parentElement.offsetWidth / instanceElement[0].offsetWidth) * heightFactor;
+//                instanceElement.outerHeight(instanceElement[0].parentElement.offsetHeight / Math.floor(instanceElement[0].parentElement.offsetHeight / h));
+                instanceElement.outerHeight(h);
+            };
+
+            scope.$watch(instanceAttributes['tileHeight'], function (value) {
+                heightFactor = 1.00 * value;
+                updateHeight();
+            });
+
+            $(window).resize(updateHeight);
+            updateHeight();
+
+            scope.$on('$destroy', function () {
+                $(window).unbind('resize', updateHeight);
+            });
+        }
+    };
+
+    return directive;
+});
 
 
 app.directive('help', function($compile) {
@@ -1069,4 +1159,4 @@ if (document.selection) {
 }}
 
 //navigator.registerProtocolHandler('web+core','https://' + window.location.hostname + '/handler/%s', 'webCoRE');
-version = function() { return 'v0.0.07c.20170420'; };
+version = function() { return 'v0.0.07d.20170421'; };
