@@ -860,7 +860,7 @@
 				<div class="form-group">
 					<label for="tep" help>Task Execution Policy</label>
 					<select name="tep" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-default" ng-model="designer.tep" data-mobile="{{mobile}}">
-						<option value="">Always execute tasks</option>
+						<option value="">Always execute tasks (default)</option>
 						<option value="c">Execute tasks on condition state change only</option>
 						<option value="p">Execute tasks on piston state change only</option>
 						<option value="b">Execute tasks on condition or piston state change only</option>
@@ -870,7 +870,7 @@
 					<label for="tcp" help>Task Cancellation Policy</label>
 					<select name="tcp" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-default" ng-model="designer.tcp" data-mobile="{{mobile}}">
 						<option value="">Never cancel tasks</option>
-						<option value="c">Cancel tasks on condition state change</option>
+						<option value="c">Cancel tasks on condition state change (default)</option>
 						<option value="p">Cancel tasks on piston state change</option>
 						<option value="b">Cancel tasks on condition or piston state change</option>
 					</select>

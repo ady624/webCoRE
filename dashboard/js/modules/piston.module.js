@@ -1750,7 +1750,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		var result = '';
 		for (i in list) {
 			var item = $scope.buildName(list[i], noQuotes, pedantic, itemPrefix);
-			result += '<span ' + tag + (className ? ' class="' + className + '"' : '') + '>' + item + '</span>' + (possessive ? '\'' + (item.substr(-1) == 's' ? '' : 's') : '') + (cnt < list.length ? '<span pun>' + (cnt == list.length - 1 ? (list.length > 2 ? ', ' : ' ') + suffix + ' ' : ', ') + '</span>' : '');
+			result += '<span ' + (item.indexOf('<span') >= 0 ? '' : tag) + (className ? ' class="' + className + '"' : '') + '>' + item + '</span>' + (possessive ? '\'' + (item.substr(-1) == 's' ? '' : 's') : '') + (cnt < list.length ? '<span pun>' + (cnt == list.length - 1 ? (list.length > 2 ? ', ' : ' ') + suffix + ' ' : ', ') + '</span>' : '');
 			cnt++;
 		}
 		return result.trim();
