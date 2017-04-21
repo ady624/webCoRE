@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.0.080.20170421" }
+public static String version() { return "v0.0.081.20170421" }
 /*
+ *	04/21/2017 >>> v0.0.081.20170421 - ALPHA - Fixed a bug preventing a for-each to work with device-typed variables
  *	04/21/2017 >>> v0.0.080.20170421 - ALPHA - Fixed a newly introduced bug where function parameters were parsed as strings, also fixed functions time, date, and datetime's timezone
  *	04/21/2017 >>> v0.0.07f.20170421 - ALPHA - Fixed an inconsistency in setting device variable (array) - this was in the UI and may require resetting the variables
  *	04/21/2017 >>> v0.0.07e.20170421 - ALPHA - Fixed a bug with local variables introduced in 07d
@@ -903,7 +904,7 @@ private Boolean executeStatement(rtData, statement, async = false) {
                     float endValue = 0
                     float stepValue = 1
                     if (statement.t == 'each') {
-                    	devices = evaluateOperand(rtData, null, statement.lo).v ?: []
+                        devices = evaluateOperand(rtData, null, statement.lo).v ?: []
                         endValue = devices.size() - 1
                     } else {
                     	startValue = evaluateScalarOperand(rtData, statement, statement.lo, null, 'decimal').v
@@ -2030,7 +2031,21 @@ private evaluateOperand(rtData, node, operand, index = null, trigger = false, ne
 			}
             break
         case "x": //variable
-	        values = [[i: "${node?.$}:$index:0", v:getVariable(rtData, operand.x) + (operand.vt ? [vt: operand.vt] : [:])]]
+        	if ((operand.vt == 'device') && (operand.x instanceof List)) {
+            	//we could have multiple devices selected
+                def sum = []
+                for (x in operand.x) {               
+                	def var = getVariable(rtData, x)
+                    if (var.v instanceof List) {
+                    	sum += var.v
+                    } else {
+                    	sum.push(var.v)
+                    }
+                    values = [[i: "${node?.$}:$index:0", v:[t: 'device', v: sum] + (operand.vt ? [vt: operand.vt] : [:])]]
+                }
+            } else {
+	        	values = [[i: "${node?.$}:$index:0", v:getVariable(rtData, operand.x) + (operand.vt ? [vt: operand.vt] : [:])]]
+            }
             break
         case "c": //constant
         	switch (operand.vt) {
