@@ -284,6 +284,14 @@ span.hl.num {
 	color: #1515ff;
 }
 
+line[phn],
+span[phn],
+span.hl.phn {
+	color: #ff15ff;
+}
+
+
+
 line[exp],
 span[exp],
 span.hl.exp {
@@ -298,9 +306,9 @@ span.hl.com {
 }
 
 
-line[dis],
-span[dis],
-span.hl.dis {
+line[nul],
+span[nul],
+span.hl.nul {
     color: #ccc;
 }
 
@@ -394,20 +402,19 @@ span[tsk][single=true] {
 }
 
 
+piston[anonymized] span[phn],
 piston[anonymized] span[dev] {
-	color: transparent !important;
+	font-size: 0px;
 }
 
 piston[anonymized] span[dev]::before {
-	box-sizing: border-box;
-	position: absolute;
-    content: "";
-    left: 0px;
-    top: -5px;
-    display: block;
-    height: 50%;
-    width: 100%;
-    border-bottom: solid 10px black;
+	content: '[device]';
+	font-size: initial;
+}
+
+piston[anonymized] span[phn]::before {
+	content: '[phone number]';
+	font-size: initial;
 }
 
 piston[mode=view] line[new] {

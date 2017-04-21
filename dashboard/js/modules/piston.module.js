@@ -1429,7 +1429,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		$scope.designer.type = variable.t;
 		$scope.designer.assignment = variable.a || 'd';
 		$scope.designer.name = variable.n;
-		$scope.designer.operand = {data: (variable.t == 'device' ? { t: 'd', d: variable.v} : variable.v), multiple: false, dataType: variable.t, optional: true}
+		$scope.designer.operand = {data: variable.v, multiple: false, dataType: variable.t, optional: true}
 		$scope.designer.description = variable.z;
 		window.designer = $scope.designer;
 		window.scope = $scope;
@@ -1455,13 +1455,11 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 			case '':
 				variable.v = null;
 				break;
-			case 'd':
-				variable.v = value.d;
-				break;
 			default:
 				variable.v = value;
 				break;
 		}
+		variable.$$html = null;
 		if ($scope.designer.$new) {
 			$scope.piston.v.push(variable);
 		} else {
@@ -1750,7 +1748,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		var result = '';
 		for (i in list) {
 			var item = $scope.buildName(list[i], noQuotes, pedantic, itemPrefix);
-			result += '<span ' + tag + (className ? ' class="' + className + '"' : '') + '>' + item + '</span>' + (possessive ? '\'' + (item.substr(-1) == 's' ? '' : 's') : '') + (cnt < list.length ? ' <span pun>' + (cnt == list.length - 1 ? (list.length > 2 ? ', ' : '') + suffix : ',') + '</span> ' : '');
+			result += '<span ' + tag + (className ? ' class="' + className + '"' : '') + '>' + item + '</span>' + (possessive ? '\'' + (item.substr(-1) == 's' ? '' : 's') : '') + (cnt < list.length ? '<span pun>' + (cnt == list.length - 1 ? (list.length > 2 ? ', ' : ' ') + suffix + ' ' : ', ') + '</span>' : '');
 			cnt++;
 		}
 		return result.trim();
@@ -1785,7 +1783,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 				}
 			}
 			if (deviceNames.length) {
-				return $scope.buildNameList(deviceNames, 'and', 'dev', '');
+				return $scope.buildNameList(deviceNames, 'and', 'dev', '', false, true);
 			}
 		}
 		return 'Location';
@@ -2688,9 +2686,9 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 	$scope.renderOperand = function(operand, noQuotes, pedantic) {
 		var result = '';
 		if (operand) {
-			if (operand instanceof Array) {
-				result = $scope.renderDeviceList(operand, null, 'and', true);
-			} else {
+//			if (operand instanceof Array) {
+//				result = $scope.renderDeviceList(operand, null, 'and', true);
+//			} else {
 				switch (operand.t) {
 					case 'd': //physical devices
 						if (operand.d)
@@ -2729,6 +2727,9 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 							case 'piston':
 								result = '<span lit>' + $scope.getPistonName(operand.c) + '</span>';
 								break;
+							case 'phone':
+								result = '<span phn>' + operand.c + '</span>';
+								break;
 							default:
 								//if we still think we need quotes, let's make sure booleans don't have any
 								if (!noQuotes) {
@@ -2743,10 +2744,10 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 							result = '<span exp>{' + operand.e + '}</span>';
 						break;
 				}
-			}
+//			}
 		}
-		result = result ? result : '<span dis>(empty)</span>';
-		return (result instanceof String) ? $sce.trustAsHtml(result) : result;
+		result = result ? result : '<span nul class="nul">(empty)</span>';
+		return (result instanceof Object) ? result : $sce.trustAsHtml(result);
 	}
 
 
@@ -3401,7 +3402,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 			var piston = document.getElementById('piston');
 			$scope.view.exportBin = bin;
 			$timeout(function() {
-				var width = piston.clientWidth;
+				var width = 1170;//piston.clientWidth;
 				var height = piston.clientHeight + (anonymize ? 0 : 64);
 				piston.setAttribute('printing', '');
 				if (anonymize) piston.setAttribute('anonymized', '');
