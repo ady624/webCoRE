@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.0.082.20170421" }
+public static String version() { return "v0.0.083.20170421" }
 /*
+ *	04/21/2017 >>> v0.0.083.20170421 - ALPHA - Fixed a bug introduced during device-typed variable refactoring, $currentEventDevice was not properly stored as a List of device Ids
  *	04/21/2017 >>> v0.0.082.20170421 - ALPHA - Fixed a pseudo-bug where older pistons (created before some parameters were added) are missing some operands and that causes errors during evaluations
  *	04/21/2017 >>> v0.0.081.20170421 - ALPHA - Fixed a bug preventing a for-each to work with device-typed variables
  *	04/21/2017 >>> v0.0.080.20170421 - ALPHA - Fixed a newly introduced bug where function parameters were parsed as strings, also fixed functions time, date, and datetime's timezone
@@ -618,7 +619,7 @@ private Boolean executeEvent(rtData, event) {
 		setSystemVariableValue(rtData, '$state', rtData.state.new)
         setSystemVariableValue(rtData, '$previousEventDate', rtData.previousEvent?.date ?: now())
         setSystemVariableValue(rtData, '$previousEventDelay', rtData.previousEvent?.delay ?: 0)
-        setSystemVariableValue(rtData, '$previousEventDevice', rtData.previousEvent?.device)
+        setSystemVariableValue(rtData, '$previousEventDevice', [rtData.previousEvent?.device])
         setSystemVariableValue(rtData, '$previousEventDeviceIndex', rtData.previousEvent?.index ?: 0)
         setSystemVariableValue(rtData, '$previousEventAttribute', rtData.previousEvent?.name ?: '')
         setSystemVariableValue(rtData, '$previousEventValue', rtData.previousEvent?.value ?: '')
@@ -627,7 +628,7 @@ private Boolean executeEvent(rtData, event) {
         //current variables
         setSystemVariableValue(rtData, '$currentEventDate', rtData.currentEvent.date ?: now())
         setSystemVariableValue(rtData, '$currentEventDelay', rtData.currentEvent.delay ?: 0)
-        setSystemVariableValue(rtData, '$currentEventDevice', rtData.currentEvent?.device)
+        setSystemVariableValue(rtData, '$currentEventDevice', [rtData.currentEvent?.device])
         setSystemVariableValue(rtData, '$currentEventDeviceIndex', rtData.currentEvent.index ?: 0)
         setSystemVariableValue(rtData, '$currentEventAttribute', rtData.currentEvent.name ?: '')
         setSystemVariableValue(rtData, '$currentEventValue', rtData.currentEvent.value ?: '')
@@ -2120,7 +2121,8 @@ private Boolean evaluateCondition(rtData, condition, collection, async) {
 
                 //we now have all the operands, their values, and the comparison, let's get to work
                 def options = [smatches: true]
-                result = evaluateComparison(rtData, condition.co, lo, ro, ro2, [operand: condition.to, values: evaluateOperand(rtData, null, condition.to)], options)
+                def to = condition.to ? [operand: condition.to, values: evaluateOperand(rtData, null, condition.to)] : null
+                result = evaluateComparison(rtData, condition.co, lo, ro, ro2, to, options)
                 result = not ? !result : !!result
                 //save new values to cache
                 if (lo) for (value in lo.values) updateCache(rtData, value)
@@ -2177,7 +2179,7 @@ private Boolean evaluateComparison(rtData, comparison, lo, ro = null, ro2 = null
         	options.devices = [matched: [], unmatched: []]
         }
         //if multiple left values, go through each
-        def tvalue = to && to.values ? to.values + [f: to.operand.f] : null 
+        def tvalue = to && to.operand && to.values ? to.values + [f: to.operand.f] : null 
         for(value in lo.values) {
             def res = false
             if (value && value.v && !value.v.x) {
@@ -3104,6 +3106,8 @@ private Map evaluateExpression(rtData, expression, dataType = null) {
     //return the value, either directly or via cast, if certain data type is requested
   	//when dealing with devices, they need to be "converted" unless the request is to return devices
     if (dataType && (dataType != 'device') && (result.t == 'device')) {
+    	//if not a list, make it a list
+    	if (!(result.v instanceof List)) result.v = [result.v]
         switch (result.v.size()) {        	
             case 0: result = [t: 'error', v: 'Empty device list']; break;
             case 1: result = getDeviceAttribute(rtData, result.v[0], result.a, result.i); break;
