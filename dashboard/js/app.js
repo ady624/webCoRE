@@ -1159,4 +1159,4 @@ if (document.selection) {
 }}
 
 //navigator.registerProtocolHandler('web+core','https://' + window.location.hostname + '/handler/%s', 'webCoRE');
-version = function() { return 'v0.0.082.20170421'; };
+version = function() { return 'v0.0.083.20170421'; };
