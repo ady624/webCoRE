@@ -1420,6 +1420,8 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 			variable.a = 'd';
 			variable.z = '';
 		}
+		//temporary fix
+		if (variable.v instanceof Array) variable.v = {data:{}};
 		$scope.designer = {};
 		$scope.designer.$variable = variable;
 		$scope.designer.$obj = variable;

@@ -101,7 +101,7 @@ app.directive('textcomplete', ['Textcomplete', function(Textcomplete) {
     }
 }]);
 
-app.directive('masonry', function ($parse) {
+app.directive('masonry', ['$parse', function ($parse) {
     return {
         restrict: 'AC',
         link: function (scope, elem, attrs) {
@@ -130,7 +130,7 @@ app.directive('masonry', function ($parse) {
 			scope.update();
         }
     };
-}).directive('masonryTile', function () {
+}]).directive('masonryTile', function () {
     return {
         restrict: 'AC',
         link: function (scope, elem) {
@@ -1159,4 +1159,4 @@ if (document.selection) {
 }}
 
 //navigator.registerProtocolHandler('web+core','https://' + window.location.hostname + '/handler/%s', 'webCoRE');
-version = function() { return 'v0.0.07f.20170421'; };
+version = function() { return 'v0.0.080.20170421'; };
