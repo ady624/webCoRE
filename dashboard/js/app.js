@@ -743,6 +743,17 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 			});
     }
 
+
+    dataService.setVariable = function (name, value) {
+		var inst = dataService.getInstance();
+		si = store ? store[inst.id] : null;
+		var data = value ? utoa(angular.toJson(value)) : '';
+    	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/variable/set?name=' + name + '&value=' + data + '&token=' + (si && si.token ? si.token : ''), {jsonpCallbackParam: 'callback'})
+			.then(function(response) {
+				return response.data;
+			});
+    }
+
     dataService.evaluateExpression = function (pid, expression, dataType) {
 		var inst = dataService.getPistonInstance(pid);
 		if (!inst) { inst = dataService.getInstance() };
@@ -1159,4 +1170,4 @@ if (document.selection) {
 }}
 
 //navigator.registerProtocolHandler('web+core','https://' + window.location.hostname + '/handler/%s', 'webCoRE');
-version = function() { return 'v0.0.083.20170421'; };
+version = function() { return 'v0.0.084.20170422'; };

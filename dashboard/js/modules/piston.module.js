@@ -115,9 +115,31 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 				if (response.activity.schedules) $scope.schedules = response.activity.schedules;
 				if (response.activity.name) $scope.meta.name = response.activity.name;
 				if ($scope.logs && $scope.logs.length) $scope.lastLogEntry =$scope.logs[0].t;
+				if (response.activity.globalVars) {
+					$scope.updateGlobalVars(response.activity.globalVars);
+				}
 			}
 			tmrActivity = $timeout($scope.updateActivity, 3000);
 		});
+	}
+
+
+	$scope.updateGlobalVars = function(globalVars) {
+		$scope.globalVars = $scope.globalVars instanceof Object ? $scope.globalVars : {};
+		for (varName in globalVars) {
+			var varType = globalVars[varName].t;
+			var varValue = globalVars[varName].v;
+			var v = $scope.globalVars[varName];
+			if (!v) {
+				$scope.globalVars[varName] = {t: varType, v: varValue};
+			} else {
+				if (v.t != varType) v.t = varType;
+				if (v.v != varValue) v.v = varValue;
+			}
+		}
+		for (varName in $scope.globalVars) {
+			if (!globalVars[varName]) delete($scope.globalVars[varName]);
+		}
 	}
 
 	$scope.init = function() {
@@ -163,7 +185,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 				$scope.virtualDevices = $scope.listAvailableVirtualDevices();
 				window.scope = $scope;
 				$scope.localVars = response.data.localVars;
-				$scope.globalVars = response.data.globalVars;
+				$scope.globalVars = $scope.instance.globalVars;
 				$scope.systemVars = response.data.systemVars;
 				$scope.systemVarNames = []; //fix for angular ignoring keys that start with $
 				for(name in $scope.systemVars) $scope.systemVarNames.push(name);
@@ -374,6 +396,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 	$scope.edit = function() {
 		$scope.mode = 'edit';
 		$scope.init();
+		$('viewer')[0].scrollTop = 0;
 	}
 
 	$scope.cancel = function() {
@@ -1475,6 +1498,90 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 
 
 
+
+
+
+	/* global variables */
+
+	$scope.addGlobalVariable = function() {
+		return $scope.editGlobalVariable(null);
+	};
+
+	$scope.editGlobalVariable = function(variableName) {
+		if ($scope.mode != 'edit') return;
+		var variable = $scope.globalVars[variableName];
+		if (!variable) {
+			variable = {t:'dynamic', v:''};
+		}
+		$scope.designer = {};
+		$scope.designer.$variableName = variableName;
+		$scope.designer.$variable = variable;
+		$scope.designer.$obj = variable;
+		$scope.designer.$new = variableName ? false : true;
+		$scope.designer.name = variableName ? '' + variableName : '@';
+		$scope.designer.type = variable.t;
+		$scope.designer.operand = {data: {t: !variable.v ? '' : ( variable.t == 'device' ? 'd' : 'c'), c:variable.v, d: variable.v}, multiple: false, dataType: variable.t, optional: true, onlyAllowConstants: true}
+		window.designer = $scope.designer;
+		window.scope = $scope;
+		$scope.validateOperand($scope.designer.operand);
+		$scope.designer.dialog = ngDialog.open({
+			template: 'dialog-edit-global-variable',
+			className: 'ngdialog-theme-default ngdialog-large',
+			closeByDocument: false,
+			disableAnimation: true,
+			scope: $scope
+		});
+	};
+
+	$scope.updateGlobalVariable = function(nextDialog) {
+		$scope.autoSave();
+		var variable = $scope.designer.$new ? {} : $scope.designer.$variable;
+		variable.t = $scope.designer.operand.dataType;
+		variable.n = $scope.designer.name.trim().replace(/[^@a-z0-9]|\s+|\r?\n|\r/gmi, '_');
+		var value = $scope.designer.operand.data;
+		switch (value.t) {
+			case '':
+				variable.v = variable.t == 'device' ? [] : null;
+				break;
+			case 'c':
+				variable.v = value.c ? value.c : '';
+				break;
+			case 'd':
+				variable.v = value.d ? value.d : [];
+				break;
+			default:
+				variable.v = null;
+				break;
+		}
+		delete(variable.$$html);
+		//save global var
+		console.log(variable);
+		dataService.setVariable($scope.designer.$variableName, variable).then(function(data) {
+			if (data && data.globalVars) {
+				$scope.updateGlobalVars(data.globalVars);
+			}
+		});
+		$scope.closeDialog();
+		if (nextDialog) {
+			$scope.addGlobalVariable();
+		}
+	}
+
+	$scope.validateGlobalVariableName = function() {
+		if (!$scope.designer) return false;
+		var name = $scope.designer.name;
+		if (!name) return false;
+		if (!name.startsWith('@')) name = '@' + name;
+		//one or two @ at the beginning of the name only
+		while (name.startsWith('@@@')) name = name.substr(1);
+		if ($scope.designer.name != name) {
+			$scope.designer.name = name;
+		}
+		return name && (name != '@') && (name != '@@') && (($scope.designer.$variableName == name) || !($scope.globalVars[name])
+);
+	}
+
+
 	$scope.drag = function(list, index) {
 		list.splice(index, 1);
 	}
@@ -2247,10 +2354,10 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 
 			var strict = !!operand.strict;
 			if (operand.onlyAllowConstants) {
-				operand.allowDevices = false;
+				operand.allowDevices = (dataType == 'device');
 				operand.allowPhysical = false;
 				operand.allowVirtual = false;
-				operand.allowConstant = true;
+				operand.allowConstant = (dataType != 'device');;
 				operand.allowVariable = false;
 				operand.allowExpression = false;
 			} else {
@@ -2315,6 +2422,8 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 			case 'piston':
 				operand.options = $scope.listAllPistons();
 				break;
+			default:
+				operand.options = null;
 		}
 	
 

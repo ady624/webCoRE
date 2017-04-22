@@ -99,12 +99,54 @@ piston[mode=edit] {
     position: absolute;
 	left: 0px;
 	top: 0px;
-	right: 0px;
+	right: 320px;
 	bottom: 0px;
 	border: 0px;
 	margin: 0px;
 	width: auto;
 	height: auto;
+}
+
+toolbar {
+	position: absolute;
+	display: block;
+	right: 0px;
+	top: 0px;
+	bottom: 0px;
+	border: 0px;
+	margin: 0px;
+	padding: 0px;
+	width: 320px;
+	height: auto;
+	border-left: solid 1px #ccc;
+	background: #f8f8f8;
+	overflow-y: auto;
+}
+
+
+toolbar > panel {
+	display: block;
+	padding: 8px;
+}
+
+toolbar > panel > label {
+    display: block;
+    text-align: center;
+    font-size: 1.2em;
+    margin: 0px 0px 8px 0px;
+    padding: 0px;
+    border-bottom: solid 1px #ccc;
+}
+
+toolbar > panel > a {
+	display: block;
+	padding: 0px;
+	margin: 2px 0px;
+	cursor: pointer;
+}
+
+toolbar > panel > a:hover {
+	text-decoration: underline;
 }
 
 piston[printing] {
@@ -355,7 +397,8 @@ label span.error {
 	float: right;
 }
 
-line[new] {
+line[new],
+span[new] {
     color: rgba(0, 0, 0, 0.2);
 }
 
@@ -878,7 +921,25 @@ badge::after {
 		border-top: solid 1px #ccc;
 	}
 	
+	viewer[mode=edit] {
+		margin: 0px;
+		padding: 0px;
+		overflow-y: auto;
+	}
 
+	piston {
+		position: relative !important;
+		width: 100% !important;
+		height: 100% !important;
+		display:  block;
+	}
+
+	toolbar {
+		position: relative;
+		width: 100%;
+		height: auto;
+		border-top: solid 1px #ccc;
+	}
 
 	div[multicolumn] {
 		column-count: 1;
