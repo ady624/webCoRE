@@ -277,7 +277,7 @@ private pageInitializeDashboard() {
                 }
                 section() {
 	            	paragraph "Now, please choose a name for this ${handle()} instance"
-					label name: "name", title: "Name", defaultValue: app.name, required: true
+					label name: "name", title: "Name", defaultValue: handle()
                 }
                 section() {
                 	paragraph "${state.installed ? "Tap Done to continue." : "Next, choose a security password for your dashboard. You will need to enter this password when accessing your dashboard for the first time, and possibly from time to time, depending on your settings."}", required: false
