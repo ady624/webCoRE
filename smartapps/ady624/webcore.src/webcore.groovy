@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.0.083.20170421" }
+public static String version() { return "v0.0.084.20170422" }
 /*
+ *	04/22/2017 >>> v0.0.084.20170422 - ALPHA - NFL integration complete LOL
  *	04/21/2017 >>> v0.0.083.20170421 - ALPHA - Fixed a bug introduced during device-typed variable refactoring, $currentEventDevice was not properly stored as a List of device Ids
  *	04/21/2017 >>> v0.0.082.20170421 - ALPHA - Fixed a pseudo-bug where older pistons (created before some parameters were added) are missing some operands and that causes errors during evaluations
  *	04/21/2017 >>> v0.0.081.20170421 - ALPHA - Fixed a bug preventing a for-each to work with device-typed variables
@@ -277,7 +278,9 @@ private pageInitializeDashboard() {
                 }
                 section() {
 	            	paragraph "Now, please choose a name for this ${handle()} instance"
-					label name: "name", title: "Name", defaultValue: handle()
+					//label name: "name", title: "Name", defaultValue: "webCoRE", required: false
+					label name: "name", title: "Name", state: (name ? "complete" : null), defaultValue: app.name, required: false
+
                 }
                 section() {
                 	paragraph "${state.installed ? "Tap Done to continue." : "Next, choose a security password for your dashboard. You will need to enter this password when accessing your dashboard for the first time, and possibly from time to time, depending on your settings."}", required: false
@@ -550,6 +553,7 @@ mappings {
 	path("/intf/dashboard/piston/delete") {action: [GET: "api_intf_dashboard_piston_delete"]}
 	path("/intf/dashboard/piston/evaluate") {action: [GET: "api_intf_dashboard_piston_evaluate"]}
 	path("/intf/dashboard/piston/activity") {action: [GET: "api_intf_dashboard_piston_activity"]}
+	path("/intf/dashboard/variable/set") {action: [GET: "api_intf_variable_set"]}
 	path("/ifttt/:eventName") {action: [GET: "api_ifttt", POST: "api_ifttt"]}
 	path("/execute") {action: [POST: "api_execute"]}
 	path("/execute/:pistonName") {action: [GET: "api_execute", POST: "api_execute"]}
@@ -584,6 +588,7 @@ private api_get_base_result(deviceVersion = 0) {
             coreVersion: version(),
             logging: settings.logging,
             virtualDevices: virtualDevices,
+            globalVars: listAvailableVariables(),
         ] + (sendDevices ? [devices: listAvailableDevices()] : [:]),
         location: [
             contactBookEnabled: location.getContactBookEnabled(),
@@ -664,7 +669,7 @@ private api_intf_dashboard_piston_get() {
             result = api_get_base_result(requireDb ? 0 : params.dev)            
             def piston = getChildApps().find{ hashId(it.id) == pistonId };
             if (piston) {
-            	result.data = piston.get() ?: [:] + [globalVars: listAvailableVariables()]
+            	result.data = piston.get() ?: [:]
             }
             if (requireDb) {
                 result.dbVersion = serverDbVersion
@@ -868,6 +873,34 @@ private api_intf_dashboard_piston_delete() {
     render contentType: "application/javascript;charset=utf-8", data: "${params.callback}(${result.encodeAsJSON()})"
 }
 
+private api_intf_variable_set() {
+	def result
+    debug "Dashboard: Request received to set a variable"
+	if (verifySecurityToken(params.token)) {
+    	def name = params.name;
+        def value = params.value ? new groovy.json.JsonSlurper().parseText(new String(params.value.decodeBase64(), "UTF-8")) : null        
+        Map globalVars = atomicState.vars ?: [:]
+        if (name && !value) {
+        	//deleting a variable
+            globalVars.remove(name);
+        } else if (value && value.n) {
+        	if (!name || (name != value.n)) {
+	        	//add a new variable
+                if (name) globalVars.remove(name);
+    	        globalVars[value.n] = [t: value.t, v: value.v]
+            } else {
+                //update a variable
+                globalVars[name] = [t: value.t, v: value.v]
+            }
+		}
+        atomicState.vars = globalVars
+		result = [status: "ST_SUCCESS"] + [globalVars: globalVars]
+	} else {
+    	result = api_get_error_result("ERR_INVALID_TOKEN")
+    }
+    render contentType: "application/javascript;charset=utf-8", data: "${params.callback}(${result.encodeAsJSON()})"
+}
+
 private api_intf_dashboard_piston_evaluate() {
 	def result
     debug "Dashboard: Request received to evaluate an expression"
@@ -892,7 +925,7 @@ private api_intf_dashboard_piston_activity() {
 	if (verifySecurityToken(params.token)) {
 	    def piston = getChildApps().find{ hashId(it.id) == params.id };
 	    if (piston) {
-			result = [status: "ST_SUCCESS", activity: piston.activity(params.log)]
+			result = [status: "ST_SUCCESS", activity: (piston.activity(params.log) ?: [:]) + [globalVars: listAvailableVariables()]]
         } else {
 	    	result = api_get_error_result("ERR_INVALID_ID")
         }
@@ -950,7 +983,7 @@ private Map listAvailableDevices(raw = false) {
             }
         }
     }
-    return devices
+    return devices.sort{ it.key }
 }
 
 private Map listAvailableVariables() {
@@ -1100,21 +1133,21 @@ public Map getRunTimeData(semaphore) {
 
 public void updateRunTimeData(data) {
 	if (!data || !data.id) return
-	List events = []
+	List variableEvents = []
+    if (data && data.gvCache) {
 	Map vars = atomicState.vars ?: [:]
     def modified = false
-    if (data && data.vars) {
-    	for(var in data.vars) {
-        	if (var.n && (vars[var.n]) && (var.v != vars[var.n].v)) {
-            	events.push([v: var.n, ov: vars[var.n].v, nv: var.v])
-            	vars[var.n].v = var.v
+    	for(var in data.gvCache) {
+        	if (var.key && var.key.startsWith('@') && (vars[var.key]) && (var.value.v != vars[var.key].v)) {
+            	variableEvents.push([name: var.key, oldValue: vars[var.key].v, newValue: var.value.v])
+            	vars[var.key].v = var.value.v
                 modified = true
             }
         }
+        if (modified) {
+            atomicState.vars = vars
+        }
 	}
-    if (modified) {
-    	atomicState.vars = vars
-    }
     def id = data.id
     Map piston = [
     	a: data.active,
@@ -1126,7 +1159,9 @@ public void updateRunTimeData(data) {
     atomicState[id] = piston
 
     //broadcast variable change events
-    //todo
+    for (event in variableEvents) {
+        sendLocationEvent( [name: "${handle()}:update", value: event.name, isStateChange: true, displayed: true, linkText: "${handle()} global variable ${event.name} changed", descriptionText: "${handle()} global variable ${event.name} changed", data: [id: hashId(app.id), name: app.label, event: 'variable', variable: event]])
+    }
     //release semaphores
 	if (data.semaphoreName && (atomicState[data.semaphoreName] <= data.semaphore)) {
     	//release the semaphore

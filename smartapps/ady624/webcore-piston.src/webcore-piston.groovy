@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.0.083.20170421" }
+public static String version() { return "v0.0.084.20170422" }
 /*
+ *	04/22/2017 >>> v0.0.084.20170422 - ALPHA - NFL integration complete LOL
  *	04/21/2017 >>> v0.0.083.20170421 - ALPHA - Fixed a bug introduced during device-typed variable refactoring, $currentEventDevice was not properly stored as a List of device Ids
  *	04/21/2017 >>> v0.0.082.20170421 - ALPHA - Fixed a pseudo-bug where older pistons (created before some parameters were added) are missing some operands and that causes errors during evaluations
  *	04/21/2017 >>> v0.0.081.20170421 - ALPHA - Fixed a bug preventing a for-each to work with device-typed variables
@@ -767,6 +768,7 @@ private updateLogs(rtData) {
     }
     atomicState.logs = logs
     state.logs = logs
+    rtData.remove('logs')
 }
 
 
@@ -2784,7 +2786,7 @@ private Map getVariable(rtData, name) {
     return [t: result.t, v: result.v]
 }
 
-def setVariable(rtData, name, value) {
+private Map setVariable(rtData, name, value) {
 	name = sanitizeVariableName(name)
 	if (!name) return [t: "error", v: "Invalid empty variable name"]
 	if (name.startsWith("@")) {
@@ -2792,6 +2794,9 @@ def setVariable(rtData, name, value) {
     	if (variable instanceof Map) {
         	//set global var
             variable.v = cast(rtData, value, variable.t)
+            Map cache = rtData.gvCache ?: [:]
+            cache[name] = variable
+            rtData.gvCache = cache
             return variable
         }
 	} else {
