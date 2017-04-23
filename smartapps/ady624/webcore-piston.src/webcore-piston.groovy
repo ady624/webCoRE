@@ -2423,7 +2423,7 @@ private boolean comp_changes_to_any_of				(rtData, lv, rv = null, rv2 = null, tv
 private boolean comp_changes_away_from_any_of		(rtData, lv, rv = null, rv2 = null, tv = null) { def oldValue = valueCacheChanged(rtData, lv); return !!oldValue && comp_is_any_of(rtData, oldValue, rv, rv2); }
 
 private boolean comp_stays							(rtData, lv, rv = null, rv2 = null, tv = null) { return comp_is(rtData, lv, rv, rv2, tv); }
-private boolean comp_stays_unchanged				(rtData, lv, rv = null, rv2 = null, tv = null) { return !valueCacheChanged(rtData, lv); }
+private boolean comp_stays_unchanged				(rtData, lv, rv = null, rv2 = null, tv = null) { return true; }
 private boolean comp_stays_not						(rtData, lv, rv = null, rv2 = null, tv = null) { return comp_is_not(rtData, lv, rv, rv2, tv); }
 private boolean comp_stays_equal_to					(rtData, lv, rv = null, rv2 = null, tv = null) { return comp_is_equal_to(rtData, lv, rv, rv2, tv); }
 private boolean comp_stays_not_equal_to				(rtData, lv, rv = null, rv2 = null, tv = null) { return comp_is_not_equal_to(rtData, lv, rv, rv2, tv); }
