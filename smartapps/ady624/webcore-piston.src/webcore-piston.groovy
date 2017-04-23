@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.0.087.20170423" }
+public static String version() { return "v0.0.088.20170423" }
 /*
+ *	04/23/2017 >>> v0.0.088.20170423 - ALPHA - Time condition offsets
  *	04/23/2017 >>> v0.0.087.20170423 - ALPHA - Timed triggers (stay/stays) implemented - need additional work to get them to play nicely with "Any of devices stays..." - this never worked in CoRE, but proved to might-have-been-helpful
  *	04/23/2017 >>> v0.0.086.20170423 - ALPHA - Subscriptions to @global variables
  *	04/22/2017 >>> v0.0.085.20170422 - ALPHA - Fixed a bug with virtual device options
@@ -2126,8 +2127,9 @@ private Boolean evaluateCondition(rtData, condition, collection, async) {
 
                 //we now have all the operands, their values, and the comparison, let's get to work
                 def options = [smatches: true]
-                def to = condition.to ? [operand: condition.to, values: evaluateOperand(rtData, null, condition.to)] : null
-                result = evaluateComparison(rtData, condition.co, lo, ro, ro2, to, options)
+                def to = (comparison.t || (ro && (lo.operand.t == 'v') && (lo.operand.v == 'time') && (ro.operand.t != 'c'))) && condition.to ? [operand: condition.to, values: evaluateOperand(rtData, null, condition.to)] : null
+                def to2 = ro2 && (lo.operand.t == 'v') && (lo.operand.v == 'time') && (ro2.operand.t != 'c') && condition.to2 ? [operand: condition.to2, values: evaluateOperand(rtData, null, condition.to2)] : null
+                result = evaluateComparison(rtData, condition.co, lo, ro, ro2, to, to2, options)
                 //save new values to cache
                 if (lo) for (value in lo.values) updateCache(rtData, value)
                 if (ro) for (value in ro.values) updateCache(rtData, value)
@@ -2194,7 +2196,7 @@ private updateCache(rtData, value) {
     }
 }
 
-private Boolean evaluateComparison(rtData, comparison, lo, ro = null, ro2 = null, to = null, options = null) {
+private Boolean evaluateComparison(rtData, comparison, lo, ro = null, ro2 = null, to = null, to2 = null, options = null) {
 		def fn = "comp_${comparison}"
         def result = (lo.operand.g == 'any' ? false : true)
         if (options?.matches) {
@@ -2202,24 +2204,25 @@ private Boolean evaluateComparison(rtData, comparison, lo, ro = null, ro2 = null
         }
         //if multiple left values, go through each
         def tvalue = to && to.operand && to.values ? to.values + [f: to.operand.f] : null 
+        def tvalue2 = to2 && to2.operand && to2.values ? to2.values : null
         for(value in lo.values) {
             def res = false
             if (value && value.v && !value.v.x) {
                 try {
                     if (!ro) {
-                        res = "$fn"(rtData, value, null, null, tvalue)
+                        res = "$fn"(rtData, value, null, null, tvalue, tvalue2)
                     } else {
                         def rres
                         res = (ro.operand.g == 'any' ? false : true)
                         //if multiple right values, go through each
                         for (rvalue in ro.values) {
                             if (!ro2) {
-                                rres = "$fn"(rtData, value, rvalue, null, tvalue)
+                                rres = "$fn"(rtData, value, rvalue, null, tvalue, tvalue2)
                             } else {
                                 rres = (ro2.operand.g == 'any' ? false : true)
                                 //if multiple right2 values, go through each
                                 for (r2value in ro2.values) {
-                                    def r2res = "$fn"(rtData, value, rvalue, r2value, tvalue)
+                                    def r2res = "$fn"(rtData, value, rvalue, r2value, tvalue, tvalue2)
 
                                     rres = (ro2.operand.g == 'any' ? rres || r2res : rres && r2res)
                                     if (((ro2.operand.g == 'any') && rres) || ((ro2.operand.g != 'any') && !rres)) break
@@ -2348,98 +2351,98 @@ private boolean valueChanged(rtData, comparisonValue, timeValue) {
 }
 
 //comparison low level functions
-private boolean comp_is								(rtData, lv, rv = null, rv2 = null, tv = null) { return (evaluateExpression(rtData, lv.v, 'string').v == evaluateExpression(rtData, rv.v, 'string').v) || (lv.v.n && (cast(rtData, lv.v.n, 'string') == cast(rtData, rv.v.v, 'string'))) }
-private boolean comp_is_not							(rtData, lv, rv = null, rv2 = null, tv = null) { return !comp_is(rtData, lv, rv, rv2, tv) }
-private boolean comp_is_equal_to					(rtData, lv, rv = null, rv2 = null, tv = null) { return evaluateExpression(rtData, lv.v, 'decimal').v == evaluateExpression(rtData, rv.v, 'decimal').v }
-private boolean comp_is_not_equal_to				(rtData, lv, rv = null, rv2 = null, tv = null) { return evaluateExpression(rtData, lv.v, 'decimal').v != evaluateExpression(rtData, rv.v, 'decimal').v }
-private boolean comp_is_different_than				(rtData, lv, rv = null, rv2 = null, tv = null) { return evaluateExpression(rtData, lv.v, 'decimal').v != evaluateExpression(rtData, rv.v, 'decimal').v }
-private boolean comp_is_less_than					(rtData, lv, rv = null, rv2 = null, tv = null) { return evaluateExpression(rtData, lv.v, 'decimal').v < evaluateExpression(rtData, rv.v, 'decimal').v }
-private boolean comp_is_less_than_or_equal_to		(rtData, lv, rv = null, rv2 = null, tv = null) { return evaluateExpression(rtData, lv.v, 'decimal').v <= evaluateExpression(rtData, rv.v, 'decimal').v }
-private boolean comp_is_greater_than				(rtData, lv, rv = null, rv2 = null, tv = null) { return evaluateExpression(rtData, lv.v, 'decimal').v > evaluateExpression(rtData, rv.v, 'decimal').v }
-private boolean comp_is_greater_than_or_equal_to	(rtData, lv, rv = null, rv2 = null, tv = null) { return evaluateExpression(rtData, lv.v, 'decimal').v >= evaluateExpression(rtData, rv.v, 'decimal').v }
-private boolean comp_is_even						(rtData, lv, rv = null, rv2 = null, tv = null) { return evaluateExpression(rtData, lv.v, 'integer').v.mod(2) == 0 }
-private boolean comp_is_odd							(rtData, lv, rv = null, rv2 = null, tv = null) { return evaluateExpression(rtData, lv.v, 'integer').v.mod(2) != 0 }
-private boolean comp_is_true						(rtData, lv, rv = null, rv2 = null, tv = null) { return !!evaluateExpression(rtData, lv.v, 'boolean').v }
-private boolean comp_is_false						(rtData, lv, rv = null, rv2 = null, tv = null) { return !evaluateExpression(rtData, lv.v, 'boolean').v }
-private boolean comp_is_inside_of_range				(rtData, lv, rv = null, rv2 = null, tv = null) { def v = evaluateExpression(rtData, lv.v, 'decimal').v; def v1 = evaluateExpression(rtData, rv.v, 'decimal').v; def v2 = evaluateExpression(rtData, rv2.v, 'decimal').v; return (v1 < v2) ? ((v >= v1) && (v <= v2)) : ((v >= v2) && (v <= v1)); }
-private boolean comp_is_outside_of_range			(rtData, lv, rv = null, rv2 = null, tv = null) { return !comp_is_inside_of_range(rtData, lv, rv, rv2, tv) }
-private boolean comp_is_any_of						(rtData, lv, rv = null, rv2 = null, tv = null) { def v = evaluateExpression(rtData, lv.v, 'string').v; for (vi in rv.v.v.tokenize(',')) { if (v == evaluateExpression(rtData, [t: rv.v.t, v: "$vi".toString().trim(), i: rv.v.i, a: rv.v.a, vt: rv.v.vt], 'string').v) return true; }; return false;}
-private boolean comp_is_not_any_of					(rtData, lv, rv = null, rv2 = null, tv = null) { return !comp_is_any_of(rtData, lv, rv, rv2, tv); }
+private boolean comp_is								(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return (evaluateExpression(rtData, lv.v, 'string').v == evaluateExpression(rtData, rv.v, 'string').v) || (lv.v.n && (cast(rtData, lv.v.n, 'string') == cast(rtData, rv.v.v, 'string'))) }
+private boolean comp_is_not							(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return !comp_is(rtData, lv, rv, rv2, tv, tv2) }
+private boolean comp_is_equal_to					(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return evaluateExpression(rtData, lv.v, 'decimal').v == evaluateExpression(rtData, rv.v, 'decimal').v }
+private boolean comp_is_not_equal_to				(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return evaluateExpression(rtData, lv.v, 'decimal').v != evaluateExpression(rtData, rv.v, 'decimal').v }
+private boolean comp_is_different_than				(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return evaluateExpression(rtData, lv.v, 'decimal').v != evaluateExpression(rtData, rv.v, 'decimal').v }
+private boolean comp_is_less_than					(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return evaluateExpression(rtData, lv.v, 'decimal').v < evaluateExpression(rtData, rv.v, 'decimal').v }
+private boolean comp_is_less_than_or_equal_to		(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return evaluateExpression(rtData, lv.v, 'decimal').v <= evaluateExpression(rtData, rv.v, 'decimal').v }
+private boolean comp_is_greater_than				(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return evaluateExpression(rtData, lv.v, 'decimal').v > evaluateExpression(rtData, rv.v, 'decimal').v }
+private boolean comp_is_greater_than_or_equal_to	(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return evaluateExpression(rtData, lv.v, 'decimal').v >= evaluateExpression(rtData, rv.v, 'decimal').v }
+private boolean comp_is_even						(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return evaluateExpression(rtData, lv.v, 'integer').v.mod(2) == 0 }
+private boolean comp_is_odd							(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return evaluateExpression(rtData, lv.v, 'integer').v.mod(2) != 0 }
+private boolean comp_is_true						(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return !!evaluateExpression(rtData, lv.v, 'boolean').v }
+private boolean comp_is_false						(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return !evaluateExpression(rtData, lv.v, 'boolean').v }
+private boolean comp_is_inside_of_range				(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { def v = evaluateExpression(rtData, lv.v, 'decimal').v; def v1 = evaluateExpression(rtData, rv.v, 'decimal').v; def v2 = evaluateExpression(rtData, rv2.v, 'decimal').v; return (v1 < v2) ? ((v >= v1) && (v <= v2)) : ((v >= v2) && (v <= v1)); }
+private boolean comp_is_outside_of_range			(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return !comp_is_inside_of_range(rtData, lv, rv, rv2, tv, tv2) }
+private boolean comp_is_any_of						(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { def v = evaluateExpression(rtData, lv.v, 'string').v; for (vi in rv.v.v.tokenize(',')) { if (v == evaluateExpression(rtData, [t: rv.v.t, v: "$vi".toString().trim(), i: rv.v.i, a: rv.v.a, vt: rv.v.vt], 'string').v) return true; }; return false;}
+private boolean comp_is_not_any_of					(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return !comp_is_any_of(rtData, lv, rv, rv2, tv, tv2); }
 
-private boolean comp_was							(rtData, lv, rv = null, rv2 = null, tv = null) { return valueWas(rtData, lv, rv, rv2, tv, 'is'); }
-private boolean comp_was_not						(rtData, lv, rv = null, rv2 = null, tv = null) { return valueWas(rtData, lv, rv, rv2, tv, 'is_not'); }
-private boolean comp_was_equal_to					(rtData, lv, rv = null, rv2 = null, tv = null) { return valueWas(rtData, lv, rv, rv2, tv, 'is_equal_to'); }
-private boolean comp_was_not_equal_to				(rtData, lv, rv = null, rv2 = null, tv = null) { return valueWas(rtData, lv, rv, rv2, tv, 'is_not_equal_to'); }
-private boolean comp_was_different_than				(rtData, lv, rv = null, rv2 = null, tv = null) { return valueWas(rtData, lv, rv, rv2, tv, 'is_different_than'); }
-private boolean comp_was_less_than					(rtData, lv, rv = null, rv2 = null, tv = null) { return valueWas(rtData, lv, rv, rv2, tv, 'is_less_than'); }
-private boolean comp_was_less_than_or_equal_to		(rtData, lv, rv = null, rv2 = null, tv = null) { return valueWas(rtData, lv, rv, rv2, tv, 'is_less_than_or_equal_to'); }
-private boolean comp_was_greater_than				(rtData, lv, rv = null, rv2 = null, tv = null) { return valueWas(rtData, lv, rv, rv2, tv, 'is_greater_than'); }
-private boolean comp_was_greater_than_or_equal_to	(rtData, lv, rv = null, rv2 = null, tv = null) { return valueWas(rtData, lv, rv, rv2, tv, 'is_greater_than_or_equal_to'); }
-private boolean comp_was_even						(rtData, lv, rv = null, rv2 = null, tv = null) { return valueWas(rtData, lv, rv, rv2, tv, 'is_even'); }
-private boolean comp_was_odd						(rtData, lv, rv = null, rv2 = null, tv = null) { return valueWas(rtData, lv, rv, rv2, tv, 'is_odd'); }
-private boolean comp_was_true						(rtData, lv, rv = null, rv2 = null, tv = null) { return valueWas(rtData, lv, rv, rv2, tv, 'is_true'); }
-private boolean comp_was_false						(rtData, lv, rv = null, rv2 = null, tv = null) { return valueWas(rtData, lv, rv, rv2, tv, 'is_false'); }
-private boolean comp_was_inside_of_range			(rtData, lv, rv = null, rv2 = null, tv = null) { return valueWas(rtData, lv, rv, rv2, tv, 'is_inside_of_range'); }
-private boolean comp_was_outside_of_range			(rtData, lv, rv = null, rv2 = null, tv = null) { return valueWas(rtData, lv, rv, rv2, tv, 'is_outside_of_range'); }
-private boolean comp_was_any_of						(rtData, lv, rv = null, rv2 = null, tv = null) { return valueWas(rtData, lv, rv, rv2, tv, 'is_any_of'); }
-private boolean comp_was_not_any_of					(rtData, lv, rv = null, rv2 = null, tv = null) { return valueWas(rtData, lv, rv, rv2, tv, 'is_not_any_of'); }
+private boolean comp_was							(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return valueWas(rtData, lv, rv, rv2, tv, 'is'); }
+private boolean comp_was_not						(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return valueWas(rtData, lv, rv, rv2, tv, 'is_not'); }
+private boolean comp_was_equal_to					(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return valueWas(rtData, lv, rv, rv2, tv, 'is_equal_to'); }
+private boolean comp_was_not_equal_to				(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return valueWas(rtData, lv, rv, rv2, tv, 'is_not_equal_to'); }
+private boolean comp_was_different_than				(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return valueWas(rtData, lv, rv, rv2, tv, 'is_different_than'); }
+private boolean comp_was_less_than					(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return valueWas(rtData, lv, rv, rv2, tv, 'is_less_than'); }
+private boolean comp_was_less_than_or_equal_to		(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return valueWas(rtData, lv, rv, rv2, tv, 'is_less_than_or_equal_to'); }
+private boolean comp_was_greater_than				(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return valueWas(rtData, lv, rv, rv2, tv, 'is_greater_than'); }
+private boolean comp_was_greater_than_or_equal_to	(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return valueWas(rtData, lv, rv, rv2, tv, 'is_greater_than_or_equal_to'); }
+private boolean comp_was_even						(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return valueWas(rtData, lv, rv, rv2, tv, 'is_even'); }
+private boolean comp_was_odd						(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return valueWas(rtData, lv, rv, rv2, tv, 'is_odd'); }
+private boolean comp_was_true						(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return valueWas(rtData, lv, rv, rv2, tv, 'is_true'); }
+private boolean comp_was_false						(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return valueWas(rtData, lv, rv, rv2, tv, 'is_false'); }
+private boolean comp_was_inside_of_range			(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return valueWas(rtData, lv, rv, rv2, tv, 'is_inside_of_range'); }
+private boolean comp_was_outside_of_range			(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return valueWas(rtData, lv, rv, rv2, tv, 'is_outside_of_range'); }
+private boolean comp_was_any_of						(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return valueWas(rtData, lv, rv, rv2, tv, 'is_any_of'); }
+private boolean comp_was_not_any_of					(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return valueWas(rtData, lv, rv, rv2, tv, 'is_not_any_of'); }
 
-private boolean comp_changed						(rtData, lv, rv = null, rv2 = null, tv = null) { return valueChanged(rtData, lv, tv); }
-private boolean comp_did_not_change					(rtData, lv, rv = null, rv2 = null, tv = null) { return !valueChanged(rtData, lv, tv); }
+private boolean comp_changed						(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return valueChanged(rtData, lv, tv); }
+private boolean comp_did_not_change					(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return !valueChanged(rtData, lv, tv); }
 
-private boolean comp_is_any							(rtData, lv, rv = null, rv2 = null, tv = null) { return true; }
-private boolean comp_is_before						(rtData, lv, rv = null, rv2 = null, tv = null) { return evaluateExpression(rtData, lv.v, 'datetime').v + 2000 < evaluateExpression(rtData, rv.v, 'datetime').v; }
-private boolean comp_is_after						(rtData, lv, rv = null, rv2 = null, tv = null) { return evaluateExpression(rtData, lv.v, 'datetime').v + 2000 >= evaluateExpression(rtData, rv.v, 'datetime').v; }
-private boolean comp_is_between						(rtData, lv, rv = null, rv2 = null, tv = null) { long v = evaluateExpression(rtData, lv.v, 'datetime').v + 2000; long v1 = evaluateExpression(rtData, rv.v, 'datetime').v; long v2 = evaluateExpression(rtData, rv2.v, 'datetime').v; return (v1 < v2) ? (v >= v1) && (v < v2) : (v < v2) || (v >= v1); }
-private boolean comp_is_not_between					(rtData, lv, rv = null, rv2 = null, tv = null) { return !comp_is_between(rtData, lv, rv, rv2, tv); }
+private boolean comp_is_any							(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return true; }
+private boolean comp_is_before						(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { long offset1 = tv ? evaluateExpression(rtData, [t: 'duration', v: tv.v, vt: tv.vt], 'long').v : 0; return evaluateExpression(rtData, lv.v, 'datetime').v + 2000 < (evaluateExpression(rtData, rv.v, 'datetime').v + offset1); }
+private boolean comp_is_after						(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { long offset1 = tv ? evaluateExpression(rtData, [t: 'duration', v: tv.v, vt: tv.vt], 'long').v : 0; return evaluateExpression(rtData, lv.v, 'datetime').v + 2000 >= (evaluateExpression(rtData, rv.v, 'datetime').v + offset1); }
+private boolean comp_is_between						(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { long offset1 = tv ? evaluateExpression(rtData, [t: 'duration', v: tv.v, vt: tv.vt], 'long').v : 0; long offset2 = tv2 ? evaluateExpression(rtData, [t: 'duration', v: tv2.v, vt: tv2.vt], 'long').v : 0; long v = evaluateExpression(rtData, lv.v, 'datetime').v + 2000; long v1 = evaluateExpression(rtData, rv.v, 'datetime').v + offset1; long v2 = evaluateExpression(rtData, rv2.v, 'datetime').v + offset2; return (v1 < v2) ? (v >= v1) && (v < v2) : (v < v2) || (v >= v1); }
+private boolean comp_is_not_between					(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return !comp_is_between(rtData, lv, rv, rv2, tv, tv2); }
 
 /*triggers*/
-private boolean comp_gets							(rtData, lv, rv = null, rv2 = null, tv = null) { return (cast(rtData, lv.v.v, 'string') == cast(rtData, rv.v.v, 'string')) && matchDeviceSubIndex(lv.v.i, rtData.currentEvent.index)}
-private boolean comp_changes						(rtData, lv, rv = null, rv2 = null, tv = null) { return valueCacheChanged(rtData, lv); }
-private boolean comp_changes_to						(rtData, lv, rv = null, rv2 = null, tv = null) { return valueCacheChanged(rtData, lv) && ("${lv.v.v}" == "${rv.v.v}"); }
-private boolean comp_changes_away_from				(rtData, lv, rv = null, rv2 = null, tv = null) { def oldValue = valueCacheChanged(rtData, lv); return oldValue && ("${oldValue.v.v}" == "${rv.v.v}"); }
-private boolean comp_drops							(rtData, lv, rv = null, rv2 = null, tv = null) { def oldValue = valueCacheChanged(rtData, lv); return oldValue && (cast(rtData, oldValue.v.v, 'decimal') > cast(rtData, lv.v.v, 'decimal')); }
-private boolean comp_does_not_drop					(rtData, lv, rv = null, rv2 = null, tv = null) { return !comp_drops(rtData, lv, rv, rv2, tv); }
-private boolean comp_drops_below					(rtData, lv, rv = null, rv2 = null, tv = null) { def oldValue = valueCacheChanged(rtData, lv); return oldValue && (cast(rtData, oldValue.v.v, 'decimal') >= cast(rtData, rv.v.v, 'decimal')) && (cast(rtData, lv.v.v, 'decimal') < cast(rtData, rv.v.v, 'decimal')); }
-private boolean comp_drops_to_or_below				(rtData, lv, rv = null, rv2 = null, tv = null) { def oldValue = valueCacheChanged(rtData, lv); return oldValue && (cast(rtData, oldValue.v.v, 'decimal') > cast(rtData, rv.v.v, 'decimal')) && (cast(rtData, lv.v.v, 'decimal') <= cast(rtData, rv.v.v, 'decimal')); }
-private boolean comp_rises							(rtData, lv, rv = null, rv2 = null, tv = null) { def oldValue = valueCacheChanged(rtData, lv); return oldValue && (cast(rtData, oldValue.v.v, 'decimal') < cast(rtData, lv.v.v, 'decimal')); }
-private boolean comp_does_not_rise					(rtData, lv, rv = null, rv2 = null, tv = null) { return !comp_rises(rtData, lv, rv, rv2, tv); }
-private boolean comp_rises_above					(rtData, lv, rv = null, rv2 = null, tv = null) { def oldValue = valueCacheChanged(rtData, lv); return oldValue && (cast(rtData, oldValue.v.v, 'decimal') <= cast(rtData, rv.v.v, 'decimal')) && (cast(rtData, lv.v.v, 'decimal') > cast(rtData, rv.v.v, 'decimal')); }
-private boolean comp_rises_to_or_above				(rtData, lv, rv = null, rv2 = null, tv = null) { def oldValue = valueCacheChanged(rtData, lv); return oldValue && (cast(rtData, oldValue.v.v, 'decimal') < cast(rtData, rv.v.v, 'decimal')) && (cast(rtData, lv.v.v, 'decimal') >= cast(rtData, rv.v.v, 'decimal')); }
-private boolean comp_remains_below					(rtData, lv, rv = null, rv2 = null, tv = null) { def oldValue = valueCacheChanged(rtData, lv); return oldValue && (cast(rtData, oldValue.v.v, 'decimal') < cast(rtData, rv.v.v, 'decimal')) && (cast(rtData, lv.v.v, 'decimal') < cast(rtData, rv.v.v, 'decimal')); }
-private boolean comp_remains_below_or_equal_to		(rtData, lv, rv = null, rv2 = null, tv = null) { def oldValue = valueCacheChanged(rtData, lv); return oldValue && (cast(rtData, oldValue.v.v, 'decimal') <= cast(rtData, rv.v.v, 'decimal')) && (cast(rtData, lv.v.v, 'decimal') <= cast(rtData, rv.v.v, 'decimal')); }
-private boolean comp_remains_above					(rtData, lv, rv = null, rv2 = null, tv = null) { def oldValue = valueCacheChanged(rtData, lv); return oldValue && (cast(rtData, oldValue.v.v, 'decimal') > cast(rtData, rv.v.v, 'decimal')) && (cast(rtData, lv.v.v, 'decimal') > cast(rtData, rv.v.v, 'decimal')); }
-private boolean comp_remains_above_or_equal_to		(rtData, lv, rv = null, rv2 = null, tv = null) { def oldValue = valueCacheChanged(rtData, lv); return oldValue && (cast(rtData, oldValue.v.v, 'decimal') >= cast(rtData, rv.v.v, 'decimal')) && (cast(rtData, lv.v.v, 'decimal') >= cast(rtData, rv.v.v, 'decimal')); }
-private boolean comp_enters_range					(rtData, lv, rv = null, rv2 = null, tv = null) { def oldValue = valueCacheChanged(rtData, lv); if (!oldValue) return false; def ov = cast(rtData, oldValue.v.v, 'decimal'); def v = cast(rtData, lv.v.v, 'decimal'); def v1 = cast(rtData, rv.v.v, 'decimal'); def v2 = cast(rtData, rv2.v.v, 'decimal'); if (v1 > v2) { def vv = v1; v1 = v2; v2 = vv; }; return ((ov < v1) || (ov > v2)) && ((v >= v1) && (v <= v2)); }
-private boolean comp_exits_range					(rtData, lv, rv = null, rv2 = null, tv = null) { def oldValue = valueCacheChanged(rtData, lv); if (!oldValue) return false; def ov = cast(rtData, oldValue.v.v, 'decimal'); def v = cast(rtData, lv.v.v, 'decimal'); def v1 = cast(rtData, rv.v.v, 'decimal'); def v2 = cast(rtData, rv2.v.v, 'decimal'); if (v1 > v2) { def vv = v1; v1 = v2; v2 = vv; }; return ((ov >= v1) && (ov <= v2)) && ((v < v1) || (v > v2)); }
-private boolean comp_remains_inside_of_range		(rtData, lv, rv = null, rv2 = null, tv = null) { def oldValue = valueCacheChanged(rtData, lv); if (!oldValue) return false; def ov = cast(rtData, oldValue.v.v, 'decimal'); def v = cast(rtData, lv.v.v, 'decimal'); def v1 = cast(rtData, rv.v.v, 'decimal'); def v2 = cast(rtData, rv2.v.v, 'decimal'); if (v1 > v2) { def vv = v1; v1 = v2; v2 = vv; }; return (ov >= v1) && (ov <= v2) && (v >= v1) && (v <= v2); }
-private boolean comp_remains_outside_of_range		(rtData, lv, rv = null, rv2 = null, tv = null) { def oldValue = valueCacheChanged(rtData, lv); if (!oldValue) return false; def ov = cast(rtData, oldValue.v.v, 'decimal'); def v = cast(rtData, lv.v.v, 'decimal'); def v1 = cast(rtData, rv.v.v, 'decimal'); def v2 = cast(rtData, rv2.v.v, 'decimal'); if (v1 > v2) { def vv = v1; v1 = v2; v2 = vv; }; return ((ov < v1) || (ov > v2)) && ((v < v1) || (v > v2)); }
-private boolean comp_becomes_even					(rtData, lv, rv = null, rv2 = null, tv = null) { def oldValue = valueCacheChanged(rtData, lv); return oldValue && (cast(rtData, oldValue.v.v, 'integer').mod(2) != 0) && (cast(rtData, lv.v.v, 'integer').mod(2) == 0); }
-private boolean comp_becomes_odd					(rtData, lv, rv = null, rv2 = null, tv = null) { def oldValue = valueCacheChanged(rtData, lv); return oldValue && (cast(rtData, oldValue.v.v, 'integer').mod(2) == 0) && (cast(rtData, lv.v.v, 'integer').mod(2) != 0); }
-private boolean comp_remains_even					(rtData, lv, rv = null, rv2 = null, tv = null) { def oldValue = valueCacheChanged(rtData, lv); return oldValue && (cast(rtData, oldValue.v.v, 'integer').mod(2) == 0) && (cast(rtData, lv.v.v, 'integer').mod(2) == 0); }
-private boolean comp_remains_odd					(rtData, lv, rv = null, rv2 = null, tv = null) { def oldValue = valueCacheChanged(rtData, lv); return oldValue && (cast(rtData, oldValue.v.v, 'integer').mod(2) != 0) && (cast(rtData, lv.v.v, 'integer').mod(2) != 0); }
+private boolean comp_gets							(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return (cast(rtData, lv.v.v, 'string') == cast(rtData, rv.v.v, 'string')) && matchDeviceSubIndex(lv.v.i, rtData.currentEvent.index)}
+private boolean comp_changes						(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return valueCacheChanged(rtData, lv); }
+private boolean comp_changes_to						(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return valueCacheChanged(rtData, lv) && ("${lv.v.v}" == "${rv.v.v}"); }
+private boolean comp_changes_away_from				(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { def oldValue = valueCacheChanged(rtData, lv); return oldValue && ("${oldValue.v.v}" == "${rv.v.v}"); }
+private boolean comp_drops							(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { def oldValue = valueCacheChanged(rtData, lv); return oldValue && (cast(rtData, oldValue.v.v, 'decimal') > cast(rtData, lv.v.v, 'decimal')); }
+private boolean comp_does_not_drop					(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return !comp_drops(rtData, lv, rv, rv2, tv, tv2); }
+private boolean comp_drops_below					(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { def oldValue = valueCacheChanged(rtData, lv); return oldValue && (cast(rtData, oldValue.v.v, 'decimal') >= cast(rtData, rv.v.v, 'decimal')) && (cast(rtData, lv.v.v, 'decimal') < cast(rtData, rv.v.v, 'decimal')); }
+private boolean comp_drops_to_or_below				(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { def oldValue = valueCacheChanged(rtData, lv); return oldValue && (cast(rtData, oldValue.v.v, 'decimal') > cast(rtData, rv.v.v, 'decimal')) && (cast(rtData, lv.v.v, 'decimal') <= cast(rtData, rv.v.v, 'decimal')); }
+private boolean comp_rises							(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { def oldValue = valueCacheChanged(rtData, lv); return oldValue && (cast(rtData, oldValue.v.v, 'decimal') < cast(rtData, lv.v.v, 'decimal')); }
+private boolean comp_does_not_rise					(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return !comp_rises(rtData, lv, rv, rv2, tv, tv2); }
+private boolean comp_rises_above					(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { def oldValue = valueCacheChanged(rtData, lv); return oldValue && (cast(rtData, oldValue.v.v, 'decimal') <= cast(rtData, rv.v.v, 'decimal')) && (cast(rtData, lv.v.v, 'decimal') > cast(rtData, rv.v.v, 'decimal')); }
+private boolean comp_rises_to_or_above				(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { def oldValue = valueCacheChanged(rtData, lv); return oldValue && (cast(rtData, oldValue.v.v, 'decimal') < cast(rtData, rv.v.v, 'decimal')) && (cast(rtData, lv.v.v, 'decimal') >= cast(rtData, rv.v.v, 'decimal')); }
+private boolean comp_remains_below					(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { def oldValue = valueCacheChanged(rtData, lv); return oldValue && (cast(rtData, oldValue.v.v, 'decimal') < cast(rtData, rv.v.v, 'decimal')) && (cast(rtData, lv.v.v, 'decimal') < cast(rtData, rv.v.v, 'decimal')); }
+private boolean comp_remains_below_or_equal_to		(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { def oldValue = valueCacheChanged(rtData, lv); return oldValue && (cast(rtData, oldValue.v.v, 'decimal') <= cast(rtData, rv.v.v, 'decimal')) && (cast(rtData, lv.v.v, 'decimal') <= cast(rtData, rv.v.v, 'decimal')); }
+private boolean comp_remains_above					(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { def oldValue = valueCacheChanged(rtData, lv); return oldValue && (cast(rtData, oldValue.v.v, 'decimal') > cast(rtData, rv.v.v, 'decimal')) && (cast(rtData, lv.v.v, 'decimal') > cast(rtData, rv.v.v, 'decimal')); }
+private boolean comp_remains_above_or_equal_to		(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { def oldValue = valueCacheChanged(rtData, lv); return oldValue && (cast(rtData, oldValue.v.v, 'decimal') >= cast(rtData, rv.v.v, 'decimal')) && (cast(rtData, lv.v.v, 'decimal') >= cast(rtData, rv.v.v, 'decimal')); }
+private boolean comp_enters_range					(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { def oldValue = valueCacheChanged(rtData, lv); if (!oldValue) return false; def ov = cast(rtData, oldValue.v.v, 'decimal'); def v = cast(rtData, lv.v.v, 'decimal'); def v1 = cast(rtData, rv.v.v, 'decimal'); def v2 = cast(rtData, rv2.v.v, 'decimal'); if (v1 > v2) { def vv = v1; v1 = v2; v2 = vv; }; return ((ov < v1) || (ov > v2)) && ((v >= v1) && (v <= v2)); }
+private boolean comp_exits_range					(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { def oldValue = valueCacheChanged(rtData, lv); if (!oldValue) return false; def ov = cast(rtData, oldValue.v.v, 'decimal'); def v = cast(rtData, lv.v.v, 'decimal'); def v1 = cast(rtData, rv.v.v, 'decimal'); def v2 = cast(rtData, rv2.v.v, 'decimal'); if (v1 > v2) { def vv = v1; v1 = v2; v2 = vv; }; return ((ov >= v1) && (ov <= v2)) && ((v < v1) || (v > v2)); }
+private boolean comp_remains_inside_of_range		(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { def oldValue = valueCacheChanged(rtData, lv); if (!oldValue) return false; def ov = cast(rtData, oldValue.v.v, 'decimal'); def v = cast(rtData, lv.v.v, 'decimal'); def v1 = cast(rtData, rv.v.v, 'decimal'); def v2 = cast(rtData, rv2.v.v, 'decimal'); if (v1 > v2) { def vv = v1; v1 = v2; v2 = vv; }; return (ov >= v1) && (ov <= v2) && (v >= v1) && (v <= v2); }
+private boolean comp_remains_outside_of_range		(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { def oldValue = valueCacheChanged(rtData, lv); if (!oldValue) return false; def ov = cast(rtData, oldValue.v.v, 'decimal'); def v = cast(rtData, lv.v.v, 'decimal'); def v1 = cast(rtData, rv.v.v, 'decimal'); def v2 = cast(rtData, rv2.v.v, 'decimal'); if (v1 > v2) { def vv = v1; v1 = v2; v2 = vv; }; return ((ov < v1) || (ov > v2)) && ((v < v1) || (v > v2)); }
+private boolean comp_becomes_even					(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { def oldValue = valueCacheChanged(rtData, lv); return oldValue && (cast(rtData, oldValue.v.v, 'integer').mod(2) != 0) && (cast(rtData, lv.v.v, 'integer').mod(2) == 0); }
+private boolean comp_becomes_odd					(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { def oldValue = valueCacheChanged(rtData, lv); return oldValue && (cast(rtData, oldValue.v.v, 'integer').mod(2) == 0) && (cast(rtData, lv.v.v, 'integer').mod(2) != 0); }
+private boolean comp_remains_even					(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { def oldValue = valueCacheChanged(rtData, lv); return oldValue && (cast(rtData, oldValue.v.v, 'integer').mod(2) == 0) && (cast(rtData, lv.v.v, 'integer').mod(2) == 0); }
+private boolean comp_remains_odd					(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { def oldValue = valueCacheChanged(rtData, lv); return oldValue && (cast(rtData, oldValue.v.v, 'integer').mod(2) != 0) && (cast(rtData, lv.v.v, 'integer').mod(2) != 0); }
 
-private boolean comp_changes_to_any_of				(rtData, lv, rv = null, rv2 = null, tv = null) { return !!valueCacheChanged(rtData, lv) && comp_is_any_of(rtData, lv, rv, rv2, tv); }
-private boolean comp_changes_away_from_any_of		(rtData, lv, rv = null, rv2 = null, tv = null) { def oldValue = valueCacheChanged(rtData, lv); return !!oldValue && comp_is_any_of(rtData, oldValue, rv, rv2); }
+private boolean comp_changes_to_any_of				(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return !!valueCacheChanged(rtData, lv) && comp_is_any_of(rtData, lv, rv, rv2, tv, tv2); }
+private boolean comp_changes_away_from_any_of		(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { def oldValue = valueCacheChanged(rtData, lv); return !!oldValue && comp_is_any_of(rtData, oldValue, rv, rv2); }
 
-private boolean comp_stays							(rtData, lv, rv = null, rv2 = null, tv = null) { return comp_is(rtData, lv, rv, rv2, tv); }
-private boolean comp_stays_unchanged				(rtData, lv, rv = null, rv2 = null, tv = null) { return true; }
-private boolean comp_stays_not						(rtData, lv, rv = null, rv2 = null, tv = null) { return comp_is_not(rtData, lv, rv, rv2, tv); }
-private boolean comp_stays_equal_to					(rtData, lv, rv = null, rv2 = null, tv = null) { return comp_is_equal_to(rtData, lv, rv, rv2, tv); }
-private boolean comp_stays_not_equal_to				(rtData, lv, rv = null, rv2 = null, tv = null) { return comp_is_not_equal_to(rtData, lv, rv, rv2, tv); }
-private boolean comp_stays_different_than			(rtData, lv, rv = null, rv2 = null, tv = null) { return comp_is_different_than(rtData, lv, rv, rv2, tv); }
-private boolean comp_stays_less_than				(rtData, lv, rv = null, rv2 = null, tv = null) { return comp_is_less_than(rtData, lv, rv, rv2, tv); }
-private boolean comp_stays_less_than_or_equal_to	(rtData, lv, rv = null, rv2 = null, tv = null) { return comp_is_less_than_or_equal_to(rtData, lv, rv, rv2, tv); }
-private boolean comp_stays_greater_than				(rtData, lv, rv = null, rv2 = null, tv = null) { return comp_is_greater_than(rtData, lv, rv, rv2, tv); }
-private boolean comp_stays_greater_than_or_equal_to	(rtData, lv, rv = null, rv2 = null, tv = null) { return comp_is_greater_than_or_equal_to(rtData, lv, rv, rv2, tv); }
-private boolean comp_stays_even						(rtData, lv, rv = null, rv2 = null, tv = null) { return comp_is_even(rtData, lv, rv, rv2, tv); }
-private boolean comp_stays_odd						(rtData, lv, rv = null, rv2 = null, tv = null) { return comp_is_odd(rtData, lv, rv, rv2, tv); }
-private boolean comp_stays_true						(rtData, lv, rv = null, rv2 = null, tv = null) { return comp_is_true(rtData, lv, rv, rv2, tv); }
-private boolean comp_stays_false					(rtData, lv, rv = null, rv2 = null, tv = null) { return comp_is_false(rtData, lv, rv, rv2, tv); }
-private boolean comp_stays_inside_of_range			(rtData, lv, rv = null, rv2 = null, tv = null) { return comp_is_inside_of_range(rtData, lv, rv, rv2, tv); }
-private boolean comp_stays_outside_of_range			(rtData, lv, rv = null, rv2 = null, tv = null) { return comp_is_outside_of_range(rtData, lv, rv, rv2, tv); }
-private boolean comp_stays_any_of					(rtData, lv, rv = null, rv2 = null, tv = null) { return comp_is_any_of(rtData, lv, rv, rv2, tv); }
-private boolean comp_stays_not_any_of				(rtData, lv, rv = null, rv2 = null, tv = null) { return comp_is_not_any_of(rtData, lv, rv, rv2, tv); }
+private boolean comp_stays							(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return comp_is(rtData, lv, rv, rv2, tv, tv2); }
+private boolean comp_stays_unchanged				(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return true; }
+private boolean comp_stays_not						(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return comp_is_not(rtData, lv, rv, rv2, tv, tv2); }
+private boolean comp_stays_equal_to					(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return comp_is_equal_to(rtData, lv, rv, rv2, tv, tv2); }
+private boolean comp_stays_not_equal_to				(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return comp_is_not_equal_to(rtData, lv, rv, rv2, tv, tv2); }
+private boolean comp_stays_different_than			(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return comp_is_different_than(rtData, lv, rv, rv2, tv, tv2); }
+private boolean comp_stays_less_than				(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return comp_is_less_than(rtData, lv, rv, rv2, tv, tv2); }
+private boolean comp_stays_less_than_or_equal_to	(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return comp_is_less_than_or_equal_to(rtData, lv, rv, rv2, tv, tv2); }
+private boolean comp_stays_greater_than				(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return comp_is_greater_than(rtData, lv, rv, rv2, tv, tv2); }
+private boolean comp_stays_greater_than_or_equal_to	(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return comp_is_greater_than_or_equal_to(rtData, lv, rv, rv2, tv, tv2); }
+private boolean comp_stays_even						(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return comp_is_even(rtData, lv, rv, rv2, tv, tv2); }
+private boolean comp_stays_odd						(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return comp_is_odd(rtData, lv, rv, rv2, tv, tv2); }
+private boolean comp_stays_true						(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return comp_is_true(rtData, lv, rv, rv2, tv, tv2); }
+private boolean comp_stays_false					(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return comp_is_false(rtData, lv, rv, rv2, tv, tv2); }
+private boolean comp_stays_inside_of_range			(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return comp_is_inside_of_range(rtData, lv, rv, rv2, tv, tv2); }
+private boolean comp_stays_outside_of_range			(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return comp_is_outside_of_range(rtData, lv, rv, rv2, tv, tv2); }
+private boolean comp_stays_any_of					(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return comp_is_any_of(rtData, lv, rv, rv2, tv, tv2); }
+private boolean comp_stays_not_any_of				(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return comp_is_not_any_of(rtData, lv, rv, rv2, tv, tv2); }
 
 
 private traverseStatements(node, closure, parentNode = null, data = null) {

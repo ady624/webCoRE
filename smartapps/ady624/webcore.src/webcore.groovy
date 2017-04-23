@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.0.087.20170423" }
+public static String version() { return "v0.0.088.20170423" }
 /*
+ *	04/23/2017 >>> v0.0.088.20170423 - ALPHA - Time condition offsets
  *	04/23/2017 >>> v0.0.087.20170423 - ALPHA - Timed triggers (stay/stays) implemented - need additional work to get them to play nicely with "Any of devices stays..." - this never worked in CoRE, but proved to might-have-been-helpful
  *	04/23/2017 >>> v0.0.086.20170423 - ALPHA - Subscriptions to @global variables
  *	04/22/2017 >>> v0.0.085.20170422 - ALPHA - Fixed a bug with virtual device options
