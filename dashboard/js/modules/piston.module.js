@@ -2922,7 +2922,9 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 	}
 
 	$scope.renderComparison = function(l, o, r, r2, to) {
-		var comparison = $scope.db.comparisons.conditions[o] || $scope.db.comparisons.triggers[o];
+		var comparison = $scope.db.comparisons.triggers[o];
+		var trigger = !!comparison;
+		if (!comparison) comparison = $scope.db.comparisons.conditions[o];
 		if (!comparison) return '[ERROR: Invalid comparison]';
 		var pedantic = l.t == 'v';
 		var plural = l && (l.t == 'p') && l.d && (l.d.length > 1) && (l.g == 'all');
@@ -2943,7 +2945,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 
 		switch (comparison.t) {
 			case 1:
-				result += ' <span pun>in the last</span> ' + $scope.renderOperand(to) + ' <span lit>' + $scope.getDurationUnitName(to.vt, !((to.t == 'c') && (!isNaN(to.c)) && (parseInt(to.c) == 1))) + '</span>';
+				result += ' <span pun>' + (trigger ? 'for' : 'in the last') + '</span> ' + $scope.renderOperand(to) + ' <span lit>' + $scope.getDurationUnitName(to.vt, !((to.t == 'c') && (!isNaN(to.c)) && (parseInt(to.c) == 1))) + '</span>';
 				break;
 			case 2:
 				result += ' <span pun>for ' + (to.f == 'g' ? 'at least' : 'less than') + '</span> ' + $scope.renderOperand(to) + ' <span lit>' + $scope.getDurationUnitName(to.vt, !((to.t == 'c') && (!isNaN(to.c)) && (parseInt(to.c) == 1))) + '</span>';
