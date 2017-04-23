@@ -7,6 +7,16 @@ viewer[mode=view] {
 	overflow-y: auto;
 }
 
+div[header] {
+    margin: 0px -15px;
+    background: #eee;
+    border-bottom: solid 1px #ccc;
+    padding: 0px;
+}
+
+div[header] h2 {
+	margin: 16px 0px;
+}
 
 piston {
 	position: relative;
@@ -826,14 +836,112 @@ div[multicolumn] {
 	column-count: 2;
 	-webkit-column-count: 2;
 	-moz-column-count: 2;	
-}
-
-div[multicolumn] {
     -webkit-column-rule: solid 1px #eee; /* Chrome, Safari, Opera */
     -moz-column-rule:solid 1px #eee; /* Firefox */
     column-rule: solid 1px #eee;
+    border: solid 1px #ccc;
+    background: #f8f8f8;
+	padding-bottom: 8px;
 }
 
+
+div[dev] {
+	clear: both;
+}
+
+div[dev]+div[dev] {
+	border-top: solid 1px #eee;
+}
+
+div[dev] div[col] {
+	display: inline-block;
+	float: left;
+	width: 60%;
+	line-height: 17px;
+}
+
+div[dev] div[col]+div[col] {
+	float: right;
+	width: 8%;
+	height: 17px;
+	text-align: center;
+	font-family: FontAwesome;
+}
+
+div[dev] div[col][switch="off"]::before {
+    content: "\f204";
+    color: #ccc;
+}
+
+div[dev] div[col][switch="on"]::before {
+    content: "\f205";
+    color: #444;
+}
+
+div[dev] div[col][presence="not present"]::before {
+    content: "\f1ae";
+    color: #ddd;
+}
+
+div[dev] div[col][presence="present"]::before {
+    content: "\f1ae";
+    color: #444;
+}
+
+div[dev] div[col][motion="inactive"]::before {
+    content: "\f09e";
+    color: #ddd;
+}
+
+div[dev] div[col][motion="active"]::before {
+    content: "\f09e";
+    color: #444;
+}
+
+div[dev] div[col][battery="0"]::before {
+    content: "\f244";
+    color: #444;
+}
+
+div[dev] div[col][battery="1"]::before {
+    content: "\f243";
+    color: #444;
+}
+
+div[dev] div[col][battery="2"]::before {
+    content: "\f242";
+    color: #ddd;
+}
+
+div[dev] div[col][battery="3"]::before {
+    content: "\f241";
+    color: #ddd;
+}
+
+div[dev] div[col][battery="4"]::before {
+    content: "\f240";
+    color: #ddd;
+}
+
+div[dev] div[col][temperature]::before {
+    content: attr(temperature);
+    color: #ccc;
+}
+
+
+div[dev] div[col][temperature=""]::before {
+    content: "";
+}
+
+
+
+label[var] {
+	display: block;
+	text-align: center;
+	color: #999;
+	font-weight: normal;
+	margin: 8px 0px 0px 0px;
+}
 
 div[var] {
 	overflow: hidden;
@@ -950,4 +1058,10 @@ badge::after {
 }
 
 
-
+@media only screen and (min-width: 1200px) {
+	div[multicolumn] {
+		column-count: 1;
+		-webkit-column-count: 1;
+		-moz-column-count: 1;	
+	}
+}

@@ -72,10 +72,16 @@
 	</div>
 </nav>
 <viewer ng-if="initialized" ng-animate options="{{viewerPiston.showOptions}}" mode="{{mode}}">
+	<div header ng-if="mode=='view'">
+		<div class="container">
+			<div class="row">
+				<h2>{{meta.name}}</h2>
+			</div>
+		</div>
+	</div>
 
 	<div class="container" ng-if="mode=='view'">
 		<div class="row">
-			<h2>{{meta.name}}</h2>
 			<div class="row" ng-if="0==1">
 				<div class="col-md-12">
 					<div class="btn-group btn-group-justified" role="group">
@@ -140,7 +146,7 @@
 				</div>
 			</div>
 			<div class="row">
-				<div class="col-md-12">
+				<div class="col-md-12 col-lg-6">
 					<h2>Logs</h2>
 					<p class="logs">
 						<table class="table logs table-striped">
@@ -160,13 +166,16 @@
 						<button class="btn btn-default" ng-click="clearLogs();" title="Clear the logs">Clear</button>
 					</div>
 				</div>
-			</div>
-			<div class="row">
-				<div class="col-md-12">
+				<div class="col-md-12 col-lg-6">
 					<h2>Variables</h2>
-				</div>
-				<div class="col-md-12" multicolumn>
-					<div var ng-repeat="i in systemVarNames" ng-if="(!systemVars[i].d || (systemVars[i].v != null)) && (!i.startsWith('$current')) && (!i.startsWith('$previous'))"><span><span class="vartype">{{systemVars[i].t}}</span><span>{{i}}</span></span><span class="{{systemVars[i].v == null ? 'notset' : ''}}">{{formatVariableValue(systemVars[i])}}</span></div>
+					<div multicolumn>
+						<label var ng-if="localVars && localVars">Local variables</label>
+						<div ng-if="localVars" var ng-repeat="(name, var) in localVars"><span><span class="vartype">{{var.t}}</span><span>{{name}}</span></span><span class="{{var.v == null ? 'notset' : ''}}">{{formatVariableValue(var)}}</span></div>
+						<label var ng-if="globalVars">Global variables</label>
+						<div ng-if="globalVars" var ng-repeat="(name, var) in globalVars"><span><span class="vartype">{{var.t}}</span><span>{{name}}</span></span><span class="{{var.v == null ? 'notset' : ''}}">{{formatVariableValue(var)}}</span></div>
+						<label var>System variables</label>
+						<div var ng-repeat="i in systemVarNames" ng-if="(!systemVars[i].d || (systemVars[i].v != null)) && (!i.startsWith('$current')) && (!i.startsWith('$previous'))"><span><span class="vartype">{{systemVars[i].t}}</span><span>{{i}}</span></span><span class="{{systemVars[i].v == null ? 'notset' : ''}}">{{formatVariableValue(systemVars[i])}}</span></div>
+					</div>
 				</div>
 			</div>
 			<div class="row" ng-if="!mobile && stats && stats.timing && stats.timing.length">
@@ -189,9 +198,7 @@
 		</panel>
 		<panel>
 			<label>Devices</label>
-			<ul>
-				<li ng-repeat="device in devices">{{device.n}}</li>
-			</ul>
+			<div ng-repeat="device in devices" dev ng-bind-html="renderDevice(device);"></div>
 		</panel>
 	</toolbar>
 </viewer>
