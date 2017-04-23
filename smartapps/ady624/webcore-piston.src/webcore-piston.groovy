@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.0.086.20170423" }
+public static String version() { return "v0.0.087.20170423" }
 /*
+ *	04/23/2017 >>> v0.0.087.20170423 - ALPHA - Timed triggers (stay/stays) implemented - need additional work to get them to play nicely with "Any of devices stays..." - this never worked in CoRE, but proved to might-have-been-helpful
  *	04/23/2017 >>> v0.0.086.20170423 - ALPHA - Subscriptions to @global variables
  *	04/22/2017 >>> v0.0.085.20170422 - ALPHA - Fixed a bug with virtual device options
  *	04/22/2017 >>> v0.0.084.20170422 - ALPHA - NFL integration complete LOL (not really, implemented global variables though)
@@ -2112,14 +2113,14 @@ private Boolean evaluateCondition(rtData, condition, collection, async) {
                     def values = evaluateOperand(rtData, condition, operand, i, trigger)                    
                     switch (i) {
                         case 0:
-                            lo = [operand: operand, values: values]
-                            break
+                        lo = [operand: operand, values: values]
+                        break
                         case 1:
-                            ro = [operand: operand, values: values]
-                            break
+                        ro = [operand: operand, values: values]
+                        break
                         case 2:
-                            ro2 = [operand: operand, values: values]
-                            break
+                        ro2 = [operand: operand, values: values]
+                        break
                     }
                 }
 
@@ -2127,14 +2128,31 @@ private Boolean evaluateCondition(rtData, condition, collection, async) {
                 def options = [smatches: true]
                 def to = condition.to ? [operand: condition.to, values: evaluateOperand(rtData, null, condition.to)] : null
                 result = evaluateComparison(rtData, condition.co, lo, ro, ro2, to, options)
-                result = not ? !result : !!result
                 //save new values to cache
                 if (lo) for (value in lo.values) updateCache(rtData, value)
                 if (ro) for (value in ro.values) updateCache(rtData, value)
                 if (ro2) for (value in ro2.values) updateCache(rtData, value)
-
-				if (!rtData.fastForwardTo) tracePoint(rtData, "c:${condition.$}", now() - t, result)
-            } else {
+                if (!rtData.fastForwardTo) tracePoint(rtData, "c:${condition.$}", now() - t, result)
+                //do the stay logic here
+                if (trigger && comparison.t) {
+                	//timed trigger
+                    //if (lo.g != 'any')
+                    cancelStatementSchedules(rtData, condition.$)
+                    if (to && result) {
+                    	//if we're using any and there's already a schedule
+                        def tvalue = to && to.operand && to.values ? to.values + [f: to.operand.f] : null
+                        if (tvalue) {
+	                        long delay = evaluateExpression(rtData, [t: 'duration', v: tvalue.v, vt: tvalue.vt], 'long').v
+                            requestWakeUp(rtData, condition, condition, delay)
+                        }
+                    }
+                    result = false
+                }
+                result = not ? !result : !!result
+            } else if ((rtData.event.name == 'time') && (rtData.fastForwardTo == condition.$)) {
+            	rtData.fastForwardTo = null
+				result = not ? false : true
+        	} else {
                 result = true
             }
         }
@@ -2403,6 +2421,25 @@ private boolean comp_remains_odd					(rtData, lv, rv = null, rv2 = null, tv = nu
 
 private boolean comp_changes_to_any_of				(rtData, lv, rv = null, rv2 = null, tv = null) { return !!valueCacheChanged(rtData, lv) && comp_is_any_of(rtData, lv, rv, rv2, tv); }
 private boolean comp_changes_away_from_any_of		(rtData, lv, rv = null, rv2 = null, tv = null) { def oldValue = valueCacheChanged(rtData, lv); return !!oldValue && comp_is_any_of(rtData, oldValue, rv, rv2); }
+
+private boolean comp_stays							(rtData, lv, rv = null, rv2 = null, tv = null) { return comp_is(rtData, lv, rv, rv2, tv); }
+private boolean comp_stays_unchanged				(rtData, lv, rv = null, rv2 = null, tv = null) { return !valueCacheChanged(rtData, lv); }
+private boolean comp_stays_not						(rtData, lv, rv = null, rv2 = null, tv = null) { return comp_is_not(rtData, lv, rv, rv2, tv); }
+private boolean comp_stays_equal_to					(rtData, lv, rv = null, rv2 = null, tv = null) { return comp_is_equal_to(rtData, lv, rv, rv2, tv); }
+private boolean comp_stays_not_equal_to				(rtData, lv, rv = null, rv2 = null, tv = null) { return comp_is_not_equal_to(rtData, lv, rv, rv2, tv); }
+private boolean comp_stays_different_than			(rtData, lv, rv = null, rv2 = null, tv = null) { return comp_is_different_than(rtData, lv, rv, rv2, tv); }
+private boolean comp_stays_less_than				(rtData, lv, rv = null, rv2 = null, tv = null) { return comp_is_less_than(rtData, lv, rv, rv2, tv); }
+private boolean comp_stays_less_than_or_equal_to	(rtData, lv, rv = null, rv2 = null, tv = null) { return comp_is_less_than_or_equal_to(rtData, lv, rv, rv2, tv); }
+private boolean comp_stays_greater_than				(rtData, lv, rv = null, rv2 = null, tv = null) { return comp_is_greater_than(rtData, lv, rv, rv2, tv); }
+private boolean comp_stays_greater_than_or_equal_to	(rtData, lv, rv = null, rv2 = null, tv = null) { return comp_is_greater_than_or_equal_to(rtData, lv, rv, rv2, tv); }
+private boolean comp_stays_even						(rtData, lv, rv = null, rv2 = null, tv = null) { return comp_is_even(rtData, lv, rv, rv2, tv); }
+private boolean comp_stays_odd						(rtData, lv, rv = null, rv2 = null, tv = null) { return comp_is_odd(rtData, lv, rv, rv2, tv); }
+private boolean comp_stays_true						(rtData, lv, rv = null, rv2 = null, tv = null) { return comp_is_true(rtData, lv, rv, rv2, tv); }
+private boolean comp_stays_false					(rtData, lv, rv = null, rv2 = null, tv = null) { return comp_is_false(rtData, lv, rv, rv2, tv); }
+private boolean comp_stays_inside_of_range			(rtData, lv, rv = null, rv2 = null, tv = null) { return comp_is_inside_of_range(rtData, lv, rv, rv2, tv); }
+private boolean comp_stays_outside_of_range			(rtData, lv, rv = null, rv2 = null, tv = null) { return comp_is_outside_of_range(rtData, lv, rv, rv2, tv); }
+private boolean comp_stays_any_of					(rtData, lv, rv = null, rv2 = null, tv = null) { return comp_is_any_of(rtData, lv, rv, rv2, tv); }
+private boolean comp_stays_not_any_of				(rtData, lv, rv = null, rv2 = null, tv = null) { return comp_is_not_any_of(rtData, lv, rv, rv2, tv); }
 
 
 private traverseStatements(node, closure, parentNode = null, data = null) {

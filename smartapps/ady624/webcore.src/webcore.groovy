@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.0.086.20170423" }
+public static String version() { return "v0.0.087.20170423" }
 /*
+ *	04/23/2017 >>> v0.0.087.20170423 - ALPHA - Timed triggers (stay/stays) implemented - need additional work to get them to play nicely with "Any of devices stays..." - this never worked in CoRE, but proved to might-have-been-helpful
  *	04/23/2017 >>> v0.0.086.20170423 - ALPHA - Subscriptions to @global variables
  *	04/22/2017 >>> v0.0.085.20170422 - ALPHA - Fixed a bug with virtual device options
  *	04/22/2017 >>> v0.0.084.20170422 - ALPHA - NFL integration complete LOL (not really, implemented global variables though)
@@ -1757,21 +1758,21 @@ private static Map comparisons() {
 			remains_even					: [ d: "remains even",						dd: "remain even",						g:"di",									],
 			becomes_odd						: [ d: "becomes odd",						dd: "become odd",						g:"di",									],
 			remains_odd						: [ d: "remains odd",						dd: "remain odd",						g:"di",									],
-    		stays_unchanged					: [ d: "stays unchanged",					dd: "stay unchanged",					g:"bdis",						t: 2,	],
-    		stays	 						: [ d: "stays",								dd: "stay",								g:"bdis",	p: 1,				t: 2,	],
-    		stays_away_from					: [ d: "stays away from",					dd: "stay away from",					g:"bdis",	p: 1,				t: 2,	],
-    		stays_any_of					: [ d: "stays any of",						dd: "stay any of",						g:"dis",	p: 1,	m: true,	t: 2,	],
-    		stays_away_from_any_of			: [ d: "stays away from any of",			dd: "stay away from any of",			g:"bdis",	p: 1,	m: true,	t: 2,	],
-			stays_equal_to 					: [ d: "stays equal to",					dd: "stay equal to",					g:"di",		p: 1,				t: 2,	],
-			stays_different_than			: [ d: "stays different than",				dd: "stay different than",				g:"di",		p: 1,				t: 2,	],
-			stays_less_than 				: [ d: "stays less than",					dd: "stay less than",					g:"di",		p: 1,				t: 2,	],
-			stays_less_than_or_equal_to 	: [ d: "stays less than or equal to",		dd: "stay less than or equal to",		g:"di",		p: 1,				t: 2,	],
-			stays_greater_than 				: [ d: "stays greater than",				dd: "stay greater than",				g:"di",		p: 1,				t: 2,	],
-			stays_greater_than_or_equal_to 	: [ d: "stays greater than or equal to",	dd: "stay greater than or equal to",	g:"di",		p: 1,				t: 2,	],
-			stays_inside_of_range 			: [ d: "stays inside of range",				dd: "stay inside of range",				g:"di",		p: 2,				t: 2,	],
-			stays_outside_of_range 			: [ d: "stays outside of range",			dd: "stay outside of range",			g:"di",		p: 2,				t: 2,	],
-			stays_even						: [ d: "stays even",						dd: "stay even",						g:"di",							t: 2,	],
-			stays_odd						: [ d: "stays odd",							dd: "stay odd",							g:"di",							t: 2,	],
+    		stays_unchanged					: [ d: "stays unchanged",					dd: "stay unchanged",					g:"bdis",						t: 1,	],
+    		stays	 						: [ d: "stays",								dd: "stay",								g:"bdis",	p: 1,				t: 1,	],
+    		stays_away_from					: [ d: "stays away from",					dd: "stay away from",					g:"bdis",	p: 1,				t: 1,	],
+    		stays_any_of					: [ d: "stays any of",						dd: "stay any of",						g:"dis",	p: 1,	m: true,	t: 1,	],
+    		stays_away_from_any_of			: [ d: "stays away from any of",			dd: "stay away from any of",			g:"bdis",	p: 1,	m: true,	t: 1,	],
+			stays_equal_to 					: [ d: "stays equal to",					dd: "stay equal to",					g:"di",		p: 1,				t: 1,	],
+			stays_different_than			: [ d: "stays different than",				dd: "stay different than",				g:"di",		p: 1,				t: 1,	],
+			stays_less_than 				: [ d: "stays less than",					dd: "stay less than",					g:"di",		p: 1,				t: 1,	],
+			stays_less_than_or_equal_to 	: [ d: "stays less than or equal to",		dd: "stay less than or equal to",		g:"di",		p: 1,				t: 1,	],
+			stays_greater_than 				: [ d: "stays greater than",				dd: "stay greater than",				g:"di",		p: 1,				t: 1,	],
+			stays_greater_than_or_equal_to 	: [ d: "stays greater than or equal to",	dd: "stay greater than or equal to",	g:"di",		p: 1,				t: 1,	],
+			stays_inside_of_range 			: [ d: "stays inside of range",				dd: "stay inside of range",				g:"di",		p: 2,				t: 1,	],
+			stays_outside_of_range 			: [ d: "stays outside of range",			dd: "stay outside of range",			g:"di",		p: 2,				t: 1,	],
+			stays_even						: [ d: "stays even",						dd: "stay even",						g:"di",							t: 1,	],
+			stays_odd						: [ d: "stays odd",							dd: "stay odd",							g:"di",							t: 1,	],
         ]
 	]
 }
