@@ -18,9 +18,10 @@
  *
  *  Version history
 */
-public static String version() { return "v0.0.084.20170422" }
+public static String version() { return "v0.0.085.20170422" }
 /*
- *	04/22/2017 >>> v0.0.084.20170422 - ALPHA - NFL integration complete LOL
+ *	04/22/2017 >>> v0.0.085.20170422 - ALPHA - Fixed a bug with virtual device options
+ *	04/22/2017 >>> v0.0.084.20170422 - ALPHA - NFL integration complete LOL (not really, implemented global variables though)
  *	04/21/2017 >>> v0.0.083.20170421 - ALPHA - Fixed a bug introduced during device-typed variable refactoring, $currentEventDevice was not properly stored as a List of device Ids
  *	04/21/2017 >>> v0.0.082.20170421 - ALPHA - Fixed a pseudo-bug where older pistons (created before some parameters were added) are missing some operands and that causes errors during evaluations
  *	04/21/2017 >>> v0.0.081.20170421 - ALPHA - Fixed a bug preventing a for-each to work with device-typed variables
@@ -1160,7 +1161,7 @@ public void updateRunTimeData(data) {
 
     //broadcast variable change events
     for (event in variableEvents) {
-        sendLocationEvent( [name: "${handle()}:update", value: event.name, isStateChange: true, displayed: true, linkText: "${handle()} global variable ${event.name} changed", descriptionText: "${handle()} global variable ${event.name} changed", data: [id: hashId(app.id), name: app.label, event: 'variable', variable: event]])
+        sendLocationEvent( [name: handle(), value: event.name, isStateChange: true, displayed: true, linkText: "${handle()} global variable ${event.name} changed", descriptionText: "${handle()} global variable ${event.name} changed", data: [id: hashId(app.id), name: app.label, event: 'variable', variable: event]])
     }
     //release semaphores
 	if (data.semaphoreName && (atomicState[data.semaphoreName] <= data.semaphore)) {
@@ -1172,6 +1173,16 @@ public void updateRunTimeData(data) {
 def webCoREHandler(event) {
     if (!event || (event.name != handle())) return;
     def data = event.jsonData ?: null
+    if (data && data.variable && (data.event == 'update') && event.value && event.value.startsWith('@')) {
+    	Map vars = atomicState.vars ?: [:]
+        Map variable = data.variable
+        def oldVar = vars[variable.name]
+        if ((oldVar.t != variable.t) || (oldVar.v != variable.v)) {
+	        vars[variable.name] = [t: oldVar ? oldVar.t : 'dynamic', v: variable.newValue]
+            atomicState.vars = vars
+        }
+        return;
+    }    
     switch (event.value) {
     	case 'ping':
         	if (data && data.id && data.name && (data.id != hashId(app.id))) {
@@ -1872,10 +1883,10 @@ private Map virtualDevices() {
     	date:				[ n: 'Date',						t: 'date',		],
     	time:				[ n: 'Time',						t: 'time',		],
     	datetime:			[ n: 'Date & Time',					t: 'datetime',	],        
-    	mode:				[ n: 'Location mode',				t: 'string', 	o: getLocationModeOptions(),				x: true],
-    	alarmSystemStatus:	[ n: 'Smart Home Monitor status',	t: 'string',	o: getAlarmSystemStatusOptions(),			x: true],
-        routine:			[ n: 'Routine',						t: 'string',	o: getRoutineOptions(),						m: true],
-        askAlexa:			[ n: 'Ask Alexa',					t: 'string',	o: [opt1: 'Option 1', opt2: 'Option 2'],	m: true	],
-        ifttt:				[ n: 'IFTTT',						t: 'string',	o: [opt1: 'Option 1', opt2: 'Option 2'],	m: true	],
+    	mode:				[ n: 'Location mode',				t: 'enum', 		o: getLocationModeOptions(),				x: true],
+    	alarmSystemStatus:	[ n: 'Smart Home Monitor status',	t: 'enum',		o: getAlarmSystemStatusOptions(),			x: true],
+        routine:			[ n: 'Routine',						t: 'enum',		o: getRoutineOptions(),						m: true],
+        askAlexa:			[ n: 'Ask Alexa',					t: 'enum',		o: [opt1: 'Option 1', opt2: 'Option 2'],	m: true	],
+        ifttt:				[ n: 'IFTTT',						t: 'enum',		o: [opt1: 'Option 1', opt2: 'Option 2'],	m: true	],
     ]
 }
