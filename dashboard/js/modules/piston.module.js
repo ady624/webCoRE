@@ -2752,6 +2752,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 			var disableTriggers = (comparison.type == 'restriction');
 			var optionList = [];
 			var options = [];
+			if (!comparison.dataType) comparison.dataType = 'dynamic';
 			switch (comparison.dataType) {
 				case 'enum':
 					dt = 's';
