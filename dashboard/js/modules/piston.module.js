@@ -990,6 +990,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 			condition.ro = {t: 'c', d: [], a: null, g:'any', v: null, c: '', x: null, e: ''};
 			condition.ro2 = {t: 'c', d: [], a: null, g:'any', v: null, c: '', x: null, e: ''};
 			condition.to = {t: 'c', d: [], a: null, g:'any', v: null, c: '', x: null, e: ''};
+			condition.to2 = {t: 'c', d: [], a: null, g:'any', v: null, c: '', x: null, e: ''};
 			condition.z = '';
 			condition.sm = 'auto';
 			condition.ts = [];
@@ -1014,7 +1015,8 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 			operator: condition.co,
 			right: {data: condition.ro ? $scope.copy(condition.ro) : {}},
 			right2: {data: condition.ro2 ? $scope.copy(condition.ro2) : {}},
-			time: {data: condition.to ? $scope.copy(condition.to) : {t:'c'}, dataType: 'duration'}
+			time: {data: condition.to ? $scope.copy(condition.to) : {t:'c', c: 0}, dataType: 'duration'},
+			time2: {data: condition.to2 ? $scope.copy(condition.to2) : {t:'c', c: 0}, dataType: 'duration'}
 		}
 		$scope.validateComparison($scope.designer.comparison, true);
 		$scope.designer.smode = condition.sm;
@@ -1059,6 +1061,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 				condition.ro = $scope.fixOperand($scope.designer.comparison.right.data);
 				condition.ro2 = $scope.fixOperand($scope.designer.comparison.right2.data);
 				condition.to = $scope.designer.comparison.time.data;
+				condition.to2 = $scope.designer.comparison.time2.data;
 				break;
 			case 'group':
 				condition.c = condition.c ? condition.c : [];
@@ -1186,6 +1189,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
             restriction.ro = {t: 'c', d: [], a: null, g:'any', v: null, c: '', x: null, e: ''};
             restriction.ro2 = {t: 'c', d: [], a: null, g:'any', v: null, c: '', x: null, e: ''};
             restriction.to = {t: 'c', d: [], a: null, g:'any', v: null, c: '', x: null, e: ''};
+            restriction.to2 = {t: 'c', d: [], a: null, g:'any', v: null, c: '', x: null, e: ''};
             restriction.z = '';
         }
         $scope.designer = {
@@ -1206,7 +1210,8 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
             operator: restriction.co,
             right: {data: restriction.ro ? $scope.copy(restriction.ro) : {}},
             right2: {data: restriction.ro2 ? $scope.copy(restriction.ro2) : {}},
-            time: {data: restriction.to ? $scope.copy(restriction.to) : {t:'c'}, dataType: 'duration'}
+            time: {data: restriction.to ? $scope.copy(restriction.to) : {t:'c', c: 0}, dataType: 'duration'},
+            time2: {data: restriction.to2 ? $scope.copy(restriction.to2) : {t:'c', c: 0}, dataType: 'duration'}
         }
         $scope.validateComparison($scope.designer.comparison, true);
         $scope.designer.smode = restriction.sm;
@@ -1237,6 +1242,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
                 restriction.ro = $scope.fixOperand($scope.designer.comparison.right.data);
                 restriction.ro2 = $scope.fixOperand($scope.designer.comparison.right2.data);
                 restriction.to = $scope.designer.comparison.time.data;
+                restriction.to2 = $scope.designer.comparison.time2.data;
                 break;
             case 'group':
                 restriction.r = restriction.r ? restriction.r : [];
@@ -2593,7 +2599,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 				operand.expressionVar = expression.errVar;
 				operand.data.exp = expression;
 				if (!operand.options) {
-					if (!operand.optional && !operand.data.c) {
+					if (!operand.optional && !operand.data.c && (!operand.allowAnyInterval)) {
 						operand.error = 'Empty value';
 						operand.expressionVar = '';
 					}
@@ -2823,7 +2829,25 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 			comparison.valid = comparison.valid && comparison.right2.valid;
 		}
 
-		if (comparison.timed) $scope.validateOperand(comparison.time, reinit, true);
+
+		var usingTime = (comparison.timed > 0);
+		var usingTime2 = false;
+
+		if (comparison.left.selectedDataType == 'time') {
+			usingTime = usingTime || (comparison.right.data.t != 'c');
+			usingTime2 = (comparison.right2.data.t != 'c');
+		}
+		if (usingTime) {
+			comparison.time.allowAnyInterval = !comparison.timed;
+			$scope.validateOperand(comparison.time, reinit, true);
+			comparison.valid = comparison.valid && comparison.time.valid;
+		}
+		if (usingTime2) {
+			comparison.time2.allowAnyInterval = true;
+			comparison.time2.dataType = 'duration';
+			$scope.validateOperand(comparison.time2, reinit, true);
+			comparison.valid = comparison.valid && comparison.time2.valid;
+		}
 		//$scope.refreshSelects();
 
 	}
@@ -2841,7 +2865,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		}
 	};
 
-	$scope.renderOperand = function(operand, noQuotes, pedantic) {
+	$scope.renderOperand = function(operand, noQuotes, pedantic, noNegatives) {
 		var result = '';
 		if (operand) {
 //			if (operand instanceof Array) {
@@ -2894,7 +2918,9 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 									if ((operand.vt == 'boolean') || (operand.vt == 'enum')) noQuotes = true;
 									m = 'lit';
 								}
-								result = '<span ' + m + '>' + scope.buildName(operand.c, noQuotes, pedantic) + '</span>';
+								var c = operand.c;
+								if (noNegatives && !isNaN(c) && parseInt(c) < 0) c = -parseInt(c);
+								result = '<span ' + m + '>' + scope.buildName(c, noQuotes, pedantic) + '</span>';
 						}
 						break;
 					case 'e': //expression
@@ -2921,7 +2947,15 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		return $sce.trustAsHtml(result ? result : '(invalid operands)');
 	}
 
-	$scope.renderComparison = function(l, o, r, r2, to) {
+	$scope.renderTimeOperand = function(to) {
+		if (!to) return '';
+		var isConstant = (to.t == 'c');
+		var constantValue = isConstant && !isNaN(to.c) ? parseInt(to.c) : 0;
+		if (isConstant && (constantValue == 0)) return '';
+		return $scope.renderOperand(to, false, false, true) + ' <span lit>' + $scope.getDurationUnitName(to.vt, (constantValue != 1)) + '</span> <span pun>' + (constantValue < 0 ? 'to' : 'past') +' </span> ';
+	}
+
+	$scope.renderComparison = function(l, o, r, r2, to, to2) {
 		var comparison = $scope.db.comparisons.triggers[o];
 		var trigger = !!comparison;
 		if (!comparison) comparison = $scope.db.comparisons.conditions[o];
@@ -2941,7 +2975,14 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		if ((comparison.g == 'm') && l.i && l.i.length) {
 			indexes = ' <span num>' + $scope.buildNameList(l.i, 'or', null, null, false, true, false, '#') + '</span>';
 		}
-		var result = $scope.renderOperand(l) + indexes + ' <span pun>' + (plural ? (comparison.dd ? comparison.dd : comparison.d) : comparison.d) + '</span>' + (comparison.p > 0 ? ' ' + $scope.renderOperand(r, noQuotes, pedantic) : '') + (comparison.p > 1 ? ' <span pun>' + (comparison.d.indexOf('between') ? 'and' : 'through') + '</span> ' + $scope.renderOperand(r2, noQuotes, pedantic) : '')
+		var offset1 = '';
+		var offset2 = '';
+		if ((l.t == 'v') && (l.v == 'time')) {
+			//time comparison, offsets?
+			if (r && to && (r.t != 'c')) offset1 = $scope.renderTimeOperand(to);
+			if (r2 && to2 && (r2.t != 'c')) offset2 = $scope.renderTimeOperand(to2);
+		}
+		var result = $scope.renderOperand(l) + indexes + ' <span pun>' + (plural ? (comparison.dd ? comparison.dd : comparison.d) : comparison.d) + '</span>' + (comparison.p > 0 ? ' ' + offset1 + $scope.renderOperand(r, noQuotes, pedantic) : '') + (comparison.p > 1 ? ' <span pun>' + (comparison.d.indexOf('between') ? 'and' : 'through') + '</span> ' + offset2 + $scope.renderOperand(r2, noQuotes, pedantic) : '')
 
 		switch (comparison.t) {
 			case 1:
