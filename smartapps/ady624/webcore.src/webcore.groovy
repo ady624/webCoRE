@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.0.085.20170422" }
+public static String version() { return "v0.0.086.20170423" }
 /*
+ *	04/23/2017 >>> v0.0.086.20170423 - ALPHA - Subscriptions to @global variables
  *	04/22/2017 >>> v0.0.085.20170422 - ALPHA - Fixed a bug with virtual device options
  *	04/22/2017 >>> v0.0.084.20170422 - ALPHA - NFL integration complete LOL (not really, implemented global variables though)
  *	04/21/2017 >>> v0.0.083.20170421 - ALPHA - Fixed a bug introduced during device-typed variable refactoring, $currentEventDevice was not properly stored as a List of device Ids
@@ -893,6 +894,7 @@ private api_intf_variable_set() {
                 //update a variable
                 globalVars[name] = [t: value.t, v: value.v]
             }
+			sendVariableEvent([name: value.n, value: value.v, type: value.t])
 		}
         atomicState.vars = globalVars
 		result = [status: "ST_SUCCESS"] + [globalVars: globalVars]
@@ -1140,7 +1142,7 @@ public void updateRunTimeData(data) {
     def modified = false
     	for(var in data.gvCache) {
         	if (var.key && var.key.startsWith('@') && (vars[var.key]) && (var.value.v != vars[var.key].v)) {
-            	variableEvents.push([name: var.key, oldValue: vars[var.key].v, newValue: var.value.v])
+            	variableEvents.push([name: var.key, oldValue: vars[var.key].v, value: var.value.v, type: var.value.t])
             	vars[var.key].v = var.value.v
                 modified = true
             }
@@ -1160,8 +1162,8 @@ public void updateRunTimeData(data) {
     atomicState[id] = piston
 
     //broadcast variable change events
-    for (event in variableEvents) {
-        sendLocationEvent( [name: handle(), value: event.name, isStateChange: true, displayed: true, linkText: "${handle()} global variable ${event.name} changed", descriptionText: "${handle()} global variable ${event.name} changed", data: [id: hashId(app.id), name: app.label, event: 'variable', variable: event]])
+    for (variable in variableEvents) {
+        sendVariableEvent(variable)
     }
     //release semaphores
 	if (data.semaphoreName && (atomicState[data.semaphoreName] <= data.semaphore)) {
@@ -1170,15 +1172,21 @@ public void updateRunTimeData(data) {
     }
 }
 
+private sendVariableEvent(variable) {
+	sendLocationEvent( [name: handle(), value: variable.name, isStateChange: true, displayed: false, linkText: "${handle()} global variable ${variable.name} changed", descriptionText: "${handle()} global variable ${variable.name} changed", data: [id: hashId(app.id), name: app.label, event: 'variable', variable: variable]])
+}
+
 def webCoREHandler(event) {
     if (!event || (event.name != handle())) return;
     def data = event.jsonData ?: null
-    if (data && data.variable && (data.event == 'update') && event.value && event.value.startsWith('@')) {
+    log.warn "GOT EVENT $event.name with value $event.value and data $data"
+    if (data && data.variable && (data.event == 'variable') && event.value && event.value.startsWith('@')) {
+    	log.warn "HERE"
     	Map vars = atomicState.vars ?: [:]
         Map variable = data.variable
-        def oldVar = vars[variable.name]
-        if ((oldVar.t != variable.t) || (oldVar.v != variable.v)) {
-	        vars[variable.name] = [t: oldVar ? oldVar.t : 'dynamic', v: variable.newValue]
+        def oldVar = vars[variable.name] ?: [t:'', v:'']
+        if ((oldVar.t != variable.type) || (oldVar.v != variable.value)) {
+	        vars[variable.name] = [t: variable.type ? variable.type : 'dynamic', v: variable.value]
             atomicState.vars = vars
         }
         return;
@@ -1724,8 +1732,8 @@ private static Map comparisons() {
     	],
         triggers: [
     		gets							: [ d: "gets",																		g:"m",		p: 1						],
-    		changes 						: [ d: "changes",							dd: "change",							g:"bdis",								],
-    		changes_to 						: [ d: "changes to",						dd: "change to",						g:"bdis",	p: 1,						],
+    		changes 						: [ d: "changes",							dd: "change",							g:"bdist",								],
+    		changes_to 						: [ d: "changes to",						dd: "change to",						g:"bdist",	p: 1,						],
     		changes_away_from 				: [ d: "changes away from",					dd: "change away from",					g:"bdis",	p: 1,						],
     		changes_to_any_of 				: [ d: "changes to any of",					dd: "change to any of",					g:"dis",	p: 1,	m: true,			],
     		changes_away_from_any_of 		: [ d: "changes away from any of",			dd: "change away from any of",			g:"dis",	p: 1,	m: true,			],

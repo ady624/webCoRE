@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.0.085.20170422" }
+public static String version() { return "v0.0.086.20170423" }
 /*
+ *	04/23/2017 >>> v0.0.086.20170423 - ALPHA - Subscriptions to @global variables
  *	04/22/2017 >>> v0.0.085.20170422 - ALPHA - Fixed a bug with virtual device options
  *	04/22/2017 >>> v0.0.084.20170422 - ALPHA - NFL integration complete LOL (not really, implemented global variables though)
  *	04/21/2017 >>> v0.0.083.20170421 - ALPHA - Fixed a bug introduced during device-typed variable refactoring, $currentEventDevice was not properly stored as a List of device Ids
@@ -2515,15 +2516,28 @@ private void subscribeAll(rtData) {
         //def expressionTraverser
         //def operandTraverser
         def expressionTraverser = { expression, parentExpression, comparisonType -> 
+        	def subscriptionId = null
+            def deviceId = null
+            def attribute = null
             if ((expression.t == 'device') && (expression.id)) {
                 devices[expression.id] = [c: (comparisonType ? 1 : 0) + (devices[expression.id]?.c ?: 0)]
-                def ct = subscriptions["${expression.id}${expression.a}"]?.t ?: null
+                subscriptionId = "${expression.id}${expression.a}"
+                deviceId = expression.id
+                attribute = expression.a
+            }
+            if ((expression.t == 'variable') && expression.x && expression.x.startsWith('@')) {
+                subscriptionId = "${expression.x}"
+                deviceId = rtData.locationId
+                attribute = "${handle()}.${expression.x}"
+            }
+            if (subscriptionId && deviceId) {
+                def ct = subscriptions[subscriptionId]?.t ?: null
                 if ((ct == 'trigger') || (comparisonType == 'trigger')) {
                     ct = 'trigger'                       
                 } else {
                     ct = ct ?: comparisonType
                 }
-                subscriptions["${expression.id}${expression.a}"] = [d: expression.id, a: expression.a, t: ct, c: (subscriptions["${expression.id}${expression.a}"] ? subscriptions["${expression.id}${expression.a}"].c : []) + [condition]]
+                subscriptions[subscriptionId] = [d: deviceId, a: attribute, t: ct, c: (subscriptions[subscriptionId] ? subscriptions[subscriptionId].c : []) + [condition]]
             }
         }    
         def operandTraverser = { node, operand, comparisonType ->
@@ -2561,6 +2575,19 @@ private void subscribeAll(rtData) {
                             break;
                     }
                     break;
+                case 'x':
+                	if (operand.x && operand.x.startsWith('@')) {
+                    	def subscriptionId = operand.x
+                        def attribute = "${handle()}.${operand.x}"
+                        def ct = subscriptions[subscriptionId]?.t ?: null
+                        if ((ct == 'trigger') || (comparisonType == 'trigger')) {
+                            ct = 'trigger'                       
+                        } else {
+                            ct = ct ?: comparisonType
+                        }
+                        subscriptions[subscriptionId] = [d: rtData.locationId, a: attribute, t: ct , c: (subscriptions[subscriptionId] ? subscriptions[subscriptionId].c : []) + (comparisonType?[node]:[])]
+                    }
+                	break;
                 case "c": //constant
                 case "e": //expression
                     traverseExpressions(operand.exp?.i, expressionTraverser, comparisonType)
@@ -2671,7 +2698,9 @@ private void subscribeAll(rtData) {
                 }
             } else {
 				for (condition in subscription.value.c) if (condition) { condition.s = false }
-                devices[subscription.value.d].c = devices[subscription.value.d].c - 1
+                if (devices[subscription.value.d]) {
+	                devices[subscription.value.d].c = devices[subscription.value.d].c - 1
+                }
             }
         }
         //fake subscriptions for controlled devices to force the piston being displayed in those devices' Smart Apps tabs
