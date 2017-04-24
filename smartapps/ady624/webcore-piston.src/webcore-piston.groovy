@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.0.089.20170424" }
+public static String version() { return "v0.0.08a.20170424" }
 /*
+ *	04/24/2017 >>> v0.0.08a.20170424 - ALPHA - Implemented Routine/AskAlexa/EchoSistant/IFTTT integrations - arguments (where available) are not processed yet - not tested
  *	04/24/2017 >>> v0.0.089.20170424 - ALPHA - Added variables in conditions and matching/non-matching device variable output
  *	04/23/2017 >>> v0.0.088.20170423 - ALPHA - Time condition offsets
  *	04/23/2017 >>> v0.0.087.20170423 - ALPHA - Timed triggers (stay/stays) implemented - need additional work to get them to play nicely with "Any of devices stays..." - this never worked in CoRE, but proved to might-have-been-helpful
@@ -2026,6 +2027,14 @@ private evaluateOperand(rtData, node, operand, index = null, trigger = false, ne
 				case 'datetime':
                 	values = [[i: "${node?.$}:v", v:[t: operand.v, v: cast(rtData, now(), operand.v)]]];
                     break;
+				case 'routine':
+                	values = [[i: "${node?.$}:v", v:[t: 'string', v: (rtData.event.name == 'routineExecuted' ? hashId(rtData.event.value) : null)]]];
+                    break;
+				case 'ifttt':
+				case 'askAlexa':
+				case 'echoSistant':               	
+                	values = [[i: "${node?.$}:v", v:[t: 'string', v: (rtData.event.name == operand.v ? hashId(rtData.event.value) : null)]]];
+                    break;
             }
             break
         case "s": //preset
@@ -2410,6 +2419,8 @@ private boolean comp_is_not_between					(rtData, lv, rv = null, rv2 = null, tv =
 
 /*triggers*/
 private boolean comp_gets							(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return (cast(rtData, lv.v.v, 'string') == cast(rtData, rv.v.v, 'string')) && matchDeviceSubIndex(lv.v.i, rtData.currentEvent.index)}
+private boolean comp_executes						(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return comp_is(rtData, lv, rv, rv2, tv, tv2) }
+
 private boolean comp_changes						(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return valueCacheChanged(rtData, lv); }
 private boolean comp_changes_to						(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return valueCacheChanged(rtData, lv) && ("${lv.v.v}" == "${rv.v.v}"); }
 private boolean comp_changes_away_from				(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { def oldValue = valueCacheChanged(rtData, lv); return oldValue && ("${oldValue.v.v}" == "${rv.v.v}"); }
@@ -2546,6 +2557,17 @@ private traverseExpressions(node, closure, param, parentNode = null) {
     }
 }
 
+private getRoutineById(routineId) {
+	def routines = location.helloHome?.getPhrases()
+    for(routine in routines) {
+    	if (routine && routine?.label && (hashId(routine.id) == routineId)) {
+    		return routine
+        }
+    }
+    return null
+}
+
+
 private void subscribeAll(rtData) {
 	try {
         rtData = rtData ?: getRunTimeData()
@@ -2592,7 +2614,7 @@ private void subscribeAll(rtData) {
                 subscriptions[subscriptionId] = [d: deviceId, a: attribute, t: ct, c: (subscriptions[subscriptionId] ? subscriptions[subscriptionId].c : []) + [condition]]
             }
         }    
-        def operandTraverser = { node, operand, comparisonType ->
+        def operandTraverser = { node, operand, value, comparisonType ->
             switch (operand.t) {
                 case "p": //physical device
                     for(deviceId in expandDeviceList(rtData, operand.d, true)) {
@@ -2611,22 +2633,49 @@ private void subscribeAll(rtData) {
                     def deviceId = rtData.locationId
                     //if we have any trigger, it takes precedence over anything else
                     devices[deviceId] = [c: (comparisonType ? 1 : 0) + (devices[deviceId]?.c ?: 0)]
+                    def subscriptionId = null
+                    def attribute = null
                     switch (operand.v) {
 						case 'time':
                         case 'date':
                         case 'datetime':
                         case 'mode':
                         case 'alarmSystemStatus':
-                            def ct = subscriptions["$deviceId${operand.v}"]?.t ?: null
-                            if ((ct == 'trigger') || (comparisonType == 'trigger')) {
-                                ct = 'trigger'                       
-                            } else {
-                                ct = ct ?: comparisonType
+                       		subscriptionId = "$deviceId${operand.v}"
+                           	attribute = operand.v
+                            break
+                        case 'routine':
+                        	if (value && (value.t == 'c') && (value.c)) {
+                            	def routine = getRoutineById(value.c)
+                                if (routine) {
+	                        		subscriptionId = "$deviceId${operand.v}${routine.id}"
+    	                        	attribute = "routineExecuted.${routine.id}"
+                                }
                             }
-                            subscriptions["$deviceId${operand.v}"] = [d: deviceId, a: operand.v, t: ct , c: (subscriptions["$deviceId${operand.v}"] ? subscriptions["$deviceId${operand.v}"].c : []) + (comparisonType?[node]:[])]
-                            break;
+                            break
+                        case 'ifttt':
+                        case 'askAlexa':
+                        case 'echoSistant':
+                        	if (value && (value.t == 'c') && (value.c)) {
+                            	def item = rtData.virtualDevices[operand.v]?.o[value.c]
+                                if (item) {
+	                        		subscriptionId = "$deviceId${operand.v}${item}"
+    	                        	attribute = "${operand.v}.${item}"
+                                }
+                            }
+                            break
                     }
-                    break;
+                    if (subscriptionId) {
+                    	def ct = subscriptions[subscriptionId]?.t ?: null
+                        if ((ct == 'trigger') || (comparisonType == 'trigger')) {
+                            ct = 'trigger'                       
+                        } else {
+                            ct = ct ?: comparisonType
+                        }
+                        subscriptions[subscriptionId] = [d: deviceId, a: attribute, t: ct , c: (subscriptions[subscriptionId] ? subscriptions[subscriptionId].c : []) + (comparisonType?[node]:[])]
+                        break;
+                    }
+					break;
                 case 'x':
                 	if (operand.x && operand.x.startsWith('@')) {
                     	def subscriptionId = operand.x
@@ -2661,7 +2710,7 @@ private void subscribeAll(rtData) {
                     for(int i = 0; i <= paramCount; i++) {
                         //get the operand to parse
                         def operand = (i == 0 ? condition.lo : (i == 1 ? condition.ro : condition.ro2))
-                        operandTraverser(condition, operand, comparisonType)
+                        operandTraverser(condition, operand, condition.ro, comparisonType)
                     }
                 }
             }
@@ -2682,7 +2731,7 @@ private void subscribeAll(rtData) {
                     for(int i = 0; i <= paramCount; i++) {
                         //get the operand to parse
                         def operand = (i == 0 ? restriction.lo : (i == 1 ? restriction.ro : restriction.ro2))
-                        operandTraverser(restriction, operand, null)
+                        operandTraverser(restriction, operand, null, null)
                     }
                 }
             }
@@ -2701,11 +2750,11 @@ private void subscribeAll(rtData) {
                 	traverseConditions((node.c?:[]) + (node.ei?node.ei*.c:[]), conditionTraverser)
                     break;
             	case 'switch':
-                	operandTraverser(node, node.lo, 'condition')
+                	operandTraverser(node, node.lo, null, 'condition')
                 	for (c in node.cs) {
-	                    operandTraverser(c, c.ro, null)
+	                    operandTraverser(c, c.ro, null, null)
 	                    //if case is a range, traverse the second operand too
-	                    if (c.t == 'r') operandTraverser(c, c.ro2, null)
+	                    if (c.t == 'r') operandTraverser(c, c.ro2, null, null)
 	                    if (c.s instanceof List) {
 	                        traverseStatements(c.s, statementTraverser, node, data)
 	                    }

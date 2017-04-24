@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.0.089.20170424" }
+public static String version() { return "v0.0.08a.20170424" }
 /*
+ *	04/24/2017 >>> v0.0.08a.20170424 - ALPHA - Implemented Routine/AskAlexa/EchoSistant/IFTTT integrations - arguments (where available) are not processed yet - not tested
  *	04/24/2017 >>> v0.0.089.20170424 - ALPHA - Added variables in conditions and matching/non-matching device variable output
  *	04/23/2017 >>> v0.0.088.20170423 - ALPHA - Time condition offsets
  *	04/23/2017 >>> v0.0.087.20170423 - ALPHA - Timed triggers (stay/stays) implemented - need additional work to get them to play nicely with "Any of devices stays..." - this never worked in CoRE, but proved to might-have-been-helpful
@@ -535,6 +536,8 @@ private initializeWebCoREEndpoint() {
 
 private subscribeAll() {
 	subscribe(location, handle(), webCoREHandler)
+	subscribe(location, "askAlexa", askAlexaHandler)
+	subscribe(location, "echoSistant", echoSistantHandler)    
 }
 
 /******************************************************************************/
@@ -941,7 +944,14 @@ private api_intf_dashboard_piston_activity() {
     render contentType: "application/javascript;charset=utf-8", data: "${params.callback}(${result.encodeAsJSON()})"
 }
 
-
+def api_ifttt() {
+	def data = request?.JSON
+	def eventName = params?.eventName
+	if (eventName) {
+		sendLocationEvent([name: "ifttt", value: eventName, isStateChange: true, linkText: "IFTTT event", descriptionText: "${handle()} has received an IFTTT event: $eventName", data: data])
+	}
+	render contentType: "text/html", data: "<!DOCTYPE html><html lang=\"en\">Received event $eventName.<body></body></html>"
+}
 
 
 
@@ -1212,7 +1222,39 @@ def webCoREHandler(event) {
     }
 }
 
+def askAlexaHandler(evt) {
+	if (!evt) return
+	switch (evt.value) {
+		case "refresh":
+        	Map macros = [:]
+			for(macro in (evt.jsonData && evt.jsonData?.macros ? evt.jsonData.macros : [])) {
+            	if (macro instanceof Map) {
+                	macros[hashId(macro.id)] = macro.name
+                } else {
+                	macros[hashId(macro)] = macro;
+                }
+            }
+            atomicState.askAlexaMacros = macros
+			break
+	}
+}
 
+def echoSistantHandler(evt) {
+	if (!evt) return
+	switch (evt.value) {
+		case "refresh":
+        	Map profiles = [:]
+			for(profile in (evt.jsonData && evt.jsonData?.macros ? evt.jsonData.macros : [])) {
+            	if (profile instanceof Map) {
+                	profiles[hashId(profile.id)] = profile.name
+                } else {
+                	profiles[hashId(profile)] = profile;
+                }
+            }
+			atomicState.echoSistantProfiles = profiles
+			break
+	}
+}
 
 
 
@@ -1735,6 +1777,7 @@ private static Map comparisons() {
     	],
         triggers: [
     		gets							: [ d: "gets",																		g:"m",		p: 1						],
+    		executes						: [ d: "executes",																	g:"v",		p: 1						],
     		changes 						: [ d: "changes",							dd: "change",							g:"bdist",								],
     		changes_to 						: [ d: "changes to",						dd: "change to",						g:"bdist",	p: 1,						],
     		changes_away_from 				: [ d: "changes away from",					dd: "change away from",					g:"bdis",	p: 1,						],
@@ -1888,6 +1931,13 @@ private Map getRoutineOptions() {
     return result
 }
 
+private Map getAskAlexaOptions() {
+	return atomicState.askAlexaMacros ?: [null:"AskAlexa not installed - please install or open AskAlexa"]
+}
+
+private Map getEchoSistantOptions() {
+	return atomicState.echoSistantProfiles ?: [null:"EchoSistant not installed - please install or open EchoSistant"]
+}
 
 private Map virtualDevices() {
 	return [
@@ -1897,7 +1947,8 @@ private Map virtualDevices() {
     	mode:				[ n: 'Location mode',				t: 'enum', 		o: getLocationModeOptions(),				x: true],
     	alarmSystemStatus:	[ n: 'Smart Home Monitor status',	t: 'enum',		o: getAlarmSystemStatusOptions(),			x: true],
         routine:			[ n: 'Routine',						t: 'enum',		o: getRoutineOptions(),						m: true],
-        askAlexa:			[ n: 'Ask Alexa',					t: 'enum',		o: [opt1: 'Option 1', opt2: 'Option 2'],	m: true	],
-        ifttt:				[ n: 'IFTTT',						t: 'enum',		o: [opt1: 'Option 1', opt2: 'Option 2'],	m: true	],
+        askAlexa:			[ n: 'Ask Alexa',					t: 'enum',		o: getAskAlexaOptions(),					m: true	],
+        echoSistant:		[ n: 'EchoSistant',					t: 'enum',		o: getEchoSistantOptions(),					m: true	],
+        ifttt:				[ n: 'IFTTT',						t: 'string',												m: true	],
     ]
 }
