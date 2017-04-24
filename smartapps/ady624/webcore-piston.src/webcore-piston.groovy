@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.0.08a.20170424" }
+public static String version() { return "v0.0.08b.20170424" }
 /*
+ *	04/24/2017 >>> v0.0.08b.20170424 - ALPHA - Fixed a bug preventing subscription to IFTTT events
  *	04/24/2017 >>> v0.0.08a.20170424 - ALPHA - Implemented Routine/AskAlexa/EchoSistant/IFTTT integrations - arguments (where available) are not processed yet - not tested
  *	04/24/2017 >>> v0.0.089.20170424 - ALPHA - Added variables in conditions and matching/non-matching device variable output
  *	04/23/2017 >>> v0.0.088.20170423 - ALPHA - Time condition offsets
@@ -2032,8 +2033,8 @@ private evaluateOperand(rtData, node, operand, index = null, trigger = false, ne
                     break;
 				case 'ifttt':
 				case 'askAlexa':
-				case 'echoSistant':               	
-                	values = [[i: "${node?.$}:v", v:[t: 'string', v: (rtData.event.name == operand.v ? hashId(rtData.event.value) : null)]]];
+				case 'echoSistant':
+                	values = [[i: "${node?.$}:v", v:[t: 'string', v: (rtData.event.name == operand.v ? (operand.v == 'ifttt' ? rtData.event.value : hashId(rtData.event.value)) : null)]]];
                     break;
             }
             break
@@ -2657,7 +2658,8 @@ private void subscribeAll(rtData) {
                         case 'askAlexa':
                         case 'echoSistant':
                         	if (value && (value.t == 'c') && (value.c)) {
-                            	def item = rtData.virtualDevices[operand.v]?.o[value.c]
+                            	def options = rtData.virtualDevices[operand.v]?.o
+                            	def item = options ? options[value.c] : value.c
                                 if (item) {
 	                        		subscriptionId = "$deviceId${operand.v}${item}"
     	                        	attribute = "${operand.v}.${item}"
