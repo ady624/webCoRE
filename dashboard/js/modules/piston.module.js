@@ -2591,6 +2591,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 				var virtualDevice = $scope.instance.virtualDevices[operand.data.v];
 				operand.selectedDataType = (!!virtualDevice && !!virtualDevice.t) ? virtualDevice.t : 'string';
 				if (virtualDevice) {
+					operand.momentary = virtualDevice.m
 					//save the options
 					for (o in virtualDevice.o) {
 						operand.selectedOptions.push({v: o, n: virtualDevice.o[o]});
@@ -2773,7 +2774,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		$scope.validateOperand(comparison.left, reinit, true);
 
 		//rebuild the list of comparisons, but only if needed
-		if ((comparison.left.selectedDataType != comparison.dataType) || (comparison.left.selectedMultiple != comparison.selectedMultiple) || (comparison.left.momentary != comparison.momentary)) {
+		if ((comparison.left.selectedDataType != comparison.dataType) || (comparison.left.selectedMultiple != comparison.selectedMultiple) || (comparison.left.momentary != comparison.momentary) || (comparison.left.data.t == 'v')) {
 			comparison.dataType = comparison.left.selectedDataType;
 			comparison.selectedMultiple = comparison.left.selectedMultiple;
 			comparison.momentary = comparison.left.momentary;
@@ -2798,7 +2799,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 				default:
 					dt = comparison.dataType.substr(0, 1);
 			}
-            dt = (comparison.momentary ? 'm' : ((dt == 'n' ? 'd' : dt)));
+            dt = (comparison.momentary ? (comparison.left.data.t == 'v' ? 'v' : 'm') : ((dt == 'n' ? 'd' : dt)));
 			for(conditionId in $scope.db.comparisons.conditions) {
 				var condition = $scope.db.comparisons.conditions[conditionId];
 				if (((!dt && (condition.g != 'm')) || (condition.g.indexOf(dt) >= 0)) && (!disableTimedComparisons || !condition.t))  {
@@ -2835,6 +2836,10 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 			comparison.right.dataType = comparison.left.selectedDataType;
 			if (angular.toJson(comparison.right.options) != angular.toJson(comparison.left.selectedOptions)) {
 				//avoid angular circus
+				if ((comparison.right.data.t == 'c') && comparison.right.options && comparison.right.options.length && (!comparison.left.selectedOptions || !comparison.left.selectedOptions.left)) {
+					//cleanup right operand constant value so we don't display old IDs
+					comparison.right.data.c = '';
+				}
 				comparison.right.options = comparison.left.selectedOptions;
 			}
 			$scope.validateOperand(comparison.right, reinit, true);
@@ -2872,7 +2877,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 			$scope.validateOperand(comparison.time2, reinit, true);
 			comparison.valid = comparison.valid && comparison.time2.valid;
 		}
-		//$scope.refreshSelects();
+		$scope.refreshSelects();
 
 	}
 
