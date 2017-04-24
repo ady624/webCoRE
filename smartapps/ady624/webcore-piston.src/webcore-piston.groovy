@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.0.088.20170423" }
+public static String version() { return "v0.0.089.20170424" }
 /*
+ *	04/24/2017 >>> v0.0.089.20170424 - ALPHA - Added variables in conditions and matching/non-matching device variable output
  *	04/23/2017 >>> v0.0.088.20170423 - ALPHA - Time condition offsets
  *	04/23/2017 >>> v0.0.087.20170423 - ALPHA - Timed triggers (stay/stays) implemented - need additional work to get them to play nicely with "Any of devices stays..." - this never worked in CoRE, but proved to might-have-been-helpful
  *	04/23/2017 >>> v0.0.086.20170423 - ALPHA - Subscriptions to @global variables
@@ -1977,7 +1978,7 @@ private evaluateOperand(rtData, node, operand, index = null, trigger = false, ne
     switch (operand.t) {
         case "p": //physical device
         	def j = 0;
-        	for(deviceId in operand.d) {
+        	for(deviceId in expandDeviceList(rtData, operand.d)) {
             	def value = [i: "${deviceId}:${operand.a}", v:getDeviceAttribute(rtData, deviceId, operand.a, operand.i, trigger) + (operand.vt ? [vt: operand.vt] : [:])]
                 updateCache(rtData, value)
 	            values.push(value)
@@ -1994,7 +1995,11 @@ private evaluateOperand(rtData, node, operand, index = null, trigger = false, ne
 	        break;
 		case 'd': //devices
         	def deviceIds = []
-            for (d in operand.d) {
+            for (d in expandDeviceList(rtData, operand.d)) {
+				if (getDevice(rtData, d)) deviceIds.push(d)
+            }
+            /*
+            for (d in rtData, operand.d) {
                 if (d.startsWith(':')) {
                     if (getDevice(rtData, d)) deviceIds.push(d)
                 } else {
@@ -2006,7 +2011,8 @@ private evaluateOperand(rtData, node, operand, index = null, trigger = false, ne
                     	}
                 	}
             	}
-            }            
+            }    
+            */
 			values = [[i: "${node?.$}:d", v:[t: 'device', v: deviceIds.unique()]]]	
             break
 		case 'v': //virtual devices
@@ -2126,7 +2132,11 @@ private Boolean evaluateCondition(rtData, condition, collection, async) {
                 }
 
                 //we now have all the operands, their values, and the comparison, let's get to work
-                def options = [smatches: true]
+                Map options = [
+                	//we ask for matching/non-matching devices if the user requested it or if the trigger is timed
+                    //setting matches to true will force the condition group to evaluate all members (disables evaluation optimizations)
+					matches: lo.operand.dm || lo.operand.dn || (trigger && comparison.t)
+				]
                 def to = (comparison.t || (ro && (lo.operand.t == 'v') && (lo.operand.v == 'time') && (ro.operand.t != 'c'))) && condition.to ? [operand: condition.to, values: evaluateOperand(rtData, null, condition.to)] : null
                 def to2 = ro2 && (lo.operand.t == 'v') && (lo.operand.v == 'time') && (ro2.operand.t != 'c') && condition.to2 ? [operand: condition.to2, values: evaluateOperand(rtData, null, condition.to2)] : null
                 result = evaluateComparison(rtData, condition.co, lo, ro, ro2, to, to2, options)
@@ -2135,6 +2145,8 @@ private Boolean evaluateCondition(rtData, condition, collection, async) {
                 if (ro) for (value in ro.values) updateCache(rtData, value)
                 if (ro2) for (value in ro2.values) updateCache(rtData, value)
                 if (!rtData.fastForwardTo) tracePoint(rtData, "c:${condition.$}", now() - t, result)
+                if (lo.operand.dm && options.devices) setVariable(rtData, lo.operand.dm, options.devices?.matched ?: [])
+                if (lo.operand.dn && options.devices) setVariable(rtData, lo.operand.dn, options.devices?.unmatched ?: [])
                 //do the stay logic here
                 if (trigger && comparison.t) {
                 	//timed trigger
@@ -2583,7 +2595,7 @@ private void subscribeAll(rtData) {
         def operandTraverser = { node, operand, comparisonType ->
             switch (operand.t) {
                 case "p": //physical device
-                    for(deviceId in operand.d) {
+                    for(deviceId in expandDeviceList(rtData, operand.d, true)) {
                         devices[deviceId] = [c: (comparisonType ? 1 : 0) + (devices[deviceId]?.c ?: 0)]
                         //if we have any trigger, it takes precedence over anything else
                         def ct = subscriptions["$deviceId${operand.a}"]?.t ?: null
@@ -2768,6 +2780,26 @@ private void subscribeAll(rtData) {
     } catch (all) {
     	error "An error has occurred while subscribing: ", rtData, null, all
     }
+}
+
+
+private List expandDeviceList(rtData, List devices, localVarsOnly = false) {
+	List result = []
+	for(deviceId in devices) {
+    	if (deviceId && (deviceId.size() == 34) && deviceId.startsWith(':') && deviceId.endsWith(':')) {
+        	result.push(deviceId)
+        } else {
+        	if (localVarsOnly) {
+            	//during subscriptions we use local vars only to make sure we don't subscribe to "variable" lists of devices
+	        	def var = rtData.localVars[deviceId]
+    	        if (var && (var.t == 'device') && (var.v instanceof Map) && (var.v.t == 'd') && (var.v.d instanceof List) && var.v.d.size()) result += var.v.d
+            } else {
+	        	def var = getVariable(rtData, deviceId)
+    	        if (var && (var.t == 'device') && (var.v instanceof List) && var.v.size()) result += var.v
+            }
+        }
+    }
+    return result.unique()
 }
 
 def appHandler(evt) {
