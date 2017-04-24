@@ -1035,7 +1035,7 @@ badge::after {
 		overflow-y: auto;
 	}
 
-	piston {
+	piston[mode=edit] {
 		position: relative !important;
 		width: 100% !important;
 		height: 100% !important;

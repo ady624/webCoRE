@@ -2172,6 +2172,17 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 							}
 						}
 					}
+				} else {
+					//variable
+					for (attributeName in $scope.db.attributes) {
+						if (!restrictAttribute || (attributeName == restrictAttribute)) {
+							if (attributes[attributeName]) {
+								attributes[attributeName] += 1;
+							} else {
+								attributes[attributeName] = 1;
+							}
+						}
+					}
 				}
 			}
 			for (attributeId in attributes) {
@@ -2207,7 +2218,9 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 	}
 
 	$scope.sortByName = function(a,b) {
-		return (a.n > b.n) ? 1 : ((b.n > a.n) ? -1 : 0);
+		a = a.n.toLowerCase();
+		b = b.n.toLowerCase();
+		return (a > b) ? 1 : ((b > a) ? -1 : 0);
 	}
 
 
@@ -2529,9 +2542,11 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 					operand.count = 0;
 					if (operand.momentary && !!attribute.s) {
 						//get the number of sub devices
+						//default of 32 buttons, if no description available
 						var countAttributes = attribute.s.split(',');
 						for (deviceIndex in operand.data.d) {
 							var dev = $scope.getDeviceById(operand.data.d[deviceIndex]);
+							var c = 0;
 							if (dev) {
 								for (i in countAttributes) {
 									var attr = $scope.getDeviceAttributeById(dev, countAttributes[i]);
@@ -2542,12 +2557,17 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 										}
 									}
 								}
+							} else {
+								if (operand.count < 32) operand.count = 32;
 							}
 						}
 					}
-					if (operand.count && ((operand.data.i == null) || (operand.data.i == undefined))) {
-						//default sub device index
-						operand.data.i = ['1'];
+					if (operand.count) {
+						if ((operand.data.i == null) || (operand.data.i == undefined)) {
+							//default sub device index
+							operand.data.i = ['1'];
+						}
+						$scope.refreshSelects();
 					}
 					operand.selectedDataType = attribute.t.toLowerCase();
 					operand.selectedOptions = attribute.o;
@@ -2679,11 +2699,15 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 
 	$scope.refreshSelects = function(type) {
 		if (type) {
-			$scope.$$postDigest(function() {$('select[' + type + ']').selectpicker('refresh');});
-			$timeout(function() {$('select[' + type + ']').selectpicker('refresh');}, 0, false);
+			$scope.$$postDigest(function() {
+				$('select[' + type + ']').selectpicker('refresh');
+				$timeout(function() {$('select[' + type + ']').selectpicker('refresh');}, 0, false);
+			});
 		} else {
-			$scope.$$postDigest(function() {$('select').selectpicker('refresh');});
-			$timeout(function() {$('select').selectpicker('refresh');}, 0, false);
+			$scope.$$postDigest(function() {
+				$('select').selectpicker('refresh');
+				$timeout(function() {$('select').selectpicker('refresh');}, 0, false);
+			});
 		}
 	}
 
@@ -3323,6 +3347,8 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 				var device = $scope.getDeviceById(devices[deviceIndex]);
 				if (device) {
 					deviceNames.push(device.n);
+				} else {
+					deviceNames.push('{' + devices[deviceIndex] + '}');
 				}
 			}
 			if (deviceNames.length) {
