@@ -75,7 +75,7 @@
 	<div header ng-if="mode=='view'">
 		<div class="container">
 			<div class="row">
-				<h2>{{meta.name}}</h2>
+				<h2 class="title">{{meta.name}}</h2>
 			</div>
 		</div>
 	</div>
@@ -1319,6 +1319,10 @@
 			</select>
 		</div>
 		<operand ng-repeat="operand in [designer.comparison.time]" ng-model="designer.comparison.time" ng-include="'operand'"></operand>
+	</div>
+	<div class="form-group" ng-if="(comparison.left.data.t == 'v') && (comparison.left.data.v == 'ifttt')">
+		<label class="col-lg-12 no-padding">Use this URL in your IFTTT's Maker channel</label>
+		<textarea class="form-control" ifttt readonly value="test">{{getIFTTTUri(comparison.right.data.c)}}</textarea>
 	</div>
 	<div class="form-group" ng-if="(designer.comparison.left.data.t == 'v') && (designer.comparison.left.data.v == 'time')">
 		<label for="devicesInput">Only on these days of the week...</label>

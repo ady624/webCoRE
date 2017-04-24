@@ -528,6 +528,11 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
         });
     }
 
+	dataService.getApiUri = function() {
+		var inst = dataService.getInstance();
+		si = store ? store[inst.id] : null;
+		return si ? si.uri : null;		
+	}
 
     dataService.getPiston = function (pistonId) {
 		var inst = dataService.getPistonInstance(pistonId);
@@ -1170,4 +1175,4 @@ if (document.selection) {
 }}
 
 //navigator.registerProtocolHandler('web+core','https://' + window.location.hostname + '/handler/%s', 'webCoRE');
-version = function() { return 'v0.0.08a.20170424'; };
+version = function() { return 'v0.0.08b.20170424'; };

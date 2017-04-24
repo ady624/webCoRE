@@ -995,6 +995,11 @@ badge::after {
 	content: attr(badge);
 }
 
+textarea[ifttt] {
+	height: 56px;
+	resize: none;
+}
+
 
 @media only screen 
   and (min-device-width: 320px) 
@@ -1055,6 +1060,19 @@ badge::after {
 		-moz-column-count: 1;	
 	}
 
+	textarea[ifttt] {
+		height: 80px;
+	}
+
+	h2.title {
+		padding: 0px 16px;
+	}
+}
+
+@media only screen and (max-width: 480px) {
+	textarea[ifttt] {
+		height: 128px;
+	}
 }
 
 
