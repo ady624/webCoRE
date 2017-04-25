@@ -565,6 +565,9 @@ designer > footer {
     display: block;
     padding: 0px;
 }
+designer > footer button {
+	margin-top: 8px !important;
+}
 designer > header {
     margin-bottom: 16px;
 }

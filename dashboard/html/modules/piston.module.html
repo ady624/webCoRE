@@ -558,7 +558,7 @@
 		<trace ng-if="(view.trace && (mode=='view') && (collection.r) && (collection.r.length > 1) && trace && trace.points && trace.points['c:' + collection.$])"><span>+{{point.rop}}ms</span><span dur eval="{{trace.points['c:' + collection.$].v}}">{{point.d}}ms</span></trace>
 		<div no-drag class="no-drag" dnd-list="collection.r" dnd-allowed-types="['restriction']">
 			<line com ng-if="collection.z">/* {{collection.z}} */</line>
-			<line pun data-ng-if-start="(collection.t == 'group') || !!collection.rn" data-ng-click="editRestrictionGroup(collection, (collection.t == 'group' ? ($parent.$parent.parentCollection ? $parent.$parent.parentCollection.r : statement.r) : null));">{{collection.rn ? 'not ' : ''}}(</line>
+			<line pun data-ng-if-start="(collection.t == 'group') || !!collection.rn" data-ng-click="editRestrictionGroup(collection, (collection.t == 'group' ? ($parent.$parent.parentCollection ? $parent.$parent.parentCollection.r : (statement ? statement.r : piston.r)) : null));">{{collection.rn ? 'not ' : ''}}(</line>
 			<container dnd-list="collection.r" dnd-allowed-types="['restriction']">
 				<restriction data-ng-repeat-start="restriction in collection.r" ng-init="parentCollection = collection" data-ng-include="'restriction'" dnd-nodrag data-nag-model="collection.r" dnd-draggable="restriction" dnd-nodrag dnd-type="'restriction'" dnd-moved="drag(collection.r, $index);" dnd-effect-allowed="copyMove"></restriction>
 				<line operator data-ng-repeat-end data-ng-click="editRestrictionGroup(collection);">{{collection.rop}}</line>
@@ -1506,10 +1506,10 @@
 				</div>
 				<!-- constant -->
 				<div class="form-table input-group pull-left" ng-if="(operand.data.t=='c') && (!operand.options.length)" style="width:{{operand.dataType == 'duration' ? '75' : '100'}}%">
-					<input ng-if="['time', 'date', 'datetime'].indexOf(operand.inputType) < 0" class="form-control" ng-model="operand.data.c" type="{{operand.inputType}}" ng-change="validateOperand(operand)" ng-min="(operand.dataType == 'duration') && (!operand.allowAnyInterval) ? 1 : null" required/>
-					<input ng-if="operand.inputType == 'time'" class="form-control" ng-model="operand.data.c" type="time" ng-change="validateOperand(operand)" ng-min="(operand.dataType == 'duration') && (!operand.allowAnyInterval) ? 1 : null" required/>
-					<input ng-if="operand.inputType == 'date'" class="form-control" ng-model="operand.data.c" type="date" ng-change="validateOperand(operand)" ng-min="(operand.dataType == 'duration') && (!operand.allowAnyInterval) ? 1 : null" required/>
-					<input ng-if="operand.inputType == 'datetime'" class="form-control" ng-model="operand.data.c" type="datetime-local" ng-change="validateOperand(operand)" ng-min="(operand.dataType == 'duration') && (!operand.allowAnyInterval) ? 1 : null" required/>
+					<input ng-if="['time', 'date', 'datetime'].indexOf(operand.inputType) < 0" class="form-control" ng-model="operand.data.c" type="{{operand.inputType}}" ng-change="validateOperand(operand)" ng-min="(operand.dataType == 'duration') && (operand.requirePositiveNumber) ? 1 : null" required/>
+					<input ng-if="operand.inputType == 'time'" class="form-control" ng-model="operand.data.c" type="time" ng-change="validateOperand(operand)" ng-min="(operand.dataType == 'duration') && (operand.requirePositiveNumber) ? 1 : null" required/>
+					<input ng-if="operand.inputType == 'date'" class="form-control" ng-model="operand.data.c" type="date" ng-change="validateOperand(operand)" ng-min="(operand.dataType == 'duration') && (operand.requirePositiveNumber) ? 1 : null" required/>
+					<input ng-if="operand.inputType == 'datetime'" class="form-control" ng-model="operand.data.c" type="datetime-local" ng-change="validateOperand(operand)" ng-min="(operand.dataType == 'duration') && (operand.requirePositiveNumber) ? 1 : null" required/>
 				</div>
 				<div class="form-table input-group pull-left" ng-if="(operand.data.t=='c') && (operand.options.length) && (!operand.multiple)" style="width:{{operand.dataType == 'duration' ? '75' : '100'}}%">
 					<select selectpicker class="selectpicker show-tick no-border-radius" data-width="75%" data-style="btn-default" ng-model="operand.data.c" data-mobile="{{mobile}}" ng-change="validateOperand(operand)">
@@ -1700,6 +1700,20 @@
 			<button type="button" class="btn btn-default pull-right" ng-click="toggleAdvancedOptions();" title="Show/Hide advanced options"><i class="fa fa-cog"></i></button>
 			<button type="button" class="btn btn-default" ng-click="closeDialog();">Cancel</button>
 			<button type="button" ng-if="!designer.$new" class="btn btn-danger" ng-click="deleteObject();">Delete</button>
+			<div ng-if="designer.custom" class="btn-group">
+				<button class="btn btn-secondary dropdown-toggle" type="button" id="dropdownMenuButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+				Parameters <span class="caret"></span>
+				</button>
+				<div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
+					<li><a href="#" ng-click="addParameter('string')">Add a string parameter</a></li>
+					<li><a href="#" ng-click="addParameter('integer')">Add an integer parameter</a></li>
+					<li><a href="#" ng-click="addParameter('decimal')">Add a decimal parameter</a></li>
+					<li><a href="#" ng-click="addParameter('boolean')">Add a boolean parameter</a></li>
+					<li><a href="#" ng-click="addParameter('datetime')">Add a datetime parameter</a></li>
+					<li ng-if="designer.parameters.length" role="separator" class="divider"></li>
+					<li ng-repeat="parameter in designer.parameters" ng-click="deleteParameter(parameter);"><a href="#">Delete Parameter {{$index + 1}}</a></li>
+				</div>
+			</div>
 		</footer>
 	</designer>
 

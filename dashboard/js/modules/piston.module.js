@@ -683,9 +683,9 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		$scope.designer.ctp = statement.ctp || 'i';
 		$scope.designer.async = statement.a;
 		$scope.designer.ontypechanged = function(designer, type) {
-			designer.operand.allowAnyInterval = false;
-			designer.operand2.allowAnyInterval = false;
-			designer.operand3.allowAnyInterval = false;
+			designer.operand.requirePositiveNumber = false;
+			designer.operand2.requirePositiveNumber = false;
+			designer.operand3.requirePositiveNumber = false;
 			switch (type) {
 				case 'for':
 					designer.operand.dataType = 'decimal';
@@ -724,7 +724,6 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 					d.setSeconds(0, 0);
 					if (designer.$new) designer.operand2.data = {t: 'c', c: d};
 					designer.operand3.dataType = 'duration'; //offset
-					designer.operand3.allowAnyInterval = true;
 					if (designer.$new) designer.operand3.data = {t: 'c', c: 0, vt: 'm'};
 					designer.operand3.onlyAllowConstants = true;
 					$scope.validateOperand(designer.operand, true);
@@ -1698,6 +1697,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		$scope.designer.parameters = [];
 		var command = $scope.db.commands.physical[$scope.designer.command] || $scope.db.commands.virtual[$scope.designer.command];
 		$scope.designer.parameters = [];
+		$scope.designer.custom = false;
 		if (command) {
 			for (parameterIndex in command.p) {
 				var parameter = $scope.copy(command.p[parameterIndex]);
@@ -1724,6 +1724,12 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 				$scope.designer.parameters.push(p);
 			}
 		} else {
+			$scope.designer.custom = !!$scope.designer.command;
+			for (i in task.p) {
+				var param = {dataType: task.p[i].vt, data: $scope.copy(task.p[i])};
+				$scope.validateOperand(param);
+				$scope.designer.parameters.push(param);
+			}
 			//custom command - we add our own parameters
 		}
 		if ($scope.designer.command == 'setVariable') {
@@ -1733,6 +1739,30 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		$scope.refreshSelects();
 	}
 
+	$scope.renameParameters = function() {
+		if (!$scope.designer.custom) return;
+		for (i in $scope.designer.parameters) {
+			$scope.designer.parameters[i].name = 'Parameter #' + (parseInt(i) + 1).toString() + ' (' + $scope.designer.parameters[i].dataType + ')';
+		}
+		$scope.refreshSelects();
+	}
+
+	$scope.addParameter = function(dataType) {
+		if (!$scope.designer.custom) return;
+		var param = {dataType: dataType, name: '', data: {t: 'c'}};
+		$scope.validateOperand(param);
+		$scope.designer.parameters.push(param);
+		$scope.renameParameters();
+	}
+
+	$scope.deleteParameter = function(parameter) {
+		if (!$scope.designer.custom) return;
+		var index = $scope.designer.parameters.indexOf(parameter);
+		if (index > -1) {
+		    $scope.designer.parameters.splice(index, 1);
+		}
+		$scope.renameParameters();
+	}
 
 /*
 	$scope.prepareParameters = function(task) {
@@ -2491,6 +2521,10 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 			case 'piston':
 				operand.options = $scope.listAllPistons();
 				break;
+			case 'integer':
+			case 'decimal':
+			case 'duration':
+				if ((operand.data.t == 'c') && (isNaN(operand.data.c) || (operand.data.c == ''))) operand.data.c = 0;
 			default:
 				operand.options = null;
 		}
@@ -2624,7 +2658,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 				operand.expressionVar = expression.errVar;
 				operand.data.exp = expression;
 				if (!operand.options) {
-					if (!operand.optional && !operand.data.c && (!operand.allowAnyInterval)) {
+					if (!operand.optional && !operand.data.c && (operand.requirePositiveNumber)) {
 						operand.error = 'Empty value';
 						operand.expressionVar = '';
 					}
@@ -2668,7 +2702,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 			((operand.data.t=='v') && !!operand.data.v) ||
 			((operand.data.t=='x') && !!operand.data.x && !!operand.data.x.length) ||
 			((operand.data.t=='s') && !!operand.data.s) ||
-			((operand.data.t=='c') && !((operand.data.c == "Invalid Date") && (operand.data.c instanceof Object)) && !((dataType == 'duration') && (isNaN(operand.data.c) || (!operand.allowAnyInterval && (operand.data.c < 1))))) ||
+			((operand.data.t=='c') && !((operand.data.c == "Invalid Date") && (operand.data.c instanceof Object)) && !((dataType == 'duration') && (isNaN(operand.data.c) || (operand.requirePositiveNumber && (operand.data.c < 1))))) ||
 			((operand.data.t=='e') && !!operand.data.e && !!operand.data.e.length)
 		);
 
@@ -2871,12 +2905,12 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 			usingTime2 = (comparison.right2.data.t != 'c');
 		}
 		if (usingTime) {
-			comparison.time.allowAnyInterval = !comparison.timed;
+			comparison.time.requirePositiveNumber = !!comparison.timed;
 			$scope.validateOperand(comparison.time, reinit, true);
 			comparison.valid = comparison.valid && comparison.time.valid;
 		}
 		if (usingTime2) {
-			comparison.time2.allowAnyInterval = true;
+			comparison.time2.requirePositiveNumber = false;
 			comparison.time2.dataType = 'duration';
 			$scope.validateOperand(comparison.time2, reinit, true);
 			comparison.valid = comparison.valid && comparison.time2.valid;
@@ -3271,10 +3305,8 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		var display;
 		if (!command) {
 			display = task.c + '(';
-			var i = 0;
-			for (p in task.p) {
-				display += (i ? ', ' : '') + $scope.renderOperand(p);
-				i++;
+			for (i in task.p) {
+				display += (parseInt(i) ? ', ' : '') + $scope.renderOperand(task.p[i]);
 			}
 			display += ')';
 		} else {
