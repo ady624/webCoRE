@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.0.08b.20170424" }
+public static String version() { return "v0.0.08c.20170425" }
 /*
+ *	04/25/2017 >>> v0.0.08c.20170425 - ALPHA - Various fixes and improvements and implemented custom commands with parameters
  *	04/24/2017 >>> v0.0.08b.20170424 - ALPHA - Fixed a bug preventing subscription to IFTTT events
  *	04/24/2017 >>> v0.0.08a.20170424 - ALPHA - Implemented Routine/AskAlexa/EchoSistant/IFTTT integrations - arguments (where available) are not processed yet - not tested
  *	04/24/2017 >>> v0.0.089.20170424 - ALPHA - Added variables in conditions and matching/non-matching device variable output
@@ -192,6 +193,7 @@ preferences {
 	page(name: "pageIntegrations")
 	page(name: "pageIntegrationAskAlexa")
 	page(name: "pageIntegrationIFTTT")
+	page(name: "pageIntegrationIFTTTConfirm")
 	page(name: "pageIntegrationTwilio")
 	page(name: "pageIntegrationTwilioTest")
 	page(name: "pageRemove")
@@ -420,6 +422,37 @@ def pageIntegrations() {
 	}
 }
 
+
+def pageIntegrationIFTTT() {
+	return dynamicPage(name: "pageIntegrationIFTTT", title: "IFTTT Integration", nextPage: settings.iftttEnabled ? "pageIntegrationIFTTTConfirm" : null) {
+		section() {
+			paragraph "CoRE can optionally integrate with IFTTT (IF This Then That) via the Maker channel, triggering immediate events to IFTTT. To enable IFTTT, please login to your IFTTT account and connect the Maker channel. You will be provided with a key that needs to be entered below", required: false
+			input "iftttEnabled", "bool", title: "Enable IFTTT", submitOnChange: true, required: false
+			if (settings.iftttEnabled) href name: "", title: "IFTTT Maker channel", required: false, style: "external", url: "https://www.ifttt.com/maker", description: "tap to go to IFTTT and connect the Maker channel"
+		}
+		if (settings.iftttEnabled) {
+			section("IFTTT Maker key"){
+				input("iftttKey", "string", title: "Key", description: "Your IFTTT Maker key", required: false)
+			}
+		}
+	}
+}
+
+def pageIntegrationIFTTTConfirm() {
+	if (testIFTTT()) {
+		return dynamicPage(name: "pageIntegrationIFTTTConfirm", title: "IFTTT Integration") {
+			section(){
+				paragraph "Congratulations! You have successfully connected CoRE to IFTTT."
+			}
+		}
+	} else {
+		return dynamicPage(name: "pageIntegrateIFTTTConfirm",  title: "IFTTT Integration") {
+			section(){
+				paragraph "Sorry, the credentials you provided for IFTTT are invalid. Please go back and try again."
+			}
+		}
+	}
+}
 def pageIntegrationTwilio() {
     //clear devices cache
 	dynamicPage(name: "pageIntegrationTwilio", title: "Twilio", install: false, uninstall: false) {
@@ -522,17 +555,22 @@ private initialize() {
 }
 
 private initializeWebCoREEndpoint() {
-	if (!state.endpoint) {
-		try {
-			def accessToken = createAccessToken()
-			if (accessToken) {
-				state.endpoint = apiServerUrl("/api/token/${accessToken}/smartapps/installations/${app.id}/")
-			}
-		} catch(e) {
-			state.endpoint = null
-		}
-	}
-	return state.endpoint
+	try {
+        if (!state.endpoint) {
+            try {
+                def accessToken = createAccessToken()
+                if (accessToken) {
+                    state.endpoint = apiServerUrl("/api/token/${accessToken}/smartapps/installations/${app.id}/")
+                }
+            } catch(e) {
+                state.endpoint = null
+            }
+        }
+        return state.endpoint
+	} catch (all) {
+    	log.error "An error has occurred during endpoint initialization: ", all
+    }
+    return false
 }
 
 private subscribeAll() {
@@ -1087,6 +1125,74 @@ private getLogging() {
         debug: (logging == 'Full')
     ]
 }
+
+
+private testIFTTT() {
+	//setup our security descriptor
+    state.modules = state.modules ?: [:]
+	state.modules["IFTTT"] = [
+		key: settings.iftttKey,
+		connected: false
+	]
+	if (settings.iftttKey) {
+		//verify the key
+		return httpGet("https://maker.ifttt.com/trigger/test/with/key/" + settings.iftttKey) { response ->
+			if (response.status == 200) {
+				if (response.data == "Congratulations! You've fired the test event")
+					state.modules["IFTTT"].connected = true
+				return true;
+			}
+			return false;
+		}
+	}
+	return false
+}
+
+private testLIFX() {
+	if ((!settings.lifxToken) || (!settings.lifxEnabled)) return false
+	//setup our security descriptor
+	state.modules["LIFX"] = [
+		token: settings.lifxToken,
+		connected: false
+	]
+	if (settings.lifxToken) {
+		//verify the key
+		def requestParams = [
+			uri:  "https://api.lifx.com",
+			path: "/v1/scenes",
+			headers: [
+				"Authorization": "Bearer ${settings.lifxToken}"
+			],
+			requestContentType: "application/json"
+		]
+		try {
+			return httpGet(requestParams) { response ->
+				if (response.status == 200) {
+					if (response.data instanceof List) {
+						state.modules["LIFX"].connected = true
+						def ss = []
+						for(scene in response.data) {
+							def s = [
+								id: scene.uuid,
+								name: scene.name
+							]
+							ss.push(s)
+						}
+						state.modules["LIFX"].scenes = ss
+					}
+					return true;
+				}
+				return false;
+			}
+		}
+		catch(all) {
+			return false
+		}
+	}
+	return false
+}
+
+
 /******************************************************************************/
 /*** 																		***/
 /*** PUBLIC METHODS															***/
@@ -1193,9 +1299,7 @@ private sendVariableEvent(variable) {
 def webCoREHandler(event) {
     if (!event || (event.name != handle())) return;
     def data = event.jsonData ?: null
-    log.warn "GOT EVENT $event.name with value $event.value and data $data"
     if (data && data.variable && (data.event == 'variable') && event.value && event.value.startsWith('@')) {
-    	log.warn "HERE"
     	Map vars = atomicState.vars ?: [:]
         Map variable = data.variable
         def oldVar = vars[variable.name] ?: [t:'', v:'']
@@ -1245,7 +1349,7 @@ def echoSistantHandler(evt) {
 	switch (evt.value) {
 		case "refresh":
         	Map profiles = [:]
-			for(profile in (evt.jsonData && evt.jsonData?.macros ? evt.jsonData.macros : [])) {
+			for(profile in (evt.jsonData && evt.jsonData?.profiles ? evt.jsonData.profiles : [])) {
             	if (profile instanceof Map) {
                 	profiles[hashId(profile.id)] = profile.name
                 } else {
@@ -1779,8 +1883,8 @@ private static Map comparisons() {
         triggers: [
     		gets							: [ d: "gets",																		g:"m",		p: 1						],
     		executes						: [ d: "executes",																	g:"v",		p: 1						],
-    		changes 						: [ d: "changes",							dd: "change",							g:"bdist",								],
-    		changes_to 						: [ d: "changes to",						dd: "change to",						g:"bdist",	p: 1,						],
+    		changes 						: [ d: "changes",							dd: "change",							g:"bdis",								],
+    		changes_to 						: [ d: "changes to",						dd: "change to",						g:"bdis",	p: 1,						],
     		changes_away_from 				: [ d: "changes away from",					dd: "change away from",					g:"bdis",	p: 1,						],
     		changes_to_any_of 				: [ d: "changes to any of",					dd: "change to any of",					g:"dis",	p: 1,	m: true,			],
     		changes_away_from_any_of 		: [ d: "changes away from any of",			dd: "change away from any of",			g:"dis",	p: 1,	m: true,			],

@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.0.08b.20170424" }
+public static String version() { return "v0.0.08c.20170425" }
 /*
+ *	04/25/2017 >>> v0.0.08c.20170425 - ALPHA - Various fixes and improvements and implemented custom commands with parameters
  *	04/24/2017 >>> v0.0.08b.20170424 - ALPHA - Fixed a bug preventing subscription to IFTTT events
  *	04/24/2017 >>> v0.0.08a.20170424 - ALPHA - Implemented Routine/AskAlexa/EchoSistant/IFTTT integrations - arguments (where available) are not processed yet - not tested
  *	04/24/2017 >>> v0.0.089.20170424 - ALPHA - Added variables in conditions and matching/non-matching device variable output
@@ -1177,19 +1178,25 @@ private Boolean executeTask(rtData, devices, statement, task, async) {
 private executePhysicalCommand(rtData, device, command, params = [], delay = null) {
 	try {
     	params = (params instanceof List) ? params : (params ? [params] : [])
+        def msg = timer ""
     	if (params.size()) {
-        	if (delay) {
+        	if (delay) {            	
 				device."$command"(params as Object[], [delay: delay])
+                msg.m = "Executed physical command $command($params, [delay: delay])"
             } else {
 				device."$command"(params as Object[])
+                msg.m = "Executed physical command $command($params)"
             }
         } else {
         	if (delay) {
 				device."$command"([delay: delay])
+                msg.m = "Executed physical command $command([delay: delay])"
 			} else {
 				device."$command"()
+                msg.m = "Executed physical command $command()"
             }
         }
+        debug msg, rtData
 	} catch(all) {
     	error "Error while executing physical command $device.$command($params):", rtData, null, all
     }
