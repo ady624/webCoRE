@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.0.08e.20170426" }
+public static String version() { return "v0.0.08f.20170426" }
 /*
+ *	04/26/2017 >>> v0.0.08f.20170426 - ALPHA - Implemented $args and the special $args.<dynamic> variables to read arguments from events. Bonus: ability to parse JSON data to read subitem by using $args.item.subitem (no array support yet)
  *	04/26/2017 >>> v0.0.08e.20170426 - ALPHA - Implemented Send notification to contacts
  *	04/26/2017 >>> v0.0.08d.20170426 - ALPHA - Timed triggers should now play nice with multiple devices (any/all)
  *	04/25/2017 >>> v0.0.08c.20170425 - ALPHA - Various fixes and improvements and implemented custom commands with parameters
@@ -526,7 +527,7 @@ def timeRecoveryHandler(event) {
 }
 
 def executeHandler(event) {
-	handleEvents([date: event.date, device: location, name: 'execute', value: event.value])
+	handleEvents([date: event.date, device: location, name: 'execute', value: event.value, jsonData: event.jsonData])
 }
 
 //entry point for all events
@@ -609,6 +610,7 @@ private Boolean executeEvent(rtData, event) {
             if (!index) index = 1
         }
         def srcEvent = event && (event.name == 'time') && event.schedule && event.schedule.evt ? event.schedule.evt : null
+        rtData.args = event ? ((event.name == 'time') && event.schedule && event.schedule.args && (event.schedule.args instanceof Map) ? event.schedule.args : (event.jsonData ?: [:])) : [:]
         rtData.currentEvent = [
             date: event.date.getTime(),
             delay: rtData.stats?.timing?.d ?: 0,
@@ -1183,10 +1185,10 @@ private executePhysicalCommand(rtData, device, command, params = [], delay = nul
         def msg = timer ""
     	if (params.size()) {
         	if (delay) {            	
-				device."$command"(params as Object[], options)
+				device."$command"(params as Object[], [delay: delay])
                 msg.m = "Executed physical command $command($params, [delay: delay])"
             } else {
-				device."$command"(params as Object[], options)
+				device."$command"(params as Object[])
                 msg.m = "Executed physical command $command($params)"
             }
         } else {
@@ -1550,7 +1552,8 @@ private requestWakeUp(rtData, statement, task, timeOrDelay, data = null) {
         cs: cs,
         ps: ps,
         d: data,
-        evt: rtData.currentEvent
+        evt: rtData.currentEvent,
+        args: rtData.args
     ]
     rtData.schedules.push(schedule)
 }
@@ -1612,18 +1615,21 @@ private long cmd_setColorTemperature(rtData, device, params) {
 }
 
 private long cmd_setColor(rtData, device, params) {
-    def color = colorUtil.findByName(params[0]) ?: hexToColor(params[0])
+    def color = params[0] == 'Random' ? colorUtil.RANDOM : (colorUtil.findByName(params[0]) ?: hexToColor(params[0]))
+    log.trace "FOUND $color"
     color = [
         hex: color.hex ?: color.rgb,
         hue: color.hue ?: color.h,
         saturation: color.saturation ?: color.s,
         level: color.level ?: color.l
     ]
+    log.trace "Converted to $color"
     def state = params.size() > 1 ? params[1] : ""
     def delay = params.size() > 2 ? params[2] : 0
     if (state && (getDeviceAttributeValue(rtData, device, 'switch') != "$state")) {
         return 0
     }
+    log.trace color
     executePhysicalCommand(rtData, device, 'setColor', color, delay)
     return 0
 }
@@ -1802,7 +1808,7 @@ private long vcmd_sendSMSNotification(rtData, device, params) {
 
 private long vcmd_sendNotificationToContacts(rtData, device, params) {
 	def message = params[0]
-    List contacts = params[1].toString().tokenize(',').unique();
+    List contacts = (params[1] instanceof List ? params[1] : params[1].toString().tokenize(',')).unique();
 	List recipients = rtData.contacts.findAll{ it.key in contacts }.collect{ it.value }
     if (recipients.size()) {
         if (recipients && recipients.size()) {
@@ -1825,9 +1831,27 @@ private long vcmd_setVariable(rtData, device, params) {
 private long vcmd_executePiston(rtData, device, params) {
 	def selfId = hashId(app.id)
 	def pistonId = params[0]
-    def arguments = params[2]
+    def arguments = (params[1] instanceof List ? params[1] : params[1].toString().tokenize(',')).unique();
     def description = "webCoRE: Piston $app.label requested execution of piston $pistonId"
-    sendLocationEvent(name: pistonId, value: selfId, isStateChange: true, displayed: false, linkText: description, descriptionText: description)
+    Map data = [:]
+    for (argument in arguments) {
+    	data[argument] = getVariable(rtData, argument).v
+    }
+    sendLocationEvent(name: pistonId, value: selfId, isStateChange: true, displayed: false, linkText: description, descriptionText: description, data: data)
+    return 0
+}
+
+private long vcmd_pausePiston(rtData, device, params) {
+	def selfId = hashId(app.id)
+	def pistonId = params[0]
+    parent.pausePiston(pistonId)
+    return 0
+}
+
+private long vcmd_resumePiston(rtData, device, params) {
+	def selfId = hashId(app.id)
+	def pistonId = params[0]
+    parent.resumePiston(pistonId)
     return 0
 }
 
@@ -1855,6 +1879,20 @@ private long vcmd_setHSLColor(rtData, device, params) {
         return 0
     }
     executePhysicalCommand(rtData, device, 'setColor', color, delay)
+    return 0
+}
+
+
+private long vcmd_wolRequest(rtData, device, params) {
+	def mac = params[0]
+	def secureCode = params[1]
+	mac = mac.replace(":", "").replace("-", "").replace(".", "").replace(" ", "").toLowerCase()
+	sendHubCommand(new physicalgraph.device.HubAction(
+		"wake on lan $mac",
+		physicalgraph.device.Protocol.LAN,
+		null,
+		secureCode ? [secureCode: secureCode] : [:]
+	))
     return 0
 }
 
@@ -2114,6 +2152,9 @@ private evaluateOperand(rtData, node, operand, index = null, trigger = false, ne
             if (values.size()) break
         case "e": //expression
 	        values = [[i: "${node?.$}:$index:0", v: [:] + evaluateExpression(rtData, operand.exp) + (operand.vt ? [vt: operand.vt] : [:])]]
+            break
+        case "u": //expression
+	        values = [[i: "${node?.$}:$index:0", v: getArgument(rtData, operand.u)]]
             break
     }
     if (!node) {
@@ -2965,6 +3006,16 @@ private Map getDeviceAttribute(rtData, deviceId, attributeName, subDeviceIndex =
     return [t: "error", v: "Device '${deviceId}' not found"]
 }
 
+private Map getArgument(rtData, name) {
+	List parts = name.tokenize('.');
+    def args = [:] + rtData.args
+    for(part in parts) {
+    	if (!(args instanceof Map)) return [t: 'dynamic', v: '']
+        args = args[part]
+    }
+    return [t: 'dynamic', v: "$args".toString()]
+}
+
 private Map getVariable(rtData, name) {
 	name = sanitizeVariableName(name)
 	if (!name) return [t: "error", v: "Invalid empty variable name"]
@@ -2973,11 +3024,15 @@ private Map getVariable(rtData, name) {
     	result = rtData.globalVars[name]
         if (!(result instanceof Map)) result = [t: "error", v: "Variable '$name' not found"]
 	} else {
-		if (name.startsWith("\$")) {
-			result = rtData.systemVars[name]
-            if (!(result instanceof Map)) result = [t: "error", v: "Variable '$name' not found"]
-            if (result && result.d) {
-            	result = [t: result.t, v: getSystemVariableValue(rtData, name)]
+		if (name.startsWith('$')) {
+        	if (name.startsWith('$args.') && (name.size() > 6)) {
+            	result = getArgument(rtData, name.substring(6))
+            } else {
+				result = rtData.systemVars[name]
+            	if (!(result instanceof Map)) result = [t: "error", v: "Variable '$name' not found"]
+            	if (result && result.d) {
+	            	result = [t: result.t, v: getSystemVariableValue(rtData, name)]
+	            }
             }
 		} else {
 			result = rtData.localVars[name]
@@ -4737,6 +4792,7 @@ def Map getSystemVariablesAndValues(rtData) {
 
 private static Map getSystemVariables() {
 	return [
+        "\$args": [t: "dynamic", d: true],
 		"\$currentEventAttribute": [t: "string", v: null],
 		"\$currentEventDate": [t: "datetime", v: null],
 		"\$currentEventDelay": [t: "integer", v: null],
@@ -4811,6 +4867,7 @@ private static Map getSystemVariables() {
 
 private getSystemVariableValue(rtData, name) {
 	switch (name) {
+    	case '$args': return "${rtData.args}".toString()
 		case "\$name": return app.label
 		case "\$now": return (long) now()
 		case "\$utc": return (long) now()
