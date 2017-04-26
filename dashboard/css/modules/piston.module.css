@@ -209,16 +209,10 @@ nav~piston {
 }
 
 
-piston[mode=edit] *[ng-click],
-piston[mode=edit] *[data-ng-click] {
-	cursor: pointer;
-}
-
-piston[mode=edit] *[ng-click]:hover,
-piston[mode=edit] *[data-ng-click]:hover,
-piston[mode=edit] *[ng-click]:hover *,
-piston[mode=edit] *[data-ng-click]:hover * {
+piston[mode=edit] span[ng-click]:hover,
+piston[mode=edit] span[data-ng-click]:hover {
 	text-decoration: underline;
+	cursor: pointer;
 }
 
 container,
@@ -410,6 +404,7 @@ label span.error {
 line[new],
 span[new] {
     color: rgba(0, 0, 0, 0.2);
+	cursor: pointer;
 }
 
 span.vartype {
@@ -599,6 +594,10 @@ line:hover {
 	ecolor: #fff;
 }
 
+[selected] line::before {
+	background: rgb(128, 192, 240) !important;
+	color: white;
+}
 
 piston trace {
 	display: none;
@@ -670,6 +669,43 @@ parameter[optional=true] label.control-label::after {
 	margin-left: 6px;
 }
 
+
+
+[clipboard-item] {
+    padding: 16px;
+    margin: 0px;
+    background: rgba(0, 0, 0, 0.05);
+    border: solid 1px #ccc;
+    border-radius: 8px;
+    position: relative;
+}
+
+[clipboard-item] [item] {
+	position: relative !important;
+	display:  block;
+	background: #fffcf0 !important;	
+	border: solid 1px #ccc !important;
+	padding: 8px;
+}
+
+[clipboard-item] [item]::after {
+	position: absolute;
+	left: 0px;
+	top: 0px;
+	right: 0px;
+	bottom: 0px;
+	content: '';
+	display:  block;
+}
+
+[clipboard-item] + [clipboard-item] {
+	margin-top: 16px;
+}
+
+[clipboard-item] .footer {
+	margin-top: 8px;
+	text-align: right;
+}
 
 @media (hover:hover) {
 	piston[mode=edit] statement:hover,

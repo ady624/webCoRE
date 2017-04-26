@@ -630,12 +630,15 @@ designer items > item.wide::after {
 	font-size: 16px;
 }
 
+designer form > p,
 designer > p {
   display: flex;
   flex-direction: row;
   justify-content: center;
   text-align: center;
 }
+designer form > p:before,
+designer form > p:after,
 designer > p:before,
 designer > p:after {
   border-top: double 3px #ccc;
@@ -645,9 +648,11 @@ designer > p:after {
   position: relative;
   top: 0.6em;
 }
+designer form > p:before,
 designer > p:before {
   margin-right:10px;
 }
+designer form > p:after,
 designer > p:after {
   margin-left:10px;
 }
@@ -656,7 +661,7 @@ designer form .form-group.row label {
     padding-left: 32px;
     line-height: 32px;
 }
-designer form p {
+designer form > * p {
     padding-left: 16px;
 }
 designer form a-ckolor {

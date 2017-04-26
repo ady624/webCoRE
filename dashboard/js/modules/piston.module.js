@@ -551,16 +551,22 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		return array;
 	}
 
-	$scope.deleteObject = function() {
-		if (($scope.designer.parent instanceof Array) && ($scope.designer.$obj)) {
-			$scope.autoSave();
-			$scope.designer.parent = $scope.removeFromArray($scope.designer.parent, $scope.designer.$obj);
-			$scope.closeDialog();
+	$scope.deleteObject = function(obj, parent) {
+		var dialog = !obj;
+		if (dialog) {
+			obj = $scope.designer.$obj;
+			parent = $scope.designer.parent;
 		}
-		if ($scope.designer.parent && ($scope.designer.parent.t == 'action') && ($scope.designer.parent.k instanceof Array) && ($scope.designer.$obj)) {
+		if (!obj) return;
+		if ((parent instanceof Array) && (obj)) {
 			$scope.autoSave();
-			$scope.designer.parent.k = $scope.removeFromArray($scope.designer.parent.k, $scope.designer.$obj);
-			$scope.closeDialog();
+			parent = $scope.removeFromArray(parent, obj);
+			if (dialog) $scope.closeDialog();
+		}
+		if (parent && (parent.t == 'action') && (parent.k instanceof Array) && (obj)) {
+			$scope.autoSave();
+			parent.k = $scope.removeFromArray(parent.k, obj);
+			if (dialog) $scope.closeDialog();
 		}
 	}
 
@@ -575,20 +581,108 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 	}
 
 
+	$scope.getClipboard = function() {
+		var clipboard = dataService.loadFromStore('clipboard');
+		if (!clipboard) clipboard = [];
+		return clipboard;
+	}
+
+	$scope.getClipboardItems = function(itemType) {
+		var clipboard = $scope.getClipboard();
+		var result = [];
+		for (i in clipboard) {
+			if (clipboard[i].t.startsWith(itemType)) result.push(clipboard[i]);
+		}
+		return result;
+	}
+
+    $scope.saveToClipboard = function(object, objectType) {
+		var clipboard = $scope.getClipboard();
+		clipboard.push({
+			s: (new Date()).getTime(),
+			t: objectType,
+			o: $scope.copy(object)
+		});
+		if (clipboard.length > MAX_STACK_SIZE) clipboard = clipboard.slice(-MAX_STACK_SIZE);
+        dataService.saveToStore('clipboard', clipboard);
+    }
+
+	$scope.deleteClipboardItem = function(item) {
+		var clipboard = $scope.getClipboard();
+		$scope.removeFromArray($scope.designer.clipboard, item);
+		for (i = 0; i < clipboard.length; i++) {
+			if ((clipboard[i].s == item.s) && (clipboard[i].t == item.t)) break;
+		}
+		if (i < clipboard.length) {
+			clipboard.splice(i, 1);
+			dataService.saveToStore('clipboard', []);
+		}		
+	}
+
+	$scope.clearClipboard = function() {
+        dataService.saveToStore('clipboard', []);
+	}
 
 
 
+	$scope.copySelection = function() {
+		if (!$scope.selection) return;
+		$scope.saveToClipboard($scope.selection, $scope.selectionType);
+		
+	}
+
+	$scope.cutSelection = function() {
+		if (!$scope.selection) return;
+		$scope.saveToClipboard($scope.selection, $scope.selectionType);
+		$scope.deleteObject($scope.selection, $scope.selectionParent);
+	}
+
+	$scope.duplicateSelection = function() {
+		if (!$scope.selection) return;
+		if (!$scope.selectionParent) return;
+		if ($scope.selectionParent instanceof Array) {
+			$scope.selectionParent.push($scope.copy($scope.selection));
+		}
+	}
+
+	$scope.deleteSelection = function() {
+		if (!$scope.selection) return;
+		$scope.deleteObject($scope.selection, $scope.selectionParent);
+	}
+
+	$scope.pasteItem = function(clipboardItem) {
+		if (!clipboardItem || !clipboardItem.o || !$scope.designer || !$scope.designer.parent) return
+		var parent = ($scope.designer.parent instanceof Array) ? $scope.designer.parent : (clipboardItem.t.startsWith('condition') && $scope.designer.parent.c ? $scope.designer.parent.c : (clipboardItem.t.startsWith('restriction') && $scope.designer.parent.r ? $scope.designer.parent.r : (clipboardItem.t.startsWith('task') && $scope.designer.parent.k ? $scope.designer.parent.k : null)));
+		if (!parent) return;
+		parent.push($scope.copy(clipboardItem.o));
+		$scope.closeDialog();
+	}
+
+	$scope.contextMenu = function(item) {
+		var result = [];
+		if ($scope.selection) {
+			result.push(['Copy selected ' + $scope.selectionType, $scope.copySelection]);
+			if ($scope.mode == 'edit') {
+				result.push(['Duplicate selected ' + $scope.selectionType, $scope.duplicateSelection]);
+				if ($scope.selectionParent) {
+					result.push(null);
+					result.push(['Cut selected ' + $scope.selectionType, $scope.cutSelection]);
+					result.push(['Delete selected ' + $scope.selectionType, $scope.deleteSelection]);
+				}
+			}
+			result.push(null);
+		}
+		result.push(['Clear clipboard', $scope.clearClipboard]);
+		return result;
+	};
 
 
-
-
-
-
-
-
-
-
-
+	$scope.select = function(object, parent, objectType) {
+		if (!objectType) objectType = 'statement';
+		$scope.selection = object;
+		$scope.selectionParent = parent;
+		$scope.selectionType = objectType;
+	}
 
 
 	$scope.editSettings = function() {
@@ -637,7 +731,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 
 	$scope.editStatement = function(statement, parent) {
 		if ($scope.mode != 'edit') return;
-		if (!statement) {
+		if (!statement) {	
 			statement = {};
 			statement.t = null; //type
 			statement.d = []; //devices
@@ -651,10 +745,11 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 			statement.tsp = ''; //tsp override
 			statement.ctp = 'i';
 			statement.s = 'local'; //tos
-			statement.z = ''; //desc
+			statement.z = ''; //desc			
 		}
 		$scope.designer = {
-			config: $scope.getExpressionConfig()
+			config: $scope.getExpressionConfig(),
+			clipboard: statement.t ? [] : $scope.getClipboardItems('statement')
 		};
 		$scope.designer.$obj = statement;
 		$scope.designer.$statement = statement;
@@ -981,7 +1076,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 
 	$scope.editCondition = function(condition, parent, newElseIf, defaultType) {
 		if ($scope.mode != 'edit') return;
-
+		var _new = !condition;
 		if (!condition) {
 			condition = {};
 			condition.t = defaultType;
@@ -1000,7 +1095,8 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 			condition.fs = [];
 		}
 		$scope.designer = {
-			config: $scope.getExpressionConfig()
+			config: $scope.getExpressionConfig(),
+			clipboard: _new ? $scope.getClipboardItems('condition') : []
 		};
 		$scope.designer.$condition = condition;
 		$scope.designer.$obj = condition;
@@ -1180,7 +1276,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 
     $scope.editRestriction = function(restriction, parent) {
         if ($scope.mode != 'edit') return;
-
+		var _new = !restriction;
         if (!restriction) {
             restriction = {};
             restriction.t = null;
@@ -1196,7 +1292,8 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
             restriction.z = '';
         }
         $scope.designer = {
-            config: $scope.getExpressionConfig()
+            config: $scope.getExpressionConfig(),
+			clipboard: _new ? $scope.getClipboardItems('restriction') : []
         };
         $scope.designer.$restriction = restriction;
         $scope.designer.$obj = restriction;
@@ -1352,8 +1449,10 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 			task.m = '';
 			task.z = '';
 		}
-		$scope.designer = {};
 		var _new = task.c ? false : true;
+		$scope.designer = {
+			clipboard: _new ? $scope.getClipboardItems('task') : []
+		};
 		var insertIndex = _new ? $scope.insertIndexes[parent.$$hashkey] : parent.k.indexOf(task);
 		if (isNaN(insertIndex)) insertIndex = parent.k.length;
 		$scope.designer.insertIndex = insertIndex;
@@ -1763,7 +1862,6 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		}
 		$scope.renameParameters();
 	}
-
 /*
 	$scope.prepareParameters = function(task) {
 		$scope.designer.parameters = [];
@@ -2274,6 +2372,9 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		}
 		if (pushToStack) {
 			stack.push(obj);
+			if (stack.length > MAX_STACK_SIZE) {
+				stack = stack.slice(-MAX_STACK_SIZE);
+			}
 		}
 		if (clearRedo) {
 			$scope.stack.redo = [];
@@ -4056,3 +4157,5 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 function test(value, parseAsString) {
 	scope.evaluateExpression(scope.parseExpression(value, parseAsString));
 }
+
+var MAX_STACK_SIZE = 10;
