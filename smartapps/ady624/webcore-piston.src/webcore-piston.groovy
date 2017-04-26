@@ -2310,7 +2310,7 @@ private updateCache(rtData, value) {
     }
 }
 
-private Boolean evaluateComparison(rtData, comparison, lo, ro = null, ro2 = null, to = null, to2 = null, options = null) {
+private Boolean evaluateComparison(rtData, comparison, lo, ro = null, ro2 = null, to = null, to2 = null, options = [:]) {
 		def fn = "comp_${comparison}"
         def result = (lo.operand.g == 'any' ? false : true)
         if (options?.matches) {
