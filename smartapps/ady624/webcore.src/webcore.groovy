@@ -218,10 +218,10 @@ preferences {
 /******************************************************************************/
 def pageMain() {
 	//webCoRE Dashboard initialization
-    List contacts = settings.contacts
-    for(contact in contacts) {
-    	log.trace "${[id: contact.id, name: contact.name, label: contact.label, contact: contact.contact]}"
-    }
+//    List contacts = settings.contacts
+//    for(contact in contacts) {
+//    	log.trace "${[id: contact.id, name: contact.name, label: contact.label, contact: contact.contact]}"
+//    }
 	def success = initializeWebCoREEndpoint()
 	if (!state.installed) {
         return dynamicPage(name: "pageMain", title: "", install: false, uninstall: false, nextPage: "pageInitializeDashboard") {
