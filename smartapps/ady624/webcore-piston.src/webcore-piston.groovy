@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.0.08d.20170426" }
+public static String version() { return "v0.0.08e.20170426" }
 /*
+ *	04/26/2017 >>> v0.0.08e.20170426 - ALPHA - Implemented Send notification to contacts
  *	04/26/2017 >>> v0.0.08d.20170426 - ALPHA - Timed triggers should now play nice with multiple devices (any/all)
  *	04/25/2017 >>> v0.0.08c.20170425 - ALPHA - Various fixes and improvements and implemented custom commands with parameters
  *	04/24/2017 >>> v0.0.08b.20170424 - ALPHA - Fixed a bug preventing subscription to IFTTT events
@@ -1796,6 +1797,21 @@ private long vcmd_sendSMSNotification(rtData, device, params) {
 		//we only need one notification
 		save = false
 	}
+    return 0
+}
+
+private long vcmd_sendNotificationToContacts(rtData, device, params) {
+	def message = params[0]
+    List contacts = params[1].toString().tokenize(',').unique();
+	List recipients = rtData.contacts.findAll{ it.key in contacts }.collect{ it.value }
+    if (recipients.size()) {
+        if (recipients && recipients.size()) {
+			def save = !!params[2]
+			sendNotificationToContacts(message, recipients, [event: save])
+        }
+	} else {
+    	error "Invalid list of contacts: ${params[1]}", rtData
+    }
     return 0
 }
 

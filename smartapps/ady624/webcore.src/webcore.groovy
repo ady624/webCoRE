@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.0.08d.20170426" }
+public static String version() { return "v0.0.08e.20170426" }
 /*
+ *	04/26/2017 >>> v0.0.08e.20170426 - ALPHA - Implemented Send notification to contacts
  *	04/26/2017 >>> v0.0.08d.20170426 - ALPHA - Timed triggers should now play nice with multiple devices (any/all)
  *	04/25/2017 >>> v0.0.08c.20170425 - ALPHA - Various fixes and improvements and implemented custom commands with parameters
  *	04/24/2017 >>> v0.0.08b.20170424 - ALPHA - Fixed a bug preventing subscription to IFTTT events
@@ -218,10 +219,6 @@ preferences {
 /******************************************************************************/
 def pageMain() {
 	//webCoRE Dashboard initialization
-//    List contacts = settings.contacts
-//    for(contact in contacts) {
-//    	log.trace "${[id: contact.id, name: contact.name, label: contact.label, contact: contact.contact]}"
-//    }
 	def success = initializeWebCoREEndpoint()
 	if (!state.installed) {
         return dynamicPage(name: "pageMain", title: "", install: false, uninstall: false, nextPage: "pageInitializeDashboard") {
@@ -671,6 +668,7 @@ private api_get_base_result(deviceVersion = 0) {
             logging: settings.logging,
             virtualDevices: virtualDevices,
             globalVars: listAvailableVariables(),
+            contacts: listAvailableContacts(),
         ] + (sendDevices ? [devices: listAvailableDevices()] : [:]),
         location: [
             contactBookEnabled: location.getContactBookEnabled(),
@@ -1076,6 +1074,20 @@ private Map listAvailableDevices(raw = false) {
     return devices.sort{ it.key }
 }
 
+
+private Map listAvailableContacts(raw = false) {
+    def contacts = [:]
+    for(contact in settings.contacts) {
+        def contactId = hashId(contact.id);
+        if (raw) {
+            contacts[contactId] = contact
+        } else {
+            contacts[contactId] = [t: contact.name, f: contact.contact.firstName, l: contact.contact.lastName, p: "$contact".endsWith('PUSH')]
+        }
+    }
+    return contacts
+}
+
 private Map listAvailableVariables() {
 	return atomicState.vars ?: [:]
 }
@@ -1282,6 +1294,7 @@ public Map getRunTimeData(semaphore) {
 		],
         comparisons: comparisons(),
         coreVersion: version(),
+    	contacts: listAvailableContacts(true),
     	devices: listAvailableDevices(true),
         virtualDevices: atomicState.virtualDevices ?: virtualDevices(),
         globalVars: listAvailableVariables()
@@ -1804,26 +1817,27 @@ private virtualCommands() {
 	//n = name
     //t = type
 	return [
-		noop				: [	n: "No operation",				a: true,	i: 'circle',				d: "No operation",																										],
-		wait				: [	n: "Wait...", 					a: true,	i: "clock-o",				d: "Wait {0}",															p: [[n:"Duration", t:"duration"]],				],
-		waitRandom			: [ n: "Wait randomly...",			a: true,	i: "clock-o",				d: "Wait randomly between {0} and {1}",									p: [[n:"At least", t:"duration"],[n:"At most", t:"duration"]],	],
-		waitForTime			: [ n: "Wait for time...",			a: true,	i: "clock-o",				d: "Wait for {0}",														p: [[n:"Time", t:"time"]],	],
-		waitForDateTime		: [ n: "Wait for date & time...",	a: true,	i: "clock-o",				d: "Wait for {0}",														p: [[n:"Date & Time", t:"datetime"]],	],
-		executePiston		: [ n: "Execute piston...",			a: true,	i: "clock-o",				d: "Execute piston \"{0}\"{1}",											p: [[n:"Piston", t:"piston"], [n:"Arguments", t:"variables", d:" with arguments {v}"]],	],
-		executeRoutine		: [ n: "Execute routine...",		a: true,	i: "clock-o",				d: "Execute routine \"{0}\"",											p: [[n:"Routine", t:"routine"]],	],
-		toggle				: [ n: "Toggle", r: ["on", "off"], 				i: "toggle-on"																				],
-		setHSLColor			: [ n: "Set color... (hsl)", 					i: "barcode",			d: "Set color to H:{0} / S:{1} / L:{2}{3}",				r: ["setColor"],				p: [[n:"Hue",t:"hue"], [n:"Saturation",t:"saturation"], [n:"Level",t:"level"], [n:"Only if switch is...", t:"enum",o:["on","off"], d:" if already {v}"]],  							],
-		toggleLevel			: [ n: "Toggle level...", 						i: "toggle-off",			d: "Toggle level between 0% and {0}%",	r: ["on", "off", "setLevel"],	p: [[n:"Level", t:"level"]],																																	],
-		sendNotification	: [ n: "Send notification...",		a: true,	i: "commenting-o",			d: "Send notification \"{0}\"",											p: [[n:"Message", t:"string"]],												],
-		sendPushNotification: [ n: "Send PUSH notification...",	a: true,	i: "commenting-o",			d: "Send PUSH notification \"{0}\"{1}",									p: [[n:"Message", t:"string"],[n:"Store in Messages", t:"boolean", d:" and store in Messages", s:1]],	],
-		sendSMSNotification	: [ n: "Send SMS notification...",	a: true,	i: "commenting-o",			d: "Send SMS notification \"{0}\" to {1}{2}",							p: [[n:"Message", t:"string"],[n:"Phone number",t:"phone"],[n:"Store in Messages", t:"boolean", d:" and store in Messages", s:1]],	],
-		log					: [ n: "Log to console...",			a: true,	i: "bug",					d: "Log {0} \"{1}\"",													p: [[n:"Log type", t:"enum", o:["info","trace","debug","warn","error"]],[n:"Message",t:"string"]],	],
-		httpRequest			: [ n: "Make a web request",		a: true, 	i: "anchor",				d: "Make a {1} request to {0} with type {2}{3}",				        p: [[n:"URL", t:"string"],[n:"Method", t:"enum", o:["GET","POST","PUT","DELETE","HEAD"]],[n:"Content Type", t:"enum", o:["JSON","FORM"]],[n:"Send variables", t:"variables", d:" and data {v}"]],	],
-        setVariable			: [ n: "Set variable...",			a: true,	i: "superscript",			d: "Set variable {0} = {1}",											p: [[n:"Variable",t:"variable"],[n:"Value", t:"dynamic"]],	],
-        setState			: [ n: "Set piston state...",		a: true,	i: "superscript",			d: "Set piston state to \"{0}\"",										p: [[n:"State",t:"string"]],	],
-		setLocationMode		: [ n: "Set location mode...",		a: true,	i: "", 						d: "Set location mode to {0}", 											p: [[n:"Mode",t:"mode"]],																														],
-		setAlarmSystemStatus: [ n: "Set Smart Home Monitor status...",	a: true, i: "",					d: "Set Smart Home Monitor status to {0}",								p: [[n:"Status", t:"alarmSystemStatus"]],																										],
-		sendEmail			: [ n: "Send email...",				a: true,	i: "envelope", 				d: "Send email with subject \"{1}\" to {0}", 							p: [[n:"Recipient",t:"email"],[n:"Subject",t:"string"],[n:"Message body",t:"string"]],																														],
+		noop						: [	n: "No operation",				a: true,	i: 'circle',				d: "No operation",																										],
+		wait						: [	n: "Wait...", 					a: true,	i: "clock-o",				d: "Wait {0}",															p: [[n:"Duration", t:"duration"]],				],
+		waitRandom					: [ n: "Wait randomly...",			a: true,	i: "clock-o",				d: "Wait randomly between {0} and {1}",									p: [[n:"At least", t:"duration"],[n:"At most", t:"duration"]],	],
+		waitForTime					: [ n: "Wait for time...",			a: true,	i: "clock-o",				d: "Wait for {0}",														p: [[n:"Time", t:"time"]],	],
+		waitForDateTime				: [ n: "Wait for date & time...",	a: true,	i: "clock-o",				d: "Wait for {0}",														p: [[n:"Date & Time", t:"datetime"]],	],
+		executePiston				: [ n: "Execute piston...",			a: true,	i: "clock-o",				d: "Execute piston \"{0}\"{1}",											p: [[n:"Piston", t:"piston"], [n:"Arguments", t:"variables", d:" with arguments {v}"]],	],
+		executeRoutine				: [ n: "Execute routine...",		a: true,	i: "clock-o",				d: "Execute routine \"{0}\"",											p: [[n:"Routine", t:"routine"]],	],
+		toggle						: [ n: "Toggle", r: ["on", "off"], 				i: "toggle-on"																				],
+		setHSLColor					: [ n: "Set color... (hsl)", 					i: "barcode",			d: "Set color to H:{0} / S:{1} / L:{2}{3}",				r: ["setColor"],				p: [[n:"Hue",t:"hue"], [n:"Saturation",t:"saturation"], [n:"Level",t:"level"], [n:"Only if switch is...", t:"enum",o:["on","off"], d:" if already {v}"]],  							],
+		toggleLevel					: [ n: "Toggle level...", 						i: "toggle-off",			d: "Toggle level between 0% and {0}%",	r: ["on", "off", "setLevel"],	p: [[n:"Level", t:"level"]],																																	],
+		sendNotification			: [ n: "Send notification...",		a: true,	i: "commenting-o",			d: "Send notification \"{0}\"",											p: [[n:"Message", t:"string"]],												],
+		sendPushNotification		: [ n: "Send PUSH notification...",	a: true,	i: "commenting-o",			d: "Send PUSH notification \"{0}\"{1}",									p: [[n:"Message", t:"string"],[n:"Store in Messages", t:"boolean", d:" and store in Messages", s:1]],	],
+		sendSMSNotification			: [ n: "Send SMS notification...",	a: true,	i: "commenting-o",			d: "Send SMS notification \"{0}\" to {1}{2}",							p: [[n:"Message", t:"string"],[n:"Phone number",t:"phone"],[n:"Store in Messages", t:"boolean", d:" and store in Messages", s:1]],	],
+		sendNotificationToContacts	: [ n: "Send notification to contacts...",a: true,i: "commenting-o",		d: "Send notification \"{0}\" to {1}{2}",								p: [[n:"Message", t:"string"],[n:"Contacts",t:"contacts"],[n:"Store in Messages", t:"boolean", d:" and store in Messages", s:1]],	],
+		log							: [ n: "Log to console...",			a: true,	i: "bug",					d: "Log {0} \"{1}\"",													p: [[n:"Log type", t:"enum", o:["info","trace","debug","warn","error"]],[n:"Message",t:"string"]],	],
+		httpRequest					: [ n: "Make a web request",		a: true, 	i: "anchor",				d: "Make a {1} request to {0} with type {2}{3}",				        p: [[n:"URL", t:"string"],[n:"Method", t:"enum", o:["GET","POST","PUT","DELETE","HEAD"]],[n:"Content Type", t:"enum", o:["JSON","FORM"]],[n:"Send variables", t:"variables", d:" and data {v}"]],	],
+        setVariable					: [ n: "Set variable...",			a: true,	i: "superscript",			d: "Set variable {0} = {1}",											p: [[n:"Variable",t:"variable"],[n:"Value", t:"dynamic"]],	],
+        setState					: [ n: "Set piston state...",		a: true,	i: "superscript",			d: "Set piston state to \"{0}\"",										p: [[n:"State",t:"string"]],	],
+		setLocationMode				: [ n: "Set location mode...",		a: true,	i: "", 						d: "Set location mode to {0}", 											p: [[n:"Mode",t:"mode"]],																														],
+		setAlarmSystemStatus		: [ n: "Set Smart Home Monitor status...",	a: true, i: "",					d: "Set Smart Home Monitor status to {0}",								p: [[n:"Status", t:"alarmSystemStatus"]],																										],
+		sendEmail					: [ n: "Send email...",				a: true,	i: "envelope", 				d: "Send email with subject \"{1}\" to {0}", 							p: [[n:"Recipient",t:"email"],[n:"Subject",t:"string"],[n:"Message body",t:"string"]],																														],
 
 
 /*		[ n: "waitState",											d: "Wait for piston state change",	p: ["Change to:enum[any,false,true]"],															i: true,	l: true,						dd: "Wait for {0} state"],
