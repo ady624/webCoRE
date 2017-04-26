@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.0.08c.20170425" }
+public static String version() { return "v0.0.08d.20170426" }
 /*
+ *	04/26/2017 >>> v0.0.08d.20170426 - ALPHA - Timed triggers should now play nice with multiple devices (any/all)
  *	04/25/2017 >>> v0.0.08c.20170425 - ALPHA - Various fixes and improvements and implemented custom commands with parameters
  *	04/24/2017 >>> v0.0.08b.20170424 - ALPHA - Fixed a bug preventing subscription to IFTTT events
  *	04/24/2017 >>> v0.0.08a.20170424 - ALPHA - Implemented Routine/AskAlexa/EchoSistant/IFTTT integrations - arguments (where available) are not processed yet - not tested
@@ -187,6 +188,7 @@ preferences {
 	page(name: "pageInitializeDashboard")
 	page(name: "pageFinishInstall")
 	page(name: "pageSelectDevices")
+	page(name: "pageSelectContacts")
 	page(name: "pageSettings")
     page(name: "pageChangePassword")
     page(name: "pageSavePassword")
@@ -216,6 +218,10 @@ preferences {
 /******************************************************************************/
 def pageMain() {
 	//webCoRE Dashboard initialization
+    List contacts = settings.contacts
+    for(contact in contacts) {
+    	log.trace "${[id: contact.id, name: contact.name, label: contact.label, contact: contact.contact]}"
+    }
 	def success = initializeWebCoREEndpoint()
 	if (!state.installed) {
         return dynamicPage(name: "pageMain", title: "", install: false, uninstall: false, nextPage: "pageInitializeDashboard") {
@@ -311,7 +317,7 @@ private pageInitializeDashboard() {
 
 private pageSelectDevices() {
 	state.deviceVersion = now().toString()
-	dynamicPage(name: "pageSelectDevices", title: "", nextPage: state.installed ? null : "pageFinishInstall") {
+	dynamicPage(name: "pageSelectDevices", title: "", nextPage: state.installed ? null : (location.getContactBookEnabled() ? "pageSelectContacts" : "pageFinishInstall")) {
 		section() {
 			paragraph "${state.installed ? "Select the devices you want ${handle()} to have access to." : "Great, now let's select some devices."}"
             paragraph "It is a good idea to only select the devices you plan on using with ${handle()} pistons. Pistons will only have access to the devices you selected."
@@ -330,6 +336,26 @@ private pageSelectDevices() {
 				if (capability.value.d != d) input "dev:${capability.key}", "capability.${capability.key}", multiple: true, title: "Which ${capability.value.d}", required: false
 				d = capability.value.d
 			}
+		}
+	}
+}
+
+private pageSelectContacts() {
+	state.deviceVersion = now().toString()
+	dynamicPage(name: "pageSelectContacts", title: "", nextPage: state.installed ? null : "pageFinishInstall") {
+		section() {
+			paragraph "${state.installed ? "Select the contacts you want ${handle()} to have access to." : "Great, now let's select some contacts."}"
+        }
+        if (!state.installed) {
+        	section (Note) {
+            	paragraph "Remember, you can always come back to ${handle()} and add or remove contacts as needed.", required: true
+            }
+        	section() {
+            	paragraph "So go ahead, select a few contacts, then tap Next"
+            }
+        }
+        section () {
+			input "contacts", "contact", multiple: true, title: "Which contacts", required: false
 		}
 	}
 }
@@ -357,8 +383,17 @@ def pageSettings() {
 			label name: "name", title: "Name", state: (name ? "complete" : null), defaultValue: app.name, required: false
 			paragraph "Memory usage is at ${mem()}", required: false			   
 		}
+        
 		section("Available devices") {
 			href "pageSelectDevices", title: "Available devices", description: "Tap here to select which devices are available to pistons" 
+		}
+
+		section("Available contacts") {
+			if (location.getContactBookEnabled()) {
+				href "pageSelectContacts", title: "Available contacts", description: "Tap here to select which contacts are available to pistons" 
+			} else {
+            	paragraph "Your contact book is not enabled."
+            }
 		}
 
 		section("Integrations") {

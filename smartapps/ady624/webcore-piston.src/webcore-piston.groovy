@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.0.08c.20170425" }
+public static String version() { return "v0.0.08d.20170426" }
 /*
+ *	04/26/2017 >>> v0.0.08d.20170426 - ALPHA - Timed triggers should now play nice with multiple devices (any/all)
  *	04/25/2017 >>> v0.0.08c.20170425 - ALPHA - Various fixes and improvements and implemented custom commands with parameters
  *	04/24/2017 >>> v0.0.08b.20170424 - ALPHA - Fixed a bug preventing subscription to IFTTT events
  *	04/24/2017 >>> v0.0.08a.20170424 - ALPHA - Implemented Routine/AskAlexa/EchoSistant/IFTTT integrations - arguments (where available) are not processed yet - not tested
@@ -717,7 +718,7 @@ private processSchedules(rtData, scheduleJob = false) {
     rtData.state.old = rtData.state.new
     schedules = (atomicState.schedules ?: [])
     //cancel statements
-    schedules.removeAll{ it.s in rtData.cancelations.statements }
+	schedules.removeAll{ schedule -> !!rtData.cancelations.statements.find{ cancelation -> (cancelation.id == schedule.s) && (!cancelation.data || (cancelation.data == schedule.d)) }}
     //cancel on conditions
 	for(cid in rtData.cancelations.conditions) {
     	schedules.removeAll{ cid in it.cs }
@@ -1181,10 +1182,10 @@ private executePhysicalCommand(rtData, device, command, params = [], delay = nul
         def msg = timer ""
     	if (params.size()) {
         	if (delay) {            	
-				device."$command"(params as Object[], [delay: delay])
+				device."$command"(params as Object[], options)
                 msg.m = "Executed physical command $command($params, [delay: delay])"
             } else {
-				device."$command"(params as Object[])
+				device."$command"(params as Object[], options)
                 msg.m = "Executed physical command $command($params)"
             }
         } else {
@@ -1536,7 +1537,7 @@ private int getWeekOfMonth(date = null, backwards = false) {
 }
 
 
-private requestWakeUp(rtData, statement, task, timeOrDelay) {
+private requestWakeUp(rtData, statement, task, timeOrDelay, data = null) {
 	def time = timeOrDelay > 9999999999 ? timeOrDelay : now() + timeOrDelay
     def cs = [] + ((statement.tcp == 'b') || (statement.tcp == 'c') ? (rtData.stack?.cs ?: []) : [])
     def ps = (statement.tcp == 'b') || (statement.tcp == 'p') ? 1 : 0
@@ -1547,6 +1548,7 @@ private requestWakeUp(rtData, statement, task, timeOrDelay) {
         i: task?.$,
         cs: cs,
         ps: ps,
+        d: data,
         evt: rtData.currentEvent
     ]
     rtData.schedules.push(schedule)
@@ -2152,7 +2154,8 @@ private Boolean evaluateCondition(rtData, condition, collection, async) {
                 Map options = [
                 	//we ask for matching/non-matching devices if the user requested it or if the trigger is timed
                     //setting matches to true will force the condition group to evaluate all members (disables evaluation optimizations)
-					matches: lo.operand.dm || lo.operand.dn || (trigger && comparison.t)
+					matches: lo.operand.dm || lo.operand.dn || (trigger && comparison.t),
+                    forceAll: (trigger && comparison.t)
 				]
                 def to = (comparison.t || (ro && (lo.operand.t == 'v') && (lo.operand.v == 'time') && (ro.operand.t != 'c'))) && condition.to ? [operand: condition.to, values: evaluateOperand(rtData, null, condition.to)] : null
                 def to2 = ro2 && (lo.operand.t == 'v') && (lo.operand.v == 'time') && (ro2.operand.t != 'c') && condition.to2 ? [operand: condition.to2, values: evaluateOperand(rtData, null, condition.to2)] : null
@@ -2167,14 +2170,39 @@ private Boolean evaluateCondition(rtData, condition, collection, async) {
                 //do the stay logic here
                 if (trigger && comparison.t) {
                 	//timed trigger
-                    //if (lo.g != 'any')
-                    cancelStatementSchedules(rtData, condition.$)
-                    if (to && result) {
-                    	//if we're using any and there's already a schedule
+                    if (to) {
                         def tvalue = to && to.operand && to.values ? to.values + [f: to.operand.f] : null
                         if (tvalue) {
 	                        long delay = evaluateExpression(rtData, [t: 'duration', v: tvalue.v, vt: tvalue.vt], 'long').v
-                            requestWakeUp(rtData, condition, condition, delay)
+                            if ((lo.operand.t == 'p') && (lo.operand.g == 'any') && lo.values.size() > 1) {
+                            	def schedules = atomicState.schedules
+                            	for (value in lo.values) {
+                                	def dev = value.v?.d
+                                    if (dev in options.devices.matched) {
+                                    	//schedule one device schedule
+                                        if (!schedules.find{ (it.s == condition.$) && (it.d == dev)  }) {
+                                        	//schedule a wake up if there's none, otherwise just move on
+                                            debug "Adding a timed trigger schedule for device $dev for condition ${condition.$}", rtData
+			                            	requestWakeUp(rtData, condition, condition, delay, dev)
+                                        }
+                                    } else {
+                                    	//cancel that one device schedule
+                                        debug "Cancelling any timed trigger schedules for device $dev for condition ${condition.$}", rtData
+                                		cancelStatementSchedules(rtData, condition.$, dev)
+                                    }
+                                }
+                            } else {
+                            	if (result) {
+                                	//if we find the comparison true, set a timer if we haven't already
+									if (!schedules.find{ (it.s == condition.$) }) {
+                                		debug "Adding a timed trigger schedule for condition ${condition.$}", rtData
+		                            	requestWakeUp(rtData, condition, condition, delay)
+                                    }
+                                } else {
+                                	debug "Cancelling any timed trigger schedules for condition ${condition.$}", rtData
+                                	cancelStatementSchedules(rtData, condition.$)
+                                }
+                            }
                         }
                     }
                     result = false
@@ -2236,7 +2264,7 @@ private Boolean evaluateComparison(rtData, comparison, lo, ro = null, ro2 = null
         def tvalue2 = to2 && to2.operand && to2.values ? to2.values : null
         for(value in lo.values) {
             def res = false
-            if (value && value.v && !value.v.x) {
+            if (value && value.v && (!value.v.x || options.forceAll)) {
                 try {
                     if (!ro) {
                         res = "$fn"(rtData, value, null, null, tvalue, tvalue2)
@@ -2294,10 +2322,10 @@ private Boolean evaluateComparison(rtData, comparison, lo, ro = null, ro2 = null
         return result
 }
 
-private cancelStatementSchedules(rtData, statementId) {
+private cancelStatementSchedules(rtData, statementId, data = null) {
 	//cancel all schedules that are pending for statement statementId
     if (!(statementId in rtData.cancelations.statements)) {
-    	rtData.cancelations.statements.push(statementId)
+    	rtData.cancelations.statements.push([id: statementId, data: data])
     }
 }
 
@@ -2669,7 +2697,15 @@ private void subscribeAll(rtData) {
                             	def item = options ? options[value.c] : value.c
                                 if (item) {
 	                        		subscriptionId = "$deviceId${operand.v}${item}"
-    	                        	attribute = "${operand.v}.${item}"
+                                	attribute = "${operand.v}.${item}"
+                                    switch (operand.v) {
+                                    	case 'askAlexa':
+                                        	attribute = 'askAlexaMacro.${item}'
+                                            break;
+                                    	case 'echoSistant':
+                                        	attribute = 'echoSistantProfile.${item}'
+                                            break;
+                                    }
                                 }
                             }
                             break
