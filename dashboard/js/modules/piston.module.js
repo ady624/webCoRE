@@ -1,4 +1,4 @@
-config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', '$interval', '$location', '$sce', '$routeParams', 'ngDialog', '$window', function($scope, $rootScope, dataService, $timeout, $interval, $location, $sce, $routeParams, ngDialog, $window) {
+config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', '$interval', '$location', '$sce', '$routeParams', 'ngDialog', '$window', '$animate', function($scope, $rootScope, dataService, $timeout, $interval, $location, $sce, $routeParams, ngDialog, $window, $animate) {
 	var tmrReveal;
 	var tmrStatus;
 	var tmrActivity;
@@ -63,6 +63,18 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
         }
         return result;
     };
+
+	$scope.listAvailableContacts = function() {
+		var result = [];
+		for(i in $scope.instance.contacts) {
+			var contact = $scope.instance.contacts[i];
+			result.push({v: i, n: (contact.f + ' ' + contact.l).trim() + (contact.p ? ' (PUSH)' : (contact.t ? ' (' + contact.t + ')' : ''))});
+		}
+		if (!result.length) {
+			result.push({v: 'no one', n: 'No available contacts'});
+		}
+		return result;
+	}
 
     $scope.getPistonName = function(pistonId) {
         var locations = dataService.listLocations();
@@ -182,6 +194,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 				
 				$scope.initChart();
 				$scope.devices = $scope.listAvailableDevices();
+				$scope.contacts = $scope.listAvailableContacts();
 				$scope.virtualDevices = $scope.listAvailableVirtualDevices();
 				window.scope = $scope;
 				$scope.localVars = response.data.localVars;
@@ -2516,6 +2529,10 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 				operand.multiple = true;
 				dataType = 'enum';
 			}
+			if (dataType == 'contacts') {
+				operand.multiple = true;
+				dataType = 'contact';
+			}
 			if (dataType == 'number') dataType = 'decimal';
 			if (dataType == 'bool') dataType = 'boolean';
 			if ((dataType == 'enum') && !operand.options && !operand.options.length) {
@@ -2551,7 +2568,8 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 			operand.onlyAllowConstants = operand.onlyAllowConstants || (dataType == 'piston') || (dataType == 'routine') || (dataType == 'askAlexaMacro')
 
 			var strict = !!operand.strict;
-			if (operand.onlyAllowConstants) {
+			if (operand.onlyAllowConstants || (dataType == 'contact')) {
+				operand.allowArgument = false;
 				operand.allowDevices = (dataType == 'device');
 				operand.allowPhysical = false;
 				operand.allowVirtual = false;
@@ -2565,6 +2583,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 				operand.allowVirtual = (dataType != 'datetime') && (dataType != 'date') && (dataType != 'time') && (dataType != 'device') && (dataType != 'variable') && (dataType != 'decimal') && (dataType != 'integer') && (dataType != 'number') && (dataType != 'boolean') && (dataType != 'enum') && (dataType != 'color') && (dataType != 'duration');
 				operand.allowVariable = (dataType != 'device' || ((dataType == 'device') && operand.multiple)) && (!strict || (dataType != 'boolean'));
 				operand.allowConstant = (dataType != 'device') && (dataType != 'variable');
+				operand.allowArgument = (dataType != 'device') && (dataType != 'variable');
 				operand.allowExpression = /*(dataType != 'device') && */(dataType != 'variable') && (dataType != 'enum') && (!strict || (dataType != 'boolean'));
 			}
 			if (((operand.data.t == 'p') && (!operand.allowPhysical)) || ((operand.data.t == 'v') && (!operand.allowVirtual))) operand.data.t = 'c';
@@ -2621,6 +2640,9 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 				break;
 			case 'piston':
 				operand.options = $scope.listAllPistons();
+				break;
+			case 'contact':
+				operand.options = $scope.contacts;
 				break;
 			case 'integer':
 			case 'decimal':
@@ -2748,10 +2770,16 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 					var variable = $scope.getVariableByName(operand.data.x);
 					if (variable) {
 						operand.selectedDataType = variable.t;
+						if (operand.selectedDataType == 'boolean') {
+							operand.selectedOptions = ['false', 'true'];
+						}
 					} else {
 						operand.error = "Invalid variable";
 					}
 				}
+				break;
+			case 'u':
+				operand.selectedDataType = 'dynamic';
 				break;
 			case 'c':
 				var expression = $scope.parseString(operand.data.c);
@@ -2803,6 +2831,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 			((operand.data.t=='v') && !!operand.data.v) ||
 			((operand.data.t=='x') && !!operand.data.x && !!operand.data.x.length) ||
 			((operand.data.t=='s') && !!operand.data.s) ||
+			((operand.data.t=='u') && !!operand.data.u) ||
 			((operand.data.t=='c') && !((operand.data.c == "Invalid Date") && (operand.data.c instanceof Object)) && !((dataType == 'duration') && (isNaN(operand.data.c) || (operand.requirePositiveNumber && (operand.data.c < 1))))) ||
 			((operand.data.t=='e') && !!operand.data.e && !!operand.data.e.length)
 		);
@@ -3090,6 +3119,9 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 								if (noNegatives && !isNaN(c) && parseInt(c) < 0) c = -parseInt(c);
 								result = '<span ' + m + '>' + scope.buildName(c, noQuotes, pedantic) + '</span>';
 						}
+						break;
+					case 'u':
+						result = result + '<span var>{$args.' + operand.u + '}</span>';
 						break;
 					case 'e': //expression
 						if (operand.e)
@@ -3767,14 +3799,15 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		var data = (anonymize ? $scope.anonymizeObject($scope.piston) : $scope.piston);
 		$scope.loading = true;
 		dataService.generateBackupBin(data, anonymize).then(function(response) {
+			$animate.enabled(false);
 			var bin = response.data;
-			var piston = document.getElementById('piston');
 			$scope.view.exportBin = bin;
+			var piston = document.getElementById('piston');
+			piston.setAttribute('printing', '');
+			if (anonymize) piston.setAttribute('anonymized', '');
 			$timeout(function() {
-				var width = 1170;//piston.clientWidth;
-				var height = piston.clientHeight + (anonymize ? 0 : 64);
-				piston.setAttribute('printing', '');
-				if (anonymize) piston.setAttribute('anonymized', '');
+				var width = piston.clientWidth + 10;
+				var height = piston.clientHeight + (anonymize ? 0 : 64) + 10;
 				html2canvas(piston, {width: width, height: height, counter: counter}).then(function(canvas) {
 					$scope.loading = false;
 					var reader = new window.FileReader();
@@ -3795,7 +3828,15 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 				piston.removeAttribute('printing');
 				piston.removeAttribute('anonymized');
 				delete($scope.view.exportBin);
-			}, 1);
+				$animate.enabled(true);
+			}, 1, false);
+
+		}, function() {
+			//error
+			piston.removeAttribute('printing');
+			piston.removeAttribute('anonymized');
+			delete($scope.view.exportBin);
+			//$animate.enabled(true);
 		});
 	}
 
@@ -4071,6 +4112,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 							}
 							break;
 					case 'variable':
+							if (item.x.startsWith('$args.') && (item.x.length > 6)) break;
 							if ($scope.systemVars && $scope.systemVars[item.x]) break;
 							if ($scope.globalVars && $scope.globalVars[item.x]) break;
 							if (!$scope.getVariableByName(item.x)) {

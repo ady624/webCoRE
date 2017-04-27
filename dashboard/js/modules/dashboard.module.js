@@ -77,9 +77,11 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 
 
 	$scope.clock = function() {
-		for(pistonIndex in $scope.instance.pistons) {
-			var piston = $scope.instance.pistons[pistonIndex];
-			piston.opacity = piston.meta ? $scope.getOpacity(piston.meta.t) : 0;
+		if ($scope.instance) {
+			for(pistonIndex in $scope.instance.pistons) {
+				var piston = $scope.instance.pistons[pistonIndex];
+				piston.opacity = piston.meta ? $scope.getOpacity(piston.meta.t) : 0;
+			}
 		}
 	};
 

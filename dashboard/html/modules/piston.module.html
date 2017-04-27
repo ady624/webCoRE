@@ -93,7 +93,7 @@
 					</div>
 				</div>
 			</div>
-			<div ng-if="meta.active && !subscriptions.events && !schedules.length && !piston.o.des" class="alert alert-warning">This piston does not subscribe to any events. Unless executed by other means, it will never run on its own</div>
+			<div warning ng-if="meta.active && !subscriptions.events && !schedules.length && !piston.o.des" class="alert alert-warning">This piston does not subscribe to any events. Unless executed by other means, it will never run on its own</div>
 			<div class="row">
 				<div class="col-md-4">
 					<h2>Status</h2>
@@ -208,7 +208,7 @@
 <script type="text/ng-template" id="dialog-captured-image">
 	<br/>
 	<center>Please tap and hold the picture below to save it to your Photo Gallery</center>
-	<img id="capturedImage" src="{{capturedImage}}" />
+		<img draggable="false" id="capturedImage" src="{{capturedImage}}" onclick="return true;"/>
 </script>
 
 
@@ -243,8 +243,8 @@
 		<line kwd>end settings;</line>
 		<line ng-if-end>&nbsp;</line>
 		<trace ng-if-start="view.trace && trace && trace.t"><span>+0ms</span><span timer>start</span></trace>
-		<line com>/* Trace started on {{utcToString(trace.t)}} (about {{timeSince(trace.t)}}) */</line>
-		<line ng-if-end>&nbsp;</line>
+		<line trace com>/* Trace started on {{utcToString(trace.t)}} (about {{timeSince(trace.t)}}) */</line>
+		<line trace ng-if-end>&nbsp;</line>
 		<line kwd ng-if-start="((mode=='edit') && view.variables) || (piston.v && piston.v.length)">define</line>
 		<variables dnd-list="piston.v" dnd-allowed-types="['variable']" data-ng-repeat="variables in [piston.v]" data-ng-include="'variables'" dnd-nodrag></variables>
 		<line kwd>end define;</line>
@@ -256,9 +256,9 @@
 		<statements dnd-list="piston.s" dnd-allowed-types="['statement']" data-nag-model="piston.s" data-ng-repeat="statements in [piston.s]" data-ng-include="'statements'" exec="{{piston && piston.s && piston.s.length && trace && trace.points && !!trace.points['s:' + piston.s[0].$]}}"></statements>
 		<trace ng-if="view.trace && trace && trace.points && trace.points['end']"><span>+{{trace.points['end'].o}}ms</span><span timer ok="true">done</span></trace>
 		<line kwd ng-if-end>end execute;</line>
-		<line ng-if-start="view.trace && trace && trace.t">&nbsp;</line>
+		<line trace ng-if-start="view.trace && trace && trace.t">&nbsp;</line>
 		<trace ng-if="view.trace"><span>+{{trace.d}}ms</span><span timer>stop</span></trace>
-		<line com ng-if-end>/* Trace ended on {{utcToString(trace.t + trace.d)}} */</line>
+		<line trace com ng-if-end>/* Trace ended on {{utcToString(trace.t + trace.d)}} */</line>
 	</content>
 </script>
 
@@ -728,7 +728,7 @@
 				<div class="form-group">
 					<label for="variableInput">Counter variable (optional)</label>
 					<div class="form-table">
-						<select selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-default" ng-model="designer.x" data-mobile="{{mobile}}" ng-change="">
+						<select data-actions-box="true" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-default" ng-model="designer.x" data-mobile="{{mobile}}" ng-change="">
 							<option value="">Nothing selected</option>
 							<optgroup ng-if="piston.v && piston.v.length" label="Local variables">
 								<option ng-repeat="variable in piston.v" ng-if="['integer', 'decimal', 'dynamic'].indexOf(variable.t) >= 0" value="{{variable.n}}" data-content="<span class='vartype'>{{variable.t}}</span>{{variable.n}}">{{variable.n}} ({{variable.t}})</option>
@@ -745,7 +745,7 @@
 				<div class="form-group">
 					<label for="variableInput">Counter variable (optional)</label>
 					<div class="form-table">
-						<select selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-default" ng-model="designer.x" data-mobile="{{mobile}}" ng-change="">
+						<select data-actions-box="true" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-default" ng-model="designer.x" data-mobile="{{mobile}}" ng-change="">
 							<option value="">Nothing selected</option>
 							<optgroup ng-if="piston.v && piston.v.length" label="Local variables">
 								<option ng-repeat="variable in piston.v" ng-if="variable.t == 'device'" value="{{variable.n}}" data-content="<span class='vartype'>{{variable.t}}</span>{{variable.n}}">{{variable.n}} ({{variable.t}})</option>
@@ -770,7 +770,7 @@
 				<info>Actions represent a collection of tasks a device or group of devices have to perform. The <i>Location</i> virtual device provides a way to execute some non-device-specific tasks, such as changing the location mode, the SHM state, sending notifications, communicating with integrated apps, and more. Note that these virtual tasks are also available to any and all devices.</info>
 				<div class="form-group">
 					<label for="devicesInput">Devices</label>
-					<select id="devices" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-info" ng-model="designer.devices"  data-header="Use the input box below to quickly search for devices" data-live-search="true" data-mobile="{{mobile}}" multiple title="Location">
+					<select data-actions-box="true" id="devices" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-info" ng-model="designer.devices"  data-header="Use the input box below to quickly search for devices" data-live-search="true" data-mobile="{{mobile}}" multiple title="Location">
 						<optgroup label="Virtual devices">
 							<option disabled>Location</option>
 						</optgroup>
@@ -798,14 +798,14 @@
 				</div>
 				<div class="form-group {{form.m.$valid ? '' : 'has-error'}}" ng-if="(designer.operand.data.vt == 'h')">
 					<label for="devicesInput">At this minute of the hour...</label>
-					<select name="m" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-info" ng-model="designer.operand.data.om" data-mobile="{{mobile}}" required>
+					<select data-actions-box="true" name="m" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-info" ng-model="designer.operand.data.om" data-mobile="{{mobile}}" required>
 						<option value="" style="display:none">Any</option>
 						<option ng-repeat="m in range(60) track by $index" ng-value="$index">{{$index}}</option>
 					</select>
 				</div>
 				<div class="form-group {{form.dow.$valid ? '' : 'has-error'}}" ng-if="designer.operand.data.vt == 'w'">
 					<label for="devicesInput">On this day of the week...</label>
-					<select name="dow" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-info" ng-model="designer.operand.data.odw" data-mobile="{{mobile}}" required>
+					<select data-actions-box="true" name="dow" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-info" ng-model="designer.operand.data.odw" data-mobile="{{mobile}}" required>
 						<option value="" style="display:none">Nothing selected</option>
 						<option ng-repeat="day in weekDays track by $index" ng-value="$index">{{day}}</option>
 					</select>
@@ -813,17 +813,17 @@
 				<div class="form-group {{form.dom.$valid ? '' : 'has-error'}}" ng-if="(designer.operand.data.vt == 'n') || (designer.operand.data.vt == 'y')">
 					<label for="devicesInput">On this day of the month...</label>
 					<div class="form-table input-group">
-						<select name="dom" selectpicker class="selectpicker show-tick" data-width="50%" data-style="btn-info" ng-model="designer.operand.data.odm" data-mobile="{{mobile}}" ng-options="day.v as day.n for day in listODM()" required>
+						<select data-actions-box="true" name="dom" selectpicker class="selectpicker show-tick" data-width="50%" data-style="btn-info" ng-model="designer.operand.data.odm" data-mobile="{{mobile}}" ng-options="day.v as day.n for day in listODM()" required>
 							<option value="" style="display:none">Nothing selected</option>
 						</select>
-						<select selectpicker class="selectpicker show-tick" data-width="50%" data-style="btn-info" ng-model="designer.operand.data.odw" data-mobile="{{mobile}}" ng-options="day.v as day.n for day in listODW()" ng-required>
+						<select data-actions-box="true" selectpicker class="selectpicker show-tick" data-width="50%" data-style="btn-info" ng-model="designer.operand.data.odw" data-mobile="{{mobile}}" ng-options="day.v as day.n for day in listODW()" ng-required>
 							<option value="" style="display:none">Nothing selected</option>
 						</select>
 					</div>
 				</div>
 				<div class="form-group {{form.moy.$valid ? '' : 'has-error'}}" ng-if="(designer.operand.data.vt == 'y')">
 					<label for="devicesInput">On this month of the year...</label>
-					<select name="moy" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-info" ng-model="designer.operand.data.omy" data-mobile="{{mobile}}" required>
+					<select data-actions-box="true" name="moy" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-info" ng-model="designer.operand.data.omy" data-mobile="{{mobile}}" required>
 						<option value="" style="display:none">Nothing selected</option>
 						<option ng-repeat="month in yearMonths track by $index" ng-value="$index">{{month}}</option>
 					</select>
@@ -838,28 +838,28 @@
 				</div>
 				<div class="form-group" ng-if="(designer.operand.data.vt == 'ms') || (designer.operand.data.vt == 's')">
 					<label for="devicesInput">Only during these minutes...</label>
-					<select name="m" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-warning" ng-model="designer.operand.data.om" data-mobile="{{mobile}}" multiple>
+					<select data-actions-box="true" name="m" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-warning" ng-model="designer.operand.data.om" data-mobile="{{mobile}}" multiple>
 						<option value="" style="display:none">Any</option>
 						<option ng-repeat="m in range(60) track by $index" ng-value="$index">{{$index}}</option>
 					</select>
 				</div>
 				<div class="form-group" ng-if="(designer.operand.data.vt == 'ms') || (designer.operand.data.vt == 's') || (designer.operand.data.vt == 'm')">
 					<label for="devicesInput">Only during these hours...</label>
-					<select name="h" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-warning" ng-model="designer.operand.data.oh" data-mobile="{{mobile}}" multiple>
+					<select data-actions-box="true" name="h" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-warning" ng-model="designer.operand.data.oh" data-mobile="{{mobile}}" multiple>
 						<option value="" style="display:none">Any</option>
 						<option ng-repeat="m in range(24) track by $index" ng-value="$index">{{formatHour($index)}}</option>
 					</select>
 				</div>
 				<div class="form-group" ng-if="(designer.operand.data.vt != 'w') && (designer.operand.data.vt != 'n') && (designer.operand.data.vt != 'y')">
 					<label for="devicesInput">Only on these days of the week...</label>
-					<select name="dow" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-warning" ng-model="designer.operand.data.odw" data-mobile="{{mobile}}" multiple>
+					<select data-actions-box="true" name="dow" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-warning" ng-model="designer.operand.data.odw" data-mobile="{{mobile}}" multiple>
 						<option value="" style="display:none">Any</option>
 						<option ng-repeat="day in weekDays track by $index" ng-value="$index">{{day}}</option>
 					</select>
 				</div>
 				<div class="form-group" ng-if="(designer.operand.data.vt != 'n') && (designer.operand.data.vt != 'y') && (!designer.operand.data.owm || !designer.operand.data.owm.length)">
 					<label for="devicesInput">Only on these days of the month...</label>
-					<select name="dom" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-warning" ng-model="designer.operand.data.odm" data-mobile="{{mobile}}" multiple>
+					<select data-actions-box="true" name="dom" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-warning" ng-model="designer.operand.data.odm" data-mobile="{{mobile}}" multiple>
 						<option value="" style="display:none">Any</option>
 						<option ng-repeat="d in range(31) track by $index" ng-value="$index + 1">{{getOrdinal($index + 1)}}</option>
 						<option ng-value="-1">last</option>
@@ -869,7 +869,7 @@
 				</div>
 				<div class="form-group" ng-if="(designer.operand.data.vt != 'n') && (designer.operand.data.vt != 'y') && (!designer.operand.data.odm || !designer.operand.data.odm.length)">
 					<label for="devicesInput">Only on these weeks of the month...</label>
-					<select name="wom" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-warning" ng-model="designer.operand.data.owm" data-mobile="{{mobile}}" multiple>
+					<select data-actions-box="true" name="wom" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-warning" ng-model="designer.operand.data.owm" data-mobile="{{mobile}}" multiple>
 						<option value="" style="display:none">Any</option>
 						<option ng-repeat="d in range(5) track by $index" ng-value="$index + 1">{{getOrdinal($index + 1)}}</option>
 						<option ng-value="-1">last</option>
@@ -879,7 +879,7 @@
 				</div>
 				<div class="form-group" ng-if="(designer.operand.data.vt != 'y')">
 					<label for="devicesInput">Only on these months of the year...</label>
-					<select name="moy" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-warning" ng-model="designer.operand.data.omy" data-mobile="{{mobile}}" multiple>
+					<select data-actions-box="true" name="moy" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-warning" ng-model="designer.operand.data.omy" data-mobile="{{mobile}}" multiple>
 						<option value="" style="display:none">Any</option>
 						<option ng-value="1">January</option>
 						<option ng-value="2">February</option>
@@ -903,7 +903,7 @@
 				</div>
 				<div class="form-group">
 					<label for="tep" help>Task Execution Policy</label>
-					<select name="tep" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-default" ng-model="designer.tep" data-mobile="{{mobile}}">
+					<select data-actions-box="true" name="tep" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-default" ng-model="designer.tep" data-mobile="{{mobile}}">
 						<option value="">Always execute tasks (default)</option>
 						<option value="c">Execute tasks on condition state change only</option>
 						<option value="p">Execute tasks on piston state change only</option>
@@ -912,7 +912,7 @@
 				</div>
 				<div class="form-group">
 					<label for="tcp" help>Task Cancellation Policy</label>
-					<select name="tcp" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-default" ng-model="designer.tcp" data-mobile="{{mobile}}">
+					<select data-actions-box="true" name="tcp" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-default" ng-model="designer.tcp" data-mobile="{{mobile}}">
 						<option value="">Never cancel tasks</option>
 						<option value="c">Cancel tasks on condition state change (default)</option>
 						<option value="p">Cancel tasks on piston state change</option>
@@ -921,14 +921,14 @@
 				</div>
 				<div class="form-group" ng-if="designer.type == 'action'">
 					<label for="tsp" help>Task Scheduling Policy</label>
-					<select name="tsp" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-default" ng-model="designer.tsp" data-mobile="{{mobile}}">
+					<select data-actions-box="true" name="tsp" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-default" ng-model="designer.tsp" data-mobile="{{mobile}}">
 						<option value="">Override any existing scheduled tasks</option>
 						<option value="a">Allow multiple scheduled tasks</option>
 					</select>
 				</div>
 <!--				<div class="form-group" ng-if="(designer.type=='action' ) && (designer.tcp !='none')">
 					<label for="tcp">Task Cancellation Policy Restriction</label>
-					<select name="tcpr" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-default" ng-model="designer.tcpr" data-mobile="{{mobile}}">
+					<select data-actions-box="true" name="tcpr" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-default" ng-model="designer.tcpr" data-mobile="{{mobile}}">
 						<option value="none">None</option>
 						<option value="to">Only when state changes to a specified value</option>
 						<option value="from">Only when state changes away from a specified value</option>
@@ -940,14 +940,14 @@
 				</div>	-->
 				<div class="form-group" ng-if="designer.type=='switch'">
 					<label for="break" help>Case Traversal Policy</label>
-					<select name="ctp" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-default" ng-model="designer.ctp" data-mobile="{{mobile}}">
+					<select data-actions-box="true" name="ctp" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-default" ng-model="designer.ctp" data-mobile="{{mobile}}">
 						<option value="i">Safe (auto-break after matching a case) (default)</option>
 						<option value="e">Fall-through (programmer style)</option>
 					</select>
 				</div>
 				<div class="form-group" ng-if="designer.type != 'every'">
 					<label for="async" help>Execution Method</label>
-					<select name="async" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-default" ng-model="designer.async" data-mobile="{{mobile}}">
+					<select data-actions-box="true" name="async" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-default" ng-model="designer.async" data-mobile="{{mobile}}">
 						<option value="0">Synchronous (default)</option>
 						<option value="1">Asynchronous</option>
 					</select>
@@ -1028,7 +1028,7 @@
 			<div class="form-group" ng-if-start="designer.type=='group'">
 				<label for="operator">Logical Operator</label>
 					<div class="form-table input-group">
-					<select id="operator" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-default" ng-model="designer.operator" data-mobile="{{mobile}}">
+					<select data-actions-box="true" id="operator" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-default" ng-model="designer.operator" data-mobile="{{mobile}}">
 						<option value="and">Logical AND</option>
 						<option value="or">Logical OR</option>
 						<option value="xor">Logical eXclusive OR (XOR)</option>
@@ -1039,7 +1039,7 @@
 			<div class="form-group" ng-if-end>
 				<label for="operator">Whole group negation</label>
 				<div class="form-table input-group">
-					<select id="operator" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-default" ng-model="designer.not" data-mobile="{{mobile}}">
+					<select data-actions-box="true" id="operator" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-default" ng-model="designer.not" data-mobile="{{mobile}}">
 						<option value="0">Not negated</option>
 						<option value="1">Negated</option>
 					</select>
@@ -1050,7 +1050,7 @@
 				<div class="form-group" ng-if="(designer.type=='condition') && (designer.comparison.left.data.t == 'p')">
 					<label>Store the list of matching devices into variable...</label>
 					<div class="form-table">
-						<select selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-default" ng-model="designer.comparison.left.data.dm" data-mobile="{{mobile}}" ng-change="">
+						<select data-actions-box="true" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-default" ng-model="designer.comparison.left.data.dm" data-mobile="{{mobile}}" ng-change="">
 							<option value="">Nothing selected</option>
 							<optgroup ng-if="piston.v && piston.v.length" label="Local variables">
 								<option ng-repeat="variable in piston.v" ng-if="variable.t == 'device'" value="{{variable.n}}" data-content="<span class='vartype'>{{variable.t}}</span>{{variable.n}}">{{variable.n}} ({{variable.t}})</option>
@@ -1064,7 +1064,7 @@
 				<div class="form-group" ng-if="(designer.type=='condition') && (designer.comparison.left.data.t == 'p')">
 					<label>Store the list of non-matching devices into variable...</label>
 					<div class="form-table">
-						<select selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-default" ng-model="designer.comparison.left.data.dn" data-mobile="{{mobile}}" ng-change="">
+						<select data-actions-box="true" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-default" ng-model="designer.comparison.left.data.dn" data-mobile="{{mobile}}" ng-change="">
 							<option value="">Nothing selected</option>
 							<optgroup ng-if="piston.v && piston.v.length" label="Local variables">
 								<option ng-repeat="variable in piston.v" ng-if="variable.t == 'device'" value="{{variable.n}}" data-content="<span class='vartype'>{{variable.t}}</span>{{variable.n}}">{{variable.n}} ({{variable.t}})</option>
@@ -1077,7 +1077,7 @@
 				</div>
 				<div class="form-group">
 					<label for="smode">Subscription method</label>
-					<select id="smode" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-default" ng-model="designer.smode" data-mobile="{{mobile}}">
+					<select data-actions-box="true" id="smode" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-default" ng-model="designer.smode" data-mobile="{{mobile}}">
 						<option value="auto">Automatic</option>
 						<option value="always">Always subscribe</option>
 						<option value="never">Never subscribe</option>
@@ -1114,7 +1114,7 @@
 			<div class="form-group">
 				<label for="operator">Logical Operator</label>
 				<div class="form-table input-group">
-					<select id="operator" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-default" ng-model="designer.operator" data-mobile="{{mobile}}">
+					<select data-actions-box="true" id="operator" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-default" ng-model="designer.operator" data-mobile="{{mobile}}">
 						<option value="and">Logical AND</option>
 						<option value="or">Logical OR</option>
 						<option value="xor">Logical eXclusive OR (XOR)</option>
@@ -1125,7 +1125,7 @@
 			<div class="form-group">
 				<label for="operator">Whole group negation</label>
 				<div class="form-table input-group">
-					<select id="operator" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-default" ng-model="designer.not" data-mobile="{{mobile}}">
+					<select data-actions-box="true" id="operator" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-default" ng-model="designer.not" data-mobile="{{mobile}}">
 						<option value="0">Not negated</option>
 						<option value="1">Negated</option>
 					</select>
@@ -1207,7 +1207,7 @@
 			<div class="form-group" ng-if-start="designer.type=='group'">
 				<label for="operator">Logical Operator</label>
 				<div class="form-table input-group">
-					<select id="operator" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-default" ng-model="designer.operator" data-mobile="{{mobile}}">
+					<select data-actions-box="true" id="operator" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-default" ng-model="designer.operator" data-mobile="{{mobile}}">
 						<option value="and">Logical AND</option>
 						<option value="or">Logical OR</option>
 						<option value="xor">Logical eXclusive OR (XOR)</option>
@@ -1218,7 +1218,7 @@
 			<div class="form-group" ng-if-end>
 				<label for="operator">Whole group negation</label>
 				<div class="form-table input-group">
-					<select id="operator" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-default" ng-model="designer.not" data-mobile="{{mobile}}">
+					<select data-actions-box="true" id="operator" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-default" ng-model="designer.not" data-mobile="{{mobile}}">
 						<option value="0">Not negated</option>
 						<option value="1">Negated</option>
 					</select>
@@ -1253,7 +1253,7 @@
 			<div class="form-group">
 				<label for="operator">Logical Operator</label>
 				<div class="form-table input-group">
-					<select id="operator" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-default" ng-model="designer.operator" data-mobile="{{mobile}}">
+					<select data-actions-box="true" id="operator" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-default" ng-model="designer.operator" data-mobile="{{mobile}}">
 						<option value="and">Logical AND</option>
 						<option value="or">Logical OR</option>
 						<option value="xor">Logical eXclusive OR (XOR)</option>
@@ -1264,7 +1264,7 @@
 			<div class="form-group">
 				<label for="operator">Whole group negation</label>
 				<div class="form-table input-group">
-					<select id="operator" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-default" ng-model="designer.not" data-mobile="{{mobile}}">
+					<select data-actions-box="true" id="operator" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-default" ng-model="designer.not" data-mobile="{{mobile}}">
 						<option value="0">Not negated</option>
 						<option value="1">Negated</option>
 					</select>
@@ -1298,7 +1298,7 @@
 			<div class="form-group">
 				<info>A CASE block allows statements execution if the switch expression matches its value.</info>
 				<label>Case type</label>
-				<select selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-default" ng-model="designer.type" data-mobile="{{mobile}}" ng-change="">
+				<select data-actions-box="true" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-default" ng-model="designer.type" data-mobile="{{mobile}}" ng-change="">
 					<option value="s">Single value</option>
 					<option value="r">Range</option>
 					<option style="display:none" value="" disabled>Nothing selected</option>
@@ -1333,7 +1333,7 @@
 	</div>
 	<div class="form-group {{comparison.operatorValid ? '' : 'has-error'}}">
 		<label class="col-lg-12 no-padding">What kind of comparison?</label>
-		<select id="operator" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-info" ng-model="comparison.operator" data-mobile="{{mobile}}" ng-change="validateComparison(comparison)" ng-options="option.id as option.d group by option.c for option in comparison.options">
+		<select data-actions-box="true" id="operator" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-info" ng-model="comparison.operator" data-mobile="{{mobile}}" ng-change="validateComparison(comparison)" ng-options="option.id as option.d group by option.c for option in comparison.options">
 			<option style="display:none" value="" disabled>Select a comparison...</option>
 		</select>
 	</div>
@@ -1341,7 +1341,7 @@
 		<label class="col-lg-12 no-padding">{{comparison.parameterCount == 1 ? 'Compare to' : 'Between...'}}<span class="error" ng-if="!designer.comparison.right.valid">{{designer.comparison.right.error}}<span ng-if="designer.comparison.right.expressionVar"> (<a ng-click="autoAddVariable(designer.comparison.right.expressionVar); validatecomparison.right(designer.comparison.right);">create it</a>)</span>&nbsp;<i class="fa fa-warning"></i></span></label>
 		<operand ng-repeat="operand in [designer.comparison.right]" ng-model="designer.comparison.left" ng-include="'operand'"></operand>
 	</div>
-	<div class="form-group" ng-if="(comparison.parameterCount > 0) && (designer.comparison.left.selectedDataType='time') && (designer.comparison.right.data.t != 'c')">
+	<div class="form-group" ng-if="(comparison.parameterCount > 0) && (designer.comparison.left.selectedDataType=='time') && (designer.comparison.right.data.t != 'c')">
 		<label class="col-lg-12 no-padding">With offset...<span class="error" ng-if="!designer.comparison.right.valid">{{designer.comparison.time.error}}<span ng-if="designer.comparison.time.expressionVar"> (<a ng-click="autoAddVariable(designer.comparison.time.expressionVar); validatecomparison.right(designer.comparison.time);">create it</a>)</span>&nbsp;<i class="fa fa-warning"></i></span></label>
 		<operand ng-repeat="operand in [designer.comparison.time]" ng-model="deisgner.comparison.time" ng-include="'operand'"></operand>
 	</div>
@@ -1349,14 +1349,14 @@
 		<label class="col-lg-12 no-padding">...and...<span class="error" ng-if="!designer.comparison.right2.valid">{{designer.comparison.right2.error}}<span ng-if="designer.comparison.right2.expressionVar"> (<a ng-click="autoAddVariable(designer.comparison.right2.expressionVar); validatecomparison.right2(designer.comparison.right2);">create it</a>)</span>&nbsp;<i class="fa fa-warning"></i></span></label>
 		<operand ng-repeat="operand in [designer.comparison.right2]" ng-model="designer.comparison.left" ng-include="'operand'"></operand>
 	</div>
-	<div class="form-group" ng-if="(comparison.parameterCount > 1) && (designer.comparison.left.selectedDataType='time') && (designer.comparison.right2.data.t != 'c')">
+	<div class="form-group" ng-if="(comparison.parameterCount > 1) && (designer.comparison.left.selectedDataType=='time') && (designer.comparison.right2.data.t != 'c')">
 		<label class="col-lg-12 no-padding">With offset...<span class="error" ng-if="!designer.comparison.right.valid">{{designer.comparison.time2.error}}<span ng-if="designer.comparison.time2.expressionVar"> (<a ng-click="autoAddVariable(designer.comparison.time2.expressionVar); validatecomparison.right(designer.comparison.time2);">create it</a>)</span>&nbsp;<i class="fa fa-warning"></i></span></label>
 		<operand ng-repeat="operand in [designer.comparison.time2]" ng-model="deisgner.comparison.time2" ng-include="'operand'"></operand>
 	</div>
 	<div class="form-group" ng-if="comparison.timed">
 		<label class="col-lg-12 no-padding">{{comparison.timed == 1 ? 'In the last...' : 'For...'}}<span class="error" ng-if="!designer.comparison.time.valid">{{designer.comparison.time.error}}<span ng-if="designer.comparison.time.expressionVar"> (<a ng-click="autoAddVariable(designer.comparison.time.expressionVar); validatecomparison.time(designer.comparison.time);">create it</a>)</span>&nbsp;<i class="fa fa-warning"></i></span></label>
 		<div class="form-group" ng-if="comparison.timed == 2">
-			<select selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-warning" ng-model="comparison.time.data.f" data-mobile="{{mobile}}" ng-change="validateComparison(comparison)">
+			<select data-actions-box="true" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-warning" ng-model="comparison.time.data.f" data-mobile="{{mobile}}" ng-change="validateComparison(comparison)">
 				<option style="display:none" value="" disabled>Select an option...</option>
 				<option value="l">less than...</option>
 				<option value="g">at least...</option>
@@ -1370,14 +1370,14 @@
 	</div>
 	<div class="form-group" ng-if="(designer.comparison.left.data.t == 'v') && (designer.comparison.left.data.v == 'time')">
 		<label for="devicesInput">Only on these days of the week...</label>
-		<select name="dow" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-warning" ng-model="designer.comparison.left.data.odw" data-mobile="{{mobile}}" multiple>
+		<select data-actions-box="true" name="dow" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-warning" ng-model="designer.comparison.left.data.odw" data-mobile="{{mobile}}" multiple>
 			<option value="" style="display:none">Any</option>
 			<option ng-repeat="day in weekDays track by $index" ng-value="$index">{{day}}</option>
 		</select>
 	</div>
 	<div class="form-group" ng-if="((designer.comparison.left.data.t == 'v') && (designer.comparison.left.data.v == 'time')) && (!designer.comparison.left.data.owm || !designer.comparison.left.data.owm.length)">
 		<label for="devicesInput">Only on these days of the month...</label>
-		<select name="dom" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-warning" ng-model="designer.comparison.left.data.odm" data-mobile="{{mobile}}" multiple>
+		<select data-actions-box="true" name="dom" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-warning" ng-model="designer.comparison.left.data.odm" data-mobile="{{mobile}}" multiple>
 			<option value="" style="display:none">Any</option>
 			<option ng-repeat="d in range(31) track by $index" ng-value="$index + 1">{{getOrdinal($index + 1)}}</option>
 			<option ng-value="-1">last</option>
@@ -1387,7 +1387,7 @@
 	</div>
 	<div class="form-group" ng-if="((designer.comparison.left.data.t == 'v') && (designer.comparison.left.data.v == 'time')) && (!designer.comparison.left.data.odm || !designer.comparison.left.data.odm.length)">
 		<label for="devicesInput">Only on these weeks of the month...</label>
-		<select name="wom" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-warning" ng-model="designer.comparison.left.data.owm" data-mobile="{{mobile}}" multiple>
+		<select data-actions-box="true" name="wom" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-warning" ng-model="designer.comparison.left.data.owm" data-mobile="{{mobile}}" multiple>
 			<option value="" style="display:none">Any</option>
 			<option ng-repeat="d in range(5) track by $index" ng-value="$index + 1">{{getOrdinal($index + 1)}}</option>
 			<option ng-value="-1">last</option>
@@ -1397,7 +1397,7 @@
 	</div>
 	<div class="form-group" ng-if="(designer.comparison.left.data.t == 'v') && (designer.comparison.left.data.v == 'time')">
 		<label for="devicesInput">Only on these months of the year...</label>
-		<select name="moy" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-warning" ng-model="designer.comparison.left.data.omy" data-mobile="{{mobile}}" multiple>
+		<select data-actions-box="true" name="moy" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-warning" ng-model="designer.comparison.left.data.omy" data-mobile="{{mobile}}" multiple>
 			<option value="" style="display:none">Any</option>
 			<option ng-value="1">January</option>
 			<option ng-value="2">February</option>
@@ -1422,7 +1422,7 @@
 		<label class="col-lg-12 no-padding"><span class="error" ng-if="!operand.valid">{{operand.error}}<span ng-if="operand.expressionVar"> (<a ng-click="autoAddVariable(operand.expressionVar); validateOperand(operand);">create it</a>)</span>&nbsp;<i class="fa fa-warning"></i></span></label>
 -->
 		<div class="form-group" ng-if="(operand.data.t=='p') && (operand.data.d) && ((operand.data.d.length> 1) || ((operand.data.d.length == 1) && !operand.data.d[0].startsWith(':'))) && (!operand.disableAggregation)">
-			<select selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-warning" ng-model="operand.data.g" data-mobile="{{mobile}}" ng-change="validateOperand(operand)">
+			<select data-actions-box="true" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-warning" ng-model="operand.data.g" data-mobile="{{mobile}}" ng-change="validateOperand(operand)">
 				<optgroup label="No aggregation">
 					<option value="any">Any of the selected devices</option>
 					<option value="all" ng-if="operand.allowAll">All of the selected devices</option>
@@ -1443,7 +1443,7 @@
 			</select>
 		</div>
 		<div class="form-table input-group {{operand.valid ? '' : 'has-error'}}">
-			<select selectpicker class="selectpicker show-tick input-addon" data-width="25%" data-style="btn-info" ng-model="operand.data.t" data-mobile="{{mobile}}" ng-change="validateOperand(operand)">
+			<select data-actions-box="true" selectpicker class="selectpicker show-tick input-addon" data-width="25%" data-style="btn-info" ng-model="operand.data.t" data-mobile="{{mobile}}" ng-change="validateOperand(operand)">
 				<option ng-if="operand.optional" value="">Nothing selected</option>
 				<option ng-if="!operand.optional" style="display:none" disabled value="">Nothing selected</option>
 				<option ng-if="operand.allowDevices" value="d">Physical device(s)</option>
@@ -1453,6 +1453,7 @@
 				<option ng-if="operand.allowConstant" value="c">Value</option>
 				<option ng-if="operand.allowVariable" value="x">Variable</option>
 				<option ng-if="operand.allowExpression" value="e">Expression</option>
+				<option ng-if="operand.allowArgument" value="u">Argument</option>
 			</select>
 			<div class="form-table input-group">
 				<div class="form-table input-group" ng-if="operand.data.t==''">
@@ -1460,7 +1461,7 @@
 				</div>
 				<!-- physical devices (variable) -->
 				<div class="form-table input-group" ng-if="operand.data.t=='d'">
-					<select selectpicker class="selectpicker show-tick no-border-radius" data-width="100%" data-style="btn-default" ng-model="operand.data.d"  data-header="Use the input box below to quickly search for devices" data-live-search="true" data-mobile="{{mobile}}" multiple ng-change="validateOperand(operand)" required>
+					<select data-actions-box="true" selectpicker class="selectpicker show-tick no-border-radius" data-width="100%" data-style="btn-default" ng-model="operand.data.d"  data-header="Use the input box below to quickly search for devices" data-live-search="true" data-mobile="{{mobile}}" multiple ng-change="validateOperand(operand)" required>
 						<optgroup label="Physical devices">
 							<option ng-repeat="device in devices" value="{{device.id}}">{{device.n}}</option>
 						</optgroup>
@@ -1477,7 +1478,7 @@
 				</div>
 				<!-- physical devices -->
 				<div class="form-table input-group" ng-if="operand.data.t=='p'">
-					<select selectpicker class="selectpicker show-tick no-border-radius" data-width="75%" data-style="btn-default" ng-model="operand.data.d"  data-header="Use the input box below to quickly search for devices" data-live-search="true" data-mobile="{{mobile}}" multiple ng-change="validateOperand(operand)">
+					<select data-actions-box="true" selectpicker class="selectpicker show-tick no-border-radius" data-width="75%" data-style="btn-default" ng-model="operand.data.d"  data-header="Use the input box below to quickly search for devices" data-live-search="true" data-mobile="{{mobile}}" multiple ng-change="validateOperand(operand)">
 						<optgroup label="Physical devices">
 							<option ng-repeat="device in devices" ng-if="!operand.restrictAttribute || hasAttribute(device, operand.restrictAttribute)" value="{{device.id}}">{{device.n}}</option>
 						</optgroup>
@@ -1491,20 +1492,20 @@
 							<option ng-repeat="name in systemVarNames" value="{{name}}" ng-if="systemVars[name].t == 'device'" data-content="<span class='vartype'>{{systemVars[name].t}}</span>{{name}}<span class='varval'>{{systemVars[name].v}}</span>">{{name}} ({{systemVars[name].t}})</option>
 						</optgroup>
 					</select>
-					<select attr selectpicker class="selectpicker show-tick input-addon" data-width="25%" data-style="btn-default" ng-model="operand.data.a" data-mobile="{{mobile}}" ng-change="validateOperand(operand)" ng-options="attribute.id as attribute.n for attribute in operand.attributes">
+					<select data-actions-box="true" attr selectpicker class="selectpicker show-tick input-addon" data-width="25%" data-style="btn-default" ng-model="operand.data.a" data-mobile="{{mobile}}" ng-change="validateOperand(operand)" ng-options="attribute.id as attribute.n for attribute in operand.attributes">
 						<option style="display:none" value="">Nothing selected</option>
 					</select>
 				</div>
 				<!-- virtual devices -->
 				<div class="form-table input-group" ng-if="operand.data.t=='v'">
-					<select selectpicker class="selectpicker show-tick no-border-radius" data-width="100%" data-style="btn-default" ng-model="operand.data.v" data-mobile="{{mobile}}"  ng-change="validateOperand(operand)" required>
+					<select data-actions-box="true" selectpicker class="selectpicker show-tick no-border-radius" data-width="100%" data-style="btn-default" ng-model="operand.data.v" data-mobile="{{mobile}}"  ng-change="validateOperand(operand)" required>
 						<option style="display:none" value="" disabled>Nothing selected</option>
 						<option ng-repeat="device in virtualDevices" ng-if="(designer.type == 'condition') || (designer.type == 'restriction') || !!device.x" value="{{device.id}}">{{device.n}}</option>
 					</select>
 				</div>
 				<!-- variables -->
 				<div class="form-table input-group pull-left" ng-if="(operand.data.t=='x') && (!operand.multiple)" style="width:{{operand.dataType == 'duration' ? '75' : '100'}}%">
-					<select selectpicker class="selectpicker show-tick" data-width="75%" data-style="btn-default" ng-model="operand.data.x" data-mobile="{{mobile}}" ng-change="validateOperand(operand)" required>
+					<select data-actions-box="true" selectpicker class="selectpicker show-tick" data-width="75%" data-style="btn-default" ng-model="operand.data.x" data-mobile="{{mobile}}" ng-change="validateOperand(operand)" required>
 						<option style="display:none" value="" disabled>Nothing selected</option>
 						<optgroup ng-if="piston.v && piston.v.length" label="Local variables">
 							<option ng-repeat="variable in piston.v" value="{{variable.n}}" ng-if="!operand.restrictType || (operand.restrictType.indexOf(variable.t) >= 0)" data-content="<span class='vartype'>{{variable.t}}</span>{{variable.n}}">{{variable.n}} ({{variable.t}})</option>
@@ -1518,7 +1519,7 @@
 					</select>
 				</div>
 				<div class="form-table input-group pull-left" ng-if="(operand.data.t=='x') && (!!operand.multiple)" style="width:{{operand.dataType == 'duration' ? '75' : '100'}}%">
-					<select selectpicker class="selectpicker show-tick" data-width="75%" data-style="btn-default" ng-model="operand.data.x" data-mobile="{{mobile}}" ng-change="validateOperand(operand)" multiple required>
+					<select data-actions-box="true" selectpicker class="selectpicker show-tick" data-width="75%" data-style="btn-default" ng-model="operand.data.x" data-mobile="{{mobile}}" ng-change="validateOperand(operand)" multiple required>
 						<option style="display:none" value="" disabled>Nothing selected</option>
 						<optgroup ng-if="piston.v && piston.v.length" label="Local variables">
 							<option ng-repeat="variable in piston.v" value="{{variable.n}}" ng-if="!operand.restrictType || (operand.restrictType.indexOf(variable.t) >= 0)" data-content="<span class='vartype'>{{variable.t}}</span>{{variable.n}}">{{variable.n}} ({{variable.t}})</option>
@@ -1533,7 +1534,7 @@
 				</div>
 				<!-- preset -->
 				<div class="form-table input-group pull-left" ng-if="(operand.data.t=='s') && ((operand.dataType == 'time') || (operand.dataType == 'datetime'))" style="width:100%">
-					<select selectpicker class="selectpicker show-tick" data-width="75%" data-style="btn-default" ng-model="operand.data.s" data-mobile="{{mobile}}" ng-change="validateOperand(operand)" required>
+					<select data-actions-box="true" selectpicker class="selectpicker show-tick" data-width="75%" data-style="btn-default" ng-model="operand.data.s" data-mobile="{{mobile}}" ng-change="validateOperand(operand)" required>
 						<option style="display:none" value="" disabled>Nothing selected</option>
 						<option value="sunrise">Sunrise</option>
 						<option value="noon">Noon</option>
@@ -1542,11 +1543,15 @@
 					</select>
 				</div>
 				<div class="form-table input-group pull-left" ng-if="(operand.data.t=='s') && (operand.dataType == 'color')" style="width:100%">
-					<select selectpicker class="selectpicker show-tick" data-width="75%" data-style="btn-default" ng-model="operand.data.s" data-mobile="{{mobile}}" ng-change="validateOperand(operand)" required>
+					<select data-actions-box="true" selectpicker class="selectpicker show-tick" data-width="75%" data-style="btn-default" ng-model="operand.data.s" data-mobile="{{mobile}}" ng-change="validateOperand(operand)" required>
 						<option style="display:none" value="" disabled>Nothing selected</option>
 						<option value="Random" data-content="<span class='color' style='background: #fff'>?</span>Random">Random</option>
 						<option ng-repeat="color in db.colors.standard" ng-value="color.name" data-content="<span class='color' style='background: {{color.rgb}}'></span>{{color.name}}">{{color.name}}</option>
 					</select>
+				</div>
+				<!-- argument -->
+				<div class="form-table input-group pull-left" ng-if="(operand.data.t=='u')" style="width:{{operand.dataType == 'duration' ? '75' : '100'}}%">
+					<input class="form-control" ng-model="operand.data.u" type="text" ng-change="validateOperand(operand)" required/>
 				</div>
 				<!-- constant -->
 				<div class="form-table input-group pull-left" ng-if="(operand.data.t=='c') && (!operand.options.length)" style="width:{{operand.dataType == 'duration' ? '75' : '100'}}%">
@@ -1556,13 +1561,13 @@
 					<input ng-if="operand.inputType == 'datetime'" class="form-control" ng-model="operand.data.c" type="datetime-local" ng-change="validateOperand(operand)" ng-min="(operand.dataType == 'duration') && (operand.requirePositiveNumber) ? 1 : null" required/>
 				</div>
 				<div class="form-table input-group pull-left" ng-if="(operand.data.t=='c') && (operand.options.length) && (!operand.multiple)" style="width:{{operand.dataType == 'duration' ? '75' : '100'}}%">
-					<select selectpicker class="selectpicker show-tick no-border-radius" data-width="75%" data-style="btn-default" ng-model="operand.data.c" data-mobile="{{mobile}}" ng-change="validateOperand(operand)">
+					<select data-actions-box="true" selectpicker class="selectpicker show-tick no-border-radius" data-width="75%" data-style="btn-default" ng-model="operand.data.c" data-mobile="{{mobile}}" ng-change="validateOperand(operand)">
 						<option style="display:none" value="" disabled>Nothing selected</option>
 						<option ng-repeat="option in operand.options" value="{{option.n ? option.v : option}}">{{option.n ? option.n : option}}</option>
 					</select>
 				</div>
 				<div class="form-table input-group pull-left" ng-if="(operand.data.t=='c') && (operand.options.length) && (!!operand.multiple)" style="width:{{operand.dataType == 'duration' ? '75' : '100'}}%">
-					<select selectpicker class="selectpicker show-tick no-border-radius" data-width="75%" data-style="btn-default" ng-model="operand.data.c" data-mobile="{{mobile}}" ng-change="validateOperand(operand)" multiple required>
+					<select data-actions-box="true" selectpicker class="selectpicker show-tick no-border-radius" data-width="75%" data-style="btn-default" ng-model="operand.data.c" data-mobile="{{mobile}}" ng-change="validateOperand(operand)" multiple required>
 						<option style="display:none" value="" disabled>Nothing selected</option>
 						<option ng-repeat="option in operand.options" value="{{option.n ? option.v : option}}">{{option.n ? option.n : option}}</option>
 					</select>
@@ -1573,7 +1578,7 @@
 				</div>
 				<!-- last - duration unit -->
 				<div class="form-table input-group pull-left" ng-if="operand.dataType == 'duration'" style="width:25%">
-					<select selectpicker class="show-tick selectpicker input-group-btn" data-width="100%" ng-model="operand.durationUnit" data-mobile="{{mobile}}" data-style="btn-default" ng-change="validateOperand(operand)" required>
+					<select data-actions-box="true" selectpicker class="show-tick selectpicker input-group-btn" data-width="100%" ng-model="operand.durationUnit" data-mobile="{{mobile}}" data-style="btn-default" ng-change="validateOperand(operand)" required>
 						<option style="display:none" value="" disabled>Nothing selected</option>
 						<option value="ms" ng-if="!operand.hideMilliseconds">milliseconds</option>
 						<option value="s">seconds</option>
@@ -1594,7 +1599,7 @@
 	<div class="form-group" ng-if="(operand.data.t=='p') && operand.count && operand.showSubDevices">
 		<div class="form-table input-group">
 			<label class="form-control btn-info">Which {{operand.data.a}}(s)</label>
-			<select selectpicker class="selectpicker show-tick" data-style="btn-default" data-width="75%" ng-model="operand.data.i" data-mobile="{{mobile}}" ng-change="validateOperand(operand)" multiple>
+			<select data-actions-box="true" selectpicker class="selectpicker show-tick" data-style="btn-default" data-width="75%" ng-model="operand.data.i" data-mobile="{{mobile}}" ng-change="validateOperand(operand)" multiple>
 				<option style="display:none" value="">Nothing selected</option>
 				<option ng-repeat="a in range(operand.count) track by $index" value="{{$index + 1}}">#{{$index + 1}}</option>"
 			</select>
@@ -1609,7 +1614,7 @@
 	<!--<div>Rendering parameter {{$parent.parameter}}</div>-->
 	<div class="form-group" ng-if="parameter.i=='color'">
 		<label for="param{{$index}}">{{parameter.n}} {{parameter.t}} {{parameter.i}}&nbsp;{{parameter.v}}{{parameter.u ? parameter.u : ''}}</label>
-		<select ng-if="parameter.i=='color'" nag-init="initBootstrapSelect()" selectpicker class="show-tick selectpicker" data-width="100%" ng-model="parameter.v" data-mobile="{{mobile}}" data-style="btn-default">
+		<select data-actions-box="true" ng-if="parameter.i=='color'" nag-init="initBootstrapSelect()" selectpicker class="show-tick selectpicker" data-width="100%" ng-model="parameter.v" data-mobile="{{mobile}}" data-style="btn-default">
 			<optgroup label="Special colors">
 				<option value="random">Random color</option>
 				<option value="custom">Custom color</option>
@@ -1640,7 +1645,7 @@
 	</div>
 	<div class="form-group" ng-if="(parameter.i=='boolean')">
 		<label class="control-label" for="param{{$index}}">{{parameter.n}}</label>
-		<select nag-init="initBootstrapSelect()" selectpicker class="show-tick selectpicker" data-width="100%" ng-model="parameter.v" data-mobile="{{mobile}}" data-style="btn-default">
+		<select data-actions-box="true" nag-init="initBootstrapSelect()" selectpicker class="show-tick selectpicker" data-width="100%" ng-model="parameter.v" data-mobile="{{mobile}}" data-style="btn-default">
 			<option value="" ng-if="parameter.d">Nothing selected</option>
 			<option value="false">false</option>
 			<option value="true">true</option>
@@ -1648,7 +1653,7 @@
 	</div>
 	<div class="form-group" ng-if="(parameter.i=='enum') && (!parameter.d)">
 		<label class="control-label" for="param{{$index}}">{{parameter.n}}</label>
-		<select ng-if="parameter.o && (parameter.o.length > 6)" nag-init="initBootstrapSelect()" selectpicker class="show-tick selectpicker" data-width="100%" ng-model="parameter.v" data-mobile="{{mobile}}" data-style="btn-default">
+		<select data-actions-box="true" ng-if="parameter.o && (parameter.o.length > 6)" nag-init="initBootstrapSelect()" selectpicker class="show-tick selectpicker" data-width="100%" ng-model="parameter.v" data-mobile="{{mobile}}" data-style="btn-default">
 			<option ng-repeat="option in parameter.o" value="{{option}}">{{option}}</option>
 		</select>
 		<div class="btn-group btn-group-justified" ng-if="parameter.o && (parameter.o.length <= 6)">
@@ -1657,7 +1662,7 @@
 	</div>
 	<div class="form-group" ng-if="(parameter.i=='enum') && (!!parameter.d)">
 		<label class="control-label" for="param{{$index}}">{{parameter.n}}</label>
-		<select ng-if="parameter.o && (parameter.o.length > 6)" nag-init="initBootstrapSelect()" selectpicker class="show-tick selectpicker" data-width="100%" ng-model="parameter.v" data-mobile="{{mobile}}" data-style="btn-default">
+		<select data-actions-box="true" ng-if="parameter.o && (parameter.o.length > 6)" nag-init="initBootstrapSelect()" selectpicker class="show-tick selectpicker" data-width="100%" ng-model="parameter.v" data-mobile="{{mobile}}" data-style="btn-default">
 			<option value="">Nothing selected</option>
 			<option ng-repeat="option in parameter.o" value="{{option}}">{{option}}</option>
 		</select>
@@ -1669,7 +1674,7 @@
 		<label class="control-label" for="param{{$index}}">{{parameter.n}}</label>
 		<div class="form-table input-group">
 			<input type="number" min="0" class="form-control" ng-model="parameter.v"/>
-			<select selectpicker class="show-tick selectpicker input-group-btn" data-width="25%" ng-model="parameter.vt" data-mobile="{{mobile}}" data-style="btn-default">
+			<select data-actions-box="true" selectpicker class="show-tick selectpicker input-group-btn" data-width="25%" ng-model="parameter.vt" data-mobile="{{mobile}}" data-style="btn-default">
 				<option value="ms">milliseconds</option>
 				<option value="s">seconds</option>
 				<option value="m">minutes</option>
@@ -1703,7 +1708,7 @@
 			<div taskedit>
 				<div class="form-group" nag-init="prepareParameters();">
 					<label for="devicesInput">Do...</label>
-					<select id="command" selectpicker class="show-tick" data-width="100%" ng-model="designer.command" data-live-search="true" data-mobile="{{mobile}}" data-style="btn-info" ng-change="prepareParameters();">
+					<select data-actions-box="true" id="command" selectpicker class="show-tick" data-width="100%" ng-model="designer.command" data-live-search="true" data-mobile="{{mobile}}" data-style="btn-info" ng-change="prepareParameters();">
 						<option value=''>Please select a command</option>
 						<optgroup label="Commands available to all devices" ng-if="designer.commands.common">
 							<option ng-repeat="command in designer.commands.common" value="{{command.id}}" data-content="<span class='vartype'>{{command.em ? 'emulated' : (command.cm ? 'custom' : 'device')}}</span>{{command.n}}">{{command.n}}</option>
@@ -1720,7 +1725,7 @@
 				<parameter ng-repeat-end ng-include="'operand'" ng-model="operand"></parameter>
 				<label ng-if-start="!!designer.command"class="col-lg-12 no-padding">Only during these modes</label>
 				<div ng-if-end class="form-group">
-					<select selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-warning" ng-model="designer.mode" data-mobile="{{mobile}}" multiple>
+					<select data-actions-box="true" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-warning" ng-model="designer.mode" data-mobile="{{mobile}}" multiple>
 						<option style="display:none" value="" disabled>Any</option>
 						<option ng-repeat="mode in location.modes" value="{{mode.id}}">{{mode.name}}</option>
 					</select>
@@ -1785,7 +1790,7 @@
 		<form>
 			<div class="form-group">
 				<div class="form-table input-group">
-					<select id="type" selectpicker class="selectpicker show-tick input-addon" data-width="25%" data-style="btn-info" ng-model="designer.operand.dataType" data-mobile="{{mobile}}" ng-change="validateOperand(designer.operand, true); refreshSelects()">
+					<select data-actions-box="true" id="type" selectpicker class="selectpicker show-tick input-addon" data-width="25%" data-style="btn-info" ng-model="designer.operand.dataType" data-mobile="{{mobile}}" ng-change="validateOperand(designer.operand, true); refreshSelects()">
 						<option value="dynamic">Dynamic</option>
 						<option value="string">String (text)</option>
 						<option value="boolean">Boolean (true/false)</option>
@@ -1808,7 +1813,7 @@
 			</div>
 			<div class="form-group" ng-if="(designer.operand.data.t != '') && (designer.operand.data.t != 'd')">
 				<label class="col-lg-12 no-padding">Assignment type</label>
-				<select id="type" selectpicker class="selectpicker show-tick input-addon" data-width="100%" data-style="btn-info" ng-model="designer.assignment" data-mobile="{{mobile}}">
+				<select data-actions-box="true" id="type" selectpicker class="selectpicker show-tick input-addon" data-width="100%" data-style="btn-info" ng-model="designer.assignment" data-mobile="{{mobile}}">
 					<option value="d">Dynamic (default)</option>
 					<option value="s">Static</option>
 				</select>
@@ -1840,7 +1845,7 @@
 		<form>
 			<div class="form-group">
 				<div class="form-table input-group">
-					<select id="type" selectpicker class="selectpicker show-tick input-addon" data-width="25%" data-style="btn-info" ng-model="designer.operand.dataType" data-mobile="{{mobile}}" ng-change="validateOperand(designer.operand, true); refreshSelects()">
+					<select data-actions-box="true" id="type" selectpicker class="selectpicker show-tick input-addon" data-width="25%" data-style="btn-info" ng-model="designer.operand.dataType" data-mobile="{{mobile}}" ng-change="validateOperand(designer.operand, true); refreshSelects()">
 						<option value="dynamic">Dynamic</option>
 						<option value="string">String (text)</option>
 						<option value="boolean">Boolean (true/false)</option>
@@ -1910,7 +1915,7 @@
 			</div>
 			<div class="form-group">
 				<label class="col-lg-12 no-padding">Automatic piston state</label>
-				<select id="type" selectpicker class="selectpicker show-tick input-addon" data-width="100%" data-style="btn-info" ng-model="designer.automaticState" data-mobile="{{mobile}}">
+				<select data-actions-box="true" id="type" selectpicker class="selectpicker show-tick input-addon" data-width="100%" data-style="btn-info" ng-model="designer.automaticState" data-mobile="{{mobile}}">
 					<option ng-value="0">Enabled (default)</option>
 					<option ng-value="1">Disabled</option>
 				</select>
@@ -1919,21 +1924,21 @@
 			<div ng-if="designer.showAdvancedOptions" class="form-group">
 				<div class="form-group">
 					<label class="col-lg-12 no-padding">Piston execution parallelism</label>
-					<select id="type" selectpicker class="selectpicker show-tick input-addon" data-width="100%" data-style="btn-info" ng-model="designer.executionParallelism" data-mobile="{{mobile}}">
+					<select data-actions-box="true" id="type" selectpicker class="selectpicker show-tick input-addon" data-width="100%" data-style="btn-info" ng-model="designer.executionParallelism" data-mobile="{{mobile}}">
 						<option ng-value="1">Enabled</option>
 						<option ng-value="0">Disabled (default)</option>
 					</select>
 				</div>
 				<div class="form-group">
 					<label class="col-lg-12 no-padding">Condition traversal optimizations</label>
-					<select id="type" selectpicker class="selectpicker show-tick input-addon" data-width="100%" data-style="btn-info" ng-model="designer.conditionOptimizations" data-mobile="{{mobile}}">
+					<select data-actions-box="true" id="type" selectpicker class="selectpicker show-tick input-addon" data-width="100%" data-style="btn-info" ng-model="designer.conditionOptimizations" data-mobile="{{mobile}}">
 						<option ng-value="0">Enabled (default)</option>
 						<option ng-value="1">Disabled</option>
 					</select>
 				</div>
 				<div class="form-group">
 					<label class="col-lg-12 no-padding">Event subscriptions</label>
-					<select id="type" selectpicker class="selectpicker show-tick input-addon" data-width="100%" data-style="btn-info" ng-model="designer.eventSubscriptions" data-mobile="{{mobile}}">
+					<select data-actions-box="true" id="type" selectpicker class="selectpicker show-tick input-addon" data-width="100%" data-style="btn-info" ng-model="designer.eventSubscriptions" data-mobile="{{mobile}}">
 						<option ng-value="0">Enabled (default)</option>
 						<option ng-value="1">Disabled</option>
 					</select>

@@ -164,11 +164,17 @@ piston[printing] {
 	left: 0px !important;
 	top: 0px !important;
 	right: 0px !important;
-	bottom: 0px !important;
+	sbottom: 0px !important;
 	border: 0px !important;
 	margin: 0px !important;
-	width: auto !important;
+	width: 1170px !important;
 	height: auto !important;
+	-webkit-transition: none !important;
+	-moz-transition: none !important;
+	-ms-transition: none !important;
+	-o-transition: none !important;
+	transition: none !important;
+	border: solid 1px #ccc !important;
 }
 
 piston[printing]:not([anonymized]) content::before,
@@ -184,7 +190,8 @@ piston[printing]:not([anonymized]) content::after {
 }
 
 piston[printing] tracer,
-piston[printing] trace {
+piston[printing] trace,
+piston[printing] [trace] {
 	display: none !important;
 }
 
@@ -594,7 +601,7 @@ line:hover {
 	ecolor: #fff;
 }
 
-[selected] line::before {
+piston:not([printing]) [selected] line::before {
 	background: rgb(128, 192, 240) !important;
 	color: white;
 }
@@ -1042,6 +1049,26 @@ textarea[ifttt] {
 	display: block !important;
 }
 
+[warning].alert {
+	margin-top: 16px;
+	margin-bottom: 0px;
+}
+
+img {
+	-webkit-pointer-events: all !important;
+	-moz-pointer-events: all !important;
+	-ms-pointer-events: all !important;
+	-o-pointer-events: all !important;
+	pointer-events: all !important;
+	-webkit-user-select: all !important;
+	-moz-user-select: all !important;
+	-ms-user-select: all !important;
+	-o-user-select: all !important;
+	user-select: all !important;
+	width: auto;
+	height: auto;
+	max-width: 100%;
+}
 
 @media only screen 
   and (min-device-width: 320px) 
@@ -1108,6 +1135,13 @@ textarea[ifttt] {
 
 	h2.title {
 		padding: 0px 16px;
+	}
+
+	[warning].alert {
+	    margin-left: -20px;
+	    margin-right: -20px;
+	    margin-top: -3px;
+		border-radius: 0px;
 	}
 }
 

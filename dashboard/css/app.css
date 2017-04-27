@@ -469,6 +469,7 @@ status {
 	font-size: 1.5em;
 	color: #eee;
 	z-index: 99999;
+	line-height: 18px;
 }
 
 status.ng-animate {
