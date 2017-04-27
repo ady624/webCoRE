@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.0.090.20170426" }
+public static String version() { return "v0.0.091.20170427" }
 /*
+ *	04/27/2017 >>> v0.0.091.20170427 - ALPHA - Various improvements and fixes
  *	04/26/2017 >>> v0.0.090.20170426 - ALPHA - Minor fixes for variables and the eq() function
  *	04/26/2017 >>> v0.0.08f.20170426 - ALPHA - Implemented $args and the special $args.<dynamic> variables to read arguments from events. Bonus: ability to parse JSON data to read subitem by using $args.item.subitem (no array support yet)
  *	04/26/2017 >>> v0.0.08e.20170426 - ALPHA - Implemented Send notification to contacts
@@ -329,9 +330,17 @@ private pageSelectDevices() {
             	paragraph "So go ahead, select a few devices, then tap Next"
             }
         }
-        section () {
+
+		section ('Select devices by type') {
+        	paragraph "Most devices should fall into one of these two categories"
+			input "dev:actuator", "capability.actuator", multiple: true, title: "Which actuators", required: false
+			input "dev:sensor", "capability.sensor", multiple: true, title: "Which sensors", required: false
+		}
+        
+		section ('Select devices by capability') {
+        	paragraph "If you cannot find a device by type, you may try looking for it by category below"
 			def d
-			for (capability in capabilities().findAll{ it.value.d != null }.sort{ it.value.d }) {
+			for (capability in capabilities().findAll{ (!(it.value.d in [null, 'actuators', 'sensors'])) }.sort{ it.value.d }) {
 				if (capability.value.d != d) input "dev:${capability.key}", "capability.${capability.key}", multiple: true, title: "Which ${capability.value.d}", required: false
 				d = capability.value.d
 			}
@@ -1020,7 +1029,6 @@ private api_intf_dashboard_piston_activity() {
 
 def api_ifttt() {
 	def data = request?.JSON
-	log.trace "HEREEEEEEE $data"
 	def eventName = params?.eventName
 	if (eventName) {
 		sendLocationEvent([name: "ifttt", value: eventName, isStateChange: true, linkText: "IFTTT event", descriptionText: "${handle()} has received an IFTTT event: $eventName", data: data])
@@ -1061,7 +1069,13 @@ private String getDashboardRegistrationUrl() {
 }
 
 private Map listAvailableDevices(raw = false) {
-    def devices = [:]
+	//long t = now()
+	if (raw) {
+    	return settings.findAll{ it.key.startsWith("dev:") }.collect{ it.value }.flatten().collectEntries{ dev -> [(hashId(dev.id)): dev]}
+    } else {
+    	return settings.findAll{ it.key.startsWith("dev:") }.collect{ it.value }.flatten().collectEntries{ dev -> [(hashId(dev.id)): dev]}.collectEntries{ id, dev -> [ (id): [ n: dev.getDisplayName(), cn: dev.getCapabilities()*.name, a: dev.getSupportedAttributes().unique{ it.name }.collect{def x = [n: it.name, t: it.getDataType(), o: it.getValues()]; try {x.v = dev.currentValue(x.n);} catch(all) {}; x}, c: dev.getSupportedCommands().unique{ it.getName() }.collect{[n: it.getName(), p: it.getArguments()]} ]]}
+	}
+/*    def devices = [:]
     for (devs in settings.findAll{ it.key.startsWith("dev:") }) {
         for(dev in devs.value) {
         	def devId = hashId(dev.id);
@@ -1074,7 +1088,8 @@ private Map listAvailableDevices(raw = false) {
             }
         }
     }
-    return devices.sort{ it.key }
+    log.error "Time for devices: ${now() - t}ms"
+    return devices*/
 }
 
 
@@ -1266,7 +1281,6 @@ public String mem(showBytes = true) {
 }
 
 public Map getRunTimeData(semaphore) {
-	def n = now()
     def startTime = now()
     semaphore = semaphore ?: 0
     def semaphoreDelay = 0
@@ -1284,7 +1298,7 @@ public Map getRunTimeData(semaphore) {
         waited = true
     	pause(250)
     }
-    Map result = [
+    return [
         logging: getLogging(),
     	attributes: attributes(),
         semaphore: semaphore,
@@ -1302,7 +1316,6 @@ public Map getRunTimeData(semaphore) {
         virtualDevices: atomicState.virtualDevices ?: virtualDevices(),
         globalVars: listAvailableVariables()
     ]
-    return result
 }
 
 public void updateRunTimeData(data) {
@@ -1786,7 +1799,8 @@ private static Map commands() {
 		setLoopTime					: [ n: "Set loop duration...",			d: "Set loop duration to {0}",																				p: [[n:"Duration", t:"duration"]]																							],
 		setDirection				: [ n: "Switch loop direction",																																																													],
 		alert						: [ n: "Alert with lights...",			d: "Alert \"{0}\" with lights",																				p: [[n:"Alert type", t:"enum", o:["Blink","Breathe","Okay","Stop"]]], 														],
-		setAdjustedColor			: [ n: "Transition to color...",		d: "Transition to color {0} in {1}",																		p: [[n:"Color", t:"color"], [n:"Duration",t:"duration"]],																	],
+		setAdjustedColor			: [ n: "Transition to color...",		d: "Transition to color {0} in {1}{2}",																		p: [[n:"Color", t:"color"], [n:"Duration",t:"duration"],[n:"Only if switch is...", t:"enum",o:["on","off"], d:" if already {v}"]],																	],
+		setAdjustedHSLColor			: [ n: "Transition to HSL color...",		d: "Transition to color H:{0}° / S:{1}% / L:{2}% in {3}{4}",												p: [[n:"Hue", t:"hue"],[n:"Saturation", t:"saturation"],[n:"Level", t:"level"],[n:"Duration",t:"duration"],[n:"Only if switch is...", t:"enum",o:["on","off"], d:" if already {v}"]],																	],
 		//harmony
 		allOn						: [ n: "Turn all on",																																																															],
 		allOff						: [ n: "Turn all off",																																																															],
@@ -1846,13 +1860,13 @@ private virtualCommands() {
 		resumePiston				: [ n: "Resume piston...",			a: true,	i: "clock-o",				d: "Resume piston \"{0}\"",												p: [[n:"Piston", t:"piston"]],	],
 		executeRoutine				: [ n: "Execute routine...",		a: true,	i: "clock-o",				d: "Execute routine \"{0}\"",											p: [[n:"Routine", t:"routine"]],	],
 		toggle						: [ n: "Toggle", r: ["on", "off"], 				i: "toggle-on"																				],
-		setHSLColor					: [ n: "Set color... (hsl)", 					i: "barcode",			d: "Set color to H:{0} / S:{1} / L:{2}{3}",				r: ["setColor"],				p: [[n:"Hue",t:"hue"], [n:"Saturation",t:"saturation"], [n:"Level",t:"level"], [n:"Only if switch is...", t:"enum",o:["on","off"], d:" if already {v}"]],  							],
+		setHSLColor					: [ n: "Set color... (hsl)", 					i: "barcode",			d: "Set color to H:{0}° / S:{1}% / L%:{2}{3}",				r: ["setColor"],				p: [[n:"Hue",t:"hue"], [n:"Saturation",t:"saturation"], [n:"Level",t:"level"], [n:"Only if switch is...", t:"enum",o:["on","off"], d:" if already {v}"]],  							],
 		toggleLevel					: [ n: "Toggle level...", 						i: "toggle-off",			d: "Toggle level between 0% and {0}%",	r: ["on", "off", "setLevel"],	p: [[n:"Level", t:"level"]],																																	],
 		sendNotification			: [ n: "Send notification...",		a: true,	i: "commenting-o",			d: "Send notification \"{0}\"",											p: [[n:"Message", t:"string"]],												],
 		sendPushNotification		: [ n: "Send PUSH notification...",	a: true,	i: "commenting-o",			d: "Send PUSH notification \"{0}\"{1}",									p: [[n:"Message", t:"string"],[n:"Store in Messages", t:"boolean", d:" and store in Messages", s:1]],	],
 		sendSMSNotification			: [ n: "Send SMS notification...",	a: true,	i: "commenting-o",			d: "Send SMS notification \"{0}\" to {1}{2}",							p: [[n:"Message", t:"string"],[n:"Phone number",t:"phone"],[n:"Store in Messages", t:"boolean", d:" and store in Messages", s:1]],	],
 		sendNotificationToContacts	: [ n: "Send notification to contacts...",a: true,i: "commenting-o",		d: "Send notification \"{0}\" to {1}{2}",								p: [[n:"Message", t:"string"],[n:"Contacts",t:"contacts"],[n:"Store in Messages", t:"boolean", d:" and store in Messages", s:1]],	],
-		log							: [ n: "Log to console...",			a: true,	i: "bug",					d: "Log {0} \"{1}\"",													p: [[n:"Log type", t:"enum", o:["info","trace","debug","warn","error"]],[n:"Message",t:"string"]],	],
+		log							: [ n: "Log to console...",			a: true,	i: "bug",					d: "Log {0} \"{1}\"",													p: [[n:"Log type", t:"enum", o:["info","trace","debug","warn","error"]],[n:"Message",t:"string"],[n:"Store in Messages", t:"boolean", d:" and store in Messages", s:1]],	],
 		httpRequest					: [ n: "Make a web request",		a: true, 	i: "anchor",				d: "Make a {1} request to {0} with type {2}{3}",				        p: [[n:"URL", t:"string"],[n:"Method", t:"enum", o:["GET","POST","PUT","DELETE","HEAD"]],[n:"Content Type", t:"enum", o:["JSON","FORM"]],[n:"Send variables", t:"variables", d:" and data {v}"]],	],
         setVariable					: [ n: "Set variable...",			a: true,	i: "superscript",			d: "Set variable {0} = {1}",											p: [[n:"Variable",t:"variable"],[n:"Value", t:"dynamic"]],	],
         setState					: [ n: "Set piston state...",		a: true,	i: "superscript",			d: "Set piston state to \"{0}\"",										p: [[n:"State",t:"string"]],	],
@@ -1863,39 +1877,23 @@ private virtualCommands() {
 
 
 /*		[ n: "waitState",											d: "Wait for piston state change",	p: ["Change to:enum[any,false,true]"],															i: true,	l: true,						dd: "Wait for {0} state"],
-		[ n: "waitTime",											d: "Wait for time",			p: ["Time:enum[midnight,sunrise,noon,sunset]","?Offset [minutes]:number[-1440..1440]","Days of week:enums[Monday,Tuesday,Wednesday,Thursday,Friday,Saturday,Sunday]"],							i: true,	l: true,						dd: "Wait for next {0} (offset {1} min), on {2}"],
-		[ n: "setHueVariable",		r: ["setHue"],					d: "Set hue (variable)",						p: ["Hue:variable"], dd: "Set hue to {0}°"],
 		[ n: "fadeLevelHW",			r: ["setLevel"], 				d: "Fade to level (hardware)",		p: ["Target level:level","Duration (ms):number[1..60000]"],																							dd: "Fade to {0}% in {1}ms",				],
 		[ n: "fadeLevel",			r: ["setLevel"], 				d: "Fade to level",					p: ["?Start level (optional):level","Target level:level","Duration (seconds):number[1..600]"],															dd: "Fade level from {0}% to {1}% in {2}s",				],
-		[ n: "fadeLevelVariable",	r: ["setLevel"], 				d: "Fade to level (variable)",		p: ["?Start level (optional):variable","Target level:variable","Duration (seconds):number[1..600]"],															dd: "Fade level from {0}% to {1}% in {2}s",				],
 		[ n: "adjustLevel",			r: ["setLevel"], 				d: "Adjust level",					p: ["Adjustment (+/-):number[-100..100]"],																												dd: "Adjust level by {0}%",	],
 		[ n: "fadeSaturation",		r: ["setSaturation"],			d: "Fade to saturation",				p: ["?Start saturation (optional):saturation","Target saturation:saturation","Duration (seconds):number[1..600]"],											dd: "Fade saturation from {0}% to {1}% in {2}s",				],
 		[ n: "adjustSaturation",		r: ["setSaturation"],		d: "Adjust saturation",				p: ["Adjustment (+/-):number[-100..100]"],																												dd: "Adjust saturation by {0}%",	],
 		[ n: "fadeHue",				r: ["setHue"], 					d: "Fade to hue",						p: ["?Start hue (optional):hue","Target hue:hue","Duration (seconds):number[1..600]"],																dd: "Fade hue from {0}° to {1}° in {2}s",				],
 		[ n: "adjustHue",			r: ["setHue"], 					d: "Adjust hue",						p: ["Adjustment (+/-):number[-360..360]"],																												dd: "Adjust hue by {0}°",	],
 		[ n: "flash",				r: ["on", "off"], 				d: "Flash",							p: ["On interval (milliseconds):number[250..5000]","Off interval (milliseconds):number[250..5000]","Number of flashes:number[1..10]"],					dd: "Flash {0}ms/{1}ms for {2} time(s)",		],
-		[ n: "setVariable",		d: "Set variable", 					p: ["Variable:var"],																				varEntry: 0, 						l: true,																	aggregated: true,	],
-		[ n: "saveAttribute",	d: "Save attribute to variable", 		p: ["Attribute:attribute","Aggregation:aggregation","?Convert to data t:dataType","Save to variable:string"],					varEntry: 3,		dd: "Save attribute '{0}' to variable |[{3}]|'",			aggregated: true,	],
 		[ n: "saveState",		d: "Save state to variable",			p: ["Attributes:attributes","Aggregation:aggregation","?Convert to data t:dataType","Save to state variable:string"],			stateVarEntry: 3,	dd: "Save state of attributes {0} to variable |[{3}]|'",	aggregated: true,	],
 		[ n: "saveStateLocally",	d: "Capture state to local store",	p: ["Attributes:attributes","?Only if state is empty:bool"],																															dd: "Capture state of attributes {0} to local store",		],
 		[ n: "saveStateGlobally",d: "Capture state to global store",	p: ["Attributes:attributes","?Only if state is empty:bool"],																															dd: "Capture state of attributes {0} to global store",	],
-		[ n: "loadAttribute",	d: "Load attribute from variable",	p: ["Attribute:attribute","Load from variable:variable","Allow translations:bool","Negate translation:bool"],											dd: "Load attribute '{0}' from variable |[{1}]|",	],
 		[ n: "loadState",		d: "Load state from variable",		p: ["Attributes:attributes","Load from state variable:stateVariable","Allow translations:bool","Negate translation:bool"],								dd: "Load state of attributes {0} from variable |[{1}]|"				],
 		[ n: "loadStateLocally",	d: "Restore state from local store",	p: ["Attributes:attributes","?Empty the state:bool"],																															dd: "Restore state of attributes {0} from local store",			],
 		[ n: "loadStateGlobally",d: "Restore state from global store",	p: ["Attributes:attributes","?Empty the state:bool"],																															dd: "Restore state of attributes {0} from global store",			],
-		[ n: "sendNotification",	d: "Send notification",				p: ["Message:text"],																													l: true,	dd: "Send notification '{0}' in notifications page",			aggregated: true,	],
-		[ n: "sendPushNotification",d: "Send Push notification",			p: ["Message:text","Show in notifications page:bool"],																							l: true,	dd: "Send Push notification '{0}'",		aggregated: true,	],
-		[ n: "sendSMSNotification",d: "Send SMS notification",			p: ["Message:text","Phone number:phone","Show in notifications page:bool"],																		l: true, dd: "Send SMS notification '{0}' to {1}",aggregated: true,	],
 		[ n: "queueAskAlexaMessage",d: "Queue AskAlexa message",			p: ["Message:text", "?Unit:text", "?Application:text"],																		l: true, dd: "Queue AskAlexa message '{0}' in unit {1}",aggregated: true,	],
 		[ n: "deleteAskAlexaMessages",d: "Delete AskAlexa messages",			p: ["Unit:text", "?Application:text"],																	l: true, dd: "Delete AskAlexa messages in unit {1}",aggregated: true,	],
-		[ n: "executeRoutine",	d: "Execute routine",					p: ["Routine:routine"],																		l: true, 										dd: "Execute routine '{0}'",				aggregated: true,	],
 		[ n: "cancelPendingTasks",d: "Cancel pending tasks",			p: ["Scope:enum[Local,Global]"],																														dd: "Cancel all pending {0} tasks",		],
-		[ n: "followUp",				d: "Follow up with piston",			p: ["Delay:number[1..1440]","Unit:enum[seconds,minutes,hours]","Piston:piston","?Save state into variable:string"],	i: true,	varEntry: 3,	l: true,	dd: "Follow up with piston '{2}' after {0} {1}",	aggregated: true],
-		[ n: "executePiston",		d: "Execute piston",					p: ["Piston:piston","?Save state into variable:string"],																varEntry: 1,	l: true,	dd: "Execute piston '{0}'",	aggregated: true],
-		[ n: "pausePiston",			d: "Pause piston",					p: ["Piston:piston"],																l: true,	dd: "Pause piston '{0}'",	aggregated: true],
-		[ n: "resumePiston",			d: "Resume piston",					p: ["Piston:piston"],																l: true,	dd: "Resume piston '{0}'",	aggregated: true],
-		[ n: "httpRequest",			d: "Make a web request", p: ["URL:string","Method:enum[GET,POST,PUT,DELETE,HEAD]","Content t:enum[JSON,FORM]","?Variables to send:variables","Import response data into variables:bool","?Variable import name prefix (optional):string"], l: true, dd: "Make a {1} web request to {0}", aggregated: true],
-		[ n: "wolRequest",			d: "Wake a LAN device", p: ["MAC address:string","?Secure code:string"], l: true, dd: "Wake LAN device at address {0} with secure code {1}", aggregated: true],
 */		
 	]
     + (location.contactBookEnabled ? [

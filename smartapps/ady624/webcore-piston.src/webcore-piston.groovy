@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.0.090.20170426" }
+public static String version() { return "v0.0.091.20170427" }
 /*
+ *	04/27/2017 >>> v0.0.091.20170427 - ALPHA - Various improvements and fixes
  *	04/26/2017 >>> v0.0.090.20170426 - ALPHA - Minor fixes for variables and the eq() function
  *	04/26/2017 >>> v0.0.08f.20170426 - ALPHA - Implemented $args and the special $args.<dynamic> variables to read arguments from events. Bonus: ability to parse JSON data to read subitem by using $args.item.subitem (no array support yet)
  *	04/26/2017 >>> v0.0.08e.20170426 - ALPHA - Implemented Send notification to contacts
@@ -611,7 +612,12 @@ private Boolean executeEvent(rtData, event) {
             if (!index) index = 1
         }
         def srcEvent = event && (event.name == 'time') && event.schedule && event.schedule.evt ? event.schedule.evt : null
-        rtData.args = event ? ((event.name == 'time') && event.schedule && event.schedule.args && (event.schedule.args instanceof Map) ? event.schedule.args : (event.jsonData ?: [:])) : [:]
+       	rtData.args = event ? ((event.name == 'time') && event.schedule && event.schedule.args && (event.schedule.args instanceof Map) ? event.schedule.args : (event.jsonData ?: [:])) : [:]
+        /*if (event && (event.name == 'time') && event.schedule && event.schedule.stack) {
+            setSystemVariableValue(rtData, '$index', event.schedule.stack.index)
+            setSystemVariableValue(rtData, '$device', event.schedule.stack.device)
+            setSystemVariableValue(rtData, '$devices', event.schedule.stack.devices)
+		}*/           
         rtData.currentEvent = [
             date: event.date.getTime(),
             delay: rtData.stats?.timing?.d ?: 0,
@@ -1075,13 +1081,17 @@ private Boolean executeStatement(rtData, statement, async = false) {
 
 private Boolean executeAction(rtData, statement, async) {
 	def parentDevicesVar = rtData.systemVars['$devices'].v    
-	def devices = []
-    def deviceIds = []
+	//def devices = []
+    //def deviceIds = []
     //if override
     if (!rtData.fastForwardTo && (statement.tsp != 'a')) {
     	cancelStatementSchedules(rtData, statement.$)
     }
     def result = true
+    List deviceIds = expandDeviceList(rtData, statement.d)
+    log.trace "DEVICE IDs: $deviceIds"
+    List devices = deviceIds.collect{ getDevice(rtData, it) }
+    /*
     for (d in statement.d) {
     	if (d.startsWith(':')) {
     		def device = getDevice(rtData, d)
@@ -1103,9 +1113,10 @@ private Boolean executeAction(rtData, statement, async) {
             }
         }
     }
-	rtData.systemVars['$devices'].v = deviceIds.unique()
+    */
+	rtData.systemVars['$devices'].v = deviceIds
     for (task in statement.k) {
-        result = executeTask(rtData, devices.unique(), statement, task, async)
+        result = executeTask(rtData, devices, statement, task, async)
         if (!result && !rtData.fastForwardTo) {
         	break
         }
@@ -1554,7 +1565,12 @@ private requestWakeUp(rtData, statement, task, timeOrDelay, data = null) {
         ps: ps,
         d: data,
         evt: rtData.currentEvent,
-        args: rtData.args
+        args: rtData.args,
+        /*stack: [
+        	index: getSystemVariableValue(rtData, '$index'),
+        	device: getSystemVariableValue(rtData, '$device'),
+        	devices: getSystemVariableValue(rtData, '$devices'),
+        ]*/
     ]
     rtData.schedules.push(schedule)
 }
@@ -1617,7 +1633,6 @@ private long cmd_setColorTemperature(rtData, device, params) {
 
 private long cmd_setColor(rtData, device, params) {
     def color = params[0] == 'Random' ? colorUtil.RANDOM : (colorUtil.findByName(params[0]) ?: hexToColor(params[0]))
-    log.trace "FOUND $color"
     color = [
         hex: color.hex ?: color.rgb,
         hue: color.hue ?: color.h,
@@ -1630,7 +1645,6 @@ private long cmd_setColor(rtData, device, params) {
     if (state && (getDeviceAttributeValue(rtData, device, 'switch') != "$state")) {
         return 0
     }
-    log.trace color
     executePhysicalCommand(rtData, device, 'setColor', color, delay)
     return 0
 }
@@ -1655,6 +1669,10 @@ private long vcmd_log(rtData, device, params) {
 	def command = params[0]
 	def message = params[1]
 	log message, rtData, null, null, "${command}".toLowerCase().trim(), true
+    def save = params.size() > 2 ? !!params[2] : false
+	if (save) {
+		sendNotificationEvent(message)
+	}
     return 0
 }
 
@@ -1883,6 +1901,45 @@ private long vcmd_setHSLColor(rtData, device, params) {
     return 0
 }
 
+
+private long vcmd_setAdjustedColor(rtData, device, params) {
+    def color = params[0] == 'Random' ? colorUtil.RANDOM : (colorUtil.findByName(params[0]) ?: hexToColor(params[0]))
+    color = [
+        hex: color.hex ?: color.rgb,
+        hue: color.hue ?: color.h,
+        saturation: color.saturation ?: color.s,
+        level: color.level ?: color.l
+    ]
+    def duration = cast(rtData, params[1], 'long')
+    log.trace "Converted to $color"
+    def state = params.size() > 2 ? params[2] : ""
+    def delay = params.size() > 3 ? params[3] : 0
+    if (state && (getDeviceAttributeValue(rtData, device, 'switch') != "$state")) {
+        return 0
+    }
+    executePhysicalCommand(rtData, device, 'setAdjustedColor', [color, duration], delay)
+    return 0
+}
+
+private long vcmd_setAdjustedHSLColor(rtData, device, params) {
+    def hue = cast(rtData, params[0] / 3.6, 'integer')
+    def saturation = params[1]
+    def level = params[2]
+    def color = [
+        hue: hue,
+        saturation: saturation,
+        level: level
+    ]
+    def duration = cast(rtData, params[3], 'long')
+    log.trace "Converted to $color"
+    def state = params.size() > 4 ? params[4] : ""
+    def delay = params.size() > 5 ? params[5] : 0
+    if (state && (getDeviceAttributeValue(rtData, device, 'switch') != "$state")) {
+        return 0
+    }
+    executePhysicalCommand(rtData, device, 'setAdjustedColor', [color, duration], delay)
+    return 0
+}
 
 private long vcmd_wolRequest(rtData, device, params) {
 	def mac = params[0]
@@ -2325,20 +2382,28 @@ private Boolean evaluateComparison(rtData, comparison, lo, ro = null, ro2 = null
             if (value && value.v && (!value.v.x || options.forceAll)) {
                 try {
                     if (!ro) {
+                    	def msg = timer ""
                         res = "$fn"(rtData, value, null, null, tvalue, tvalue2)
+                    	msg.m = "Comparison ${value?.v?.v} $comparison = $res"
+                        debug msg, rtData
                     } else {
                         def rres
                         res = (ro.operand.g == 'any' ? false : true)
                         //if multiple right values, go through each
                         for (rvalue in ro.values) {
                             if (!ro2) {
+                                def msg = timer ""
                                 rres = "$fn"(rtData, value, rvalue, null, tvalue, tvalue2)
+                                msg.m = "Comparison ${value?.v?.v} $comparison ${rvalue?.v?.v} = $rres"
+                                debug msg, rtData                                
                             } else {
                                 rres = (ro2.operand.g == 'any' ? false : true)
                                 //if multiple right2 values, go through each
                                 for (r2value in ro2.values) {
+                                	def msg = timer ""
                                     def r2res = "$fn"(rtData, value, rvalue, r2value, tvalue, tvalue2)
-
+                                    msg.m = "Comparison ${value?.v?.v} $comparison ${rvalue?.v?.v} .. ${r2value?.v?.v} = $r2res"
+                                    debug msg, rtData
                                     rres = (ro2.operand.g == 'any' ? rres || r2res : rres && r2res)
                                     if (((ro2.operand.g == 'any') && rres) || ((ro2.operand.g != 'any') && !rres)) break
                                 }
