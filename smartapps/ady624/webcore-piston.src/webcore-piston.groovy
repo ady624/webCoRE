@@ -1649,6 +1649,53 @@ private long cmd_setColor(rtData, device, params) {
     return 0
 }
 
+private long cmd_setAdjustedColor(rtData, device, params) {
+    def color = params[0] == 'Random' ? colorUtil.RANDOM : (colorUtil.findByName(params[0]) ?: hexToColor(params[0]))
+    color = [
+        hex: color.hex ?: color.rgb,
+        hue: color.hue ?: color.h,
+        saturation: color.saturation ?: color.s,
+        level: color.level ?: color.l
+    ]
+    def duration = cast(rtData, params[1], 'long')
+    log.trace "Converted to $color"
+    def state = params.size() > 2 ? params[2] : ""
+    def delay = params.size() > 3 ? params[3] : 0
+    if (state && (getDeviceAttributeValue(rtData, device, 'switch') != "$state")) {
+        return 0
+    }
+    executePhysicalCommand(rtData, device, 'setAdjustedColor', [color, duration], delay)
+    return 0
+}
+
+private long cmd_setAdjustedHSLColor(rtData, device, params) {
+    def hue = cast(rtData, params[0] / 3.6, 'integer')
+    def saturation = params[1]
+    def level = params[2]
+    def color = [
+        hue: hue,
+        saturation: saturation,
+        level: level
+    ]
+    def duration = cast(rtData, params[3], 'long')
+    log.trace "Converted to $color"
+    def state = params.size() > 4 ? params[4] : ""
+    def delay = params.size() > 5 ? params[5] : 0
+    if (state && (getDeviceAttributeValue(rtData, device, 'switch') != "$state")) {
+        return 0
+    }
+    executePhysicalCommand(rtData, device, 'setAdjustedColor', [color, duration], delay)
+    return 0
+}
+
+private long cmd_setVideoLength(rtData, device, params) {
+    int duration = (int) Math.round(cast(rtData, params[0], 'long') / 1000)
+    executePhysicalCommand(rtData, device, 'setVideoLength', duration, delay)
+    return 0
+}
+
+
+
 
 private long executeVirtualCommand(rtData, devices, task, params)
 {
@@ -1902,44 +1949,6 @@ private long vcmd_setHSLColor(rtData, device, params) {
 }
 
 
-private long vcmd_setAdjustedColor(rtData, device, params) {
-    def color = params[0] == 'Random' ? colorUtil.RANDOM : (colorUtil.findByName(params[0]) ?: hexToColor(params[0]))
-    color = [
-        hex: color.hex ?: color.rgb,
-        hue: color.hue ?: color.h,
-        saturation: color.saturation ?: color.s,
-        level: color.level ?: color.l
-    ]
-    def duration = cast(rtData, params[1], 'long')
-    log.trace "Converted to $color"
-    def state = params.size() > 2 ? params[2] : ""
-    def delay = params.size() > 3 ? params[3] : 0
-    if (state && (getDeviceAttributeValue(rtData, device, 'switch') != "$state")) {
-        return 0
-    }
-    executePhysicalCommand(rtData, device, 'setAdjustedColor', [color, duration], delay)
-    return 0
-}
-
-private long vcmd_setAdjustedHSLColor(rtData, device, params) {
-    def hue = cast(rtData, params[0] / 3.6, 'integer')
-    def saturation = params[1]
-    def level = params[2]
-    def color = [
-        hue: hue,
-        saturation: saturation,
-        level: level
-    ]
-    def duration = cast(rtData, params[3], 'long')
-    log.trace "Converted to $color"
-    def state = params.size() > 4 ? params[4] : ""
-    def delay = params.size() > 5 ? params[5] : 0
-    if (state && (getDeviceAttributeValue(rtData, device, 'switch') != "$state")) {
-        return 0
-    }
-    executePhysicalCommand(rtData, device, 'setAdjustedColor', [color, duration], delay)
-    return 0
-}
 
 private long vcmd_wolRequest(rtData, device, params) {
 	def mac = params[0]
