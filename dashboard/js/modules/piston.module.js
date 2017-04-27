@@ -527,6 +527,10 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 	};
 
 	$scope.getExpressionConfig = function() {
+		var attributes = [];
+		for (attribute in $scope.db.attributes) {
+			attributes.push(': ' + attribute + ']');
+		}
 		return {
 				autocomplete: [{
 					words: []
@@ -544,7 +548,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 					cssClass: 'hl dev'
 				},
 				{
-					words: [': level]', ': hue]'],
+					words: attributes,
 					cssClass: 'hl dev'
 				},
 				{
@@ -2209,7 +2213,9 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		var result = [];
 		for(deviceIndex in $scope.instance.devices) {
 			var device = $scope.instance.devices[deviceIndex];
-			result.push(mergeObjects({id: deviceIndex}, device));
+			var tokens = "";
+			for (i in device.a) tokens += ':' + device.a[i].n + ' ';
+			result.push(mergeObjects({id: deviceIndex, tokens: tokens + device.n}, device));
 		}
 		return result.sort($scope.sortByName);
 	}
@@ -3454,7 +3460,12 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 					var unit = $scope.getDurationUnitName(task.p[idx].vt, true);
 					value = $scope.renderOperand(task.p[idx], true) + ' ' + unit;
 				} else {
-					value = $scope.renderOperand(task.p[idx], true);
+					if ((task.p[idx].t == 'c') && (!!command.p[idx].d) && (task.p[idx].c == 'false')) {
+						//false optional values, we don't show them
+						value = '';
+					} else {
+						value = $scope.renderOperand(task.p[idx], true);
+					}
 				}
 				if (!value) value = '';
 				if (!!value && !!command.p[idx].d) {
@@ -3982,7 +3993,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 						}
 						continue;
 					case '\'':
-						if (exp && !dq) {
+						if (exp && !dq && !dv) {
 							sq = !sq;
 							(sq ? addOperand() : addConstant());
 							startIndex = i;

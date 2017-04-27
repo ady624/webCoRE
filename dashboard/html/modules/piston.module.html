@@ -207,8 +207,13 @@
 
 <script type="text/ng-template" id="dialog-captured-image">
 	<br/>
-	<center>Please tap and hold the picture below to save it to your Photo Gallery</center>
-		<img draggable="false" id="capturedImage" src="{{capturedImage}}" onclick="return true;"/>
+	<center>
+		<span ng-if="mobile">Please tap and hold the picture below to save it to your Photo Gallery. On 3D Touch enabled devices, hard press on the image to save it. On all others, tap the image to open it in a new tab and save it from there</span>
+		<span ng-if="!mobile">Please right click on the picture below and copy or save it to a file.</span>
+	</center>
+	<dnd-nodrag>
+		<img draggable="false" id="capturedImage" src="{{capturedImage}}" onclick="window.open(this.src);" dnd-nodrag/>
+	</dnd-nodrag>
 </script>
 
 
@@ -775,7 +780,7 @@
 							<option disabled>Location</option>
 						</optgroup>
 						<optgroup label="Physical devices">
-							<option ng-repeat="device in devices" value="{{device.id}}">{{device.n}}</option>
+							<option ng-repeat="device in devices" data-tokens="{{device.tokens}}" value="{{device.id}}">{{device.n}}</option>
 						</optgroup>
 						<optgroup label="Local variables">
 							<option ng-repeat="variable in piston.v" value="{{variable.n}}" ng-if="variable.t == 'device'" data-content="<span class='vartype'>{{variable.t}}</span>{{variable.n}}">{{variable.n}} ({{variable.t}})</option>
@@ -1461,9 +1466,9 @@
 				</div>
 				<!-- physical devices (variable) -->
 				<div class="form-table input-group" ng-if="operand.data.t=='d'">
-					<select data-actions-box="true" selectpicker class="selectpicker show-tick no-border-radius" data-width="100%" data-style="btn-default" ng-model="operand.data.d"  data-header="Use the input box below to quickly search for devices" data-live-search="true" data-mobile="{{mobile}}" multiple ng-change="validateOperand(operand)" required>
+					<select data-actions-box="true" selectpicker class="selectpicker show-tick no-border-radius" data-show-subtext="false" data-width="100%" data-style="btn-default" ng-model="operand.data.d"  data-header="Use the input box below to quickly search for devices" data-live-search="true" data-mobile="{{mobile}}" multiple ng-change="validateOperand(operand)" required>
 						<optgroup label="Physical devices">
-							<option ng-repeat="device in devices" value="{{device.id}}">{{device.n}}</option>
+							<option ng-repeat="device in devices" data-tokens="{{device.tokens}}" value="{{device.id}}">{{device.n}}</option>
 						</optgroup>
 						<optgroup label="Local variables">
 							<option ng-repeat="variable in piston.v" value="{{variable.n}}" ng-if="variable.t == 'device'" data-content="<span class='vartype'>{{variable.t}}</span>{{variable.n}}">{{variable.n}} ({{variable.t}})</option>
@@ -1478,9 +1483,9 @@
 				</div>
 				<!-- physical devices -->
 				<div class="form-table input-group" ng-if="operand.data.t=='p'">
-					<select data-actions-box="true" selectpicker class="selectpicker show-tick no-border-radius" data-width="75%" data-style="btn-default" ng-model="operand.data.d"  data-header="Use the input box below to quickly search for devices" data-live-search="true" data-mobile="{{mobile}}" multiple ng-change="validateOperand(operand)">
+					<select data-actions-box="true" selectpicker class="selectpicker show-tick no-border-radius" data-show-subtext="false" data-width="75%" data-style="btn-default" ng-model="operand.data.d"  data-header="Use the input box below to quickly search for devices" data-live-search="true" data-mobile="{{mobile}}" multiple ng-change="validateOperand(operand)">
 						<optgroup label="Physical devices">
-							<option ng-repeat="device in devices" ng-if="!operand.restrictAttribute || hasAttribute(device, operand.restrictAttribute)" value="{{device.id}}">{{device.n}}</option>
+							<option ng-repeat="device in devices" data-tokens="{{device.tokens}}" ng-if="!operand.restrictAttribute || hasAttribute(device, operand.restrictAttribute)" value="{{device.id}}">{{device.n}}</option>
 						</optgroup>
 						<optgroup label="Local variables">
 							<option ng-repeat="variable in piston.v" value="{{variable.n}}" ng-if="variable.t == 'device'" data-content="<span class='vartype'>{{variable.t}}</span>{{variable.n}}">{{variable.n}} ({{variable.t}})</option>

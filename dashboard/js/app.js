@@ -1153,11 +1153,11 @@ function atou(str) {
     return decodeURIComponent(escape(window.atob(str)));
 }
 
-document.documentElement.addEventListener('touchstart', function (event) {
-    if (event.touches.length > 1) {
-        event.preventDefault();
-    }
-}, false);
+//document.documentElement.addEventListener('touchstart', function (event) {
+//    if (event.touches.length > 1) {
+//        event.preventDefault();
+//    }
+//}, false);
 
 
 function copyToClipboard(containerId) {
@@ -1174,4 +1174,4 @@ if (document.selection) {
      document.execCommand("Copy");
 }}
 
-version = function() { return 'v0.0.090.20170426'; };
+version = function() { return 'v0.0.091.20170426'; };
