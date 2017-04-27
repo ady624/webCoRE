@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.0.091.20170427" }
+public static String version() { return "v0.0.092.20170427" }
 /*
+ *	04/27/2017 >>> v0.0.092.20170427 - ALPHA - Added time trigger happens daily at...
  *	04/27/2017 >>> v0.0.091.20170427 - ALPHA - Various improvements and fixes
  *	04/26/2017 >>> v0.0.090.20170426 - ALPHA - Minor fixes for variables and the eq() function
  *	04/26/2017 >>> v0.0.08f.20170426 - ALPHA - Implemented $args and the special $args.<dynamic> variables to read arguments from events. Bonus: ability to parse JSON data to read subitem by using $args.item.subitem (no array support yet)
@@ -1089,7 +1090,6 @@ private Boolean executeAction(rtData, statement, async) {
     }
     def result = true
     List deviceIds = expandDeviceList(rtData, statement.d)
-    log.trace "DEVICE IDs: $deviceIds"
     List devices = deviceIds.collect{ getDevice(rtData, it) }
     /*
     for (d in statement.d) {
@@ -1398,10 +1398,15 @@ private scheduleTimer(rtData, timer, long lastRun = 0) {
 private scheduleTimeCondition(rtData, condition) {
 	//if already scheduled once during this run, don't do it again
     if (rtData.schedules.find{ (it.s == condition.$) && (it.i == 0) }) return
-	def comparison = rtData.comparisons.conditions[condition.co]
-    if (!comparison) return
+	def comparison = rtData.comparisons.conditions[condition.co]    
+    def trigger = false
+    if (!comparison) {
+		comparison = rtData.comparisons.triggers[condition.co]
+	    if (!comparison) return
+    	trigger = true
+    }
     def v1 = evaluateExpression(rtData, evaluateOperand(rtData, null, condition.ro), 'datetime').v
-    def v2 = comparison.p > 1 ? evaluateExpression(rtData, evaluateOperand(rtData, null, condition.ro2, null, false, true), 'datetime').v : (condition.lo.v == 'time' ? getMidnightTime(rtData) : v1)
+    def v2 = trigger ? v1 : (comparison.p > 1 ? evaluateExpression(rtData, evaluateOperand(rtData, null, condition.ro2, null, false, true), 'datetime').v : (condition.lo.v == 'time' ? getMidnightTime(rtData) : v1))
     def n = now() + 2000
     if (condition.lo.v == 'time') {
 	    while (v1 < n) v1 += 86400000
@@ -2251,6 +2256,7 @@ private Boolean evaluateCondition(rtData, condition, collection, async) {
         def comparison = rtData.comparisons.triggers[condition.co]
         def trigger = !!comparison
         if (!comparison) comparison = rtData.comparisons.conditions[condition.co]
+        rtData.wakingUp = (rtData.event.name == 'time') && (!!rtData.event.schedule) && (rtData.event.schedule.s == condition.$)
         if (rtData.fastForwardTo || comparison) {
             if (!rtData.fastForwardTo) {
                 def paramCount = comparison.p ?: 0
@@ -2340,6 +2346,7 @@ private Boolean evaluateCondition(rtData, condition, collection, async) {
             }
         }
     }
+    rtData.wakingUp = false
     rtData.conditionStateChanged = rtData.cache["c:${condition.$}"] != result
     if (rtData.conditionStateChanged) {
     	//condition change
@@ -2588,6 +2595,7 @@ private boolean comp_is_not_between					(rtData, lv, rv = null, rv2 = null, tv =
 /*triggers*/
 private boolean comp_gets							(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return (cast(rtData, lv.v.v, 'string') == cast(rtData, rv.v.v, 'string')) && matchDeviceSubIndex(lv.v.i, rtData.currentEvent.index)}
 private boolean comp_executes						(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return comp_is(rtData, lv, rv, rv2, tv, tv2) }
+private boolean comp_happens_daily_at				(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return rtData.wakingUp }
 
 private boolean comp_changes						(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return valueCacheChanged(rtData, lv); }
 private boolean comp_changes_to						(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return valueCacheChanged(rtData, lv) && ("${lv.v.v}" == "${rv.v.v}"); }
@@ -3044,7 +3052,7 @@ private getDevice(rtData, idOrName) {
 }
 
 private getDeviceAttributeValue(rtData, device, attributeName) {
-	if ((rtData.event.name == attributeName) && (rtData.event.device.id == device.id)) {
+	if (rtData.event && (rtData.event.name == attributeName) && (rtData.event.device.id == device.id)) {
     	return rtData.event.value;
     } else {
 		return device.currentValue(attributeName)

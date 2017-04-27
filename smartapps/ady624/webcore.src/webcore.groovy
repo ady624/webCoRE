@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.0.091.20170427" }
+public static String version() { return "v0.0.092.20170427" }
 /*
+ *	04/27/2017 >>> v0.0.092.20170427 - ALPHA - Added time trigger happens daily at...
  *	04/27/2017 >>> v0.0.091.20170427 - ALPHA - Various improvements and fixes
  *	04/26/2017 >>> v0.0.090.20170426 - ALPHA - Minor fixes for variables and the eq() function
  *	04/26/2017 >>> v0.0.08f.20170426 - ALPHA - Implemented $args and the special $args.<dynamic> variables to read arguments from events. Bonus: ability to parse JSON data to read subitem by using $args.item.subitem (no array support yet)
@@ -1951,6 +1952,7 @@ private static Map comparisons() {
     	],
         triggers: [
     		gets							: [ d: "gets",																		g:"m",		p: 1						],
+			happens_daily_at				: [ d: "happens daily at",															g:"t",		p: 1						],
     		executes						: [ d: "executes",																	g:"v",		p: 1						],
     		changes 						: [ d: "changes",							dd: "change",							g:"bdis",								],
     		changes_to 						: [ d: "changes to",						dd: "change to",						g:"bdis",	p: 1,						],
