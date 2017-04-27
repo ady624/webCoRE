@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.0.08f.20170426" }
+public static String version() { return "v0.0.090.20170426" }
 /*
+ *	04/26/2017 >>> v0.0.090.20170426 - ALPHA - Minor fixes for variables and the eq() function
  *	04/26/2017 >>> v0.0.08f.20170426 - ALPHA - Implemented $args and the special $args.<dynamic> variables to read arguments from events. Bonus: ability to parse JSON data to read subitem by using $args.item.subitem (no array support yet)
  *	04/26/2017 >>> v0.0.08e.20170426 - ALPHA - Implemented Send notification to contacts
  *	04/26/2017 >>> v0.0.08d.20170426 - ALPHA - Timed triggers should now play nice with multiple devices (any/all)
@@ -1134,7 +1135,7 @@ private Boolean executeTask(rtData, devices, statement, task, async) {
     }
     def params = []
     for (param in task.p) {
-    	def p = (param.vt == 'variable') ? param.x : cast(rtData, evaluateOperand(rtData, null, param).v, param.vt)
+    	def p = (param.vt == 'variable') ? param.x : evaluateExpression(rtData, evaluateOperand(rtData, null, param), param.vt).v
         //ensure value type is successfuly passed through
 		params.push p
     }
@@ -4088,8 +4089,9 @@ private func_eq(rtData, params) {
 	if (!params || !(params instanceof List) || (params.size() != 2)) {
     	return [t: "error", v: "Invalid parameters. Expecting eq(value1, value2)"];
     }
-    def value1 = evaluateExpression(rtData, params[0])
-    def value2 = evaluateExpression(rtData, params[1], value1.t)
+    def t = params[0].t == 'device' ? params[1].t : params[0].t
+    def value1 = evaluateExpression(rtData, params[0], t)
+    def value2 = evaluateExpression(rtData, params[1], t)
     return [t: "boolean", v: value1.v == value2.v]
 }
 
@@ -4774,7 +4776,7 @@ private Map getLocalVariables(rtData, vars) {
 	for (var in vars) {
     	def variable = [t: var.t, v: var.v ?: cast(rtData, values[var.n], var.t), f: !!var.v] //f means fixed value - we won't save this to the state
         if (rtData && var.v && (var.a == 's')) {
-        	variable.v = evaluateExpression(rtData, evaluateOperand(rtData, null, var), var.t).v
+        	variable.v = evaluateExpression(rtData, evaluateOperand(rtData, null, var.v), var.t).v
         }
         result[var.n] = variable
     }
