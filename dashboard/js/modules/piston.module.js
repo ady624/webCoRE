@@ -1591,6 +1591,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 			disableAnimation: true,
 			scope: $scope
 		});
+		$scope.refreshSelects();
 	};
 
 	$scope.updateVariable = function(nextDialog) {
@@ -1774,6 +1775,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 
 	$scope.nextPage = function() {
 		$scope.designer.page++;
+		$scope.refreshSelects();
 	}
 
 	$scope.prevPage = function() {

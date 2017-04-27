@@ -247,7 +247,7 @@
 		</container>
 		<line kwd>end settings;</line>
 		<line ng-if-end>&nbsp;</line>
-		<trace ng-if-start="view.trace && trace && trace.t"><span>+0ms</span><span timer>start</span></trace>
+		<trace ng-if-start="(mode == 'view') && view.trace && trace && trace.t"><span>+0ms</span><span timer>start</span></trace>
 		<line trace com>/* Trace started on {{utcToString(trace.t)}} (about {{timeSince(trace.t)}}) */</line>
 		<line trace ng-if-end>&nbsp;</line>
 		<line kwd ng-if-start="((mode=='edit') && view.variables) || (piston.v && piston.v.length)">define</line>
@@ -261,7 +261,7 @@
 		<statements dnd-list="piston.s" dnd-allowed-types="['statement']" data-nag-model="piston.s" data-ng-repeat="statements in [piston.s]" data-ng-include="'statements'" exec="{{piston && piston.s && piston.s.length && trace && trace.points && !!trace.points['s:' + piston.s[0].$]}}"></statements>
 		<trace ng-if="view.trace && trace && trace.points && trace.points['end']"><span>+{{trace.points['end'].o}}ms</span><span timer ok="true">done</span></trace>
 		<line kwd ng-if-end>end execute;</line>
-		<line trace ng-if-start="view.trace && trace && trace.t">&nbsp;</line>
+		<line trace ng-if-start="(mode == 'view') && view.trace && trace && trace.t">&nbsp;</line>
 		<trace ng-if="view.trace"><span>+{{trace.d}}ms</span><span timer>stop</span></trace>
 		<line trace com ng-if-end>/* Trace ended on {{utcToString(trace.t + trace.d)}} */</line>
 	</content>
@@ -272,7 +272,7 @@
 <script type="text/ng-template" id="variables">
 			<div ng-repeat="variable in variables">
 				<line com ng-if="variable.z">/* {{variable.z}} */</line>
-				<line pun ng-click="editVariable(variable);"><span pun ng-if="(variable.a == 's') && (variable.v)">static&nbsp;</span><span typ>{{variable.t}}&nbsp;</span><span var>{{variable.n}}</span><span ng-if="variable.v" pun>&nbsp;=&nbsp;</span><span ng-if="variable.v" ng-bind-html="variable.$$html || (variable.$$html = renderOperand(variable.v))"></span><span pun>;</span><span ng-if="!variable.v" com>&nbsp;/* {{getVariableValue(variable.n, variable.t)}} */</span></line>
+				<line pun><span ng-click="editVariable(variable);"><span pun ng-if="(variable.a == 's') && (variable.v)">const&nbsp;</span><span typ>{{variable.t}}&nbsp;</span><span var>{{variable.n}}</span><span ng-if="variable.v" pun>&nbsp;=&nbsp;</span><span ng-if="variable.v" ng-bind-html="variable.$$html || (variable.$$html = renderOperand(variable.v))"></span><span pun>;</span><span ng-if="!variable.v" com>&nbsp;/* {{getVariableValue(variable.n, variable.t)}} */</span></span></line>
 			</div>
 			<line new data-ng-click="addVariable()">+ add a new variable</line>
 </script>
@@ -470,7 +470,7 @@
 			<line kwd ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)">only when</line>
 			<restrictions ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)" data-ng-repeat="collection in [statement]" data-ng-include="'restrictions'" dnd-nodrag data-nag-model="statement"></restrictions>
 			<line kwd ng-click="select(statement, statements)">
-				<handle dnd-handle class="fa fa-sort"></handle><span kwd ng-click="editStatement(statement, statements)">every</span> <span lit ng-bind-html="renderTimer(statement);"></span>
+				<handle dnd-handle class="fa fa-sort"></handle><span kwd ng-click="editStatement(statement, statements)">every</span> <span lit ng-click="editStatement(statement, statements)" ng-bind-html="renderTimer(statement);"></span>
 				<badge green ng-if="(statement.tep == 'c')" badge="C" title="Only execute on condition state change"></badge>
 				<badge green ng-if="(statement.tep == 'p')" badge="P" title="Only execute on piston state change"></badge>
 				<badge green ng-if="(statement.tep == 'b')" badge="C|P" title="Only execute on condition or piston state change"></badge>
@@ -1810,17 +1810,17 @@
 				</div>
 			</div>
 			<div class="form-group">
-				<label class="col-lg-12 no-padding">Value<span class="error" ng-if="!designer.operand.valid">{{designer.operand.error}}<span ng-if="designer.operand.expressionVar"> (<a ng-click="autoAddVariable(designer.operand.expressionVar); validateOperand(designer.operand);">create it</a>)</span>&nbsp;<i class="fa fa-warning"></i></span></label>
+				<label class="col-lg-12 no-padding">Initial value (optional)<span class="error" ng-if="!designer.operand.valid">{{designer.operand.error}}<span ng-if="designer.operand.expressionVar"> (<a ng-click="autoAddVariable(designer.operand.expressionVar); validateOperand(designer.operand);">create it</a>)</span>&nbsp;<i class="fa fa-warning"></i></span></label>
 				<operand ng-repeat="operand in [designer.operand]" ng-model="designer.operand" ng-include="'operand'"></operand>
 			</div>
 			<div class="form-group" ng-if="designer.operand.data.t != ''">
-				<label>NOTE: By providing a value to the variable, you are instructing the piston to initialize this variable on every run. While you can change the value of the variable during a piston run, the variable will revert to this initial value on subsequent piston runs.</label>
+				<label>NOTE: By assigning an initial value to the variable, you are instructing the piston to initialize the variable on every run to that initial value. While you can change the value of the variable during a piston run, the variable will revert to its initial value on subsequent piston runs. If you plan on storing data in this variable that needs to persist between piston runs, leave the value as <i>Nothing Selected</i>.</label>
 			</div>
 			<div class="form-group" ng-if="(designer.operand.data.t != '') && (designer.operand.data.t != 'd')">
 				<label class="col-lg-12 no-padding">Assignment type</label>
 				<select data-actions-box="true" id="type" selectpicker class="selectpicker show-tick input-addon" data-width="100%" data-style="btn-info" ng-model="designer.assignment" data-mobile="{{mobile}}">
 					<option value="d">Dynamic (default)</option>
-					<option value="s">Static</option>
+					<option value="s">Constant (value is sttic and cannot be changed)</option>
 				</select>
 			</div>
 			<div ng-if="designer.showAdvancedOptions" class="form-group">
