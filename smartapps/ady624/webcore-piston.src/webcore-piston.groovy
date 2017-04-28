@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.0.092.20170427" }
+public static String version() { return "v0.0.093.20170428" }
 /*
+ *	04/28/2017 >>> v0.0.093.20170428 - ALPHA - Fixed bugs (piston state issues, time condition schedules ignored offsets). Implemented more virtual commands (the fade suite)
  *	04/27/2017 >>> v0.0.092.20170427 - ALPHA - Added time trigger happens daily at...
  *	04/27/2017 >>> v0.0.091.20170427 - ALPHA - Various improvements and fixes
  *	04/26/2017 >>> v0.0.090.20170426 - ALPHA - Minor fixes for variables and the eq() function
@@ -486,7 +487,7 @@ private getRunTimeData(rtData = null, semaphore = null) {
 	    //flow control
 	    //we're reading the old state from atomicState because we might have waited at a semaphore
 	    def oldState = atomicState.state ?: ''
-	    rtData.state = [old: oldState, new: piston.o?.mps ? oldState : 'true'];
+	    rtData.state = [old: oldState, new: oldState];
 	    rtData.statementLevel = 0;
 	    rtData.fastForwardTo = null
 	    rtData.break = false
@@ -581,13 +582,28 @@ def handleEvents(event) {
         long threshold = now() > event.schedule.t ? now() : event.schedule.t
         //schedules.removeAll{ (it.t <= threshold) && (it.s == event.schedule.s) && (it.i == event.schedule.i) }
         schedules.remove(event.schedule)
+        //if we have any other pending -3 events (device schedules), we cancel them all
+        //if (event.schedule.i > 0) schedules.removeAll{ (it.s == event.schedule.s) && ( it.i == -3 ) }
         atomicState.schedules = schedules
         def delay = event.schedule.t - now()
         if (syncTime && (delay > 0)) {
         	debug "Fast executing schedules, waiting for ${delay}ms to sync up", rtData
         	pause delay
         }
-        success = executeEvent(rtData, event)	
+        if (event.schedule.i == -3) {
+        	def data = event.schedule.d
+            if (data && data.d && data.c) {
+        		//we have a device schedule, execute it
+            	def device = getDevice(rtData, data.d)
+                if (device) {
+                	//executing scheduled physical command
+                    //used by fades, flashes, etc.
+                	executePhysicalCommand(rtData, device, data.c, data.p)
+                }
+			}
+        } else {
+        	success = executeEvent(rtData, event)
+        }
         syncTime = true
         //if we waited at a semaphore, we don't want to process too many events
         if (rtData.semaphoreDelay) break
@@ -702,7 +718,6 @@ private finalizeEvent(rtData, initialMsg, success = true) {
     if (stats.timing.size() > 500) stats.timing = stats.timing[stats.timing.size() - 500..stats.timing.size() - 1]
     rtData.trace.d = now() - rtData.trace.t
 
-
 	state.state = rtData.state.new
     state.stats = stats
     state.trace = rtData.trace
@@ -725,8 +740,13 @@ private processSchedules(rtData, scheduleJob = false) {
     		scheduleTimer(rtData, timer, 0)
         }
     }
-    boolean pistonStateChanged = rtData.state.old != rtData.state.new
+	//reset states
+    //if automatic states, we set it based on the autoNew - if any
+    if (!rtData.piston.o?.mps) {    
+    	rtData.state.new = rtData.state.autoNew ?: 'true'
+    }
     rtData.state.old = rtData.state.new
+	rtData.pistonStateChanged = false
     schedules = (atomicState.schedules ?: [])
     //cancel statements
 	schedules.removeAll{ schedule -> !!rtData.cancelations.statements.find{ cancelation -> (cancelation.id == schedule.s) && (!cancelation.data || (cancelation.data == schedule.d)) }}
@@ -735,7 +755,7 @@ private processSchedules(rtData, scheduleJob = false) {
     	schedules.removeAll{ cid in it.cs }
     }
     //cancel on piston state change
-    if (pistonStateChanged) {
+    if (rtData.pistonStateChanged) {
     	schedules.removeAll{ !!it.ps }
     }
     rtData.cancelations = []
@@ -813,9 +833,24 @@ private Boolean executeStatement(rtData, statement, async = false) {
 	if (!statement) return false
     if (!rtData.fastForwardTo) {
     	switch (statement.tep) {
-        	case 'c': if (!rtData.conditionStateChanged) return; break;
-        	case 'p': if (!rtData.pistonStateChanged) return; break;
-        	case 'b': if ((!rtData.conditionStateChanged) && (!rtData.pistonStateChanged)) return; break;
+        	case 'c':
+            	if (!rtData.conditionStateChanged) {
+                	debug "Skipping execution for statement #${statement.$} because condition state did not change", rtData
+            		return;
+                }
+                break;
+        	case 'p':
+            	if (!rtData.pistonStateChanged) {
+                	debug "Skipping execution for statement #${statement.$} because piston state did not change", rtData
+                	return;
+                }
+                break;
+        	case 'b':
+            	if ((!rtData.conditionStateChanged) && (!rtData.pistonStateChanged)) {
+                	debug "Skipping execution for statement #${statement.$} because neither condition state nor piston state changed", rtData
+                	return;
+                }
+                break;
         }
     }
     rtData.stack.ss.push(rtData.stack.s)
@@ -876,10 +911,9 @@ private Boolean executeStatement(rtData, statement, async = false) {
                     perform = evaluateConditions(rtData, statement, 'c', async)
                 	//we override current condition so that child statements can cancel on it
 	                rtData.stack.c = statement.$
-                    if (!rtData.fastForwardTo && (!rtData.piston.o?.mps) && (statement.t == 'if') && (rtData.statementLevel == 1)) {
+                    if (!rtData.fastForwardTo && (!rtData.piston.o?.mps) && (statement.t == 'if') && (rtData.statementLevel == 1) && perform) {
                         //automatic piston state                        
-                        rtData.state.new = 'true';
-				    	rtData.pistonStateChanged = rtData.pistonStateChanged || (rtData.state.old != rtData.state.new)
+                        rtData.state.autoNew = 'true';
                     }
                     
                     if (perform || !!rtData.fastForwardTo) {
@@ -910,8 +944,7 @@ private Boolean executeStatement(rtData, statement, async = false) {
                             }
                             if (!rtData.fastForwardTo && (!rtData.piston.o?.mps) && (rtData.statementLevel == 1)) {
                             	//automatic piston state
-                                rtData.state.new = 'false';
-						    	rtData.pistonStateChanged = rtData.pistonStateChanged || (rtData.state.old != rtData.state.new)
+                                rtData.state.autoNew = 'false';
                             }
                             if ((!perform || !!rtData.fastForwardTo) && !executeStatements(rtData, statement.e, async)) {
                                 //stop processing
@@ -1114,6 +1147,7 @@ private Boolean executeAction(rtData, statement, async) {
         }
     }
     */
+    rtData.currentAction = statement
 	rtData.systemVars['$devices'].v = deviceIds
     for (task in statement.k) {
         result = executeTask(rtData, devices, statement, task, async)
@@ -1146,7 +1180,16 @@ private Boolean executeTask(rtData, devices, statement, task, async) {
     }
     def params = []
     for (param in task.p) {
-    	def p = (param.vt == 'variable') ? param.x : evaluateExpression(rtData, evaluateOperand(rtData, null, param), param.vt).v
+    	def p
+    	switch (param.vt) {
+        	case 'variable':
+            	p = param.x;
+                break;
+            default:
+            	def v = evaluateOperand(rtData, null, param)
+                //if not selected, we want to return null
+                p = (v.v != null) ? evaluateExpression(rtData, v, param.vt).v : null
+        }
         //ensure value type is successfuly passed through
 		params.push p
     }
@@ -1175,8 +1218,11 @@ private Boolean executeTask(rtData, devices, statement, task, async) {
     if (delay) {
     	//get remaining piston time
     	def timeLeft = 20000 + rtData.timestamp - now()
+        //negative delays force us to reschedule, no sleeping on this one
+        boolean reschedule = (delay < 0)
+        delay = reschedule ? -delay : delay
     	//we're aiming at waking up with at least 10s left
-    	if ((timeLeft - delay < 10000) || (delay >= 5000) || async) {
+    	if (reschedule || (timeLeft - delay < 10000) || (delay >= 5000) || async) {
 	        //schedule a wake up
 	        trace "Requesting a wake up for ${formatLocalTime(now() + delay)} (in ${cast(rtData, delay / 1000, 'decimal')}s)", rtData
             tracePoint(rtData, "t:${task.$}", now() - t, -delay)
@@ -1191,34 +1237,70 @@ private Boolean executeTask(rtData, devices, statement, task, async) {
     return true
 }
 
-private executePhysicalCommand(rtData, device, command, params = [], delay = null) {
-	try {
-    	params = (params instanceof List) ? params : (params ? [params] : [])
-        def msg = timer ""
-    	if (params.size()) {
-        	if (delay) {            	
-				device."$command"(params as Object[], [delay: delay])
-                msg.m = "Executed physical command $command($params, [delay: delay])"
-            } else {
-				device."$command"(params as Object[])
-                msg.m = "Executed physical command $command($params)"
-            }
-        } else {
-        	if (delay) {
-				device."$command"([delay: delay])
-                msg.m = "Executed physical command $command([delay: delay])"
-			} else {
-				device."$command"()
-                msg.m = "Executed physical command $command()"
-            }
-        }
-        debug msg, rtData
-	} catch(all) {
-    	error "Error while executing physical command $device.$command($params):", rtData, null, all
+private long executeVirtualCommand(rtData, devices, task, params)
+{
+	def msg = timer "Executed virtual command ${devices ? (devices instanceof List ? "$devices." : "[$devices].") : ""}${task.c}"
+    long delay = 0
+    try {
+		delay = "vcmd_${task.c}"(rtData, devices, params)
+	    trace msg, rtData
+    } catch(all) {
+    	msg.m = "Error executing virtual command ${devices instanceof List ? "$devices" : "[$devices]"}.${task.c}:"
+        msg.e = all
+        error msg, rtData
     }
-    if (rtData.piston.o?.ced) {
-        pause(rtData.piston.o.ced)
-    	debug "Injected a ${rtData.piston.o.ced}ms delay after [$device].$command(${params ? "$params" : ''})", rtData
+    return delay
+}
+
+private executePhysicalCommand(rtData, device, command, params = [], delay = null, scheduleDevice = null) {
+	if (!!delay && !!scheduleDevice) {    
+    	//we're using schedules instead
+        def statement = rtData.currentAction
+    	def cs = [] + ((statement.tcp == 'b') || (statement.tcp == 'c') ? (rtData.stack?.cs ?: []) : [])
+        def ps = (statement.tcp == 'b') || (statement.tcp == 'p') ? 1 : 0
+        cs.removeAll{ it == 0 }
+        def schedule = [
+            t: now() + delay,
+            s: statement.$,
+            i: -3,
+            cs: cs,
+            ps: ps,
+            d: [
+            	d: scheduleDevice,
+                c: command,
+                p: params
+            ]
+        ]
+        rtData.schedules.push(schedule)
+    } else {
+        try {
+            params = (params instanceof List) ? params : (params != null ? [params] : [])
+            def msg = timer ""
+            if (params.size()) {
+                if (delay) {            	
+                    device."$command"((params as Object[]) + [delay: delay])
+                    msg.m = "Executed physical command [${device.label}].$command($params, [delay: $delay])"
+                } else {
+                    device."$command"(params as Object[])
+                    msg.m = "Executed physical command [${device.label}].$command($params)"
+                }
+            } else {
+                if (delay) {
+                    device."$command"([delay: delay])
+                    msg.m = "Executed physical command [${device.label}].$command([delay: $delay])"
+                } else {
+                    device."$command"()
+                    msg.m = "Executed physical command [${device.label}].$command()"
+                }
+            }
+            debug msg, rtData
+        } catch(all) {
+            error "Error while executing physical command $device.$command($params):", rtData, null, all
+        }
+        if (rtData.piston.o?.ced) {
+            pause(rtData.piston.o.ced)
+            debug "Injected a ${rtData.piston.o.ced}ms delay after [$device].$command(${params ? "$params" : ''})", rtData
+        }
     }
 }
 
@@ -1404,9 +1486,11 @@ private scheduleTimeCondition(rtData, condition) {
 		comparison = rtData.comparisons.triggers[condition.co]
 	    if (!comparison) return
     	trigger = true
-    }
-    def v1 = evaluateExpression(rtData, evaluateOperand(rtData, null, condition.ro), 'datetime').v
-    def v2 = trigger ? v1 : (comparison.p > 1 ? evaluateExpression(rtData, evaluateOperand(rtData, null, condition.ro2, null, false, true), 'datetime').v : (condition.lo.v == 'time' ? getMidnightTime(rtData) : v1))
+    }  
+    def tv1 = evaluateOperand(rtData, null, condition.to)
+    def v1 = evaluateExpression(rtData, evaluateOperand(rtData, null, condition.ro), 'datetime').v + (tv1 ? evaluateExpression(rtData, [t: 'duration', v: tv1.v, vt: tv1.vt], 'long').v : 0)    
+    def tv2 = comparison.p > 1 ? evaluateOperand(rtData, null, condition.to) : null
+    def v2 = trigger ? v1 : ((comparison.p > 1) ? (evaluateExpression(rtData, evaluateOperand(rtData, null, condition.ro2, null, false, true), 'datetime').v + (tv2 ? evaluateExpression(rtData, [t: 'duration', v: tv2.v, vt: tv2.vt]).v : 0)) : (condition.lo.v == 'time' ? getMidnightTime(rtData) : v1))
     def n = now() + 2000
     if (condition.lo.v == 'time') {
 	    while (v1 < n) v1 += 86400000
@@ -1693,29 +1777,18 @@ private long cmd_setAdjustedHSLColor(rtData, device, params) {
     return 0
 }
 
+private long cmd_setLoopDuration(rtData, device, params) {
+    int duration = (int) Math.round(cast(rtData, params[0], 'long') / 1000)
+    executePhysicalCommand(rtData, device, 'setLoopDuration', duration, delay)
+    return 0
+}
+
 private long cmd_setVideoLength(rtData, device, params) {
     int duration = (int) Math.round(cast(rtData, params[0], 'long') / 1000)
     executePhysicalCommand(rtData, device, 'setVideoLength', duration, delay)
     return 0
 }
 
-
-
-
-private long executeVirtualCommand(rtData, devices, task, params)
-{
-	def msg = timer "Executed virtual command ${devices ? (devices instanceof List ? "$devices." : "[$devices].") : ""}${task.c}"
-    long delay = 0
-    try {
-		delay = "vcmd_${task.c}"(rtData, devices, params)
-	    trace msg, rtData
-    } catch(all) {
-    	msg.m = "Error executing virtual command ${devices instanceof List ? "$devices" : "[$devices]"}.${task.c}:"
-        msg.e = all
-        error msg, rtData
-    }
-    return delay
-}
 
 private long vcmd_log(rtData, device, params) {
 	def command = params[0]
@@ -1842,6 +1915,187 @@ private long vcmd_toggleLevel(rtData, device, params) {
 	    executePhysicalCommand(rtData, device, 'setLevel', level)
     }
     return 0
+}
+
+private long vcmd_adjustLevel(rtData, device, params) {
+	int level = cast(rtData, params[0], 'integer')
+    def state = params.size() > 1 ? params[1] : ""
+    def delay = params.size() > 2 ? params[2] : 0
+    if (state && (getDeviceAttributeValue(rtData, device, 'switch') != "$state")) {
+        return 0
+    }
+    level = level + cast(rtData, getDeviceAttributeValue(rtData, device, 'level'), 'integer')
+    level = (level < 0) ? 0 : ((level > 100) ? 100 : level)
+    executePhysicalCommand(rtData, device, 'setLevel', level, delay)
+    return 0
+}
+
+private long vcmd_adjustInfraredLevel(rtData, device, params) {
+	int infraredLevel = cast(rtData, params[0], 'integer')
+    def state = params.size() > 1 ? params[1] : ""
+    def delay = params.size() > 2 ? params[2] : 0
+    if (state && (getDeviceAttributeValue(rtData, device, 'switch') != "$state")) {
+        return 0
+    }
+    infraredLevel = infraredLevel + cast(rtData, getDeviceAttributeValue(rtData, device, 'infraredLevel'), 'integer')
+    infraredLevel = (infraredLevel < 0) ? 0 : ((infraredLevel > 100) ? 100 : infraredLevel)
+    executePhysicalCommand(rtData, device, 'setInfraredLevel', infraredLevel, delay)
+    return 0
+}
+
+private long vcmd_adjustSaturation(rtData, device, params) {
+	int saturation = cast(rtData, params[0], 'integer')
+    def state = params.size() > 1 ? params[1] : ""
+    def delay = params.size() > 2 ? params[2] : 0
+    if (state && (getDeviceAttributeValue(rtData, device, 'switch') != "$state")) {
+        return 0
+    }
+    saturation = saturation + cast(rtData, getDeviceAttributeValue(rtData, device, 'saturation'), 'integer')
+    saturation = (saturation < 0) ? 0 : ((saturation > 100) ? 100 : saturation)
+    executePhysicalCommand(rtData, device, 'setSaturation', saturation, delay)
+    return 0
+}
+
+private long vcmd_adjustHue(rtData, device, params) {
+	int hue = cast(rtData, params[0] / 3.6, 'integer')
+    def state = params.size() > 1 ? params[1] : ""
+    def delay = params.size() > 2 ? params[2] : 0
+    if (state && (getDeviceAttributeValue(rtData, device, 'switch') != "$state")) {
+        return 0
+    }
+    hue = hue + cast(rtData, getDeviceAttributeValue(rtData, device, 'hue'), 'integer')
+    hue = (hue < 0) ? 0 : ((hue > 100) ? 100 : hue)
+    executePhysicalCommand(rtData, device, 'setHue', hue, delay)
+    return 0
+}
+
+private long vcmd_adjustColorTemperature(rtData, device, params) {
+	int colorTemperature = cast(rtData, params[0], 'integer')
+    def state = params.size() > 1 ? params[1] : ""
+    def delay = params.size() > 2 ? params[2] : 0
+    if (state && (getDeviceAttributeValue(rtData, device, 'switch') != "$state")) {
+        return 0
+    }
+    colorTemperature = colorTemperature + cast(rtData, getDeviceAttributeValue(rtData, device, 'colorTemperature'), 'integer')
+    colorTemperature = (colorTemperature < 1000) ? 1000 : ((colorTemperature > 30000) ? 30000 : colorTemperature)
+    executePhysicalCommand(rtData, device, 'setColorTemperature', colorTemperature, delay)
+    return 0
+}
+
+private long vcmd_fadeLevel(rtData, device, params) {
+	int startLevel = (params[0] != null) ? cast(rtData, params[0], 'integer') : cast(rtData, getDeviceAttributeValue(rtData, device, 'level'), 'integer')
+    int endLevel = cast(rtData, params[1], 'integer')
+    long duration = cast(rtData, params[2], 'long')
+    def state = params.size() > 3 ? params[3] : ""
+    def delay = params.size() > 4 ? params[4] : 0
+    if (state && (getDeviceAttributeValue(rtData, device, 'switch') != "$state")) {
+        return 0
+    }
+    startLevel = (startLevel < 0) ? 0 : ((startLevel > 100) ? 100 : startLevel)
+    endLevel = (endLevel < 0) ? 0 : ((endLevel > 100) ? 100 : endLevel)
+    return vcmd_internal_fade(rtData, device, 'setLevel', startLevel, endLevel, duration)
+}
+
+private long vcmd_fadeInfraredLevel(rtData, device, params) {
+	int startLevel = (params[0] != null) ? cast(rtData, params[0], 'integer') : cast(rtData, getDeviceAttributeValue(rtData, device, 'infraredLevel'), 'integer')
+    int endLevel = cast(rtData, params[1], 'integer')
+    long duration = cast(rtData, params[2], 'long')
+    def state = params.size() > 3 ? params[3] : ""
+    def delay = params.size() > 4 ? params[4] : 0
+    if (state && (getDeviceAttributeValue(rtData, device, 'switch') != "$state")) {
+        return 0
+    }
+    startLevel = (startLevel < 0) ? 0 : ((startLevel > 100) ? 100 : startLevel)
+    endLevel = (endLevel < 0) ? 0 : ((endLevel > 100) ? 100 : endLevel)
+    return vcmd_internal_fade(rtData, device, 'setInfraredLevel', startLevel, endLevel, duration)
+}
+
+private long vcmd_fadeSaturation(rtData, device, params) {
+	int startLevel = (params[0] != null) ? cast(rtData, params[0], 'integer') : cast(rtData, getDeviceAttributeValue(rtData, device, 'saturation'), 'integer')
+    int endLevel = cast(rtData, params[1], 'integer')
+    long duration = cast(rtData, params[2], 'long')
+    def state = params.size() > 3 ? params[3] : ""
+    def delay = params.size() > 4 ? params[4] : 0
+    if (state && (getDeviceAttributeValue(rtData, device, 'switch') != "$state")) {
+        return 0
+    }
+    startLevel = (startLevel < 0) ? 0 : ((startLevel > 100) ? 100 : startLevel)
+    endLevel = (endLevel < 0) ? 0 : ((endLevel > 100) ? 100 : endLevel)
+    return vcmd_internal_fade(rtData, device, 'setSaturation', startLevel, endLevel, duration)
+}
+
+private long vcmd_fadeHue(rtData, device, params) {
+	int startLevel = (params[0] != null) ? cast(rtData, params[0] / 3.6, 'integer') : cast(rtData, getDeviceAttributeValue(rtData, device, 'hue'), 'integer')
+    int endLevel = cast(rtData, params[1], 'integer')
+    long duration = cast(rtData, params[2], 'long')
+    def state = params.size() > 3 ? params[3] : ""
+    def delay = params.size() > 4 ? params[4] : 0
+    if (state && (getDeviceAttributeValue(rtData, device, 'switch') != "$state")) {
+        return 0
+    }
+    startLevel = (startLevel < 0) ? 0 : ((startLevel > 100) ? 100 : startLevel)
+    endLevel = (endLevel < 0) ? 0 : ((endLevel > 100) ? 100 : endLevel)
+    return vcmd_internal_fade(rtData, device, 'setHue', startLevel, endLevel, duration)
+}
+
+private long vcmd_fadeColorTemperature(rtData, device, params) {
+	int startLevel = (params[0] != null) ? cast(rtData, params[0], 'integer') : cast(rtData, getDeviceAttributeValue(rtData, device, 'colorTemperature'), 'integer')
+    int endLevel = cast(rtData, params[1], 'integer')
+    long duration = cast(rtData, params[2], 'long')
+    def state = params.size() > 3 ? params[3] : ""
+    def delay = params.size() > 4 ? params[4] : 0
+    if (state && (getDeviceAttributeValue(rtData, device, 'switch') != "$state")) {
+        return 0
+    }
+    startLevel = (startLevel < 0) ? 0 : ((startLevel > 100) ? 100 : startLevel)
+    endLevel = (endLevel < 0) ? 0 : ((endLevel > 100) ? 100 : endLevel)
+    return vcmd_internal_fade(rtData, device, 'setColorTemperature', startLevel, endLevel, duration)
+}
+
+private long vcmd_internal_fade(Map rtData, device, String command, int startLevel, int endLevel, long duration) {
+    long minInterval = 5000
+    if (duration <= 5000) {
+    	minInterval = 500
+    } else if (duration <= 10000) {
+    	minInterval = 1000    
+	} else if (duration <= 30000) {
+		minInterval = 3000
+	} else {
+		minInterval = 5000
+    }
+    if ((startLevel == endLevel) || (duration <= 500)) {
+    	//if the fade is too fast, or not changing anything, give it up and go to the end level directly
+    	executePhysicalCommand(rtData, device, command, endLevel)
+        return 0
+    }
+	int delta = endLevel - startLevel
+    //the max number of steps we can do
+    int steps = delta > 0 ? delta : -delta
+    //figure out the interval
+    long interval = Math.round(duration / steps)
+    if (interval < minInterval) {
+    	//intervals too small, adjust to do one change per 500ms
+    	steps = Math.floor(1.0 * duration / minInterval)
+        interval = Math.round(1.0 * duration / steps)
+    }
+    def scheduleDevice = (duration > 10000) ? hashId(device.id) : null
+    int oldLevel = startLevel
+	executePhysicalCommand(rtData, device, command, startLevel)
+    for(def i = 1; i <= steps; i++) {
+        int newLevel = Math.round(startLevel + delta * i / steps)
+        if (oldLevel != newLevel) {
+           	executePhysicalCommand(rtData, device, command, newLevel, i * interval, scheduleDevice)
+        }
+        oldLevel = newLevel
+    }
+    //for good measure, send a last command 100ms after the end of the interval
+    executePhysicalCommand(rtData, device, command, endLevel, duration + 99, scheduleDevice)
+    return duration + 100
+}
+
+private long vcmd_flash(rtData, device, params) {
+	error "Sorry, flash is not yet implemented", rtData
+	return 0
 }
 
 private long vcmd_sendNotification(rtData, device, params) {
@@ -2089,8 +2343,8 @@ private Boolean evaluateConditions(rtData, conditions, collection, async) {
     if (!rtData.fastForwardTo) tracePoint(rtData, "c:${conditions.$}", now() - t, result)
     def oldResult = !!rtData.cache["c:${conditions.$}"];
     rtData.conditionStateChanged = (oldResult != result)
-    if (rtData.conditionStateChanged) {  
-    	//condition change
+    if (rtData.conditionStateChanged) {
+    	//condition change, perform TCP
         cancelConditionSchedules(rtData, conditions.$)
     }
     rtData.cache["c:${conditions.$}"] = result
@@ -2102,7 +2356,7 @@ private Boolean evaluateConditions(rtData, conditions, collection, async) {
     //restore condition id
     rtData.stack.c = c
     if (!rtData.fastForwardTo) {
-    	msg.m = "Condition group #${conditions.$} evaluated $result"
+    	msg.m = "Condition group #${conditions.$} evaluated $result (${rtData.conditionStateChanged ? 'changed' : 'did not change'})"
     	debug msg, rtData
     }
 	return result
@@ -2113,6 +2367,9 @@ private evaluateOperand(rtData, node, operand, index = null, trigger = false, ne
     //older pistons don't have the 'to' operand (time offset), we're simulating an empty one
     if (!operand) operand = [t: 'c']
     switch (operand.t) {
+    	case '': //optional, nothing selected
+        	values = [[i: "${node?.$}:$index:0", v: [t: operand.vt, v: null]]]
+            break
         case "p": //physical device
         	def j = 0;
         	for(deviceId in expandDeviceList(rtData, operand.d)) {
@@ -2347,15 +2604,16 @@ private Boolean evaluateCondition(rtData, condition, collection, async) {
         }
     }
     rtData.wakingUp = false
-    rtData.conditionStateChanged = rtData.cache["c:${condition.$}"] != result
+    def oldResult = !!rtData.cache["c:${condition.$}"];
+    rtData.conditionStateChanged = oldResult != result
     if (rtData.conditionStateChanged) {
-    	//condition change
+    	//condition change, perform TCP
         cancelConditionSchedules(rtData, condition.$)
     }
     rtData.cache["c:${condition.$}"] = result
     //true/false actions
     if ((result || rtData.fastForwardTo) && condition.ts && condition.ts.length) executeStatements(rtData, condition.ts, async)
-    if ((!result || rtData.fastForwardTo) && condition.fs && condition.fs.length) executeStatements(rtData, condition.fs, async)
+	if ((!result || rtData.fastForwardTo) && condition.fs && condition.fs.length) executeStatements(rtData, condition.fs, async)
     //restore condition id
     rtData.stack.c = c
     if (!rtData.fastForwardTo) {
