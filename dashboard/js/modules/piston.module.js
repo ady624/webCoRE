@@ -3865,7 +3865,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 	}
 
 	$scope.parseExpression = function(str, parseAsString) {
-		str = str ? str.toString() : "";
+		str = (str != null) ? str.toString() : "";
 		//remove \r \n
 		//str = str.replace(/[\r\n]*/g, "");
 		var i = 0;
@@ -3905,7 +3905,17 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 			}
 			function addConstant() {
 				if (i-1 > startIndex) {
-					arr.push({t: 'string', v: str.slice(startIndex, i-1), l: location(startIndex, i - 2)});
+					var value = str.slice(startIndex, i-1);
+					var parsedValue = parseFloat(value.trim());
+					if (!isNaN(parsedValue)) {
+						if (Number.isInteger(parsedValue)) {
+							arr.push({t: 'integer', v: parseInt(parsedValue), l: location(startIndex, i - 2)});
+							return true;
+						}
+						arr.push({t: 'decimal', v: parsedValue, l: location(startIndex, i - 2)});
+						return true;
+					}
+					arr.push({t: 'string', v: value, l: location(startIndex, i - 2)});
 				}
 			}
 			function addDevice() {
