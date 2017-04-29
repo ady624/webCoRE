@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.0.095.20170429" }
+public static String version() { return "v0.0.096.20170429" }
 /*
+ *	04/29/2017 >>> v0.0.096.20170429 - ALPHA - Various bug fixes, added options to disable certain statements, as per @RobinWinbourne's idea
  *	04/29/2017 >>> v0.0.095.20170429 - ALPHA - Fully implemented the on event statements
  *	04/28/2017 >>> v0.0.094.20170428 - ALPHA - Fixed a bug preventing timers from scheduling properly. Added the on statement and the do statement
  *	04/28/2017 >>> v0.0.093.20170428 - ALPHA - Fixed bugs (piston state issues, time condition schedules ignored offsets). Implemented more virtual commands (the fade suite)
@@ -818,7 +819,8 @@ private updateLogs(rtData) {
 private Boolean executeStatements(rtData, statements, async = false) {
 	rtData.statementLevel = rtData.statementLevel + 1
 	for(statement in statements) {
-    	if (!executeStatement(rtData, statement, !!async)) {
+    	//only execute statements that are enabled
+    	if (!statement.di && !executeStatement(rtData, statement, !!async)) {
         	//stop processing
 			rtData.statementLevel = rtData.statementLevel - 1
         	return false
@@ -2934,13 +2936,15 @@ private traverseStatements(node, closure, parentNode = null, data = null) {
 	//if a statements element, go through each item
 	if (node instanceof List) {
     	for(item in node) {
-            boolean lastTimer = (data && data.timer)
-            if (data && (item.t == 'every')) {
-                data.timer = true
-            }
-	    	traverseStatements(item, closure, parentNode, data)
-            if (data) {
-                data.timer = lastTimer
+        	if (!item.di) {
+	           	boolean lastTimer = (data && data.timer)
+    	        if (data && (item.t == 'every')) {
+        	        data.timer = true
+            	}
+	    		traverseStatements(item, closure, parentNode, data)
+            	if (data) {
+                	data.timer = lastTimer
+            	}
             }
 	    }
         return

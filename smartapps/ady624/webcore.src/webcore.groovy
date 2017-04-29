@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.0.095.20170429" }
+public static String version() { return "v0.0.096.20170429" }
 /*
+ *	04/29/2017 >>> v0.0.096.20170429 - ALPHA - Various bug fixes, added options to disable certain statements, as per @RobinWinbourne's idea
  *	04/29/2017 >>> v0.0.095.20170429 - ALPHA - Fully implemented the on event statements
  *	04/28/2017 >>> v0.0.094.20170428 - ALPHA - Fixed a bug preventing timers from scheduling properly. Added the on statement and the do statement
  *	04/28/2017 >>> v0.0.093.20170428 - ALPHA - Fixed bugs (piston state issues, time condition schedules ignored offsets). Implemented more virtual commands (the fade suite)
@@ -1758,9 +1759,9 @@ private static Map commands() {
 		playText					: [ n: "Speak text...",					d: "Speak text \"{0}\"",																					p: [[n:"Text",t:"string"]],  													],
 		playTextAndRestore			: [ n: "Speak text and restore...",		d: "Speak text \"{0}\" and restore",																		p: [[n:"Text",t:"string"]],  													],
 		playTextAndResume			: [ n: "Speak text and resume...",		d: "Speak text \"{0}\" and resume",																		p: [[n:"Text",t:"string"]],  													],
-		playTrack					: [ n: "Play track...",					d: "Play track <uri>{0}</uri>{1}",																			p: [[n:"Track URL",t:"url"], [n:"Volume", t:"level", d:" at volume {v}"]],  												],
-		playTrackAndRestore			: [ n: "Play track...",					d: "Play track <uri>{0}</uri>{1} and restore",																p: [[n:"Track URL",t:"url"], [n:"Volume", t:"level", d:" at volume {v}"]],  												],
-		playTrackAndResume			: [ n: "Play track...",					d: "Play track <uri>{0}</uri>{1} and resume",																p: [[n:"Track URL",t:"url"], [n:"Volume", t:"level", d:" at volume {v}"]],  												],
+		playTrack					: [ n: "Play track...",					d: "Play track <uri>{0}</uri>{1}",																			p: [[n:"Track URL",t:"string"], [n:"Volume", t:"level", d:" at volume {v}"]],  												],
+		playTrackAndRestore			: [ n: "Play track and restore...",		d: "Play track <uri>{0}</uri>{1} and restore",																p: [[n:"Track URL",t:"string"], [n:"Volume", t:"level", d:" at volume {v}"]],  												],
+		playTrackAndResume			: [ n: "Play track and resume...",		d: "Play track <uri>{0}</uri>{1} and resume",																p: [[n:"Track URL",t:"string"], [n:"Volume", t:"level", d:" at volume {v}"]],  												],
 		poll						: [ n: "Poll",						i: 'question',																																																											],
 		presetPosition				: [ n: "Move to preset position",														a: "windowShade",					v: "partially open",																																],
 		previousTrack				: [ n: "Previous track",																																																														],
