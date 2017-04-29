@@ -26,38 +26,37 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 		dataService.loadInstance(instance, uri, pin).then(function(data) {
 				if ($scope.$$destroyed) return;
 				if (currentRequestId != $scope.requestId) { return };
-				if (data.error) {
-					switch (data.error) {
-						case 'ERR_INVALID_TOKEN':
-							$scope.dialogLogIn(data.name, data.uri);
-							break;
+				if (data) {
+					if (data.error) {
+						switch (data.error) {
+							case 'ERR_INVALID_TOKEN':
+								$scope.dialogLogIn(data.name, data.uri);
+								break;
+						}
+					} else {
+						$scope.initialized = true;
+						$scope.location = dataService.getLocation();
+						$scope.instance = dataService.getInstance();
+						$scope.currentInstanceId = $scope.instance.id;
+						$scope.instanceCount = dataService.getInstanceCount();
+    		            if (!$scope.devices) $scope.devices = $scope.listAvailableDevices();
+	    	            if (!$scope.virtualDevices) $scope.virtualDevices = $scope.listAvailableVirtualDevices();
+						window.scope = $scope;
+						$scope.loading = false;
+						$scope.activePistons = 0;
+						$scope.pausedPistons = 0;
+						for(pistonIndex in $scope.instance.pistons) {
+							var piston = $scope.instance.pistons[pistonIndex];
+							if (piston.meta && piston.meta.a) {
+								$scope.activePistons++;
+							} else {
+								$scope.pausedPistons++;
+							}
+						}
+						$scope.clock();
+						$scope.render();
 					}
 				} else {
-					$scope.initialized = true;
-					$scope.location = dataService.getLocation();
-					$scope.instance = dataService.getInstance();
-					$scope.currentInstanceId = $scope.instance.id;
-					$scope.instanceCount = dataService.getInstanceCount();
-    	            if (!$scope.devices) $scope.devices = $scope.listAvailableDevices();
-	                if (!$scope.virtualDevices) $scope.virtualDevices = $scope.listAvailableVirtualDevices();
-					window.scope = $scope;
-					$scope.loading = false;
-					$scope.activePistons = 0;
-					$scope.pausedPistons = 0;
-					for(pistonIndex in $scope.instance.pistons) {
-						var piston = $scope.instance.pistons[pistonIndex];
-						if (piston.meta && piston.meta.a) {
-							$scope.activePistons++;
-						} else {
-							$scope.pausedPistons++;
-						}
-					}
-					$scope.clock();
-					$scope.render();
-				}
-		    }, function(data, status, headers, config) {
-				if ($scope.$$destroyed) return;
-				if (status == 404) {
 					$scope.dialogDeleteInstance(instance);
 				}
 			});
@@ -549,22 +548,7 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 
 
 	$scope.determineDeviceType = function(device) {
-		if (device.cn.indexOf('Water Sensor') >= 0) return 'waterSensor';
-		if (device.cn.indexOf('Contact Sensor') >= 0) return 'contactSensor';
-		if (device.cn.indexOf('Thermostat') >= 0) return 'thermostat';
-		if (device.cn.indexOf('Garage Door Control') >= 0) return 'garageDoor';
-		if (device.cn.indexOf('Music Player') >= 0) return 'musicPlayer';
-		if (device.cn.indexOf('Door Control') >= 0) return 'door';
-		if (device.cn.indexOf('Presence Sensor') >= 0) return 'presenceSensor';
-		if (device.cn.indexOf('Motion Sensor') >= 0) return 'motionSensor';
-		if (device.cn.indexOf('Color Control') >= 0) return 'rgbBulb';
-		if (device.cn.indexOf('Color Temperature') >= 0) return 'whiteBulb';
-		if (device.cn.indexOf('Switch Level') >= 0) return 'dimmer';
-		if (device.cn.indexOf('Switch') >= 0) return 'switch';
-		if (device.cn.indexOf('Lock') >= 0) return 'lock';
-		if ((device.cn.indexOf('Button') >= 0) && (device.cn.indexOf('Button') >= 0)) return 'keypad';
-		if (device.cn.indexOf('Button') >= 0) return 'button';
-		if (device.cn.indexOf('Temperature Measurement') > 0) return 'temperatureSensor';
+		return dataService.determineDeviceType(device);
 	};
 
 

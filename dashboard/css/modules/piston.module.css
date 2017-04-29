@@ -226,6 +226,7 @@ container,
 variables,
 devices,
 statements,
+events,
 conditions,
 restrictions,
 tasks {
@@ -385,7 +386,7 @@ span.hl.typ {
 line[var],
 span[var],
 span.hl.var {
-	color: #af2b91;
+	color: #c63;
 }
 
 span[kwd] + task {
@@ -459,15 +460,18 @@ span[tsk][single=true] {
 
 piston[anonymized] span[phn],
 piston[anonymized] span[dev] {
-	font-size: 0px;
+	font-size: 0px !important;
+	line-height: 0px !important;
 }
 
 piston[anonymized] span[dev]::before {
-	content: '[device]';
+	line-height: 17px !important;
+	content: attr(an);
 	font-size: initial;
 }
 
 piston[anonymized] span[phn]::before {
+	line-height: 17px !important;
 	content: '[phone number]';
 	font-size: initial;
 }
@@ -486,6 +490,7 @@ nav .title {
 }
 
 statement,
+event,
 condition,
 restriction {
     width: 100%;
@@ -541,11 +546,14 @@ statement task > content::before {
     font-size: 10px;
 }
 
+events > events,
 conditions > conditions,
 restrictions > restrictions {
     margin-left: -0px;
 }
 
+events > dnd-nodrag > div > line[operator]:nth-last-child(2),
+events > dnd-nodrag > div > container > line[operator]:nth-last-child(2),
 conditions > dnd-nodrag > div > line[operator]:nth-last-child(2),
 conditions > dnd-nodrag > div > container > line[operator]:nth-last-child(2),
 restrictions > dnd-nodrag > div > line[operator]:nth-last-child(2),
@@ -553,6 +561,7 @@ restrictions > dnd-nodrag > div > container > line[operator]:nth-last-child(2) {
     display: none;
 }
 
+event subscription,
 condition subscription {
 	position: absolute;
 	left: 39px;
@@ -658,6 +667,7 @@ piston[trace=true] trace {
 	width: 40px;
 }
 
+events,
 conditions,
 restrictions {
 	display: flex !important;
@@ -716,6 +726,7 @@ parameter[optional=true] label.control-label::after {
 
 @media (hover:hover) {
 	piston[mode=edit] statement:hover,
+	piston[mode=edit] events:hover,
 	piston[mode=edit] conditions:hover,
 	piston[mode=edit] restrictions:hover {
 	    background: rgba(0, 0, 0, 0.05);
@@ -1070,19 +1081,37 @@ img {
 	max-width: 100%;
 }
 
+
+
+
+
+
+piston[printing] dnd-nodrag[disabled] {
+	display: none !important;;
+}
+
+
+dnd-nodrag[disabled] * {
+	color: rgba(0, 0, 0, 0.2) !important;	
+	border-color: rgba(0, 0, 0, 0.05) !important;
+	font-style: italic;
+}
+
+
+
 @media only screen 
   and (min-device-width: 320px) 
   and (max-device-width: 568px)
   and (-webkit-min-device-pixel-ratio: 2) {
 
-	piston line,
-	piston line * {
+	piston:not([printing]) line,
+	piston:not([printing]) line * {
 		line-height: 44px !important;
 		min-height: 44px !important;
 		font-size: 16px;
 	}
 
-	piston line::after {
+	piston:not([printing]) line::after {
 		display: block;
 		content: "";
 		margin-left: -100px;
@@ -1090,8 +1119,9 @@ img {
 		border-top: solid 1px #eee;
 	}
 
-	condition subscription,
-	statement async {
+	piston:not([printing]) event subscription,
+	piston:not([printing]) condition subscription,
+	piston:not([printing]) statement async {
 		margin-top: 16px;
 	}
 }

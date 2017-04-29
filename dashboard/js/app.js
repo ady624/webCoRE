@@ -782,6 +782,30 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 		navigator.registerProtocolHandler('web+core','https://' + window.location.hostname + '/handler/%s', 'webCoRE');
 	};
 
+
+	dataService.determineDeviceType = function(device) {
+		if (device && device.cn) {
+	        if (device.cn.indexOf('Water Sensor') >= 0) return 'waterSensor';
+	        if (device.cn.indexOf('Contact Sensor') >= 0) return 'contactSensor';
+	        if (device.cn.indexOf('Thermostat') >= 0) return 'thermostat';
+	        if (device.cn.indexOf('Garage Door Control') >= 0) return 'garageDoor';
+	        if (device.cn.indexOf('Music Player') >= 0) return 'musicPlayer';
+	        if (device.cn.indexOf('Door Control') >= 0) return 'door';
+	        if (device.cn.indexOf('Presence Sensor') >= 0) return 'presenceSensor';
+	        if (device.cn.indexOf('Motion Sensor') >= 0) return 'motionSensor';
+	        if (device.cn.indexOf('Color Control') >= 0) return 'rgbBulb';
+	        if (device.cn.indexOf('Color Temperature') >= 0) return 'whiteBulb';
+	        if (device.cn.indexOf('Switch Level') >= 0) return 'dimmer';
+	        if (device.cn.indexOf('Switch') >= 0) return 'switch';
+	        if (device.cn.indexOf('Lock') >= 0) return 'lock';
+	        if ((device.cn.indexOf('Button') >= 0) && (device.cn.indexOf('Button') >= 0)) return 'keypad';
+	        if (device.cn.indexOf('Button') >= 0) return 'button';
+	        if (device.cn.indexOf('Temperature Measurement') > 0) return 'temperatureSensor';
+		}
+		return 'unknownDevice';
+	}
+
+
 	//initialize store
 	store = readObject('store');
 	if (!store) {
@@ -1174,4 +1198,4 @@ if (document.selection) {
      document.execCommand("Copy");
 }}
 
-version = function() { return 'v0.0.093.20170428'; };
+version = function() { return 'v0.0.096.20170429'; };

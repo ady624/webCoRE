@@ -212,7 +212,8 @@
 		<span ng-if="!mobile">Please right click on the picture below and copy or save it to a file.</span>
 	</center>
 	<dnd-nodrag>
-		<img draggable="false" id="capturedImage" src="{{capturedImage}}" onclick="window.open(this.src);" dnd-nodrag/>
+		<img ng-if="mobile" draggable="false" id="capturedImage" src="{{capturedImage}}" onclick="window.open(this.src);" dnd-nodrag/>
+		<img ng-if="!mobile" draggable="false" id="capturedImage" src="{{capturedImage}}" dnd-nodrag/>
 	</dnd-nodrag>
 </script>
 
@@ -283,7 +284,7 @@
 	<line new data-ng-click="addStatement(statements)">+ add a new statement</line>
 </script>
 <script type="text/ng-template" id="statement">
-	<dnd-nodrag ng-selected="selection == statement">
+	<dnd-nodrag ng-selected="selection == statement" ng-disabled="statement.di">
 		<async ng-if="(statement.a == '1')" class="fa fa-code-fork" title="This statement is executed asynchronously"></async>
 		<bar ng-if="(statement.t!='action') || ((mode=='edit') && view.movable) || ((statement.d) && (statement.d.length)) || ((statement.r) && (statement.r.length)) || ((statement.k) && ((mode=='edit') || (statement.k.length>1)))" asynch="{{statement.a == '1'}}"></bar>
 <!--		<trace ng-if="(view.trace && (mode=='view') && trace && trace.points && trace.points['s:' + statement.$])"><span>+{{trace.points['s:' + statement.$].o}}ms</span><span dur>{{trace.points['s:' + statement.$].d}}ms</span></trace>-->
@@ -314,6 +315,42 @@
 			<line ng-if="!(((mode=='edit') && view.movable) || ((statement.d) && (statement.d.length)) || ((statement.r) && (statement.r.length)) || ((statement.k) && (statement.k.length==0)))" new data-ng-click="addTask(statement)">+ add a new task</line>
 		</div>
 
+		<!--do-->
+		<div no-drag class="no-drag" ng-if="statement.t=='do'" no-drag>
+			<line com ng-if="statement.z">/* {{statement.z}} */</line>
+			<line kwd ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)">only when</line>
+			<restrictions ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)" data-ng-repeat="collection in [statement]" data-ng-include="'restrictions'" dnd-nodrag data-nag-model="statement"></restrictions>
+			<line kwd ng-click="select(statement, statements)">
+				<handle dnd-handle class="fa fa-sort"></handle><span ng-click="editStatement(statement, statements)" kwd>{{statement.a == '1' ? 'async ' : ''}}do</span>
+				<badge green ng-if="(statement.tep == 'c')" badge="C" title="Only execute on condition state change"></badge>
+				<badge green ng-if="(statement.tep == 'p')" badge="P" title="Only execute on piston state change"></badge>
+				<badge green ng-if="(statement.tep == 'b')" badge="C|P" title="Only execute on condition or piston state change"></badge>
+				<badge red ng-if="(statement.tcp != 'c') && (statement.tcp != 'p') && (statement.tcp != 'b')" badge="N" title="Never cancel"></badge>
+				<badge red ng-if="(statement.tcp == 'p')" badge="P" title="Cancel on piston state change"></badge>
+				<badge red ng-if="(statement.tcp == 'b')" badge="C|P" title="Cancel on condition or piston state change"></badge>
+				<badge blue ng-if="statement.tsp == 'a'" badge="A" title="Allow multiple schedules"></badge>
+				<span ng-if="view.trace && (mode=='view')" nul> /* #{{statement.$}} */</span>
+			</line>
+			<statements ng-if="(mode=='edit') || (statement.s && statement.s.length)" dnd-list="statement.s" dnd-allowed-types="['statement']" data-ng-repeat="statements in [statement.s]" data-ng-include="'statements'" dnd-nodrag data-nag-model="statement.s" exec="{{statement && statement.s && statement.s.length && trace && trace.points && !!trace.points['s:' + statement.s[0].$]}}"></statements>
+			<line ng-if-end kwd ng-click="select(statement, statements)">end do;</line>
+		</div>
+
+
+		<!--on-->
+		<div no-drag class="no-drag" ng-if="statement.t=='on'" no-drag>
+			<line com ng-if="statement.z">/* {{statement.z}} */</line>
+			<line kwd ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)">only when</line>
+			<restrictions ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)" data-ng-repeat="collection in [statement]" data-ng-include="'restrictions'" dnd-nodrag data-nag-model="statement"></restrictions>
+			<line kwd ng-click="select(statement, statements)">
+				<handle dnd-handle class="fa fa-sort"></handle><span ng-click="editStatement(statement, statements)" kwd>on events from</span>
+				<span ng-if="view.trace && (mode=='view')" nul> /* #{{statement.$}} */</span>
+			</line>
+			<events data-ng-repeat="collection in [statement]" data-ng-include="'events'" dnd-nodrag eval="{{statement && trace && trace.points && trace.points['c:' + statement.$] ? trace.points['c:' + statement.$].v : ''}}"></events>
+			<line kwd ng-click="select(statement, statements)">do</line>
+			<statements ng-if="(mode=='edit') || (statement.s && statement.s.length)" dnd-list="statement.s" dnd-allowed-types="['statement']" data-ng-repeat="statements in [statement.s]" data-ng-include="'statements'" dnd-nodrag data-nag-model="statement.s" exec="{{statement && statement.s && statement.s.length && trace && trace.points && !!trace.points['s:' + statement.s[0].$]}}"></statements>
+			<line ng-if-end kwd ng-click="select(statement, statements)">end on;</line>
+		</div>
+
 		<!--if-->
 		<div no-drag class="no-drag" ng-if="statement.t=='if'" no-drag>
 			<line com ng-if="statement.z">/* {{statement.z}} */</line>
@@ -334,7 +371,7 @@
 			<line kwd ng-if="(mode=='edit') || (statement.s && statement.s.length)" ng-click="select(statement, statements)">then</line>
 			<statements ng-if="(mode=='edit') || (statement.s && statement.s.length)" dnd-list="statement.s" dnd-allowed-types="['statement']" data-ng-repeat="statements in [statement.s]" data-ng-include="'statements'" dnd-nodrag data-nag-model="statement.s" exec="{{statement && statement.s && statement.s.length && trace && trace.points && !!trace.points['s:' + statement.s[0].$]}}"></statements>
 			<line kwd ng-if="(mode=='edit') || (statement.ei && statement.ei.length)" ng-repeat-start="elseIf in statement.ei" ng-click="select(statement, statements)">else if</line>
-			<conditions ng-if="(mode=='edit') || (statement.ei && statement.ei.length)" data-ng-repeat="collection in [elseIf]" data-ng-include="'conditions'" dnd-nodrag data-nag-model="elseIf" eval="{{elseIf && trace && trace.points && trace.points['c:' + elseIf.$] ? trace.points['c:' + elseIf.$].v : ''}}"></conditions>
+			<conditions ng-if="(mode=='edit') || (statement.ei && statement.ei.length)" data-ng-repeat="collection in [elseIf]" data-ng-include="'conditions'" ng-init="parentCollection = elseIf" dnd-nodrag data-nag-model="elseIf" eval="{{elseIf && trace && trace.points && trace.points['c:' + elseIf.$] ? trace.points['c:' + elseIf.$].v : ''}}"></conditions>
 			<line kwd ng-if="(mode=='edit') || (statement.ei && statement.ei.length)" ng-click="select(statement, statements)">then</line>
 			<statements ng-if="(mode=='edit') || (statement.ei && statement.ei.length)" dnd-list="elseIf.s" dnd-allowed-types="['statement']" ng-repeat-end data-ng-repeat="statements in [elseIf.s]" data-ng-include="'statements'" dnd-nodrag data-nag-model="elseIf.s" exec="{{elseIf && elseIf.s && elseIf.s.length && trace && trace.points && !!trace.points['s:' + elseIf.s[0].$]}}"></statements>
 			<line ng-if-start="(mode=='edit') && view.elseIfs" kwd>else if</line>
@@ -513,6 +550,30 @@
 
 
 
+<script type="text/ng-template" id="events">
+	<dnd-nodrag ng-selected="selection && (selection.c == collection.c)">
+		<bar ng-if="(mode=='edit') || (collection.c && (collection.c.length > 1))"></bar>
+		<trace ng-if="(view.trace && (mode=='view') && (collection.c) && (collection.c.length > 1) && trace && trace.points && trace.points['c:' + collection.$])"><span>+{{point.o}}ms</span><span dur eval="{{trace.points['c:' + collection.$].v}}">{{point.d}}ms</span></trace>
+		<div no-drag class="no-drag" dnd-list="collection.c" dnd-allowed-types="['event']" ng-selected="selection == collection">
+			<line com ng-if="collection.z">/* {{collection.z}} */</line>
+			<event data-ng-repeat-start="event in collection.c" data-ng-include="'event'" dnd-nodrag dnd-draggable="event" dnd-nodrag dnd-type="'event'" dnd-moved="drag(collection.c, $index);" dnd-effect-allowed="copyMove"></event>
+			<line operator data-ng-repeat-end><span pun>or</span></line>
+			<line new data-ng-click="addEvent(collection)">+ add a new event</line>
+		</div>		
+	</dnd-nodrag>
+</script>
+<script type="text/ng-template" id="event">
+	<dnd-nodrag ng-selected="selection == event">
+		<div>
+		<trace ng-if="(view.trace && (mode=='view') && trace && trace.points && trace.points['c:' + event.$])"><span>+{{trace.points['c:' + event.$].o}}ms</span><span dur eval="{{trace.points['c:' + event.$].v}}">{{trace.points['c:' + event.$].d}}ms</span></trace>
+		<subscription ng-if="(mode == 'view') && !!event.s" class="fa fa-bolt" title="This event subscribes to events"></subscription>
+		<line com ng-if="!event.c && !!event.z">/* {{event.z}} */</line>
+		<line cond ng-if="!event.c" ng-click="select(event, collection.c, 'event')">
+			<handle dnd-handle class="fa fa-sort"></handle><span ng-click="editEvent(event, collection.c);" ng-bind-html="event.$$html || (event.$$html = renderOperand(event.lo))"></span><span ng-if="view.trace && (mode=='view')" nul> /* #{{event.$}} */</span>
+		</line>
+		</div>	
+	</dnd-nodrag>
+</script>
 
 
 
@@ -771,6 +832,12 @@
 				<label class="col-lg-12 no-padding">New piston state<span class="error" ng-if="!designer.operand.valid">{{designer.operand.error}}<span ng-if="designer.operand.expressionVar"> (<a ng-click="autoAddVariable(designer.operand.expressionVar); validateOperand(designer.operand);">create it</a>)</span>&nbsp;<i class="fa fa-warning"></i></span></label>
 				<operand ng-repeat="operand in [designer.operand]" ng-model="designer.operand" ng-include="'operand'"></operand>
 			</div>
+			<div class="form-group" ng-if="designer.type=='do'">
+				<info>There are no options for the <i>do</i> statement. Add statements you want to execute.</info>
+			</div>
+			<div class="form-group" ng-if="designer.type=='on'">
+				<info>There are no options for the <i>on</i> statement. Add events that you want to execute statements on.</info>
+			</div>
 			<div class="form-group" ng-if="designer.type=='action'">
 				<info>Actions represent a collection of tasks a device or group of devices have to perform. The <i>Location</i> virtual device provides a way to execute some non-device-specific tasks, such as changing the location mode, the SHM state, sending notifications, communicating with integrated apps, and more. Note that these virtual tasks are also available to any and all devices.</info>
 				<div class="form-group">
@@ -906,7 +973,7 @@
 					<label for="descriptionInput">Description (optional)</label>
 					<textarea name="desc" type="text" id="descriptionInput" class="form-control" placeholder="Description for this statement" ng-model="designer.description"></textarea>
 				</div>
-				<div class="form-group">
+				<div class="form-group" ng-if="designer.type != 'on'">
 					<label for="tep" help>Task Execution Policy</label>
 					<select data-actions-box="true" name="tep" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-default" ng-model="designer.tep" data-mobile="{{mobile}}">
 						<option value="">Always execute tasks (default)</option>
@@ -915,7 +982,7 @@
 						<option value="b">Execute tasks on condition or piston state change only</option>
 					</select>
 				</div>
-				<div class="form-group">
+				<div class="form-group" ng-if="designer.type != 'on'">
 					<label for="tcp" help>Task Cancellation Policy</label>
 					<select data-actions-box="true" name="tcp" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-default" ng-model="designer.tcp" data-mobile="{{mobile}}">
 						<option value="">Never cancel tasks</option>
@@ -950,17 +1017,26 @@
 						<option value="e">Fall-through (programmer style)</option>
 					</select>
 				</div>
-				<div class="form-group" ng-if="designer.type != 'every'">
+				<div class="form-group" ng-if="(designer.type != 'every') && (designer.type != 'on')">
 					<label for="async" help>Execution Method</label>
 					<select data-actions-box="true" name="async" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-default" ng-model="designer.async" data-mobile="{{mobile}}">
 						<option value="0">Synchronous (default)</option>
 						<option value="1">Asynchronous</option>
 					</select>
 				</div>
+				<div class="form-group">
+					<label help>Disable statement</label>
+					<select data-actions-box="true" name="disabled" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-default" ng-model="designer.disabled" data-mobile="{{mobile}}">
+						<option value="0">No (default)</option>
+						<option value="1">Yes</option>
+					</select>
+				</div>
 			</div>
 		</form>
 		<footer>
 			<!--<button type="button" ng-if="(designer.type=='if' ) && (designer.$new)" class="btn btn-info pull-right" ng-disabled="!designer.type" ng-click="updateStatement(true);">Add a condition</button>-->
+			<button type="button" ng-if="(designer.type=='do' ) && (designer.$new)" class="btn btn-info pull-right" ng-disabled="!designer.type" ng-click="updateStatement(true);">Add a statement</button>
+			<button type="button" ng-if="(designer.type=='on' ) && (designer.$new)" class="btn btn-info pull-right" ng-disabled="!designer.type" ng-click="updateStatement(true);">Add an event</button>
 			<button type="button" ng-if="(designer.type=='switch' ) && (designer.$new)" class="btn btn-info pull-right" ng-disabled="!designer.type" ng-click="updateStatement(true);">Add a case</button>
 			<button type="button" ng-if="(designer.type=='for' ) && (designer.$new)" class="btn btn-info pull-right" ng-disabled="!designer.type" ng-click="updateStatement(true);">Add a statement</button>
 			<button type="button" ng-if="(designer.type=='each' ) && (designer.$new)" class="btn btn-info pull-right" ng-disabled="!designer.type" ng-click="updateStatement(true);">Add a statement</button>
@@ -979,6 +1055,36 @@
 		</footer>
 	</designer>
 </script>
+
+<script type="text/ng-template" id="dialog-edit-event">
+	<designer>
+		<header>
+			<label >{{designer.$new ? 'Add' : 'Edit' }} an event</label>
+		</header>
+		<form>
+			<info ng-if="designer.type=='condition'">An event allows the execution of statements when certain devices' attributes change.</info>
+			<comparison ng-repeat="comparison in [designer.comparison]" ng-include="'comparison'"></comparison>
+
+			<div ng-if="designer.showAdvancedOptions" class="form-group">
+				<div class="form-group">
+					<label for="descriptionInput">Description (optional)</label>
+					<textarea type="text" id="descriptionInput" class="form-control" placeholder="Description for this event" ng-model="designer.description"></textarea>
+				</div>
+			</div>
+
+		</form>
+		<footer>
+			<button type="button" ng-if="designer.$new" class="btn btn-info pull-right" ng-disabled="!designer.comparison.left.valid" ng-click="updateEvent();">Add</button>
+			<button type="button" ng-if="designer.$new" class="btn btn-success pull-right" ng-disabled="!designer.comparison.left.valid" ng-click="updateEvent(true);">Add more</button>
+			<button type="button" ng-if="!designer.$new" class="btn btn-info pull-right" ng-disabled="!designer.comparison.left.valid" ng-click="updateEvent();">Save</button>
+			<button type="button" class="btn btn-default pull-right" ng-click="toggleAdvancedOptions();" title="Show/Hide advanced options"><i class="fa fa-cog"></i></button>
+			<button type="button" class="btn btn-default" ng-click="closeDialog();">Cancel</button>
+			<button type="button" ng-if="!designer.$new" class="btn btn-danger" ng-click="deleteObject();">Delete</button>
+		</footer>
+	</designer>
+</script>
+
+
 
 <script type="text/ng-template" id="dialog-edit-condition">
 	<designer ng-if="designer.page==0">
@@ -1107,7 +1213,6 @@
 		</footer>
 	</designer>
 </script>
-
 
 
 <script type="text/ng-template" id="dialog-edit-condition-group">
@@ -1336,29 +1441,29 @@
 		<label class="col-lg-12 no-padding">What to compare<span class="error" ng-if="!designer.comparison.left.valid">{{designer.comparison.left.error}}<span ng-if="designer.comparison.left.expressionVar"> (<a ng-click="autoAddVariable(designer.comparison.left.expressionVar); validateOperand(designer.comparison.left);">create it</a>)</span>&nbsp;<i class="fa fa-warning"></i></span></label>
 		<operand ng-repeat="operand in [designer.comparison.left]" ng-model="designer.comparison.left" ng-include="'operand'"></operand>
 	</div>
-	<div class="form-group {{comparison.operatorValid ? '' : 'has-error'}}">
+	<div ng-if="!comparison.event" class="form-group {{comparison.operatorValid ? '' : 'has-error'}}">
 		<label class="col-lg-12 no-padding">What kind of comparison?</label>
 		<select data-actions-box="true" id="operator" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-info" ng-model="comparison.operator" data-mobile="{{mobile}}" ng-change="validateComparison(comparison)" ng-options="option.id as option.d group by option.c for option in comparison.options">
 			<option style="display:none" value="" disabled>Select a comparison...</option>
 		</select>
 	</div>
-	<div class="form-group" ng-if="comparison.parameterCount > 0">
+	<div class="form-group" ng-if="!comparison.event && (comparison.parameterCount > 0)">
 		<label class="col-lg-12 no-padding">{{comparison.parameterCount == 1 ? 'Compare to' : 'Between...'}}<span class="error" ng-if="!designer.comparison.right.valid">{{designer.comparison.right.error}}<span ng-if="designer.comparison.right.expressionVar"> (<a ng-click="autoAddVariable(designer.comparison.right.expressionVar); validatecomparison.right(designer.comparison.right);">create it</a>)</span>&nbsp;<i class="fa fa-warning"></i></span></label>
 		<operand ng-repeat="operand in [designer.comparison.right]" ng-model="designer.comparison.left" ng-include="'operand'"></operand>
 	</div>
-	<div class="form-group" ng-if="(comparison.parameterCount > 0) && (designer.comparison.left.selectedDataType=='time') && (designer.comparison.right.data.t != 'c')">
+	<div class="form-group" ng-if="!comparison.event && (comparison.parameterCount > 0) && (designer.comparison.left.selectedDataType=='time') && (designer.comparison.right.data.t != 'c')">
 		<label class="col-lg-12 no-padding">With offset...<span class="error" ng-if="!designer.comparison.right.valid">{{designer.comparison.time.error}}<span ng-if="designer.comparison.time.expressionVar"> (<a ng-click="autoAddVariable(designer.comparison.time.expressionVar); validatecomparison.right(designer.comparison.time);">create it</a>)</span>&nbsp;<i class="fa fa-warning"></i></span></label>
 		<operand ng-repeat="operand in [designer.comparison.time]" ng-model="deisgner.comparison.time" ng-include="'operand'"></operand>
 	</div>
-	<div class="form-group" ng-if="comparison.parameterCount > 1">
+	<div class="form-group" ng-if="!comparison.event && (comparison.parameterCount > 1)">
 		<label class="col-lg-12 no-padding">...and...<span class="error" ng-if="!designer.comparison.right2.valid">{{designer.comparison.right2.error}}<span ng-if="designer.comparison.right2.expressionVar"> (<a ng-click="autoAddVariable(designer.comparison.right2.expressionVar); validatecomparison.right2(designer.comparison.right2);">create it</a>)</span>&nbsp;<i class="fa fa-warning"></i></span></label>
 		<operand ng-repeat="operand in [designer.comparison.right2]" ng-model="designer.comparison.left" ng-include="'operand'"></operand>
 	</div>
-	<div class="form-group" ng-if="(comparison.parameterCount > 1) && (designer.comparison.left.selectedDataType=='time') && (designer.comparison.right2.data.t != 'c')">
+	<div class="form-group" ng-if="!comparison.event && (comparison.parameterCount > 1) && (designer.comparison.left.selectedDataType=='time') && (designer.comparison.right2.data.t != 'c')">
 		<label class="col-lg-12 no-padding">With offset...<span class="error" ng-if="!designer.comparison.right.valid">{{designer.comparison.time2.error}}<span ng-if="designer.comparison.time2.expressionVar"> (<a ng-click="autoAddVariable(designer.comparison.time2.expressionVar); validatecomparison.right(designer.comparison.time2);">create it</a>)</span>&nbsp;<i class="fa fa-warning"></i></span></label>
 		<operand ng-repeat="operand in [designer.comparison.time2]" ng-model="deisgner.comparison.time2" ng-include="'operand'"></operand>
 	</div>
-	<div class="form-group" ng-if="comparison.timed">
+	<div class="form-group" ng-if="!comparison.event && comparison.timed">
 		<label class="col-lg-12 no-padding">{{comparison.timed == 1 ? 'In the last...' : 'For...'}}<span class="error" ng-if="!designer.comparison.time.valid">{{designer.comparison.time.error}}<span ng-if="designer.comparison.time.expressionVar"> (<a ng-click="autoAddVariable(designer.comparison.time.expressionVar); validatecomparison.time(designer.comparison.time);">create it</a>)</span>&nbsp;<i class="fa fa-warning"></i></span></label>
 		<div class="form-group" ng-if="comparison.timed == 2">
 			<select data-actions-box="true" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-warning" ng-model="comparison.time.data.f" data-mobile="{{mobile}}" ng-change="validateComparison(comparison)">
@@ -1369,18 +1474,18 @@
 		</div>
 		<operand ng-repeat="operand in [designer.comparison.time]" ng-model="designer.comparison.time" ng-include="'operand'"></operand>
 	</div>
-	<div class="form-group" ng-if="(comparison.left.data.t == 'v') && (comparison.left.data.v == 'ifttt')">
+	<div class="form-group" ng-if="!comparison.event && (comparison.left.data.t == 'v') && (comparison.left.data.v == 'ifttt')">
 		<label class="col-lg-12 no-padding">Use this URL in your IFTTT's Maker channel</label>
 		<textarea class="form-control" ifttt readonly value="test">{{getIFTTTUri(comparison.right.data.c)}}</textarea>
 	</div>
-	<div class="form-group" ng-if="(designer.comparison.left.data.t == 'v') && (designer.comparison.left.data.v == 'time')">
+	<div class="form-group" ng-if="!comparison.event && (designer.comparison.left.data.t == 'v') && (designer.comparison.left.data.v == 'time')">
 		<label for="devicesInput">Only on these days of the week...</label>
 		<select data-actions-box="true" name="dow" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-warning" ng-model="designer.comparison.left.data.odw" data-mobile="{{mobile}}" multiple>
 			<option value="" style="display:none">Any</option>
 			<option ng-repeat="day in weekDays track by $index" ng-value="$index">{{day}}</option>
 		</select>
 	</div>
-	<div class="form-group" ng-if="((designer.comparison.left.data.t == 'v') && (designer.comparison.left.data.v == 'time')) && (!designer.comparison.left.data.owm || !designer.comparison.left.data.owm.length)">
+	<div class="form-group" ng-if="!comparison.event && ((designer.comparison.left.data.t == 'v') && (designer.comparison.left.data.v == 'time')) && (!designer.comparison.left.data.owm || !designer.comparison.left.data.owm.length)">
 		<label for="devicesInput">Only on these days of the month...</label>
 		<select data-actions-box="true" name="dom" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-warning" ng-model="designer.comparison.left.data.odm" data-mobile="{{mobile}}" multiple>
 			<option value="" style="display:none">Any</option>
@@ -1390,7 +1495,7 @@
 			<option ng-value="-3">third-last</option>
 		</select>
 	</div>
-	<div class="form-group" ng-if="((designer.comparison.left.data.t == 'v') && (designer.comparison.left.data.v == 'time')) && (!designer.comparison.left.data.odm || !designer.comparison.left.data.odm.length)">
+	<div class="form-group" ng-if="!comparison.event && ((designer.comparison.left.data.t == 'v') && (designer.comparison.left.data.v == 'time')) && (!designer.comparison.left.data.odm || !designer.comparison.left.data.odm.length)">
 		<label for="devicesInput">Only on these weeks of the month...</label>
 		<select data-actions-box="true" name="wom" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-warning" ng-model="designer.comparison.left.data.owm" data-mobile="{{mobile}}" multiple>
 			<option value="" style="display:none">Any</option>
@@ -1400,7 +1505,7 @@
 			<option ng-value="-3">third-last</option>
 		</select>
 	</div>
-	<div class="form-group" ng-if="(designer.comparison.left.data.t == 'v') && (designer.comparison.left.data.v == 'time')">
+	<div class="form-group" ng-if="!comparison.event && (designer.comparison.left.data.t == 'v') && (designer.comparison.left.data.v == 'time')">
 		<label for="devicesInput">Only on these months of the year...</label>
 		<select data-actions-box="true" name="moy" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-warning" ng-model="designer.comparison.left.data.omy" data-mobile="{{mobile}}" multiple>
 			<option value="" style="display:none">Any</option>
@@ -1426,7 +1531,7 @@
 <!--
 		<label class="col-lg-12 no-padding"><span class="error" ng-if="!operand.valid">{{operand.error}}<span ng-if="operand.expressionVar"> (<a ng-click="autoAddVariable(operand.expressionVar); validateOperand(operand);">create it</a>)</span>&nbsp;<i class="fa fa-warning"></i></span></label>
 -->
-		<div class="form-group" ng-if="(operand.data.t=='p') && (operand.data.d) && ((operand.data.d.length> 1) || ((operand.data.d.length == 1) && !operand.data.d[0].startsWith(':'))) && (!operand.disableAggregation)">
+		<div class="form-group" ng-if="(!operand.event) && (operand.data.t=='p') && (operand.data.d) && ((operand.data.d.length> 1) || ((operand.data.d.length == 1) && !operand.data.d[0].startsWith(':'))) && (!operand.disableAggregation)">
 			<select data-actions-box="true" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-warning" ng-model="operand.data.g" data-mobile="{{mobile}}" ng-change="validateOperand(operand)">
 				<optgroup label="No aggregation">
 					<option value="any">Any of the selected devices</option>
@@ -1512,13 +1617,13 @@
 				<div class="form-table input-group pull-left" ng-if="(operand.data.t=='x') && (!operand.multiple)" style="width:{{operand.dataType == 'duration' ? '75' : '100'}}%">
 					<select data-actions-box="true" selectpicker class="selectpicker show-tick" data-width="75%" data-style="btn-default" ng-model="operand.data.x" data-mobile="{{mobile}}" ng-change="validateOperand(operand)" required>
 						<option style="display:none" value="" disabled>Nothing selected</option>
-						<optgroup ng-if="piston.v && piston.v.length" label="Local variables">
+						<optgroup ng-if="!operand.event && piston.v && piston.v.length" label="Local variables">
 							<option ng-repeat="variable in piston.v" value="{{variable.n}}" ng-if="!operand.restrictType || (operand.restrictType.indexOf(variable.t) >= 0)" data-content="<span class='vartype'>{{variable.t}}</span>{{variable.n}}">{{variable.n}} ({{variable.t}})</option>
 						</optgroup>
 						<optgroup label="Global variables">
 							<option ng-repeat="(name, variable) in globalVars" value="{{name}}" ng-if="!operand.restrictType || (operand.restrictType.indexOf(variable.t) >= 0)" data-content="<span class='vartype'>{{variable.t}}</span>{{name}}">{{name}} ({{variable.t}})</option>
 						</optgroup>
-						<optgroup label="System variables" ng-if="operand.dataType != 'variable'">
+						<optgroup label="System variables" ng-if="!operand.event && operand.dataType != 'variable'">
 							<option ng-repeat="name in systemVarNames" value="{{name}}" ng-if="!operand.restrictType || (operand.restrictType.indexOf(systemVars[name].t) >= 0)" data-content="<span class='vartype'>{{systemVars[name].t}}</span>{{name}}<span class='varval'>{{systemVars[name].v}}</span>">{{name}} ({{systemVars[name].t}})</option>
 						</optgroup>
 					</select>
@@ -1820,7 +1925,7 @@
 				<label class="col-lg-12 no-padding">Assignment type</label>
 				<select data-actions-box="true" id="type" selectpicker class="selectpicker show-tick input-addon" data-width="100%" data-style="btn-info" ng-model="designer.assignment" data-mobile="{{mobile}}">
 					<option value="d">Dynamic (default)</option>
-					<option value="s">Constant (value is sttic and cannot be changed)</option>
+					<option value="s">Constant (value is static and cannot be changed)</option>
 				</select>
 			</div>
 			<div ng-if="designer.showAdvancedOptions" class="form-group">

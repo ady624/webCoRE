@@ -193,7 +193,10 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 				$scope.schedules = response.data.schedules;
 				
 				$scope.initChart();
-				$scope.devices = $scope.listAvailableDevices();
+				if ($scope.instance && $scope.instance.devices) {
+					$scope.anonymizeDevices($scope.instance.devices);
+				}
+				$scope.devices =$scope.listAvailableDevices();
 				$scope.contacts = $scope.listAvailableContacts();
 				$scope.virtualDevices = $scope.listAvailableVirtualDevices();
 				window.scope = $scope;
@@ -757,6 +760,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 			statement.rop = 'and'; //restriction operator
 			statement.rn = false; //restriction negation
 			statement.a = '0'; //async
+			statement.di = false; //disabled
 			statement.tcp = 'c'; //tcp - cancel on condition state change
 			statement.tep = ''; //tep always
 			statement.tsp = ''; //tsp override
@@ -775,8 +779,9 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		$scope.designer.page = statement.t ? 1 : 0;
 		$scope.designer.operator = statement.o;
 		$scope.designer.not = statement.n ? '1' : '0';
+		$scope.designer.disabled = statement.di ? '1' : '0';
 		$scope.designer.roperator = statement.rop;
-		$scope.designer.rnot = statement.rn;
+		$scope.designer.rnot = statement.rn ? '1' : '0';
 		$scope.designer.description = statement.z;
 		$scope.designer.parent = parent;
 		$scope.designer.devices = statement.d;
@@ -854,6 +859,8 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 			],
 			advanced: [
 				{ type: 'switch', name: 'Switch', icon: 'code-fork', cssClass: 'info', description: 'A switch statement compares an operand against a set of values and executes statements corresponding to those matches', button: 'a switch' },
+				{ type: 'do', name: 'Do Block', icon: 'code', cssClass: 'success', description: 'A do block can help organize several statements into a single block', button: 'a do block' },
+				{ type: 'on', name: 'On event', icon: 'code-fork', cssClass: 'warning', description: 'An on event executes its statements only when certain events happen', button: 'an on event' },
 				{ type: 'for', name: 'For Loop', icon: 'circle-o-notch', cssClass: 'warning', description: 'A for loop executes the same statements for a set number of iteration cycles', button: 'a for loop' },
 				{ type: 'each', name: 'For Each Loop', icon: 'circle-o-notch', cssClass: 'warning', description: 'An each loop executes the same statements for each device in a device list', button: 'a for each loop' },
 				{ type: 'while', name: 'While Loop', icon: 'circle-o-notch', cssClass: 'warning', description: 'A while loop executes the same statements for as long as a condition is met', button: 'a while loop' },
@@ -885,11 +892,21 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		statement.z = $scope.designer.description;
 		statement.r = statement.r ? statement.r : [];
 		statement.rop = $scope.designer.roperator;
-		statement.rn = $scope.designer.rnot;
+		statement.rn = $scope.designer.rnot == '1';
+		statement.di = $scope.designer.disabled == '1';
 		switch (statement.t) {
 			case 'action':
 				statement.d = $scope.designer.devices;
 				statement.k = statement.k ? statement.k : [];
+				break;
+			case 'do':
+				statement.s = statement.s ? statement.s : [];
+				break;
+			case 'on':
+				statement.c = statement.c ? statement.c : [];
+				statement.o = 'or';
+				statement.n = false;
+				statement.s = statement.s ? statement.s : [];
 				break;
 			case 'if':
 				statement.o = $scope.designer.operator;
@@ -966,11 +983,13 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 					$scope.addTask(statement);
 					break;
 				case 'if':
+				case 'on':
 					$scope.addCondition(statement.c, false, defaultType);
 					break;
 				case 'while':
 					$scope.addCondition(statement.c);
 					break;
+				case 'do':
 				case 'for':
 				case 'each':
 				case 'repeat':
@@ -1081,6 +1100,101 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 			$scope.addStatement(_case.s);
 		}
 	}
+
+
+
+
+
+
+
+
+
+
+
+
+
+	/* events */
+
+	$scope.addEvent = function(parent) {
+		return $scope.editEvent(null, parent);
+	}
+
+	$scope.editEvent = function(event, parent) {
+		if ($scope.mode != 'edit') return;
+		var _new = !event;
+		if (!event) {
+			event = {};
+			event.t = 'event';
+			event.lo = {t: 'p', d: [], a: null, g:'any', v: null, c: '', x: null, e: ''};
+			event.z = '';
+			event.sm = 'auto';
+		}
+		$scope.designer = {
+			config: $scope.getExpressionConfig(),
+			clipboard: _new ? $scope.getClipboardItems('event') : []
+		};
+		$scope.designer.$event = event;
+		$scope.designer.$obj = event;
+		$scope.designer.type = event.t;
+		$scope.designer.$new = _new;
+		$scope.designer.parent = parent;
+		$scope.designer.comparison = {
+			event: true,
+			type: 'event',
+			left: {data: event.lo ? $scope.copy(event.lo) : {}, event: true},
+		}
+		$scope.validateComparison($scope.designer.comparison, true);
+		$scope.designer.smode = event.sm;
+		$scope.designer.description = event.z;
+		window.designer = $scope.designer;
+
+		$scope.designer.dialog = ngDialog.open({
+			template: 'dialog-edit-event',
+			className: 'ngdialog-theme-default ngdialog-large',
+			closeByDocument: false,
+			disableAnimation: true,
+			scope: $scope
+		});
+	};
+	
+	$scope.updateEvent = function(nextDialog) {
+		$scope.autoSave();
+		var event = $scope.designer.$new ? {t: $scope.designer.type} : $scope.designer.$event;
+		event.lo = $scope.fixOperand($scope.designer.comparison.left.data);
+		event.sm = $scope.designer.smode;
+		event.z = $scope.designer.description;
+		if (event.t) {
+			event.$$html = null;
+			if ($scope.designer.$new) {
+				if ($scope.designer.parent instanceof Array) {
+					$scope.designer.parent.push(event);
+				} else if (($scope.designer.parent.c) && ($scope.designer.parent.c instanceof Array)) {
+						$scope.designer.parent.c.push(event);
+				} else {
+					$scope.designer.parent.c = [event];
+				}
+			} else {
+				$scope.designer.$event = event;
+			}
+		}
+		$scope.closeDialog();
+		if (event.t && nextDialog) {
+			$scope.addEvent($scope.designer.parent);
+		}
+	}
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1601,7 +1715,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		variable.n = $scope.designer.name.trim().replace(/[^a-z0-9]|\s+|\r?\n|\r/gmi, '_');
 		variable.z = $scope.designer.description;
 		variable.a = $scope.designer.assignment;
-		var value = $scope.designer.operand.data;
+		var value = $scope.fixOperand($scope.designer.operand.data);
 		switch (value.t) {
 			case '':
 				variable.v = null;
@@ -2057,8 +2171,15 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		var cnt = 1;
 		var result = '';
 		for (i in list) {
-			var item = $scope.buildName(list[i], noQuotes, pedantic, itemPrefix);
-			result += '<span ' + (item.indexOf('<span') >= 0 ? '' : tag) + (className ? ' class="' + className + '"' : '') + '>' + item + '</span>' + (possessive ? '\'' + (item.substr(-1) == 's' ? '' : 's') : '') + (cnt < list.length ? '<span pun>' + (cnt == list.length - 1 ? (list.length > 2 ? ', ' : ' ') + suffix + ' ' : ', ') + '</span>' : '');
+			var an = '';
+			var it = list[i]
+			if (it instanceof Object) {
+				tag = it.t ? it.t : tag;
+				an = it.a ? it.a : '[device]';
+				it = it.n;
+			}
+			var item = $scope.buildName(it, noQuotes, pedantic, itemPrefix);
+			result += '<span ' + (tag ? tag : '') + (an ? ' an="' + an + '"' : '') + (className ? ' class="' + className + '"' : '') + '>' + item + '</span>' + (possessive ? '\'' + (item.substr(-1) == 's' ? '' : 's') : '') + (cnt < list.length ? '<span pun>' + (cnt == list.length - 1 ? (list.length > 2 ? ', ' : ' ') + suffix + ' ' : ', ') + '</span>' : '');
 			cnt++;
 		}
 		return result.trim();
@@ -2081,7 +2202,15 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 	$scope.buildDeviceNameList = function(devices) {
 		var deviceNames = [];
 		if (devices instanceof Array) {
-			for (deviceIndex in devices) {
+	        for (deviceIndex in devices) {
+	             var device = $scope.getDeviceById(devices[deviceIndex]);
+	             if (device) {
+	                 deviceNames.push({n: device.n, a: device.an, t: 'dev'});
+	             } else {
+	                 deviceNames.push({ n: '{' + devices[deviceIndex] + '}', t: 'var'});
+	             }
+	         }
+/*			for (deviceIndex in devices) {
 				var deviceId = devices[deviceIndex] || '';
 				if (deviceId.startsWith(':')) {
 					var device = $scope.getDeviceById(deviceId);
@@ -2091,7 +2220,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 				} else {
 					deviceNames.push('{<span var>' + deviceId + '</span>}');
 				}
-			}
+			}*/
 			if (deviceNames.length) {
 				return $scope.buildNameList(deviceNames, 'and', 'dev', '', false, true);
 			}
@@ -2587,12 +2716,12 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 			} else {
 				operand.allowDevices = dataType == 'device';
 				operand.allowPhysical = (dataType != 'datetime') && (dataType != 'date') && (dataType != 'time') && (dataType != 'device') && (dataType != 'variable') && (!strict || (dataType != 'boolean')) && (dataType != 'duration');
-				operand.allowPreset = (dataType == 'datetime') || (dataType == 'time') || (dataType == 'color');
-				operand.allowVirtual = (dataType != 'datetime') && (dataType != 'date') && (dataType != 'time') && (dataType != 'device') && (dataType != 'variable') && (dataType != 'decimal') && (dataType != 'integer') && (dataType != 'number') && (dataType != 'boolean') && (dataType != 'enum') && (dataType != 'color') && (dataType != 'duration');
+				operand.allowPreset = (!operand.event) && (dataType == 'datetime') || (dataType == 'time') || (dataType == 'color');
+				operand.allowVirtual = (!operand.event) && (dataType != 'datetime') && (dataType != 'date') && (dataType != 'time') && (dataType != 'device') && (dataType != 'variable') && (dataType != 'decimal') && (dataType != 'integer') && (dataType != 'number') && (dataType != 'boolean') && (dataType != 'enum') && (dataType != 'color') && (dataType != 'duration');
 				operand.allowVariable = (dataType != 'device' || ((dataType == 'device') && operand.multiple)) && (!strict || (dataType != 'boolean'));
-				operand.allowConstant = (dataType != 'device') && (dataType != 'variable');
-				operand.allowArgument = (dataType != 'device') && (dataType != 'variable');
-				operand.allowExpression = /*(dataType != 'device') && */(dataType != 'variable') && (dataType != 'enum') && (!strict || (dataType != 'boolean'));
+				operand.allowConstant = (!operand.event) && (dataType != 'device') && (dataType != 'variable');
+				operand.allowArgument = (!operand.event) && (dataType != 'device') && (dataType != 'variable');
+				operand.allowExpression = (!operand.event) && (dataType != 'variable') && (dataType != 'enum') && (!strict || (dataType != 'boolean'));
 			}
 			if (((operand.data.t == 'p') && (!operand.allowPhysical)) || ((operand.data.t == 'v') && (!operand.allowVirtual))) operand.data.t = 'c';
 
@@ -3533,9 +3662,9 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 			for (deviceIndex in devices) {
 				var device = $scope.getDeviceById(devices[deviceIndex]);
 				if (device) {
-					deviceNames.push(device.n);
+					deviceNames.push({n: device.n, a: device.an, t: 'dev'});
 				} else {
-					deviceNames.push('{' + devices[deviceIndex] + '}');
+					deviceNames.push({ n: '{' + devices[deviceIndex] + '}', t: 'var'});
 				}
 			}
 			if (deviceNames.length) {
@@ -3579,11 +3708,21 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 
 
 
+    $scope.determineDeviceType = function(device) {
+        return dataService.determineDeviceType(device);
+    };
 
-
-
-
-
+    $scope.anonymizeDevices = function(devices) {
+		var cache = {}
+		for (i in devices) {
+			var device = devices[i];
+	        var name = dataService.determineDeviceType(device).replace(/([A-Z])/g, ' $1').replace(/^./, function(str){ return str.toUpperCase(); }).replace('Rgb ', 'RGB ');
+			var idx = cache[name] ? cache[name] + 1 : 1;
+			cache[name] = idx;
+			devices[i].an = name + ' ' + idx;
+		}
+		return devices;
+    };
 
 	$scope.breakList = function(list) {
 		return list.replace(/,/g , '<br/>')
