@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.0.094.20170428" }
+public static String version() { return "v0.0.095.20170429" }
 /*
+ *	04/29/2017 >>> v0.0.095.20170429 - ALPHA - Fully implemented the on event statements
  *	04/28/2017 >>> v0.0.094.20170428 - ALPHA - Fixed a bug preventing timers from scheduling properly. Added the on statement and the do statement
  *	04/28/2017 >>> v0.0.093.20170428 - ALPHA - Fixed bugs (piston state issues, time condition schedules ignored offsets). Implemented more virtual commands (the fade suite)
  *	04/27/2017 >>> v0.0.092.20170427 - ALPHA - Added time trigger happens daily at...
@@ -338,7 +339,7 @@ def set(data) {
 
 
 private int setIds(node, maxId = 0, existingIds = [:], requiringIds = [], level = 0) {
-    if (node?.t in ['if', 'while', 'repeat', 'for', 'each', 'switch', 'action', 'every', 'condition', 'restriction', 'group', 'on', 'event']) {
+    if (node?.t in ['if', 'while', 'repeat', 'for', 'each', 'switch', 'action', 'every', 'condition', 'restriction', 'group', 'do', 'on', 'event']) {
         def id = node['$']
         if (!id || existingIds[id]) {
             requiringIds.push(node)
@@ -905,6 +906,28 @@ private Boolean executeStatement(rtData, statement, async = false) {
                     }
                     value = true
                     perform = !evaluateConditions(rtData, statement, 'c', async)
+                    break
+                case 'on':
+                    perform = false
+                    if (!rtData.fastForwardTo) {
+                    	//look to see if any of the event matches
+                        def deviceId = (rtData.event.device) ? hashId(rtData.event.device.id) : null
+                        for (event in statement.c) {
+                        	def operand = event.lo
+                            if (operand && operand.t) {
+                            	switch (operand.t) {
+                                	case 'p':
+                                    	if (!!deviceId && (rtData.event.name == operand.a) && !!operand.d && (operand.d instanceof List) && (deviceId in operand.d)) perform = true
+                                    	break;
+                                   	case 'x':
+                                    	if ((rtData.event.value == operand.x) && (rtData.event.name == handle())) perform = true                                        
+                                    	break;
+                                }
+                            }
+                            if (perform) break
+                        }
+                    }
+                    value = perform ? executeStatements(rtData, statement.s, async) : true
                     break
 				case 'if':
                 case 'while':
@@ -2937,6 +2960,21 @@ private traverseStatements(node, closure, parentNode = null, data = null) {
     }
 }
 
+private traverseEvents(node, closure, parentNode = null) {
+    if (!node) return
+	//if a statements element, go through each item
+	if (node instanceof List) {
+    	for(item in node) {
+	    	traverseEvents(item, closure, parentNode)
+	    }
+        return
+	}
+    //got a condition, pass it on to the closure
+    if ((closure instanceof Closure)) {
+    	closure(node, parentNode)
+    }
+}
+
 private traverseConditions(node, closure, parentNode = null) {
     if (!node) return
 	//if a statements element, go through each item
@@ -3053,7 +3091,8 @@ private void subscribeAll(rtData) {
             }
         }    
         def operandTraverser = { node, operand, value, comparisonType ->
-            switch (operand.t) {
+        	if (!operand) return
+            switch (operand.t) {	
                 case "p": //physical device
                     for(deviceId in expandDeviceList(rtData, operand.d, true)) {
                         devices[deviceId] = [c: (comparisonType ? 1 : 0) + (devices[deviceId]?.c ?: 0)]
@@ -3142,6 +3181,12 @@ private void subscribeAll(rtData) {
                     break
             }
         }
+        def eventTraverser = { event, parentEvent ->
+            if (event.lo) {
+				def comparisonType = 'trigger'
+                operandTraverser(event, event.lo, null, comparisonType)
+            }
+        }
         def conditionTraverser = { condition, parentCondition ->
             if (condition.co) {
                 def comparison = rtData.comparisons.conditions[condition.co]
@@ -3196,6 +3241,9 @@ private void subscribeAll(rtData) {
                 case 'repeat':
                 	traverseConditions((node.c?:[]) + (node.ei?node.ei*.c:[]), conditionTraverser)
                     break;
+                case 'on':
+                	traverseEvents(node.c?:[], eventTraverser)
+                    break
             	case 'switch':
                 	operandTraverser(node, node.lo, null, 'condition')
                 	for (c in node.cs) {
