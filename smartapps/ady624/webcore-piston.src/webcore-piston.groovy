@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.0.093.20170428" }
+public static String version() { return "v0.0.094.20170428" }
 /*
+ *	04/28/2017 >>> v0.0.094.20170428 - ALPHA - Fixed a bug preventing timers from scheduling properly. Added the on statement and the do statement
  *	04/28/2017 >>> v0.0.093.20170428 - ALPHA - Fixed bugs (piston state issues, time condition schedules ignored offsets). Implemented more virtual commands (the fade suite)
  *	04/27/2017 >>> v0.0.092.20170427 - ALPHA - Added time trigger happens daily at...
  *	04/27/2017 >>> v0.0.091.20170427 - ALPHA - Various improvements and fixes
@@ -337,7 +338,7 @@ def set(data) {
 
 
 private int setIds(node, maxId = 0, existingIds = [:], requiringIds = [], level = 0) {
-    if (node?.t in ['if', 'while', 'repeat', 'for', 'each', 'switch', 'action', 'every', 'condition', 'restriction', 'group']) {
+    if (node?.t in ['if', 'while', 'repeat', 'for', 'each', 'switch', 'action', 'every', 'condition', 'restriction', 'group', 'on', 'event']) {
         def id = node['$']
         if (!id || existingIds[id]) {
             requiringIds.push(node)
@@ -1061,6 +1062,9 @@ private Boolean executeStatement(rtData, statement, async = false) {
                 case 'action':
                     value = executeAction(rtData, statement, async)
                     break
+                case 'do':
+                	value = executeStatements(rtData, statement.s, async)
+                    break
                 case 'break':
                 	rtData.break = true
                     value = false
@@ -1310,7 +1314,7 @@ private scheduleTimer(rtData, timer, long lastRun = 0) {
     if (rtData.schedules.find{ it.s == timer.$ }) return
 	//complicated stuff follows...
     def t = now()
-    def interval = evaluateOperand(rtData, null, timer.lo).v
+    def interval = "${evaluateOperand(rtData, null, timer.lo).v}"
     if (!interval.isInteger()) return
     interval = interval.toInteger()
     if (interval <= 0) return
