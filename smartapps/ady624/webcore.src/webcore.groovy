@@ -18,9 +18,10 @@
  *
  *  Version history
 */
-public static String version() { return "v0.0.096.20170429" }
+public static String version() { return "v0.1.097.20170429" }
 /*
- *	04/29/2017 >>> v0.0.096.20170429 - ALPHA - Various bug fixes, added options to disable certain statements, as per @RobinWinbourne's idea
+ *	04/29/2017 >>> v0.1.097.20170429 - BETA M1 - First Beta Milestone 1!
+ *	04/29/2017 >>> v0.0.096.20170429 - ALPHA - Various bug fixes, added options to disable certain statements, as per @eibyer's original idea and @RobinWinbourne's annoying persistance :)
  *	04/29/2017 >>> v0.0.095.20170429 - ALPHA - Fully implemented the on event statements
  *	04/28/2017 >>> v0.0.094.20170428 - ALPHA - Fixed a bug preventing timers from scheduling properly. Added the on statement and the do statement
  *	04/28/2017 >>> v0.0.093.20170428 - ALPHA - Fixed bugs (piston state issues, time condition schedules ignored offsets). Implemented more virtual commands (the fade suite)
