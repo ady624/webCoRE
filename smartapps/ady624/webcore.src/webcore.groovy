@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.1.097.20170429" }
+public static String version() { return "v0.1.098.20170430" }
 /*
+ *	04/30/2017 >>> v0.1.098.20170430 - BETA M1 - Minor bug fixes
  *	04/29/2017 >>> v0.1.097.20170429 - BETA M1 - First Beta Milestone 1!
  *	04/29/2017 >>> v0.0.096.20170429 - ALPHA - Various bug fixes, added options to disable certain statements, as per @eibyer's original idea and @RobinWinbourne's annoying persistance :)
  *	04/29/2017 >>> v0.0.095.20170429 - ALPHA - Fully implemented the on event statements
@@ -1760,9 +1761,9 @@ private static Map commands() {
 		playText					: [ n: "Speak text...",					d: "Speak text \"{0}\"",																					p: [[n:"Text",t:"string"]],  													],
 		playTextAndRestore			: [ n: "Speak text and restore...",		d: "Speak text \"{0}\" and restore",																		p: [[n:"Text",t:"string"]],  													],
 		playTextAndResume			: [ n: "Speak text and resume...",		d: "Speak text \"{0}\" and resume",																		p: [[n:"Text",t:"string"]],  													],
-		playTrack					: [ n: "Play track...",					d: "Play track <uri>{0}</uri>{1}",																			p: [[n:"Track URL",t:"string"], [n:"Volume", t:"level", d:" at volume {v}"]],  												],
-		playTrackAndRestore			: [ n: "Play track and restore...",		d: "Play track <uri>{0}</uri>{1} and restore",																p: [[n:"Track URL",t:"string"], [n:"Volume", t:"level", d:" at volume {v}"]],  												],
-		playTrackAndResume			: [ n: "Play track and resume...",		d: "Play track <uri>{0}</uri>{1} and resume",																p: [[n:"Track URL",t:"string"], [n:"Volume", t:"level", d:" at volume {v}"]],  												],
+		playTrack					: [ n: "Play track...",					d: "Play track {0}{1}",																			p: [[n:"Track URL",t:"uri"], [n:"Volume", t:"level", d:" at volume {v}"]],  												],
+		playTrackAndRestore			: [ n: "Play track and restore...",		d: "Play track {0}{1} and restore",																p: [[n:"Track URL",t:"uri"], [n:"Volume", t:"level", d:" at volume {v}"]],  												],
+		playTrackAndResume			: [ n: "Play track and resume...",		d: "Play track {0}{1} and resume",																p: [[n:"Track URL",t:"uri"], [n:"Volume", t:"level", d:" at volume {v}"]],  												],
 		poll						: [ n: "Poll",						i: 'question',																																																											],
 		presetPosition				: [ n: "Move to preset position",														a: "windowShade",					v: "partially open",																																],
 		previousTrack				: [ n: "Previous track",																																																														],
@@ -1873,7 +1874,7 @@ private virtualCommands() {
 		sendSMSNotification			: [ n: "Send SMS notification...",	a: true,	i: "commenting-o",			d: "Send SMS notification \"{0}\" to {1}{2}",							p: [[n:"Message", t:"string"],[n:"Phone number",t:"phone"],[n:"Store in Messages", t:"boolean", d:" and store in Messages", s:1]],	],
 		sendNotificationToContacts	: [ n: "Send notification to contacts...",a: true,i: "commenting-o",		d: "Send notification \"{0}\" to {1}{2}",								p: [[n:"Message", t:"string"],[n:"Contacts",t:"contacts"],[n:"Store in Messages", t:"boolean", d:" and store in Messages", s:1]],	],
 		log							: [ n: "Log to console...",			a: true,	i: "bug",					d: "Log {0} \"{1}\"",													p: [[n:"Log type", t:"enum", o:["info","trace","debug","warn","error"]],[n:"Message",t:"string"],[n:"Store in Messages", t:"boolean", d:" and store in Messages", s:1]],	],
-		httpRequest					: [ n: "Make a web request",		a: true, 	i: "anchor",				d: "Make a {1} request to {0} with type {2}{3}",				        p: [[n:"URL", t:"string"],[n:"Method", t:"enum", o:["GET","POST","PUT","DELETE","HEAD"]],[n:"Content Type", t:"enum", o:["JSON","FORM"]],[n:"Send variables", t:"variables", d:" and data {v}"]],	],
+		httpRequest					: [ n: "Make a web request",		a: true, 	i: "anchor",				d: "Make a {1} request to {0} with type {2}{3}",				        p: [[n:"URL", t:"uri"],[n:"Method", t:"enum", o:["GET","POST","PUT","DELETE","HEAD"]],[n:"Content Type", t:"enum", o:["JSON","FORM"]],[n:"Send variables", t:"variables", d:" and data {v}"]],	],
         setVariable					: [ n: "Set variable...",			a: true,	i: "superscript",			d: "Set variable {0} = {1}",											p: [[n:"Variable",t:"variable"],[n:"Value", t:"dynamic"]],	],
         setState					: [ n: "Set piston state...",		a: true,	i: "superscript",			d: "Set piston state to \"{0}\"",										p: [[n:"State",t:"string"]],	],
 		setLocationMode				: [ n: "Set location mode...",		a: true,	i: "", 						d: "Set location mode to {0}", 											p: [[n:"Mode",t:"mode"]],																														],

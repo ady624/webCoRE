@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.1.097.20170429" }
+public static String version() { return "v0.1.098.20170430" }
 /*
+ *	04/30/2017 >>> v0.1.098.20170430 - BETA M1 - Minor bug fixes
  *	04/29/2017 >>> v0.1.097.20170429 - BETA M1 - First Beta Milestone 1!
  *	04/29/2017 >>> v0.0.096.20170429 - ALPHA - Various bug fixes, added options to disable certain statements, as per @eibyer's original idea and @RobinWinbourne's annoying persistance :)
  *	04/29/2017 >>> v0.0.095.20170429 - ALPHA - Fully implemented the on event statements
@@ -3523,6 +3524,7 @@ private Map evaluateExpression(rtData, expression, dataType = null) {
         case "enum":
         case "error":
         case "phone":
+        case "uri":
         case "text":
         	result = [t: 'string', v: cast(rtData, expression.v, 'string')]
         	break        
