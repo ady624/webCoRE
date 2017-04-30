@@ -2921,7 +2921,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 				operand.selectedDataType = 'dynamic';
 				break;
 			case 'c':
-				var expression = $scope.parseString(operand.data.c);
+				var expression = $scope.parseString(operand.data.c, operand.data.vt);
 				operand.error = expression.err;
 				operand.expressionVar = expression.errVar;
 				operand.data.exp = expression;
@@ -2939,7 +2939,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 				operand.selectedDataType = operand.dataType;//$scope.detectDataType(operand.data.c);
 				break;
 			case 'e':
-				var expression = $scope.parseExpression(operand.data.e);
+				var expression = $scope.parseExpression(operand.data.e, operand.data.vt);
 				operand.error = expression.err;
 				operand.expressionVar = expression.errVar;
 				if (expression.err) {
@@ -3247,6 +3247,9 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 								break;
 							case 'phone':
 								result = '<span phn>' + operand.c + '</span>';
+								break;
+							case 'uri':
+								result = '<span uri>' + operand.c + '</span>';
 								break;
 							default:
 								//if we still think we need quotes, let's make sure booleans don't have any
@@ -4001,11 +4004,11 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 
 
 
-	$scope.parseString = function(string) {
-		return $scope.parseExpression(string, true);
+	$scope.parseString = function(string, dataType) {
+		return $scope.parseExpression(string, true, dataType);
 	}
 
-	$scope.parseExpression = function(str, parseAsString) {
+	$scope.parseExpression = function(str, parseAsString, dataType) {
 		str = (str != null) ? str.toString() : "";
 		//remove \r \n
 		//str = str.replace(/[\r\n]*/g, "");
@@ -4048,7 +4051,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 				if (i-1 > startIndex) {
 					var value = str.slice(startIndex, i-1);
 					var parsedValue = parseFloat(value.trim());
-					if (!isNaN(parsedValue)) {
+					if ((dataType != 'phone') && !isNaN(parsedValue)) {
 						if (Number.isInteger(parsedValue)) {
 							arr.push({t: 'integer', v: parseInt(parsedValue), l: location(startIndex, i - 2)});
 							return true;
@@ -4360,8 +4363,8 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 	$scope.md5 = window.md5;
 }]);
 
-function test(value, parseAsString) {
-	scope.evaluateExpression(scope.parseExpression(value, parseAsString));
+function test(value, parseAsString, dataType) {
+	scope.evaluateExpression(scope.parseExpression(value, parseAsString, dataType));
 }
 
 var MAX_STACK_SIZE = 10;

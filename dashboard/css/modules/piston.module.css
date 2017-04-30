@@ -344,6 +344,11 @@ span.hl.phn {
 	color: #ff15ff;
 }
 
+line[uri],
+span[uri],
+span.hl.uri {
+	color: #3399ff;
+}
 
 
 line[exp],
@@ -458,6 +463,7 @@ span[tsk][single=true] {
 }
 
 
+piston[anonymized] span[uri],
 piston[anonymized] span[phn],
 piston[anonymized] span[dev] {
 	font-size: 0px !important;
@@ -473,6 +479,12 @@ piston[anonymized] span[dev]::before {
 piston[anonymized] span[phn]::before {
 	line-height: 17px !important;
 	content: '[phone number]';
+	font-size: initial;
+}
+
+piston[anonymized] span[uri]::before {
+	line-height: 17px !important;
+	content: '[https://webcore.co]';
 	font-size: initial;
 }
 
