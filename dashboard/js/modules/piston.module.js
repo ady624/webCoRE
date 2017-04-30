@@ -983,8 +983,10 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 					$scope.addTask(statement);
 					break;
 				case 'if':
-				case 'on':
 					$scope.addCondition(statement.c, false, defaultType);
+					break;
+				case 'on':
+					$scope.addEvent(statement.c);
 					break;
 				case 'while':
 					$scope.addCondition(statement.c);

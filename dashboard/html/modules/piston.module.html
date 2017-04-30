@@ -1438,7 +1438,7 @@
 
 <script type="text/ng-template" id="comparison">
 	<div class="form-group">
-		<label class="col-lg-12 no-padding">What to compare<span class="error" ng-if="!designer.comparison.left.valid">{{designer.comparison.left.error}}<span ng-if="designer.comparison.left.expressionVar"> (<a ng-click="autoAddVariable(designer.comparison.left.expressionVar); validateOperand(designer.comparison.left);">create it</a>)</span>&nbsp;<i class="fa fa-warning"></i></span></label>
+		<label class="col-lg-12 no-padding">{{comparison.event ? 'What event to expect' : 'What to compare'}}<span class="error" ng-if="!designer.comparison.left.valid">{{designer.comparison.left.error}}<span ng-if="designer.comparison.left.expressionVar"> (<a ng-click="autoAddVariable(designer.comparison.left.expressionVar); validateOperand(designer.comparison.left);">create it</a>)</span>&nbsp;<i class="fa fa-warning"></i></span></label>
 		<operand ng-repeat="operand in [designer.comparison.left]" ng-model="designer.comparison.left" ng-include="'operand'"></operand>
 	</div>
 	<div ng-if="!comparison.event" class="form-group {{comparison.operatorValid ? '' : 'has-error'}}">
