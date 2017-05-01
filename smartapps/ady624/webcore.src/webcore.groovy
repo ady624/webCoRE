@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.1.098.20170430" }
+public static String version() { return "v0.1.099.20170501" }
 /*
+ *	05/01/2017 >>> v0.1.099.20170501 - BETA M1 - Lots of fixes and improvements - expressions now accept more logical operators like !, !!, ==, !=, <, >, <=, >= and some new math operators like \ (integer division) and % (modulo)
  *	04/30/2017 >>> v0.1.098.20170430 - BETA M1 - Minor bug fixes
  *	04/29/2017 >>> v0.1.097.20170429 - BETA M1 - First Beta Milestone 1!
  *	04/29/2017 >>> v0.0.096.20170429 - ALPHA - Various bug fixes, added options to disable certain statements, as per @eibyer's original idea and @RobinWinbourne's annoying persistance :)

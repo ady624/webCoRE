@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.1.098.20170430" }
+public static String version() { return "v0.1.099.20170501" }
 /*
+ *	05/01/2017 >>> v0.1.099.20170501 - BETA M1 - Lots of fixes and improvements - expressions now accept more logical operators like !, !!, ==, !=, <, >, <=, >= and some new math operators like \ (integer division) and % (modulo)
  *	04/30/2017 >>> v0.1.098.20170430 - BETA M1 - Minor bug fixes
  *	04/29/2017 >>> v0.1.097.20170429 - BETA M1 - First Beta Milestone 1!
  *	04/29/2017 >>> v0.0.096.20170429 - ALPHA - Various bug fixes, added options to disable certain statements, as per @eibyer's original idea and @RobinWinbourne's annoying persistance :)
@@ -681,7 +682,8 @@ private Boolean executeEvent(rtData, event) {
         def ended = false
         try {
 		    def allowed = !rtData.piston.r || !(rtData.piston.r.length) || evaluateConditions(rtData, rtData.piston, 'r', true)
-    		if (allowed || !!rtData.fastForwardTo) {        
+    		if (allowed || !!rtData.fastForwardTo) {
+            	rtData.restricted = !allowed
 				if (executeStatements(rtData, rtData.piston.s)) {
                 	ended = true
 		        	tracePoint(rtData, 'end', 0, 0)
@@ -872,7 +874,8 @@ private Boolean executeStatement(rtData, statement, async = false) {
     def parentAsync = async
     def parentIndex = getVariable(rtData, '$index').v
     def parentDevice = getVariable(rtData, '$device').v
-    async = !!async || (statement.a == "1") || (statement.t == 'every') || (statement.t == 'on')
+    def selfAsync = (statement.a == "1") || (statement.t == 'every') || (statement.t == 'on')
+    async = !!async || selfAsync
     def perform = false
     def repeat = true
     def index = null
@@ -890,7 +893,8 @@ private Boolean executeStatement(rtData, statement, async = false) {
                     	scheduleTimer(rtData, statement, ownEvent ? rtData.event.schedule.t : 0)
                     }
 	                rtData.stack.c = statement.$
-                    if (!!rtData.fastForwardTo || ownEvent) {
+                    if (!!rtData.fastForwardTo || (ownEvent && allowed && !rtData.restricted)) {
+                    	//we don't want to run this if there are piston restrictions in effect
                     	//we only execute the every if i = -1 (for rapid timers with large restrictions i.e. every second, but only on Mondays) we need to make sure we don't block execution while trying
                         //to find the next execution scheduled time, so we give up after too many attempts and schedule a rerun with i = -2 to give us the chance to try again at that later time
                     	if (!!rtData.fastForwardTo || (rtData.event.schedule.i == -1)) executeStatements(rtData, statement.s, true);
@@ -1126,11 +1130,15 @@ private Boolean executeStatement(rtData, statement, async = false) {
     		tracePoint(rtData, "s:${statement.$}", now() - t, value)
         }
     }
-	if (statement.a == '1') {
+	//if (statement.a == '1') {
 		//when an async action requests the thread termination, we continue to execute the parent
         //when an async action terminates as a result of a time event, we exit completely
-		value = (rtData.event.name != 'time')
-	}
+//		value = (rtData.event.name != 'time')
+	//}
+    if (async) {
+    	//if running in async mode, we return true (to continue execution)
+    	value = true
+    }
     //restore current condition
     rtData.stack.c = c
     if (stacked) {
@@ -1239,9 +1247,8 @@ private Boolean executeTask(rtData, devices, statement, task, async) {
         } else {
             if (vcmd) {
 	        	delay = executeVirtualCommand(rtData, vcmd.a ? devices : device, task, params)
-                if (delay || vcmd.a) {
-               		break
-                }
+                //aggregate commands only run once, for all devices at the same time
+                if (vcmd.a) break
             }
         }
     }
@@ -3199,7 +3206,7 @@ private void subscribeAll(rtData) {
                 def comparisonType = 'condition'
                 if (!comparison) {
                     hasTriggers = true
-                    comparisonType = downgradeTriggers ? 'condition' : 'trigger'
+                    comparisonType = downgradeTriggers || (condition.sm == 'never') ? 'condition' : 'trigger'
                     comparison = rtData.comparisons.triggers[condition.co]                	
                 }
                 if (comparison) {
@@ -3220,8 +3227,8 @@ private void subscribeAll(rtData) {
                 def comparison = rtData.comparisons.conditions[restriction.co]
                 def comparisonType = 'condition'
                 if (!comparison) {
-                    hasTriggers = true
-                    comparisonType = downgradeTriggers ? 'condition' : 'trigger'
+                    //hasTriggers = true
+                    //comparisonType = downgradeTriggers ? 'condition' : 'trigger'
                     comparison = rtData.comparisons.triggers[restriction.co]                	
                 }
                 if (comparison) {
@@ -3276,11 +3283,16 @@ private void subscribeAll(rtData) {
         }
         def dds = [:]
         for (subscription in subscriptions) {
-            for (condition in subscription.value.c) if (condition) { condition.s = false }
-            if (!rtData.piston.o.des && subscription.value.t && ((subscription.value.t == "trigger") || (subscription.value.c.sm == "always") || (!hasTriggers && (subscription.value.c.sm != "never")))) {
+        	def altSub = 'never';
+            for (condition in subscription.value.c) if (condition) {
+            	condition.s = false
+                altSub = (condition.sm == 'always') ? condition.sm : ((altSub != 'always') && (condition.sm != 'never') ? condition.sm : altSub)
+			}
+            if (!rtData.piston.o.des && !!subscription.value.t && !!subscription.value.c && (altSub != "never") && ((subscription.value.t == "trigger") || (altSub == "always") || !hasTriggers)) {
                 def device = getDevice(rtData, subscription.value.d)
                 if (device) {
-					for (condition in subscription.value.c) if (condition) { condition.s = (condition.ct == 't') || (condition.cm == 'always') || (!hasTriggers) }
+					for (condition in subscription.value.c) if (condition) { condition.s = (condition.sm != 'never') && ((condition.ct == 't') || (condition.sm == 'always') || (!hasTriggers)) }
+            	//error " SUBSCRIBING DEVICE $subscription", rtData
                 	switch (subscription.value.a) {
                     	case 'time':
                         case 'date':
@@ -3616,16 +3628,27 @@ private Map evaluateExpression(rtData, expression, dataType = null) {
                         	case '+':
                             case '-':
                             case '^':
-                            	items.push([t: decimal, v: 0, o: item.o])
+                        	case '&':
+                        	case '|':
+                        	case '<':
+                        	case '>':
+                        	case '<=':
+                        	case '>=':
+                        	case '==':
+                        	case '!=':
+                        	case '<>':
+                        	case '!':
+                        	case '!!':
+                            	items.push([t: integer, v: 0, o: item.o])
                                 break;
                         	case '*':
                             case '/':
-                            	items.push([t: decimal, v: 1, o: item.o])
+                            	items.push([t: integer, v: 1, o: item.o])
                                 break;
-                        	case '&':
+                        	case '&&':
                             	items.push([t: boolean, v: true, o: item.o])
                                 break;
-                        	case '|':
+                        	case '||':
                             	items.push([t: boolean, v: false, o: item.o])
                                 break;
                         }
@@ -3660,19 +3683,29 @@ private Map evaluateExpression(rtData, expression, dataType = null) {
             }
             //do the job
             idx = 0
+            def secondary = false
             while (items.size() > 1) {
 	           	//order of operations :D
-                //we first look for power ^
                 idx = 0
+                //we first look for !, !!
                 for (item in items) {
-                	if ((item.o) == '^') break;
+                	if (((item.o) == '!') || ((item.o) == '!!')) break;
+                    secondary = true
                     idx++
+                }
+                if (idx >= items.size()) {
+	                //we then look for power ^
+                    idx = 0
+	                for (item in items) {
+    	            	if ((item.o) == '^') break;
+        	            idx++
+            	    }
                 }
                 if (idx >= items.size()) {
                     //we then look for * or /
                     idx = 0
                     for (item in items) {
-                        if (((item.o) == '*') || ((item.o) == '/')) break;
+                        if (((item.o) == '*') || ((item.o) == '/') || ((item.o) == '\\') || ((item.o) == '%')) break;
                         idx++
                     }
                 }
@@ -3681,6 +3714,38 @@ private Map evaluateExpression(rtData, expression, dataType = null) {
                     idx = 0
                     for (item in items) {
                         if (((item.o) == '+') || ((item.o) == '-')) break;
+                        idx++
+                    }
+                }
+                if (idx >= items.size()) {
+                    //we then look for >, <, >=, <=
+                    idx = 0
+                    for (item in items) {
+                        if (((item.o) == '>') || ((item.o) == '<') || ((item.o) == '>=') || ((item.o) == '<=')) break;
+                        idx++
+                    }
+                }
+                if (idx >= items.size()) {
+                    //we then look for ==, !=, <>
+                    idx = 0
+                    for (item in items) {
+                        if (((item.o) == '==') || ((item.o) == '!=') || ((item.o) == '<>')) break;
+                        idx++
+                    }
+                }
+                if (idx >= items.size()) {
+                    //we then look for bitwise operations &, |
+                    idx = 0
+                    for (item in items) {
+                        if (((item.o) == '&') || ((item.o) == '|')) break;
+                        idx++
+                    }
+                }
+                if (idx >= items.size()) {
+                    //we then look for logical operations &&, ||
+                    idx = 0
+                    for (item in items) {
+                        if (((item.o) == '&&') || ((item.o) == '||')) break;
                         idx++
                     }
                 }
@@ -3707,12 +3772,17 @@ private Map evaluateExpression(rtData, expression, dataType = null) {
     	            items[idx + 1].t = 'device'
                     items[idx + 1].v = v
                 } else {
-                    if ((o == '*') || (o == '*') || (o == '/') || (o == '-') || (o == '^')) {
+                    if ((o == '*') || (o == '/') || (o == '-') || (o == '^')) {
                         if ((t1 != 'number') && (t1 != 'integer') && (t1 != 'decimal') && (t1 != 'float') && (t1 != 'datetime') && (t1 != 'date') && (t1 != 'time')) t1 = 'decimal'
                         if ((t2 != 'number') && (t2 != 'integer') && (t2 != 'decimal') && (t2 != 'float') && (t2 != 'datetime') && (t2 != 'date') && (t2 != 'time')) t2 = 'decimal'
                         t = (t1 == 'datetime') || (t2 == 'datetime') ? 'datetime' : ((t1 == 'date') || (t2 == 'date') ? 'date' : ((t1 == 'time') || (t2 == 'time') ? 'time' : 'decimal'))
                     }
-                    if ((o == '&') || (o == '|')) {
+                    if ((o == '\\') || (o == '%') || (o == '&') || (o == '|')) {
+                        t1 = 'integer'
+                        t2 = 'integer'
+                        t = 'integer'
+                    }
+                    if ((o == '&&') || (o == '||') || (o == '!') || (o == '!!')) {
                         t1 = 'boolean'
                         t2 = 'boolean'
                         t = 'boolean'
@@ -3737,10 +3807,14 @@ private Map evaluateExpression(rtData, expression, dataType = null) {
                         t2 = 'decimal'
                         t = 'decimal'
                     }
+                    if ((o == '==') || (o == '!=') || (o == '<') || (o == '>') || (o == '<=') || (o == '>=') || (o == '<>')) {
+                        t1 = t1 == 'string' ? t2 : t1
+                        t2 = t2 == 'string' ? t1 : t2
+                        t = 'boolean'
+                    }
                     v1 = evaluateExpression(rtData, items[idx], t1).v
 	                v2 = evaluateExpression(rtData, items[idx + 1], t2).v
-                    //error "Calculating ($t1) $v1 $o ($t2) $v2", rtData
-    	            switch (o) {
+                    switch (o) {
         	            case '-':
             	        	v = v1 - v2
                 	    	break
@@ -3750,14 +3824,51 @@ private Map evaluateExpression(rtData, expression, dataType = null) {
             	        case '/':
                 	    	v = (v2 != 0 ? v1 / v2 : 0)
 	                    	break
+            	        case '\\':
+                	    	v = (int) Math.floor(v2 != 0 ? v1 / v2 : 0)
+	                    	break
+            	        case '%':
+                	    	v = (int) (v2 != 0 ? v1 % v2 : 0)
+	                    	break
     	                case '^':
         	            	v = v1 ** v2
             	        	break
                 	    case '&':
-	                    	v = !!v1 && !!v2
+	                    	v = v1 & v2
     	                	break
         	            case '|':
+            	        	v = v1 | v2
+                	    	break
+                	    case '&&':
+	                    	v = !!v1 && !!v2
+    	                	break
+        	            case '||':
             	        	v = !!v1 || !!v2
+                	    	break
+                	    case '==':
+	                    	v = v1 == v2
+    	                	break
+        	            case '!=':
+        	            case '<>':
+            	        	v = v1 != v2
+                	    	break
+        	            case '<':
+            	        	v = v1 < v2
+                	    	break
+        	            case '>':
+            	        	v = v1 > v2
+                	    	break
+        	            case '<=':
+            	        	v = v1 <= v2
+                	    	break
+        	            case '>=':
+            	        	v = v1 >= v2
+                	    	break
+        	            case '!':
+            	        	v = !v2
+                	    	break
+        	            case '!!':
+            	        	v = !!v2
                 	    	break
 	                    case '+':
     	                default:                    	
@@ -3765,6 +3876,8 @@ private Map evaluateExpression(rtData, expression, dataType = null) {
             	        	break
                 	}
 
+					debug "Calculating ($t1) $v1 $o ($t2) $v2 >> ($t) $v", rtData
+    	            
                     //set the results
                     items[idx + 1].t = t
                     items[idx + 1].v = cast(rtData, v, t)
