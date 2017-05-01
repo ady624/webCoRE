@@ -1760,14 +1760,29 @@ private long cmd_setColorTemperature(rtData, device, params) {
 }
 
 private long cmd_setColor(rtData, device, params) {
-    def color = params[0] == 'Random' ? colorUtil.RANDOM : (colorUtil.findByName(params[0]) ?: hexToColor(params[0]))
-    color = [
-        hex: color.hex ?: color.rgb,
-        hue: color.hue ?: color.h,
-        saturation: color.saturation ?: color.s,
-        level: color.level ?: color.l
-    ]
-    log.trace "Converted to $color"
+    def color = (params[0] == 'Random') ? colorUtil.RANDOM : colorUtil.findByName(params[0])
+    if (color) {
+		color = [
+        	hex: color.rgb,
+        	hue: color.h,
+        	saturation: color.s,
+        	level: color.l
+    	]
+    } else {
+    	color = hexToColor(params[0])
+        if (color) {
+            color = [
+                hex: color.hex,
+                hue: Math.round(color.hue / 3.6),
+                saturation: color.saturation,
+                level: color.level
+            ]
+        }
+    }
+    if (!color) {
+    	error "ERROR: Invalid color $params", rtData
+        return 0
+    }
     def state = params.size() > 1 ? params[1] : ""
     def delay = params.size() > 2 ? params[2] : 0
     if (state && (getDeviceAttributeValue(rtData, device, 'switch') != "$state")) {
@@ -1778,15 +1793,30 @@ private long cmd_setColor(rtData, device, params) {
 }
 
 private long cmd_setAdjustedColor(rtData, device, params) {
-    def color = params[0] == 'Random' ? colorUtil.RANDOM : (colorUtil.findByName(params[0]) ?: hexToColor(params[0]))
-    color = [
-        hex: color.hex ?: color.rgb,
-        hue: color.hue ?: color.h,
-        saturation: color.saturation ?: color.s,
-        level: color.level ?: color.l
-    ]
+    def color = (params[0] == 'Random') ? colorUtil.RANDOM : colorUtil.findByName(params[0])
+    if (color) {
+		color = [
+        	hex: color.rgb,
+        	hue: color.h,
+        	saturation: color.s,
+        	level: color.l
+    	]
+    } else {
+    	color = hexToColor(params[0])
+        if (color) {
+            color = [
+                hex: color.hex,
+                hue: Math.round(color.hue / 3.6),
+                saturation: color.saturation,
+                level: color.level
+            ]
+        }
+    }
+    if (!color) {
+    	error "ERROR: Invalid color $params", rtData
+        return 0
+    }
     def duration = cast(rtData, params[1], 'long')
-    log.trace "Converted to $color"
     def state = params.size() > 2 ? params[2] : ""
     def delay = params.size() > 3 ? params[3] : 0
     if (state && (getDeviceAttributeValue(rtData, device, 'switch') != "$state")) {
@@ -1806,7 +1836,6 @@ private long cmd_setAdjustedHSLColor(rtData, device, params) {
         level: level
     ]
     def duration = cast(rtData, params[3], 'long')
-    log.trace "Converted to $color"
     def state = params.size() > 4 ? params[4] : ""
     def delay = params.size() > 5 ? params[5] : 0
     if (state && (getDeviceAttributeValue(rtData, device, 'switch') != "$state")) {
