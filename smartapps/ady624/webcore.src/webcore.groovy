@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.1.099.20170501" }
+public static String version() { return "v0.1.09a.20170501" }
 /*
+ *	05/01/2017 >>> v0.1.09a.20170501 - BETA M1 - Some visual UI fixes, added ternary operator support in expressions ( condition ? trueValue : falseValue ) - even with Groovy-style support for ( object ?: falseValue)
  *	05/01/2017 >>> v0.1.099.20170501 - BETA M1 - Lots of fixes and improvements - expressions now accept more logical operators like !, !!, ==, !=, <, >, <=, >= and some new math operators like \ (integer division) and % (modulo)
  *	04/30/2017 >>> v0.1.098.20170430 - BETA M1 - Minor bug fixes
  *	04/29/2017 >>> v0.1.097.20170429 - BETA M1 - First Beta Milestone 1!

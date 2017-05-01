@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.1.099.20170501" }
+public static String version() { return "v0.1.09a.20170501" }
 /*
+ *	05/01/2017 >>> v0.1.09a.20170501 - BETA M1 - Some visual UI fixes, added ternary operator support in expressions ( condition ? trueValue : falseValue ) - even with Groovy-style support for ( object ?: falseValue)
  *	05/01/2017 >>> v0.1.099.20170501 - BETA M1 - Lots of fixes and improvements - expressions now accept more logical operators like !, !!, ==, !=, <, >, <=, >= and some new math operators like \ (integer division) and % (modulo)
  *	04/30/2017 >>> v0.1.098.20170430 - BETA M1 - Minor bug fixes
  *	04/29/2017 >>> v0.1.097.20170429 - BETA M1 - First Beta Milestone 1!
@@ -2462,9 +2463,13 @@ private evaluateOperand(rtData, node, operand, index = null, trigger = false, ne
                 	values = [[i: "${node?.$}:v", v:[t: 'string', v: (rtData.event.name == 'routineExecuted' ? hashId(rtData.event.value) : null)]]];
                     break;
 				case 'ifttt':
+                	values = [[i: "${node?.$}:v", v:[t: 'string', v: (rtData.event.name == 'ifttt' ?rtData.event.value : null)]]];
+                    break;
 				case 'askAlexa':
-				case 'echoSistant':
-                	values = [[i: "${node?.$}:v", v:[t: 'string', v: (rtData.event.name == operand.v ? (operand.v == 'ifttt' ? rtData.event.value : hashId(rtData.event.value)) : null)]]];
+                	values = [[i: "${node?.$}:v", v:[t: 'string', v: (rtData.event.name == 'askAlexaMacro' ? hashId(rtData.event.value) : null)]]];
+                    break;
+				case 'echoSistant':                
+                	values = [[i: "${node?.$}:v", v:[t: 'string', v: (rtData.event.name == 'echoSistantProfile' ? hashId(rtData.event.value) : null)]]];
                     break;
             }
             break
@@ -3292,7 +3297,6 @@ private void subscribeAll(rtData) {
                 def device = getDevice(rtData, subscription.value.d)
                 if (device) {
 					for (condition in subscription.value.c) if (condition) { condition.s = (condition.sm != 'never') && ((condition.ct == 't') || (condition.sm == 'always') || (!hasTriggers)) }
-            	//error " SUBSCRIBING DEVICE $subscription", rtData
                 	switch (subscription.value.a) {
                     	case 'time':
                         case 'date':
@@ -3621,6 +3625,7 @@ private Map evaluateExpression(rtData, expression, dataType = null) {
         	//if we have a single item, we simply traverse the expression
         	List items = []
             def operand = -1
+            def lastOperand = -1
         	for(item in expression.i) {
 	            if (item.t == "operator") {
                 	if (operand < 0) {
@@ -3639,7 +3644,16 @@ private Map evaluateExpression(rtData, expression, dataType = null) {
                         	case '<>':
                         	case '!':
                         	case '!!':
+                        	case '?':
                             	items.push([t: integer, v: 0, o: item.o])
+                                break;
+                        	case ':':
+                            	if (lastOperand >= 0) {
+                                	//groovy-style support for (object ?: value)
+                                	items.push(items[lastOperand] + [o: item.o])
+                                } else {
+                            		items.push([t: integer, v: 0, o: item.o])
+                                }
                                 break;
                         	case '*':
                             case '/':
@@ -3658,7 +3672,8 @@ private Map evaluateExpression(rtData, expression, dataType = null) {
                     }
 	            } else {
 	                items.push(evaluateExpression(rtData, item) + [:])
-                    operand = items.size() - 1;
+                    operand = items.size() - 1
+                    lastOperand = operand
 	            }
 	        }
             //clean up operators, ensure there's one for each
@@ -3685,6 +3700,17 @@ private Map evaluateExpression(rtData, expression, dataType = null) {
             idx = 0
             def secondary = false
             while (items.size() > 1) {
+            	//ternary
+                if ((items.size() == 3) && (items[0].o == '?') && (items[1].o == ':')) {
+                	//we have a ternary operator
+                    if (evaluateExpression(rtData, items[0], 'boolean').v) {
+                    	items = [items[1]]
+                    } else {
+                    	items = [items[2]]
+                    }                    
+                    items[0].o = null;
+                    break
+                }
 	           	//order of operations :D
                 idx = 0
                 //we first look for !, !!
@@ -3815,6 +3841,11 @@ private Map evaluateExpression(rtData, expression, dataType = null) {
                     v1 = evaluateExpression(rtData, items[idx], t1).v
 	                v2 = evaluateExpression(rtData, items[idx + 1], t2).v
                     switch (o) {
+                    	case '?':
+                    	case ':':
+                        	error "Invalid ternary operator. Ternary operator's syntax is ( condition ? trueValue : falseValue ). Please check your syntax and try again.", rtData
+                            v = '';
+                            break
         	            case '-':
             	        	v = v1 - v2
                 	    	break
@@ -3871,7 +3902,7 @@ private Map evaluateExpression(rtData, expression, dataType = null) {
             	        	v = !!v2
                 	    	break
 	                    case '+':
-    	                default:                    	
+    	                default:
         	                v = t == 'string' ? "$v1$v2" : v1 + v2
             	        	break
                 	}
@@ -4957,6 +4988,8 @@ private cast(rtData, value, dataType, srcDataType = null) {
             	case 'decimal':
             	case 'boolean':
 					return !!value;
+            	case 'device':
+					return (value instanceof List) && value.size();
 			}
             if (value) {
             	if ("$value".toLowerCase().trim() in trueStrings) return true
