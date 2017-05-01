@@ -93,7 +93,7 @@
 					</div>
 				</div>
 			</div>
-			<div warning ng-if="meta.active && !subscriptions.events && !schedules.length && !piston.o.des" class="alert alert-warning">This piston does not subscribe to any events. Unless executed by other means, it will never run on its own</div>
+			<div warning ng-if="meta.active && !subscriptions.events && !schedules.length && !piston.o.des" class="alert alert-warning">This piston does not subscribe to any events. Unless executed by other means, it will never run on its own.</div>
 			<div class="row">
 				<div class="col-md-4">
 					<h2>Status</h2>
@@ -170,11 +170,11 @@
 					<h2>Variables</h2>
 					<div multicolumn>
 						<label var ng-if="localVars && localVars">Local variables</label>
-						<div ng-if="localVars" var ng-repeat="(name, var) in localVars"><span><span class="vartype">{{var.t}}</span><span>{{name}}</span></span><span class="{{var.v == null ? 'notset' : ''}}">{{formatVariableValue(var)}}</span></div>
+						<div ng-if="localVars" var ng-repeat="var in piston.v"><span><span class="vartype">{{var.t}}</span><span>{{name}}</span></span><span class="{{var.v == null ? 'notset' : ''}}" ng-bind-html="var.v ? renderOperand(var.v) : formatVariableValue(var, var.n)"></span></div>
 						<label var ng-if="globalVars">Global variables</label>
-						<div ng-if="globalVars" var ng-repeat="(name, var) in globalVars"><span><span class="vartype">{{var.t}}</span><span>{{name}}</span></span><span class="{{var.v == null ? 'notset' : ''}}">{{formatVariableValue(var)}}</span></div>
+						<div ng-if="globalVars" var ng-repeat="(name, var) in globalVars"><span><span class="vartype">{{var.t}}</span><span>{{name}}</span></span><span class="{{var.v == null ? 'notset' : ''}}" ng-bind-html="formatVariableValue(var)"></span></div>
 						<label var>System variables</label>
-						<div var ng-repeat="i in systemVarNames" ng-if="(!systemVars[i].d || (systemVars[i].v != null)) && (!i.startsWith('$current')) && (!i.startsWith('$previous'))"><span><span class="vartype">{{systemVars[i].t}}</span><span>{{i}}</span></span><span class="{{systemVars[i].v == null ? 'notset' : ''}}">{{formatVariableValue(systemVars[i])}}</span></div>
+						<div var ng-repeat="i in systemVarNames" ng-if="(!systemVars[i].d || (systemVars[i].v != null)) && (!i.startsWith('$current')) && (!i.startsWith('$previous'))"><span><span class="vartype">{{systemVars[i].t}}</span><span>{{i}}</span></span><span class="{{systemVars[i].v == null ? 'notset' : ''}}" ng-bind-html="formatVariableValue(systemVars[i])"></span></div>
 					</div>
 				</div>
 			</div>
@@ -193,7 +193,8 @@
 	<toolbar ng-if="initialized && (mode=='edit')">
 		<panel>
 			<label>Global variables</label>
-			<a ng-repeat="(name, var) in globalVars" ng-click="editGlobalVariable(name);"><span typ>{{var.t}}</span> <span var>{{name}}</span><span pun> = </span><span ng-bind-html="renderOperand({t: (var.t == 'device' ? 'd': 'c'), vt: var.t, c: var.v, d: var.v})"></span><span pun>;</span></a>
+			<!--<a ng-repeat="(name, var) in globalVars" ng-click="editGlobalVariable(name);"><span typ>{{var.t}}</span> <span var>{{name}}</span><span pun> = </span><span ng-bind-html="renderOperand({t: (var.t == 'device' ? 'd': 'c'), vt: var.t, c: var.v, d: var.v})"></span><span pun>;</span></a>-->
+			<a ng-repeat="(name, var) in globalVars" ng-click="editGlobalVariable(name);"><span typ>{{var.t}}</span> <span var>{{name}}</span><span pun> = </span><span ng-bind-html="formatVariableValue(var)"></span><span pun>;</span></a>
 			<a ng-click="addGlobalVariable()"><span new>+ add a new global variable</span></a>
 		</panel>
 		<panel>
@@ -273,7 +274,7 @@
 <script type="text/ng-template" id="variables">
 			<div ng-repeat="variable in variables">
 				<line com ng-if="variable.z">/* {{variable.z}} */</line>
-				<line pun><span ng-click="editVariable(variable);"><span pun ng-if="(variable.a == 's') && (variable.v)">const&nbsp;</span><span typ>{{variable.t}}&nbsp;</span><span var>{{variable.n}}</span><span ng-if="variable.v" pun>&nbsp;=&nbsp;</span><span ng-if="variable.v" ng-bind-html="variable.$$html || (variable.$$html = renderOperand(variable.v))"></span><span pun>;</span><span ng-if="!variable.v" com>&nbsp;/* {{getVariableValue(variable.n, variable.t)}} */</span></span></line>
+				<line pun><span ng-click="editVariable(variable);"><span pun ng-if="(variable.a == 's') && (variable.v)">const&nbsp;</span><span typ>{{variable.t}}&nbsp;</span><span var>{{variable.n}}</span><span ng-if="variable.v" pun>&nbsp;=&nbsp;</span><span ng-if="variable.v" ng-bind-html="variable.$$html || (variable.$$html = renderOperand(variable.v))"></span><span pun>;</span><span ng-if="!variable.v" com sensitive>&nbsp;/* <span ng-bind-html="formatVariableValue(variable, variable.n)"></span> */</span></span></line>
 			</div>
 			<line new data-ng-click="addVariable()">+ add a new variable</line>
 </script>
@@ -1935,7 +1936,7 @@
 		</form>
 
 		<footer>
-			<button type="button" ng-if="designer.$new" class="btn btn-info pull-right" ng-disabled="!designer.name || !designer.operand.valid" ng-click="updateVariable();">Add</button>
+			<button type="button" ng-if="designer.$new" class="btn btn-info pull-right" ng-disabled="(!designer.name && (designer.name != 'true') && (designer.name != 'false')) || !designer.operand.valid" ng-click="updateVariable();">Add</button>
 			<button type="button" ng-if="designer.$new" class="btn btn-success pull-right" ng-disabled="!designer.name || !designer.operand.valid" ng-click="updateVariable(true);">Add more</button>
 			<button type="button" ng-if="!designer.$new" class="btn btn-info pull-right" ng-disabled="!designer.name || !designer.operand.valid" ng-click="updateVariable();">Save</button>
 			<button type="button" class="btn btn-default pull-right" ng-click="toggleAdvancedOptions();" title="Show/Hide advanced options"><i class="fa fa-cog"></i></button>
@@ -2089,6 +2090,55 @@
 		<footer>
 			<button type="button" class="btn btn-success pull-right" ng-click="chooseVersion(true);">Use the locally saved version</button>
 			<button type="button" class="btn btn-danger" ng-click="chooseVersion(false);">Use the current version</button>
+		</footer>
+	</designer>	
+</script>
+
+
+<script type="text/ng-template" id="dialog-rebuild-piston">
+	<designer>
+		<header>
+			<label>Rebuild piston items</label>
+		</header>
+		<form>
+			<info>This piston is using some items that do not exist in your webCoRE instance. Let's replace them with items you do have. Please try and select an equivalent value for each item in the list below. If you skip any items, you will have to fix them by manually visiting that statement.</info>
+			<div ng-repeat="(key, item) in designer.legend">
+				<div class="form-group" ng-if="item.t == 'contact'">
+					<label class="col-lg-12 no-padding">Contact</label>
+					<select data-actions-box="true" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-info" ng-model="item.id"  data-header="Use the input box below to quickly search for devices" data-live-search="true" data-mobile="{{mobile}}" ng-required>
+						<option ng-repeat="(id, contact) in item.i" value="{{id}}">{{contact.f}} {{contact.l}} - {{contact.t}} ({{contact.p ? 'PUSH' : 'SMS'}})</option>
+					</select>
+				</div>
+				<div class="form-group" ng-if="item.t == 'device'">
+					<label class="col-lg-12 no-padding">Device: {{item.n}}</label>
+					<select data-actions-box="true" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-info" ng-model="item.id"  data-header="Use the input box below to quickly search for devices" data-live-search="true" data-mobile="{{mobile}}" ng-required>
+						<option ng-repeat="(id, device) in item.i" data-tokens="{{device.tokens}}" value="{{id}}">{{device.n}}</option>
+					</select>
+				</div>
+				<div class="form-group" ng-if="item.t == 'mode'">
+					<label class="col-lg-12 no-padding">Location mode: {{item.n}}</label>
+					<select data-actions-box="true" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-info" ng-model="item.id"  data-header="Use the input box below to quickly search for devices" data-live-search="true" data-mobile="{{mobile}}" ng-required>
+						<option ng-repeat="(id, mode) in item.i" value="{{id}}">{{mode}}</option>
+					</select>
+				</div>
+				<div class="form-group" ng-if="item.t == 'routine'">
+					<label class="col-lg-12 no-padding">Routine: {{item.n}}</label>
+					<select data-actions-box="true" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-info" ng-model="item.id"  data-header="Use the input box below to quickly search for devices" data-live-search="true" data-mobile="{{mobile}}" ng-required>
+						<option ng-repeat="(id, routine) in item.i" value="{{id}}">{{routine}}</option>
+					</select>
+				</div>
+				<div class="form-group" ng-if="item.t == 'phone'">
+					<label class="col-lg-12 no-padding">Phone number</label>
+					<input type="text" ng-value="item.id" />
+				</div>
+				<div class="form-group" ng-if="item.t == 'uri'">
+					<label class="col-lg-12 no-padding">URL</label>
+					<input type="text" ng-value="item.id" />
+				</div>
+			</div>
+		</form>
+		<footer>
+			<button type="button" class="btn btn-info pull-right" ng-click="doRebuildPiston();">Continue</button>
 		</footer>
 	</designer>	
 </script>

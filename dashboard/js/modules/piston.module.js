@@ -68,7 +68,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		var result = [];
 		for(i in $scope.instance.contacts) {
 			var contact = $scope.instance.contacts[i];
-			result.push({v: i, n: (contact.f + ' ' + contact.l).trim() + (contact.p ? ' (PUSH)' : (contact.t ? ' (' + contact.t + ')' : ''))});
+			result.push({v: i, n: (contact.f + ' ' + contact.l).trim() + (contact.p ? ' (PUSH)' : (contact.t ? ' (' + contact.t + ')' : '')), an: contact.an});
 		}
 		if (!result.length) {
 			result.push({v: 'no one', n: 'No available contacts'});
@@ -193,9 +193,8 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 				$scope.schedules = response.data.schedules;
 				
 				$scope.initChart();
-				if ($scope.instance && $scope.instance.devices) {
-					$scope.anonymizeDevices($scope.instance.devices);
-				}
+				if ($scope.instance && $scope.instance.devices) $scope.anonymizeDevices($scope.instance.devices);
+				if ($scope.instance && $scope.instance.devices) $scope.anonymizeContacts($scope.instance.contacts);
 				$scope.devices =$scope.listAvailableDevices();
 				$scope.contacts = $scope.listAvailableContacts();
 				$scope.virtualDevices = $scope.listAvailableVirtualDevices();
@@ -247,6 +246,9 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 										}
 										$scope.initialized = true;
 										$scope.loading = false;
+										if (!!piston && !!piston.l) {
+											$scope.rebuildPiston(piston.l);
+										}
 									});
 									return;
 								}
@@ -505,8 +507,12 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		});
 	};
 
-	$scope.formatVariableValue = function(variable) {
-		if (variable.v == null) return '(not set)';
+	$scope.formatVariableValue = function(variable, name) {
+		if ((variable.v == null) && !!name && $scope.localVars) {
+			variable = $scope.copy(variable);
+            variable.v = $scope.localVars[name];
+		}
+		if (!variable.v || (variable.v == null) || ((variable.v instanceof Array) && !variable.v.length)) return '(not set)';
 		switch (variable.t) {
 			case 'time':
 				return utcToTimeString(variable.v);
@@ -514,6 +520,10 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 				return utcToString(variable.v);
 			case 'date':
 				return utcToDateString(variable.v);
+			case 'contact':
+				return $scope.renderContactNameList(variable.v);
+			case 'device':
+				return $scope.renderDeviceNameList(variable.v);
 			default:
 				return variable.v;
 		}
@@ -528,6 +538,72 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 			scope: $scope
 		});
 	};
+
+
+
+	$scope.listDevicesWithAttributes = function(attributes) {
+		if (!attributes || !(attributes instanceof Array) || !attributes.length) return $scope.instance.devices;
+		var result = {};
+		for (d in $scope.instance.devices) {
+			var device = $scope.instance.devices[d];
+			var found = 0;
+			for (a in device.a) {
+				if (attributes.indexOf(device.a[a].n) >= 0) {
+					found++;
+					if (found == attributes.length) break;
+				}
+			}
+			if (found == attributes.length) result[d] = device;
+		}
+		return result;
+	}
+
+
+	$scope.rebuildPiston = function(legend) {
+		if (!legend) return;
+
+		for (key in legend) {
+			var item = legend[key];
+			item.id = '';
+			switch (item.t) {
+				case 'device':
+					item.i = $scope.listDevicesWithAttributes(item.a);
+					break;
+				case 'contact':
+					item.i = $scope.instance.contacts;
+					break;
+				case 'mode':
+					item.i = $scope.instance.virtualDevices['mode'].o;
+					for (i in item.i) {
+						if (item.i[i] == item.n) {
+							item.id = i;
+							break;
+						}
+					}
+					break;
+				case 'routine':
+					item.i = $scope.instance.virtualDevices['routine'].o;
+					break;
+			}
+		}
+
+		$scope.designer = {
+			legend: legend
+		};
+		$scope.designer.dialog = ngDialog.open({
+			template: 'dialog-rebuild-piston',
+			className: 'ngdialog-theme-default ngdialog-large',
+			closeByDocument: false,
+			disableAnimation: true,
+			scope: $scope
+		});
+	};
+
+	$scope.doRebuildPiston = function() {
+		$scope.piston = $scope.compilePiston($scope.piston, false, $scope.designer.legend);
+		$scope.closeDialog();
+	}
+
 
 	$scope.getExpressionConfig = function() {
 		var attributes = [];
@@ -882,7 +958,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 	$scope.updateStatement = function(nextDialog, defaultType) {
 		$scope.autoSave();
 		var statement = $scope.designer.$new ? {t: $scope.designer.type} : $scope.designer.$statement;
-		statement.a = $scope.designer.async;
+		statement.a = ($scope.designer.async == '1') || (['every', 'on'].indexOf($scope.designer.type) >= 0) ? '1' : '0';
 		statement.tcp = $scope.designer.tcp;
 		statement.tep = $scope.designer.tep;
 		statement.tsp = $scope.designer.tsp;
@@ -2074,9 +2150,27 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		return null;
 	}
 
+	$scope.getContactById = function(contactId) {
+		return $scope.instance.contacts[contactId];
+	}
+
+	$scope.getRoutineById = function(routineId) {
+		if ($scope.instance.virtualDevices.routine && $scope.instance.virtualDevices.routine.o) {
+			return $scope.instance.virtualDevices.routine.o[routineId];
+		}
+		return null;
+	}
+
+	$scope.getLocationModeById = function(locationModeId) {
+		if ($scope.instance.virtualDevices.mode && $scope.instance.virtualDevices.mode.o) {
+			return $scope.instance.virtualDevices.mode.o[locationModeId];
+		}
+		return null;
+	}
+
 	$scope.getDeviceById = function(deviceId) {
 		if (deviceId == $scope.location.id) {
-			return {id: deviceId, name: $scope.location.name};
+			return {id: deviceId, n: $scope.location.name, an: 'Location'};
 		}
 		return $scope.instance.devices[deviceId];
 	}
@@ -2177,7 +2271,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 			var it = list[i]
 			if (it instanceof Object) {
 				tag = it.t ? it.t : tag;
-				an = it.a ? it.a : '[device]';
+				an = it.a ? it.a : '[unknown]';
 				it = it.n;
 			}
 			var item = $scope.buildName(it, noQuotes, pedantic, itemPrefix);
@@ -2212,17 +2306,6 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 	                 deviceNames.push({ n: '{' + devices[deviceIndex] + '}', t: 'var'});
 	             }
 	         }
-/*			for (deviceIndex in devices) {
-				var deviceId = devices[deviceIndex] || '';
-				if (deviceId.startsWith(':')) {
-					var device = $scope.getDeviceById(deviceId);
-					if (device) {
-						deviceNames.push(device.n);
-					}
-				} else {
-					deviceNames.push('{<span var>' + deviceId + '</span>}');
-				}
-			}*/
 			if (deviceNames.length) {
 				return $scope.buildNameList(deviceNames, 'and', 'dev', '', false, true);
 			}
@@ -2230,6 +2313,23 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		return 'Location';
 	};
 
+	$scope.buildContactNameList = function(contacts) {
+		var contactNames = [];
+		if (contacts instanceof Array) {
+	        for (contactIndex in contacts) {
+	             var contact = $scope.getContactById(contacts[contactIndex]);
+	             if (contact) {
+	                 contactNames.push({n: (contact.f + ' ' + contact.l).trim() + ' (' + contact.t + '/' + (contact.p ? 'PUSH' : 'SMS') + ')', a: contact.an, t: 'cnt'});
+	             } else {
+	                 contactNames.push({ n: '{' + contacts[contactIndex] + '}', a: contact.an, t: 'var'});
+	             }
+	         }
+			if (contactNames.length) {
+				return $scope.buildNameList(contactNames, 'and', 'cnt', '', false, true);
+			}
+		}
+		return '(empty)';
+	};
 
 
 	$scope.formatHour = function(hour) {
@@ -2238,6 +2338,10 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 
 	$scope.renderDeviceNameList = function(devices) {
 		return $sce.trustAsHtml($scope.buildDeviceNameList(devices));
+	}
+
+	$scope.renderContactNameList = function(contacts) {
+		return $sce.trustAsHtml($scope.buildContactNameList(contacts));
 	}
 
 	$scope.hasCommand = function(device, commandName) {
@@ -2509,7 +2613,8 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 
 
 	$scope.getStackData = function() {
-		return {hash: $scope.md5(angular.toJson($scope.piston)), timestamp: (new Date()).getTime(), data: angular.fromJson(angular.toJson($scope.piston))};
+		var data = angular.toJson($scope.compilePiston($scope.piston));
+		return {hash: $scope.md5(data), timestamp: (new Date()).getTime(), data: angular.fromJson(data)};
 	}
 
 	$scope.autoSave = function(stack) {
@@ -2601,6 +2706,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 	}
 
 	$scope.localTimeToDate = function(time) {
+		time = time ? time : 0;
 		var today = new Date();
 		today.setHours(Math.floor(time / 60));
 		today.setMinutes(time % 60);
@@ -2692,7 +2798,9 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 			switch (operand.data.vt) {
 				case 'time':
 					if (!(operand.data.c instanceof Date)) {
-						operand.data.c = $scope.localTimeToDate(operand.data.c);
+						if (operand.data.c != undefined) { //firefox is weird
+							operand.data.c = $scope.localTimeToDate(operand.data.c);
+						}
 					}
 					break;
 				case 'date':
@@ -2939,7 +3047,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 				operand.selectedDataType = operand.dataType;//$scope.detectDataType(operand.data.c);
 				break;
 			case 'e':
-				var expression = $scope.parseExpression(operand.data.e, operand.data.vt);
+				var expression = $scope.parseExpression(operand.data.e, false, operand.data.vt);
 				operand.error = expression.err;
 				operand.expressionVar = expression.errVar;
 				if (expression.err) {
@@ -3006,6 +3114,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 	};
 
 	$scope.refreshSelects = function(type) {
+		console.log('refresh!');
 		if (type) {
 			$scope.$$postDigest(function() {
 				$('select[' + type + ']').selectpicker('refresh');
@@ -3184,7 +3293,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 			$scope.validateOperand(comparison.time2, reinit, true);
 			comparison.valid = comparison.valid && comparison.time2.valid;
 		}
-		$scope.refreshSelects();
+		//$scope.refreshSelects();
 
 	}
 
@@ -3251,6 +3360,9 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 							case 'uri':
 								result = '<span uri>' + operand.c + '</span>';
 								break;
+							case 'contact':
+								result = $scope.renderContactNameList(operand.c);
+								break;
 							default:
 								//if we still think we need quotes, let's make sure booleans don't have any
 								if (!noQuotes) {
@@ -3305,13 +3417,20 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		var pedantic = l.t == 'v';
 		var plural = l && (l.t == 'p') && l.d && (l.d.length > 1) && (l.g == 'all');
 		var noQuotes = false;
-		if (l.t == 'v') {
-			switch (l.v) {
-				case 'locationMode':
-				case 'shmState':
-					noQuotes = true;
-					break;
-			}
+		var unit = '';
+		switch (l.t) {
+			case 'v':
+				switch (l.v) {
+					case 'locationMode':
+					case 'shmState':
+						noQuotes = true;
+						break;
+				}
+				break;
+			case 'p':
+				var a = $scope.getAttributeById(l.a);
+				if (!!a && !!a.u) unit = a.u;
+				break;
 		}
 		var indexes = '';
 		if ((comparison.g == 'm') && l.i && l.i.length) {
@@ -3324,7 +3443,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 			if (r && to && (r.t != 'c')) offset1 = $scope.renderTimeOperand(to);
 			if (r2 && to2 && (r2.t != 'c')) offset2 = $scope.renderTimeOperand(to2);
 		}
-		var result = $scope.renderOperand(l) + indexes + ' <span pun>' + (plural ? (comparison.dd ? comparison.dd : comparison.d) : comparison.d) + '</span>' + (comparison.p > 0 ? ' ' + offset1 + $scope.renderOperand(r, noQuotes, pedantic) : '') + (comparison.p > 1 ? ' <span pun>' + (comparison.d.indexOf('between') ? 'and' : 'through') + '</span> ' + offset2 + $scope.renderOperand(r2, noQuotes, pedantic) : '')
+		var result = $scope.renderOperand(l) + indexes + ' <span pun>' + (plural ? (comparison.dd ? comparison.dd : comparison.d) : comparison.d) + '</span>' + (comparison.p > 0 ? ' ' + offset1 + $scope.renderOperand(r, noQuotes, pedantic) : '') + (unit ? '<span pun>' + unit + '</span> ' : '') + (comparison.p > 1 ? ' <span pun>' + (comparison.d.indexOf('between') ? 'and' : 'through') + '</span> ' + offset2 + $scope.renderOperand(r2, noQuotes, pedantic) + (unit ? '<span pun>' + unit + '</span> ' : '') : '');
 
 		switch (comparison.t) {
 			case 1:
@@ -3703,6 +3822,127 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 
 
 
+	$scope.compilePiston = function(piston, anonymize, legend) {
+		var legend = legend ? legend : {}
+		var idx = 0;
+		var anonymizeValue = function(key, data) {
+			if (!anonymize) {
+				return (!!legend[key] && !!legend[key].id) ? legend[key].id : key;
+			}
+			if (!key) return '';
+			var safeKey;
+			if (legend[key]) {
+				var item = legend[key];
+				safeKey = item.key;
+				if (data && data.a && (data.a instanceof Array) && item.value && item.value.a && (item.value.a instanceof Array)) {
+					for (a in data.a) {
+						if (item.value.a.indexOf(data.a[a]) < 0) item.value.a.push(data.a[a]);
+					}
+				}
+			} else {
+				safeKey = ':' + ('xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx' + idx).substr(-32) + ':';
+				idx++;
+				legend[key] = { key: safeKey, value: data };
+			}
+			return safeKey;
+		}
+		var traverseObject = function(object, parentObject, dataType) {
+			if (object instanceof Array) {
+				for(i in object) {
+					object[i] = traverseObject(object[i], parentObject, dataType);
+				}
+				return object;
+			}
+			if (object instanceof Object) {
+				if (object.exp) delete(object.exp);
+				if (anonymize) {
+					switch (object.vt) {
+						case 'phone':
+							var phones = object.c ? object.c.split(/,;\*\|/) : [];
+							var safePhones = [];
+							for (p in phones) {
+								safePhones.push(anonymizeValue(phones[p], {t: 'phone'}));
+							}
+							object.c = safePhones.join(',');
+							object.e = '';
+							break;
+						case 'contact':
+						case 'contacts':
+							var contacts = object.c ? (object.c instanceof Array ? object.c : object.c.split(/,;\*|/)) : [];
+							var safeContacts = [];
+							for (c in contacts) {
+								safeContacts.push(anonymizeValue(contacts[c], {t: 'contact'}));
+							}
+							object.c = (object.c instanceof Array) ? safeContacts : safeContacts[0];
+							object.e = '';
+							break;
+						case 'uri':
+							object.c = anonymizeValue(object.c, {t: 'uri'})
+							object.e = '';
+							break;
+					}
+				}
+				for (property in object) {
+					object[property] = traverseObject(object[property], object, object.vt ? object.vt : object.t);
+				}
+				if (!anonymize && !!object && !!object.t && !!object.vt && ((object.t == 'c') || (object.t == 'e'))) {
+					switch (object.t) {
+						case 'c':
+							object.exp = $scope.parseString(object.c, object.vt);
+							break;
+						case 'e':
+							object.exp = $scope.parseExpression(object.e, false, object.vt);
+							break;
+					}
+				}
+				return object;
+			}
+			var value = object ? object.toString() : '';
+			if (value.startsWith(':') && value.endsWith(':')) {
+				if (anonymize) {
+					var device = $scope.getDeviceById(object);
+					if (device) {
+						object = anonymizeValue(object, {t: 'device', n: device.an, a: !!parentObject && !!parentObject.a && (parentObject.a.length > 1) ? [parentObject.a] : []});
+						return object;
+					}
+					var locationMode = $scope.getLocationModeById(object);
+					if (locationMode) {
+						switch (locationMode) {
+							case 'Home':
+							case 'Night':
+							case 'Sleep':
+							case 'Away':
+							case 'Vacation':
+								break;
+							default:
+								locationMode = 'Custom Mode';
+						}
+						object = anonymizeValue(object, {t: 'mode', n: locationMode});
+						return object;
+					}
+					var routine = $scope.getRoutineById(object);
+					if (routine) {
+						object = anonymizeValue(object, {t: 'routine'});
+							return object;
+					}
+					var contact = $scope.getContactById(object);
+					if (contact) {
+						object = anonymizeValue(object, {t: 'contact'});
+						return object;
+					}
+				}
+				object = anonymizeValue(object, {t: 'unknown'});
+				return object;
+			}
+			return object;
+		}
+		piston = traverseObject($scope.copy(piston), 'piston');
+		piston.l = {};
+		for (l in legend) {
+			piston.l[legend[l].key] = legend[l].value;
+		}
+		return piston;
+	}
 
 
 
@@ -3727,6 +3967,18 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 			devices[i].an = name + ' ' + idx;
 		}
 		return devices;
+    };
+
+    $scope.anonymizeContacts = function(contacts) {
+		var cache = {}
+		for (i in contacts) {
+			var contact = contacts[i];
+	        var name = 'John Doe';
+			var idx = cache[name] ? cache[name] + 1 : 1;
+			cache[name] = idx;
+			contacts[i].an = name + ' ' + idx;
+		}
+		return contacts;
     };
 
 	$scope.breakList = function(list) {
@@ -3953,7 +4205,8 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 			cnt++;
 			return cnt;
 		}
-		var data = (anonymize ? $scope.anonymizeObject($scope.piston) : $scope.piston);
+//		var data = (anonymize ? $scope.anonymizePiston($scope.piston) : $scope.piston);
+		var data = $scope.compilePiston($scope.piston, anonymize);
 		$scope.loading = true;
 		dataService.generateBackupBin(data, anonymize).then(function(response) {
 			$animate.enabled(false);
@@ -4031,15 +4284,15 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 					var value = str.slice(startIndex, i-1);
 					var parsedValue = parseFloat(value.trim());
 					if (!isNaN(parsedValue)) {
-						if (Number.isInteger(parsedValue)) {
-							arr.push({t: 'integer', v: parseInt(parsedValue), l: location(startIndex, i - 2)});
-							return true;
-						}
-						arr.push({t: 'decimal', v: parsedValue, l: location(startIndex, i - 2)});
+						arr.push({t: (value.indexOf('.') > 0 ? 'decimal' : 'integer'), v: parsedValue, l: location(startIndex, i - 2)});
 						return true;
 					}
 					if (typeof value == 'string') {
-						arr.push({t: 'variable', x: value, l: location(startIndex, i - 2)});
+						if (['true', 'false'].indexOf(value) >= 0) {
+							arr.push({t: 'boolean', v: value, l: location(startIndex, i - 2)});
+						} else {
+							arr.push({t: 'variable', x: value, l: location(startIndex, i - 2)});
+						}
 						return true;
 					}
 					arr.push({t: 'operand', v:str.slice(startIndex, i-1), l: location(startIndex, i - 2)});
@@ -4052,14 +4305,10 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 					var value = str.slice(startIndex, i-1);
 					var parsedValue = parseFloat(value.trim());
 					if ((dataType != 'phone') && !isNaN(parsedValue)) {
-						if (Number.isInteger(parsedValue)) {
-							arr.push({t: 'integer', v: parseInt(parsedValue), l: location(startIndex, i - 2)});
-							return true;
-						}
-						arr.push({t: 'decimal', v: parsedValue, l: location(startIndex, i - 2)});
+						arr.push({t: (value.indexOf('.') > 0 ? 'decimal' : 'integer'), v: parseInt(parsedValue), l: location(startIndex, i - 2)});
 						return true;
-					}
-					arr.push({t: 'string', v: value, l: location(startIndex, i - 2)});
+					}					
+					arr.push({t: (['true', 'false'].indexOf(value) >= 0 ? 'boolean' : 'string'), v: value, l: location(startIndex, i - 2)});
 				}
 			}
 			function addDevice() {
@@ -4132,11 +4381,24 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 					case '/':
 					case '*':
 					case '^':
+					case '\\':
+					case '%':
 					case '&':
 					case '|':
 					case ',':
+					case '!':
+					case '=':
+					case '<':
+					case '>':
+					case '?':
+					case ':':
 						if (exp && !dv && !sq && !dq) {
+							var c2 = (i < str.length) ? str[i] : '';
 							addOperand();
+							if (['&&', '||', '==', '!=', '!!', '>=', '<=', '<>'].indexOf(c + c2) >= 0) {
+								i++;
+								c += c2;
+							}
 							arr.push({t: 'operator', o: c, l: location(i - 1, i - 1)});
 							startIndex = i;
 						}

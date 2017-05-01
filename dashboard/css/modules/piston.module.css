@@ -313,6 +313,12 @@ span.hl.dev {
     color: blueviolet;
 }
 
+line[cnt],
+span[cnt],
+span.hl.cnt {
+    color: blueviolet;
+}
+
 line[vdev],
 span[vdev],
 span.hl.vdev {
@@ -360,10 +366,15 @@ span.hl.exp {
 line[com],
 span[com],
 span.hl.com {
-	color: #008000;
-	white-space: pre;
+	color: #008000 !important;
+	/*white-space: pre;*/
 }
 
+line[com] *,
+span[com] *,
+span.hl.com * {
+	color: #008000 !important;
+}
 
 line[nul],
 span[nul],
@@ -463,13 +474,19 @@ span[tsk][single=true] {
 }
 
 
+piston[anonymized] *[sensitive] {
+	display: none !important;
+}
+
 piston[anonymized] span[uri],
 piston[anonymized] span[phn],
+piston[anonymized] span[cnt],
 piston[anonymized] span[dev] {
 	font-size: 0px !important;
 	line-height: 0px !important;
 }
 
+piston[anonymized] span[cnt]::before,
 piston[anonymized] span[dev]::before {
 	line-height: 17px !important;
 	content: attr(an);
