@@ -3876,7 +3876,7 @@ private Map evaluateExpression(rtData, expression, dataType = null) {
             	        	break
                 	}
 
-					debug "Calculating ($t1) $v1 $o ($t2) $v2 >> ($t) $v", rtData
+					//debug "Calculating ($t1) $v1 $o ($t2) $v2 >> ($t) $v", rtData
     	            
                     //set the results
                     items[idx + 1].t = t
