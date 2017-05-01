@@ -3154,10 +3154,10 @@ private void subscribeAll(rtData) {
                                 	attribute = "${operand.v}.${item}"
                                     switch (operand.v) {
                                     	case 'askAlexa':
-                                        	attribute = 'askAlexaMacro.${item}'
+                                        	attribute = "askAlexaMacro.${item}"
                                             break;
                                     	case 'echoSistant':
-                                        	attribute = 'echoSistantProfile.${item}'
+                                        	attribute = "echoSistantProfile.${item}"
                                             break;
                                     }
                                 }
