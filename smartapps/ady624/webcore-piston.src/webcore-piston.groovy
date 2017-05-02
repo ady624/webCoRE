@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.1.09a.20170501" }
+public static String version() { return "v0.1.09b.20170502" }
 /*
+ *	05/02/2017 >>> v0.1.09b.20170502 - BETA M1 - Fixes for async elements as well as setColor hue inconsistencies
  *	05/01/2017 >>> v0.1.09a.20170501 - BETA M1 - Some visual UI fixes, added ternary operator support in expressions ( condition ? trueValue : falseValue ) - even with Groovy-style support for ( object ?: falseValue)
  *	05/01/2017 >>> v0.1.099.20170501 - BETA M1 - Lots of fixes and improvements - expressions now accept more logical operators like !, !!, ==, !=, <, >, <=, >= and some new math operators like \ (integer division) and % (modulo)
  *	04/30/2017 >>> v0.1.098.20170430 - BETA M1 - Minor bug fixes
@@ -1103,6 +1104,7 @@ private Boolean executeStatement(rtData, statement, async = false) {
                     break
                 case 'exit':
                 	vcmd_setState(rtData, null, [cast(rtData, evaluateOperand(rtData, null, statement.lo).v, 'string')])
+                    rtData.terminated = true
                     value = false
                     break
             }
@@ -1136,9 +1138,12 @@ private Boolean executeStatement(rtData, statement, async = false) {
         //when an async action terminates as a result of a time event, we exit completely
 //		value = (rtData.event.name != 'time')
 	//}
-    if (async) {
+    if (selfAsync) {
     	//if running in async mode, we return true (to continue execution)
     	value = true
+    }
+    if (rtData.terminated) {
+    	value = false
     }
     //restore current condition
     rtData.stack.c = c
@@ -1764,7 +1769,7 @@ private long cmd_setColor(rtData, device, params) {
     if (color) {
 		color = [
         	hex: color.rgb,
-        	hue: color.h,
+        	hue: Math.round(color.h / 3.6),
         	saturation: color.s,
         	level: color.l
     	]
@@ -1773,7 +1778,7 @@ private long cmd_setColor(rtData, device, params) {
         if (color) {
             color = [
                 hex: color.hex,
-                hue: Math.round(color.hue / 3.6),
+                hue: color.hue,
                 saturation: color.saturation,
                 level: color.level
             ]
@@ -1797,7 +1802,7 @@ private long cmd_setAdjustedColor(rtData, device, params) {
     if (color) {
 		color = [
         	hex: color.rgb,
-        	hue: color.h,
+        	hue: Math.round(color.h / 3.6),
         	saturation: color.s,
         	level: color.l
     	]
@@ -1806,7 +1811,7 @@ private long cmd_setAdjustedColor(rtData, device, params) {
         if (color) {
             color = [
                 hex: color.hex,
-                hue: Math.round(color.hue / 3.6),
+                hue: color.hue,
                 saturation: color.saturation,
                 level: color.level
             ]
@@ -3865,6 +3870,8 @@ private Map evaluateExpression(rtData, expression, dataType = null) {
                     if ((o == '==') || (o == '!=') || (o == '<') || (o == '>') || (o == '<=') || (o == '>=') || (o == '<>')) {
                         t1 = t1 == 'string' ? t2 : t1
                         t2 = t2 == 'string' ? t1 : t2
+                    	if ((items[idx].t == 'device') && (items[idx].a)) t1 = 'string'
+                    	if ((items[idx + 1].t == 'device') && (items[idx + 1].a)) t2 = 'string'
                         t = 'boolean'
                     }
                     v1 = evaluateExpression(rtData, items[idx], t1).v
@@ -3936,7 +3943,7 @@ private Map evaluateExpression(rtData, expression, dataType = null) {
             	        	break
                 	}
 
-					//debug "Calculating ($t1) $v1 $o ($t2) $v2 >> ($t) $v", rtData
+					debug "Calculating ($t1) $v1 $o ($t2) $v2 >> ($t) $v", rtData
     	            
                     //set the results
                     items[idx + 1].t = t
