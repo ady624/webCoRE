@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.1.09b.20170502" }
+public static String version() { return "v0.1.09c.20170503" }
 /*
+ *	05/03/2017 >>> v0.1.09c.20170503 - BETA M1 - Fixes for race conditions where a second almost simultaneous event would miss cache updates from the first event, also improvements on timeout recovery
  *	05/02/2017 >>> v0.1.09b.20170502 - BETA M1 - Fixes for async elements as well as setColor hue inconsistencies
  *	05/01/2017 >>> v0.1.09a.20170501 - BETA M1 - Some visual UI fixes, added ternary operator support in expressions ( condition ? trueValue : falseValue ) - even with Groovy-style support for ( object ?: falseValue)
  *	05/01/2017 >>> v0.1.099.20170501 - BETA M1 - Lots of fixes and improvements - expressions now accept more logical operators like !, !!, ==, !=, <, >, <=, >= and some new math operators like \ (integer division) and % (modulo)
@@ -536,6 +537,9 @@ def timeHandler(event) {
 
 def timeRecoveryHandler(event) {
 	timeHandler(event)
+	//def event = [date: new Date(), device: location, name: 'time', value: now(), schedule: [t: 0, s: 0, i: -9]]
+    //executeEvent(rtData, event)
+	//processSchedules rtData, true
 }
 
 def executeHandler(event) {
@@ -546,7 +550,7 @@ def executeHandler(event) {
 def handleEvents(event) {
 	//cancel all pending jobs, we'll handle them later
 	unschedule(timeHandler)
-	unschedule(timeRecoveryHandler)
+	runIn(30, timeRecoveryHandler)
     if (!state.active) return
 	def startTime = now()
     state.lastExecuted = startTime
@@ -732,11 +736,12 @@ private finalizeEvent(rtData, initialMsg, success = true) {
     state.trace = rtData.trace
     //flush the new cache value
     for(item in rtData.newCache) rtData.cache[item.key] = item.value
-    //beat race conditions
-    state.cache = rtData.cache    
+    atomicState.cache = rtData.cache    
 	parent.updateRunTimeData(rtData)
+    //beat race conditions
     //overwrite state, might have changed meanwhile
     state.schedules = atomicState.schedules
+    state.cache = atomicState.cache
 }
 
 private processSchedules(rtData, scheduleJob = false) {
@@ -777,16 +782,20 @@ private processSchedules(rtData, scheduleJob = false) {
     		tracePoint(rtData, "t:${schedule.i}", 0, t)
         }
     }*/
-    if (scheduleJob && schedules.size()) {
-    	def next = schedules.sort{ it.t }[0]
-        def t = (next.t - now()) / 1000
-        t = (t < 1 ? 1 : t)
-        rtData.stats.nextSchedule = next.t
-        trace "Setting up scheduled job for ${formatLocalTime(next.t)} (in ${t}s)" + (schedules.size() > 1 ? ', with ' + (schedules.size() - 1).toString() + ' more job' + (schedules.size() > 2 ? 's' : '') + ' pending' : ''), rtData
-        runIn(t, timeHandler, [data: next])
-        runIn(t + 30, timeRecoveryHandler, [data: next])
-    } else {
-    	rtData.stats.nextSchedule = 0
+    if (scheduleJob) {
+        if (schedules.size()) {
+    		def next = schedules.sort{ it.t }[0]
+        	def t = (next.t - now()) / 1000
+        	t = (t < 1 ? 1 : t)
+        	rtData.stats.nextSchedule = next.t
+        	trace "Setting up scheduled job for ${formatLocalTime(next.t)} (in ${t}s)" + (schedules.size() > 1 ? ', with ' + (schedules.size() - 1).toString() + ' more job' + (schedules.size() > 2 ? 's' : '') + ' pending' : ''), rtData
+        	runIn(t, timeHandler, [data: next])
+        	runIn(t + 30, timeRecoveryHandler, [data: next])
+    	} else {
+	    	rtData.stats.nextSchedule = 0
+            //remove the recovery
+    		unschedule(timeRecoveryHandler)    
+	    }
     }
     atomicState.schedules = schedules
     state.schedules = schedules
