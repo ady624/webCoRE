@@ -551,6 +551,10 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 		return dataService.determineDeviceType(device);
 	};
 
+	$scope.initSocialMedia = function() {
+		$window.FB.XFBML.parse();
+	};
+
 
     //init
 	$scope.init();
@@ -563,4 +567,5 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 	$scope.tablet = (!$scope.mobile) && (window.mobileOrTabletCheck());
 	$scope.formatTime = formatTime;
     $scope.utcToString = utcToString;
+	$scope.$$postDigest(function() {$window.FB.XFBML.parse()});
 }]);

@@ -1198,4 +1198,4 @@ if (document.selection) {
      document.execCommand("Copy");
 }}
 
-version = function() { return 'v0.1.09a.20170501'; };
+version = function() { return 'v0.1.09c.20170503'; };

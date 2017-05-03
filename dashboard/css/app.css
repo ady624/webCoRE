@@ -709,6 +709,57 @@ input[type="time"]  {
 	text-align: right;
 }
 
+
+ul.socialmedia {
+	position: absolute;
+	display: block;
+	left: 0px;
+	right: 0px;
+	bottom: 0px;
+	height: auto;
+	padding: 0px;
+	margin: 16px 0px;
+}
+
+ul.socialmedia li {
+	display: block;
+	text-align: center;
+}
+
+ul.socialmedia li > * {
+	filter: grayscale();
+	opacity: 0.25;
+}
+
+ul.socialmedia li > *:hover {
+	filter: none;
+	opacity: 1;
+}
+
+ul.socialmedia li + li {
+	margin-top: 4px;
+}
+
+ul.socialmedia a .fa-facebook {
+    background: #3b5998;
+    color: white;
+    padding: 6px 2px 2px 10px;
+    border-radius: 4px;
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+}
+
+ul.socialmedia a .fa-twitter {
+    background: #00aced;
+    color: white;
+    padding: 6px 6px 2px 6px;
+    border-radius: 4px;
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+}
+
 @media only screen and (max-width: 767px) {
 	body > logo {
 		font-size: 80px;

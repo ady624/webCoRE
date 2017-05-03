@@ -512,7 +512,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 			variable = $scope.copy(variable);
             variable.v = $scope.localVars[name];
 		}
-		if (!variable.v || (variable.v == null) || ((variable.v instanceof Array) && !variable.v.length)) return '(not set)';
+		if ((variable.v === '') || (variable.v === null) || ((variable.v instanceof Array) && !variable.v.length)) return '(not set)';
 		switch (variable.t) {
 			case 'time':
 				return utcToTimeString(variable.v);
@@ -4317,7 +4317,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 					var pos = value.lastIndexOf(':');
 					var deviceName = value;
 					var attribute = '';
-					if (pos) {
+					if (pos > 0) {
 						var deviceName = value.substr(0, pos).trim();
 						attribute = value.substr(pos + 1).trim();
 					}
@@ -4332,6 +4332,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 								attribute = attr.n;
 							}
 						}
+						if (!!a && !attribute) attribute = '?';
 						arr.push({t: 'device', id: device.id, a: attribute, l: location(startIndex - 1, i - 1)});
 					} else {
 						//the device name is probably a variable?!
@@ -4533,7 +4534,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 								loc = item.l;
 								break;
 							}
-							if (!item.a) {
+							if (item.a == '?') {
 								ok = false;
 								err = 'Invalid attribute ' + getSubstring(item.l, ':', 1);
 								loc = item.l;

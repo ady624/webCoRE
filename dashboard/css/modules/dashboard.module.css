@@ -201,6 +201,9 @@ td i[star] {
 	vertical-align: middle;
 }
 
+td {
+	text-align: left;
+}
 
 td[dur] {
 	font-size: 12px;
