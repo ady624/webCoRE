@@ -18,9 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.1.09d.20170503" }
+public static String version() { return "v0.1.09e.20170503" }
 /*
- *	05/03/2017 >>> v0.1.09e.20170503 - BETA M1 - Added the formatDuration function
+ *	05/03/2017 >>> v0.1.09e.20170503 - BETA M1 - Added the formatDuration function, added volume to playText, playTextAndResume, and playTextAndRestore
  *	05/03/2017 >>> v0.1.09d.20170503 - BETA M1 - Fixed a problem where async blocks inside async blocks were not working correctly.
  *	05/03/2017 >>> v0.1.09c.20170503 - BETA M1 - Fixes for race conditions where a second almost simultaneous event would miss cache updates from the first event, also improvements on timeout recovery
  *	05/02/2017 >>> v0.1.09b.20170502 - BETA M1 - Fixes for async elements as well as setColor hue inconsistencies
@@ -1764,9 +1764,9 @@ private static Map commands() {
 		open						: [ n: "Open",																			a: "door|valve|windowShade",		v: "open",																																			],
 		pause						: [ n: "Pause",																																																																	],
 		play						: [ n: "Play",																																																																	],
-		playText					: [ n: "Speak text...",					d: "Speak text \"{0}\"",																					p: [[n:"Text",t:"string"]],  													],
-		playTextAndRestore			: [ n: "Speak text and restore...",		d: "Speak text \"{0}\" and restore",																		p: [[n:"Text",t:"string"]],  													],
-		playTextAndResume			: [ n: "Speak text and resume...",		d: "Speak text \"{0}\" and resume",																		p: [[n:"Text",t:"string"]],  													],
+		playText					: [ n: "Speak text...",					d: "Speak text \"{0}\"",																					p: [[n:"Text",t:"string"], [n:"Volume", t:"level", d:" at volume {v}"]],  													],
+		playTextAndRestore			: [ n: "Speak text and restore...",		d: "Speak text \"{0}\" and restore",																		p: [[n:"Text",t:"string"], [n:"Volume", t:"level", d:" at volume {v}"]],  													],
+		playTextAndResume			: [ n: "Speak text and resume...",		d: "Speak text \"{0}\" and resume",																		p: [[n:"Text",t:"string"], [n:"Volume", t:"level", d:" at volume {v}"]],  													],
 		playTrack					: [ n: "Play track...",					d: "Play track {0}{1}",																			p: [[n:"Track URL",t:"uri"], [n:"Volume", t:"level", d:" at volume {v}"]],  												],
 		playTrackAndRestore			: [ n: "Play track and restore...",		d: "Play track {0}{1} and restore",																p: [[n:"Track URL",t:"uri"], [n:"Volume", t:"level", d:" at volume {v}"]],  												],
 		playTrackAndResume			: [ n: "Play track and resume...",		d: "Play track {0}{1} and resume",																p: [[n:"Track URL",t:"uri"], [n:"Volume", t:"level", d:" at volume {v}"]],  												],
