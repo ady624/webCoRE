@@ -20,6 +20,7 @@
 */
 public static String version() { return "v0.1.09d.20170503" }
 /*
+ *	05/03/2017 >>> v0.1.09e.20170503 - BETA M1 - Added the formatDuration function
  *	05/03/2017 >>> v0.1.09d.20170503 - BETA M1 - Fixed a problem where async blocks inside async blocks were not working correctly.
  *	05/03/2017 >>> v0.1.09c.20170503 - BETA M1 - Fixes for race conditions where a second almost simultaneous event would miss cache updates from the first event, also improvements on timeout recovery
  *	05/02/2017 >>> v0.1.09b.20170502 - BETA M1 - Fixes for async elements as well as setColor hue inconsistencies
@@ -4881,6 +4882,70 @@ private func_isbetween(rtData, params) {
     return [t: "boolean", v: (value.v >= startValue.v) && (value.v <= endValue.v)]
 }
 
+/******************************************************************************/
+/*** formatDuration returns a duration in a readable format					***/
+/*** Usage: formatDuration(value[, friendly = false[, granularity = 's'[, showAdverbs = false]]])	***/
+/******************************************************************************/
+private func_formatduration(rtData, params) {
+	if (!params || !(params instanceof List) || (params.size() < 1) || (params.size() > 4)) {
+    	return [t: "error", v: "Invalid parameters. Expecting formatDuration(value[, friendly = false[, granularity = 's'[, showAdverbs = false]]])"];
+    }
+    long value = evaluateExpression(rtData, params[0], 'long').v
+	boolean friendly = params.size() > 1 ? !!evaluateExpression(rtData, params[1], 'boolean').v : false
+	def granularity = params.size() > 2 ? evaluateExpression(rtData, params[2], 'string').v : 's'
+	boolean showAdverbs = params.size() > 3 ? !!evaluateExpression(rtData, params[3], 'boolean').v : false
+
+	int sign = (value >= 0) ? 1 : -1
+    if (sign < 0) value = -value
+	int ms = value % 1000
+    value = Math.floor((value - ms) / 1000)
+	int s = value % 60
+    value = Math.floor((value - s) / 60)
+	int m = value % 60
+    value = Math.floor((value - m) / 60)
+	int h = value % 24
+    value = Math.floor((value - h) / 24)
+	int d = value
+    
+    def parts = 0
+    def partName = ''
+    switch (granularity) {
+    	case 'd': parts = 1; partName = 'day'; break;
+    	case 'h': parts = 2; partName = 'hour'; break;
+    	case 'm': parts = 3; partName = 'minute'; break;
+    	case 'ms': parts = 5; partName = 'millisecond'; break;
+    	default: parts = 4; partName = 'second'; break;
+    }
+    parts = friendly ? parts : (parts < 3 ? 3 : parts)
+    def result = ''
+    if (friendly) {
+    	List p = []
+        if (d) p.push("$d day" + (d > 1 ? 's' : ''))
+        if ((parts > 1) && h) p.push("$h hour" + (h > 1 ? 's' : ''))
+        if ((parts > 2) && m) p.push("$m minute" + (m > 1 ? 's' : ''))
+        if ((parts > 3) && s) p.push("$s second" + (s > 1 ? 's' : ''))
+        if ((parts > 4) && ms) p.push("$ms millisecond" + (ms > 1 ? 's' : ''))
+        switch (p.size()) {
+        	case 0:
+            	result = showAdverbs ? 'now' : '0 ' + partName + 's'
+                break
+            case 1:
+            	result = p[0]
+                break
+			default:
+            	result = '';
+                int sz = p.size()
+                for (int i=0; i < sz; i++) {
+                	result += (i ? (sz > 2 ? ', ' : ' ') : '') + (i == sz - 1 ? 'and ' : '') + p[i]
+                }
+                result = (showAdverbs && (sign > 0) ? 'in ' : '') + result + (showAdverbs && (sign < 0) ? ' ago' : '')
+            	break
+		}            
+    } else {
+    	result = (sign < 0 ? '-' : '') + (d > 0 ? sprintf("%dd ", d) : '') + sprintf("%02d:%02d", h, m) + (parts > 3 ? sprintf(":%02d", s) : '') + (parts > 4 ? sprintf(".%03d", ms) : '')
+    }
+    return [t: "string", v: result]
+}
 
 
 
@@ -4930,7 +4995,7 @@ private cast(rtData, value, dataType, srcDataType = null) {
     	value = '';
         srcDataType = 'string';
     }
-	value = (value instanceof GString) ? value.toString() : value
+	value = (value instanceof GString) ? "$value".toString() : value
     if (!srcDataType) {
         switch (value) {
             case {it instanceof List}: srcDataType = 'device'; break;
