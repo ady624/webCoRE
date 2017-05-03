@@ -801,16 +801,18 @@ div[type=e] .form-control {
     border-bottom-right-radius: 0px;
 }
 
-p.logs {
-	height: 80%;
+div.logs {
+	max-height: 800px;
 	overflow: hidden;
 	border: solid 1px #ccc;
 	overflow-y: auto;
+	margin-bottom: 20px;
 }
 
 table.logs {
 	font-family: monospace;
 	font-size: 12px;
+	margin-bottom: 0px;
 }
 
 table.logs tr:first-child th,
@@ -922,6 +924,11 @@ div[multicolumn] {
     -webkit-column-rule: solid 1px #eee; /* Chrome, Safari, Opera */
     -moz-column-rule:solid 1px #eee; /* Firefox */
     column-rule: solid 1px #eee;
+    -webkit-column-gap: 0px;
+    -moz-column-gap: 0px;
+    -ms-column-gap: 0px;
+    -o-column-gap: 0px;
+    column-gap: 0px;
     border: solid 1px #ccc;
     background: #f8f8f8;
 	padding-bottom: 8px;
@@ -1023,7 +1030,26 @@ label[var] {
 	text-align: center;
 	color: #999;
 	font-weight: normal;
-	margin: 8px 0px 0px 0px;
+	margin: 0px;
+	background: #eee;
+	padding: 4px;
+	border-bottom: solid 1px #ddd;
+}
+
+* + label[var] {
+	margin: 16px 0px 0px 0px;	
+}
+
+div[novar] {
+	text-align: center;
+	color: #ccc;
+	font-size: 10px;
+	margin: 4px auto;
+	display: none;
+}
+
+label[var] + div[novar] {
+	display: block;
 }
 
 div[var] {

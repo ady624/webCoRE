@@ -148,20 +148,22 @@
 			<div class="row">
 				<div class="col-md-12 col-lg-6">
 					<h2>Logs</h2>
-					<p class="logs">
+					<div class="logs">
 						<table class="table logs table-striped">
+							<thead>
+								<tr ng-if="logs.length == 0">
+									<th>The log is empty</th>
+								</tr>
+							</thead>
 							<tbody>				
 								<tr ng-repeat="log in logs" log="{{log.c}}">
 									<td ng-if="log.t" colspan="2" class="hdr">{{utcToString(log.t) + ' +' + (log.t % 1000) + 'ms'}}</td>
 									<td ng-if-start="log.o != null">+{{log.o}}ms</td>
-									<td ng-if-end>{{log.p}}<span>{{log.m}}</span></td>					
-								</tr>
-								<tr ng-if="logs.length == 0">
-									<th>The log is empty</th>
+									<td ng-if-end>{{log.p}}<span>{{log.m}}</span></td>
 								</tr>
 							</tbody>
 						</table>
-					</p>
+					</div>
 					<div class="form-group" ng-if="logs && logs.length">
 						<button class="btn btn-default" ng-click="clearLogs();" title="Clear the logs">Clear</button>
 					</div>
@@ -169,10 +171,12 @@
 				<div class="col-md-12 col-lg-6">
 					<h2>Variables</h2>
 					<div multicolumn>
-						<label var ng-if="localVars && localVars">Local variables</label>
+						<label var ng-if="piston && piston.v">Local variables</label>
 						<div ng-if="localVars" var ng-repeat="var in piston.v"><span><span class="vartype">{{var.t}}</span><span>{{name}}</span></span><span class="{{var.v == null ? 'notset' : ''}}" ng-bind-html="var.v ? renderOperand(var.v) : formatVariableValue(var, var.n)"></span></div>
+						<div novar>(no variables defined)</div>
 						<label var ng-if="globalVars">Global variables</label>
 						<div ng-if="globalVars" var ng-repeat="(name, var) in globalVars"><span><span class="vartype">{{var.t}}</span><span>{{name}}</span></span><span class="{{var.v == null ? 'notset' : ''}}" ng-bind-html="formatVariableValue(var)"></span></div>
+						<div novar>(no variables defined)</div>
 						<label var>System variables</label>
 						<div var ng-repeat="i in systemVarNames" ng-if="(!systemVars[i].d || (systemVars[i].v != null)) && (!i.startsWith('$current')) && (!i.startsWith('$previous'))"><span><span class="vartype">{{systemVars[i].t}}</span><span>{{i}}</span></span><span class="{{systemVars[i].v == null ? 'notset' : ''}}" ng-bind-html="formatVariableValue(systemVars[i])"></span></div>
 					</div>
