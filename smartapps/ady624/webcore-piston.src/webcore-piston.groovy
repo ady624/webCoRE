@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.1.09c.20170503" }
+public static String version() { return "v0.1.09d.20170503" }
 /*
+ *	05/03/2017 >>> v0.1.09d.20170503 - BETA M1 - Fixed a problem where async blocks inside async blocks were not working correctly.
  *	05/03/2017 >>> v0.1.09c.20170503 - BETA M1 - Fixes for race conditions where a second almost simultaneous event would miss cache updates from the first event, also improvements on timeout recovery
  *	05/02/2017 >>> v0.1.09b.20170502 - BETA M1 - Fixes for async elements as well as setColor hue inconsistencies
  *	05/01/2017 >>> v0.1.09a.20170501 - BETA M1 - Some visual UI fixes, added ternary operator support in expressions ( condition ? trueValue : falseValue ) - even with Groovy-style support for ( object ?: falseValue)
@@ -662,6 +663,8 @@ private Boolean executeEvent(rtData, event) {
         rtData.conditionStateChanged = false
         rtData.pistonStateChanged = false
         rtData.fastForwardTo = null
+        rtData.resumed = false
+        rtData.terminated = false
         if (event.name == 'time') {
         	rtData.fastForwardTo = event.schedule.i
         }
@@ -901,7 +904,7 @@ private Boolean executeStatement(rtData, statement, async = false) {
                     	//if the time has come for our timer, schedule the next timer
                         //if no next time is found quick enough, a new schedule with i = -2 will be setup so that a new attempt can be made at a later time
                     	rtData.fastForwardTo = null
-                    	scheduleTimer(rtData, statement, ownEvent ? rtData.event.schedule.t : 0)
+                        scheduleTimer(rtData, statement, ownEvent ? rtData.event.schedule.t : 0)
                     }
 	                rtData.stack.c = statement.$
                     if (!!rtData.fastForwardTo || (ownEvent && allowed && !rtData.restricted)) {
@@ -1149,7 +1152,8 @@ private Boolean executeStatement(rtData, statement, async = false) {
 	//}
     if (selfAsync) {
     	//if running in async mode, we return true (to continue execution)
-    	value = true
+    	value = !rtData.resumed
+        rtData.resumed = false
     }
     if (rtData.terminated) {
     	value = false
@@ -1222,6 +1226,7 @@ private Boolean executeTask(rtData, devices, statement, task, async) {
     		//finally found the resuming point, play nicely from hereon
             tracePoint(rtData, "t:${task.$}", now() - t, null)
     		rtData.fastForwardTo = null
+            rtData.resumed = true
         }
        	//we're not doing anything, we're fast forwarding...        
        	return true
@@ -2683,6 +2688,7 @@ private Boolean evaluateCondition(rtData, condition, collection, async) {
                 result = not ? !result : !!result
             } else if ((rtData.event.name == 'time') && (rtData.fastForwardTo == condition.$)) {
             	rtData.fastForwardTo = null
+                rtData.resumed = true
 				result = not ? false : true
         	} else {
                 result = true
