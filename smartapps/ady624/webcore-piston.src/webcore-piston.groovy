@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.1.09e.20170503" }
+public static String version() { return "v0.1.09f.20170504" }
 /*
+ *	05/04/2017 >>> v0.1.09f.20170504 - BETA M1 - Various improvements, added more expression operators, replaced localStorage with localforage, improvements on parent app memory usage
  *	05/03/2017 >>> v0.1.09e.20170503 - BETA M1 - Added the formatDuration function, added volume to playText, playTextAndResume, and playTextAndRestore
  *	05/03/2017 >>> v0.1.09d.20170503 - BETA M1 - Fixed a problem where async blocks inside async blocks were not working correctly.
  *	05/03/2017 >>> v0.1.09c.20170503 - BETA M1 - Fixes for race conditions where a second almost simultaneous event would miss cache updates from the first event, also improvements on timeout recovery
@@ -3682,9 +3683,14 @@ private Map evaluateExpression(rtData, expression, dataType = null) {
                     	switch (item.o) {
                         	case '+':
                             case '-':
-                            case '^':
+                            case '**':
                         	case '&':
                         	case '|':
+                            case '^':
+                        	case '~':
+                        	case '~&':
+                        	case '~|':
+                        	case '~^':
                         	case '<':
                         	case '>':
                         	case '<=':
@@ -3692,6 +3698,8 @@ private Map evaluateExpression(rtData, expression, dataType = null) {
                         	case '==':
                         	case '!=':
                         	case '<>':
+                        	case '<<':
+                        	case '>>':
                         	case '!':
                         	case '!!':
                         	case '?':
@@ -3710,9 +3718,13 @@ private Map evaluateExpression(rtData, expression, dataType = null) {
                             	items.push([t: integer, v: 1, o: item.o])
                                 break;
                         	case '&&':
+                        	case '!&':
                             	items.push([t: boolean, v: true, o: item.o])
                                 break;
                         	case '||':
+                        	case '!|':
+                        	case '^^':
+                        	case '!^':
                             	items.push([t: boolean, v: false, o: item.o])
                                 break;
                         }
@@ -3763,20 +3775,22 @@ private Map evaluateExpression(rtData, expression, dataType = null) {
                 }
 	           	//order of operations :D
                 idx = 0
-                //we first look for !, !!
+                //#2 	 !   !!   ~ 	Logical negation, logical double-negation and bitwise NOT unary operators 
                 for (item in items) {
-                	if (((item.o) == '!') || ((item.o) == '!!')) break;
+                	if (((item.o) == '!') || ((item.o) == '!!') || ((item.o) == '~')) break;
                     secondary = true
                     idx++
                 }
+                //#3 	** 	Exponent operator 
                 if (idx >= items.size()) {
-	                //we then look for power ^
+	                //we then look for power **
                     idx = 0
 	                for (item in items) {
-    	            	if ((item.o) == '^') break;
+    	            	if ((item.o) == '**') break;
         	            idx++
             	    }
                 }
+                //#4 	*   /   \   % MOD 	Multiplication, division, modulo 
                 if (idx >= items.size()) {
                     //we then look for * or /
                     idx = 0
@@ -3785,43 +3799,83 @@ private Map evaluateExpression(rtData, expression, dataType = null) {
                         idx++
                     }
                 }
+                //#5 	+   - 	Addition and subtraction 
                 if (idx >= items.size()) {
-                    //we then look for + or -
                     idx = 0
                     for (item in items) {
                         if (((item.o) == '+') || ((item.o) == '-')) break;
                         idx++
                     }
                 }
+                //#6 	<<   >> 	Shift left and shift right operators 
                 if (idx >= items.size()) {
-                    //we then look for >, <, >=, <=
+                    idx = 0
+                    for (item in items) {
+                        if (((item.o) == '<<') || ((item.o) == '>>')) break;
+                        idx++
+                    }
+                }
+                //#7 	<   <=   >   >= 	Comparisons: less than, less than or equal to, greater than, greater than or equal to
+                if (idx >= items.size()) {
                     idx = 0
                     for (item in items) {
                         if (((item.o) == '>') || ((item.o) == '<') || ((item.o) == '>=') || ((item.o) == '<=')) break;
                         idx++
                     }
                 }
+                //#8 	==   != 	Comparisons: equal and not equal 
                 if (idx >= items.size()) {
-                    //we then look for ==, !=, <>
                     idx = 0
                     for (item in items) {
                         if (((item.o) == '==') || ((item.o) == '!=') || ((item.o) == '<>')) break;
                         idx++
                     }
                 }
+                //#9 	& 	Bitwise AND 
                 if (idx >= items.size()) {
-                    //we then look for bitwise operations &, |
                     idx = 0
                     for (item in items) {
-                        if (((item.o) == '&') || ((item.o) == '|')) break;
+                        if (((item.o) == '&') || ((item.o) == '~&')) break;
                         idx++
                     }
                 }
+                //#10 	^ 	Bitwise exclusive OR (XOR) 
                 if (idx >= items.size()) {
-                    //we then look for logical operations &&, ||
                     idx = 0
                     for (item in items) {
-                        if (((item.o) == '&&') || ((item.o) == '||')) break;
+                        if (((item.o) == '^') || ((item.o) == '~^')) break;
+                        idx++
+                    }
+                }
+                //#11 	| 	Bitwise inclusive (normal) OR 
+                if (idx >= items.size()) {
+                    idx = 0
+                    for (item in items) {
+                        if (((item.o) == '|') || ((item.o) == '~|')) break;
+                        idx++
+                    }
+                }
+                //#12 	&& 	Logical AND 
+                if (idx >= items.size()) {
+                    idx = 0
+                    for (item in items) {
+                        if (((item.o) == '&&') || ((item.o) == '!&')) break;
+                        idx++
+                    }
+                }
+                //#13 	^^ 	Logical XOR
+                if (idx >= items.size()) {
+                    idx = 0
+                    for (item in items) {
+                        if (((item.o) == '^^') || ((item.o) == '~^')) break;
+                        idx++
+                    }
+                }
+                //#14 	|| 	Logical OR
+                if (idx >= items.size()) {
+                    idx = 0
+                    for (item in items) {
+                        if (((item.o) == '||') || ((item.o) == '!|')) break;
                         idx++
                     }
                 }
@@ -3839,7 +3893,7 @@ private Map evaluateExpression(rtData, expression, dataType = null) {
                 def v2 = items[idx + 1].v
                 def t = t1
                 //fix-ups
-                //integer with decimal gives decimal, also *, /, and ^ require decimals
+                //integer with decimal gives decimal, also *, / require decimals
                 if ((t1 == 'device') && (t2 == 'device') && ((o == '+') || (o == '-'))) {
 					v1 = (v1 instanceof List) ? v1 : [v1]
 					v2 = (v2 instanceof List) ? v2 : [v2]
@@ -3848,17 +3902,17 @@ private Map evaluateExpression(rtData, expression, dataType = null) {
     	            items[idx + 1].t = 'device'
                     items[idx + 1].v = v
                 } else {
-                    if ((o == '*') || (o == '/') || (o == '-') || (o == '^')) {
+                    if ((o == '*') || (o == '/') || (o == '-') || (o == '**')) {
                         if ((t1 != 'number') && (t1 != 'integer') && (t1 != 'decimal') && (t1 != 'float') && (t1 != 'datetime') && (t1 != 'date') && (t1 != 'time')) t1 = 'decimal'
                         if ((t2 != 'number') && (t2 != 'integer') && (t2 != 'decimal') && (t2 != 'float') && (t2 != 'datetime') && (t2 != 'date') && (t2 != 'time')) t2 = 'decimal'
                         t = (t1 == 'datetime') || (t2 == 'datetime') ? 'datetime' : ((t1 == 'date') || (t2 == 'date') ? 'date' : ((t1 == 'time') || (t2 == 'time') ? 'time' : 'decimal'))
                     }
-                    if ((o == '\\') || (o == '%') || (o == '&') || (o == '|')) {
+                    if ((o == '\\') || (o == '%') || (o == '&') || (o == '|') || (o == '^') || (o == '~&') || (o == '~|') || (o == '~^') || (o == '<<') || (o == '>>')) {
                         t1 = 'integer'
                         t2 = 'integer'
                         t = 'integer'
                     }
-                    if ((o == '&&') || (o == '||') || (o == '!') || (o == '!!')) {
+                    if ((o == '&&') || (o == '||') || (o == '^^') || (o == '!&') || (o == '!|') || (o == '!^') || (o == '!') || (o == '!!')) {
                         t1 = 'boolean'
                         t2 = 'boolean'
                         t = 'boolean'
@@ -3913,7 +3967,7 @@ private Map evaluateExpression(rtData, expression, dataType = null) {
             	        case '%':
                 	    	v = (int) (v2 != 0 ? v1 % v2 : 0)
 	                    	break
-    	                case '^':
+    	                case '**':
         	            	v = v1 ** v2
             	        	break
                 	    case '&':
@@ -3922,11 +3976,44 @@ private Map evaluateExpression(rtData, expression, dataType = null) {
         	            case '|':
             	        	v = v1 | v2
                 	    	break
+    	                case '^':
+        	            	v = v1 ^ v2
+            	        	break
+                	    case '~&':
+	                    	v = ~(v1 & v2)
+    	                	break
+        	            case '~|':
+            	        	v = ~(v1 | v2)
+                	    	break
+    	                case '~^':
+        	            	v = ~(v1 ^ v2)
+            	        	break
+    	                case '~':
+        	            	v = ~v2
+            	        	break
+    	                case '<<':
+        	            	v = v1 << v2
+            	        	break
+    	                case '>>':
+        	            	v = v1 >> v2
+            	        	break
                 	    case '&&':
 	                    	v = !!v1 && !!v2
     	                	break
         	            case '||':
             	        	v = !!v1 || !!v2
+                	    	break
+        	            case '^^':
+            	        	v = !v1 != !v2
+                	    	break
+                	    case '!&':
+	                    	v = !(!!v1 && !!v2)
+    	                	break
+        	            case '!|':
+            	        	v = !(!!v1 || !!v2)
+                	    	break
+        	            case '!^':
+            	        	v = !(!v1 != !v2)
                 	    	break
                 	    case '==':
 	                    	v = v1 == v2

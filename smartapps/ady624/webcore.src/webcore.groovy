@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.1.09e.20170503" }
+public static String version() { return "v0.1.09f.20170504" }
 /*
+ *	05/04/2017 >>> v0.1.09f.20170504 - BETA M1 - Various improvements, added more expression operators, replaced localStorage with localforage, improvements on parent app memory usage
  *	05/03/2017 >>> v0.1.09e.20170503 - BETA M1 - Added the formatDuration function, added volume to playText, playTextAndResume, and playTextAndRestore
  *	05/03/2017 >>> v0.1.09d.20170503 - BETA M1 - Fixed a problem where async blocks inside async blocks were not working correctly.
  *	05/03/2017 >>> v0.1.09c.20170503 - BETA M1 - Fixes for race conditions where a second almost simultaneous event would miss cache updates from the first event, also improvements on timeout recovery
@@ -209,12 +210,13 @@ preferences {
 	page(name: "pageSettings")
     page(name: "pageChangePassword")
     page(name: "pageSavePassword")
-	page(name: "pageIntegrations")
+    page(name: "pageRebuildCache")    
+/*	page(name: "pageIntegrations")
 	page(name: "pageIntegrationAskAlexa")
 	page(name: "pageIntegrationIFTTT")
 	page(name: "pageIntegrationIFTTTConfirm")
 	page(name: "pageIntegrationTwilio")
-	page(name: "pageIntegrationTwilioTest")
+	page(name: "pageIntegrationTwilioTest")*/
 	page(name: "pageRemove")
 }
 
@@ -402,7 +404,6 @@ def pageSettings() {
 	dynamicPage(name: "pageSettings", title: "", install: false, uninstall: false) {
 		section("General") {
 			label name: "name", title: "Name", state: (name ? "complete" : null), defaultValue: app.name, required: false
-			paragraph "Memory usage is at ${mem()}", required: false			   
 		}
         
 		section("Available devices") {
@@ -417,9 +418,9 @@ def pageSettings() {
             }
 		}
 
-		section("Integrations") {
+/*		section("Integrations") {
 			href "pageIntegrations", title: "Integrations with other services", description: "Tap here to configure your integrations" 
-		}
+		}*/
 
 		section("Security") {
 			href "pageChangePassword", title: "Security", description: "Tap here to change your dashboard security settings" 
@@ -428,7 +429,12 @@ def pageSettings() {
 		section(title: "Logging") {
 			input "logging", "enum", title: "Logging level", options: ["None", "Minimal", "Medium", "Full"], description: "Logs will be available in your dashboard if this feature is enabled", defaultValue: "None", required: false
 		}
-        
+
+		section(title: "Maintenance") {
+			paragraph "Memory usage is at ${mem()}", required: false			           
+			href "pageRebuildCache", title: "Clean up and rebuild data cache", description: "Tap here to change your clean up and rebuild your data cache" 
+		}
+
 		section("Uninstall") {
 			href "pageRemove", title: "Uninstall ${handle()}", description: "Tap here to uninstall ${handle()}" 
 		}
@@ -462,6 +468,14 @@ private pageSavePassword() {
 	}
 }
 
+def pageRebuildCache() {
+	cleanUp()
+	dynamicPage(name: "pageRebuildCache", title: "", install: false, uninstall: false) {
+    	section() {
+    		paragraph "Success! Data cache has been cleaned up and rebuilt."
+        }
+    }
+}
 
 def pageIntegrations() {
     //clear devices cache
@@ -672,34 +686,32 @@ private api_get_error_result(error) {
     ]
 }
 
-private api_get_base_result(deviceVersion = 0) {
+private api_get_base_result(deviceVersion = 0, updateCache = false) {
 	def tz = location.getTimeZone()
-    def currentDeviceVersion = atomicState.deviceVersion
+    def currentDeviceVersion = state.deviceVersion
 	def Boolean sendDevices = (deviceVersion != currentDeviceVersion)
-    def virtualDevices = virtualDevices()
-    atomicState.virtualDevices = virtualDevices
 	return [
         name: location.name + ' \\ ' + (app.label ?: app.name),
         instance: [
-	    	account: [id: hashId(app.getAccountId())],
-        	pistons: getChildApps().sort{ it.label }.collect{ [ id: hashId(it.id), 'name': it.label, 'meta': state[hashId(it.id)] ] },
-            id: hashId(app.id),
-            locationId: hashId(location.id),
+	    	account: [id: hashId(app.getAccountId(), updateCache)],
+        	pistons: getChildApps().sort{ it.label }.collect{ [ id: hashId(it.id, updateCache), 'name': it.label, 'meta': state[hashId(it.id, updateCache)] ] },
+            id: hashId(app.id, updateCache),
+            locationId: hashId(location.id, updateCache),
             name: app.label ?: app.name,
-            uri: atomicState.endpoint,
+            uri: state.endpoint,
             deviceVersion: currentDeviceVersion,
             coreVersion: version(),
             logging: settings.logging,
-            virtualDevices: virtualDevices,
+            virtualDevices: virtualDevices(updateCache),
             globalVars: listAvailableVariables(),
-            contacts: listAvailableContacts(),
-        ] + (sendDevices ? [devices: listAvailableDevices()] : [:]),
+            contacts: listAvailableContacts(false, updateCache),
+        ] + (sendDevices ? [devices: listAvailableDevices(false, updateCache)] : [:]),
         location: [
             contactBookEnabled: location.getContactBookEnabled(),
-            hubs: location.getHubs().collect{ [id: hashId(it.id), name: it.name, firmware: it.getFirmwareVersionString(), physical: it.getType().toString().contains('PHYSICAL') ]},
-            id: hashId(location.id),
-            mode: hashId(location.getCurrentMode().id),
-            modes: location.getModes().collect{ [id: hashId(it.id), name: it.name ]},
+            hubs: location.getHubs().collect{ [id: hashId(it.id, updateCache), name: it.name, firmware: it.getFirmwareVersionString(), physical: it.getType().toString().contains('PHYSICAL') ]},
+            id: hashId(location.id, updateCache),
+            mode: hashId(location.getCurrentMode().id, updateCache),
+            modes: location.getModes().collect{ [id: hashId(it.id, updateCache), name: it.name ]},
             name: location.name,
             temperatureScale: location.getTemperatureScale(),
             timeZone: tz ? [
@@ -717,7 +729,7 @@ private api_intf_dashboard_load() {
 	def result
     //debug "Dashboard: Request received to initialize instance"
 	if (verifySecurityToken(params.token)) {
-    	result = api_get_base_result(params.dev)
+    	result = api_get_base_result(params.dev, true)
     } else {
     	if (params.pin) {
         	if (settings.PIN && (md5("pin:${settings.PIN}") == params.pin)) {
@@ -770,7 +782,7 @@ private api_intf_dashboard_piston_get() {
         def clientDbVersion = params.db
         def requireDb = serverDbVersion != clientDbVersion
         if (pistonId) {
-            result = api_get_base_result(requireDb ? 0 : params.dev)            
+            result = api_get_base_result(requireDb ? 0 : params.dev, true)            
             def piston = getChildApps().find{ hashId(it.id) == pistonId };
             if (piston) {
             	result.data = piston.get() ?: [:]
@@ -857,10 +869,10 @@ private api_intf_dashboard_piston_set_chunk() {
 	def result
     def chunk = "${params?.chunk}"
     chunk = chunk.isInteger() ? chunk.toInteger() : -1
-    debug "Dashboard: Request received to set a piston chunk (#${1 + chunk}/${atomicState.chunks?.count})"
+    debug "Dashboard: Request received to set a piston chunk (#${1 + chunk}/${state.chunks?.count})"
 	if (verifySecurityToken(params.token)) {
     	def data = params?.data
-        def chunks = atomicState.chunks
+        def chunks = state.chunks
         if (chunks && chunks.count && (chunk >= 0) && (chunk < chunks.count)) {
         	chunks["chunk:$chunk"] = data;
             atomicState.chunks = chunks;
@@ -878,7 +890,7 @@ private api_intf_dashboard_piston_set_end() {
 	def result
     debug "Dashboard: Request received to set a piston (chunked end)"
 	if (verifySecurityToken(params.token)) {
-    	def chunks = atomicState.chunks
+    	def chunks = state.chunks
         if (chunks && chunks.count) {
             def ok = true
             def data = ""
@@ -895,6 +907,7 @@ private api_intf_dashboard_piston_set_end() {
                 }
                 i++
             }
+            atomicState.chunks = null
             if (ok) {
                 //save the piston here
                 def saved = api_intf_dashboard_piston_set_save(chunks.id, data)
@@ -928,7 +941,7 @@ private api_intf_dashboard_piston_pause() {
         	def rtData = piston.pause()
             updateRunTimeData(rtData)
             //update the state because it will overwrite the atomicState
-            state[piston.id] = atomicState[piston.id]
+            //state[piston.id] = state[piston.id]
 			result = [status: "ST_SUCCESS", active: false]
         } else {
 	    	result = api_get_error_result("ERR_INVALID_ID")
@@ -949,7 +962,7 @@ private api_intf_dashboard_piston_resume() {
             result = rtData.result
             updateRunTimeData(rtData)
             //update the state because it will overwrite the atomicState
-            state[piston.id] = atomicState[piston.id]
+            //state[piston.id] = state[piston.id]
 			result.status = "ST_SUCCESS"
         } else {
 	    	result = api_get_error_result("ERR_INVALID_ID")
@@ -968,6 +981,8 @@ private api_intf_dashboard_piston_delete() {
 	    if (piston) {
         	app.deleteChildApp(piston);
 			result = [status: "ST_SUCCESS"]
+            state.remove(params.id)
+            state.remove('sph${params.id}')
         } else {
 	    	result = api_get_error_result("ERR_INVALID_ID")
         }
@@ -1070,6 +1085,27 @@ def api_ifttt() {
 /*** 																		***/
 /******************************************************************************/
 
+private cleanUp() {
+	try {
+        List pistons = getChildApps().collect{ hashId(it.id) }    
+        for (item in state.findAll{ (it.key.startsWith('sph') && (it.value == 0)) || it.key.contains('-') || (it.key.startsWith(':') && !(it.key in pistons)) }) {
+            log.trace "REMOVING $item.key"
+            state.remove(item.key)
+        }
+        state.remove('chunks')
+        state.remove('hash')
+        state.remove('virtualDevices')
+        state.remove('updateDevices')
+        state.remove('semaphore')
+        state.remove('pong')
+        state.remove('modules')
+        state.remove('globalVars')
+        state.remove('devices')
+        api_get_base_result(1, true)
+	} catch (all) {
+    }
+}
+
 private String getDashboardInitUrl(register = false) {
 	def url = register ? getDashboardRegistrationUrl() : getDashboardUrl()
     if (!url) return null
@@ -1081,12 +1117,12 @@ private String getDashboardRegistrationUrl() {
 	return "https://api.${domain()}/dashboard/"
 }
 
-private Map listAvailableDevices(raw = false) {
+private Map listAvailableDevices(raw = false, updateCache = false) {
 	//long t = now()
 	if (raw) {
-    	return settings.findAll{ it.key.startsWith("dev:") }.collect{ it.value }.flatten().collectEntries{ dev -> [(hashId(dev.id)): dev]}
+    	return settings.findAll{ it.key.startsWith("dev:") }.collect{ it.value }.flatten().collectEntries{ dev -> [(hashId(dev.id, updateCache)): dev]}
     } else {
-    	return settings.findAll{ it.key.startsWith("dev:") }.collect{ it.value }.flatten().collectEntries{ dev -> [(hashId(dev.id)): dev]}.collectEntries{ id, dev -> [ (id): [ n: dev.getDisplayName(), cn: dev.getCapabilities()*.name, a: dev.getSupportedAttributes().unique{ it.name }.collect{def x = [n: it.name, t: it.getDataType(), o: it.getValues()]; try {x.v = dev.currentValue(x.n);} catch(all) {}; x}, c: dev.getSupportedCommands().unique{ it.getName() }.collect{[n: it.getName(), p: it.getArguments()]} ]]}
+    	return settings.findAll{ it.key.startsWith("dev:") }.collect{ it.value }.flatten().collectEntries{ dev -> [(hashId(dev.id, updateCache)): dev]}.collectEntries{ id, dev -> [ (id): [ n: dev.getDisplayName(), cn: dev.getCapabilities()*.name, a: dev.getSupportedAttributes().unique{ it.name }.collect{def x = [n: it.name, t: it.getDataType(), o: it.getValues()]; try {x.v = dev.currentValue(x.n);} catch(all) {}; x}, c: dev.getSupportedCommands().unique{ it.getName() }.collect{[n: it.getName(), p: it.getArguments()]} ]]}
 	}
 /*    def devices = [:]
     for (devs in settings.findAll{ it.key.startsWith("dev:") }) {
@@ -1106,10 +1142,10 @@ private Map listAvailableDevices(raw = false) {
 }
 
 
-private Map listAvailableContacts(raw = false) {
+private Map listAvailableContacts(raw = false, updateCache = false) {
     def contacts = [:]
     for(contact in settings.contacts) {
-        def contactId = hashId(contact.id);
+        def contactId = hashId(contact.id, updateCache);
         if (raw) {
             contacts[contactId] = contact
         } else {
@@ -1120,16 +1156,16 @@ private Map listAvailableContacts(raw = false) {
 }
 
 private Map listAvailableVariables() {
-	return atomicState.vars ?: [:]
+	return state.vars ?: [:]
 }
 
 private void initTokens() {
     debug "Dashboard: Initializing security tokens"
-	atomicState.securityTokens = [:]
+	state.securityTokens = [:]
 }
 
 private Boolean verifySecurityToken(tokenId) {
-	def tokens = atomicState.securityTokens
+	def tokens = state.securityTokens
     if (!tokens) return false
     def threshold = now()
     def modified = false
@@ -1152,7 +1188,7 @@ private Boolean verifySecurityToken(tokenId) {
 private String createSecurityToken() {
     trace "Dashboard: Generating new security token after a successful PIN authentication"
 	def token = UUID.randomUUID().toString()
-    def tokens = atomicState.securityTokens ?: [:]
+    def tokens = state.securityTokens ?: [:]
     long expiry = 0
     def eo = "$settings.expiry".toLowerCase().replace("every ", "").replace("(recommended)", "").replace("(not recommended)", "").trim()
     switch (eo) {
@@ -1164,8 +1200,8 @@ private String createSecurityToken() {
         case "never": expiry = 3110400000; break; //never means 100 years, okay?
 	}
     tokens[token] = now() + (expiry * 1000)
-    atomicState.securityTokens = tokens
     state.securityTokens = tokens
+    //state.securityTokens = tokens
     return token
 }
 
@@ -1289,29 +1325,31 @@ public String getWikiUrl() {
 	return "https://wiki.${domain()}/"
 }
 public String mem(showBytes = true) {
-	def bytes = atomicState.toString().length()
+	def bytes = state.toString().length()
 	return Math.round(100.00 * (bytes/ 100000.00)) + "%${showBytes ? " ($bytes bytes)" : ""}"
 }
 
 public Map getRunTimeData(semaphore) {
     def startTime = now()
     semaphore = semaphore ?: 0
-    def semaphoreDelay = 0
-    def semaphoreName = "sph$semaphore"
-    def waited = false
-    //if we need to wait for a semaphore, we do it here
-    while (semaphore) {
-        def lastSemaphore = atomicState[semaphoreName] ?: 0
-        if (!lastSemaphore || (now() - lastSemaphore > 10000)) {
-        	semaphoreDelay = waited ? now() - startTime : 0
-            semaphore = now()
-            atomicState[semaphoreName] = semaphore
-            break
-        }
-        waited = true
-    	pause(250)
+   	def semaphoreDelay = 0
+   	def semaphoreName = semaphore ? "sph$semaphore" : ''
+    if (semaphore) {
+    	def waited = false
+    	//if we need to wait for a semaphore, we do it here
+    	while (semaphore) {
+	        def lastSemaphore = atomicState[semaphoreName] ?: 0
+	        if (!lastSemaphore || (now() - lastSemaphore > 10000)) {
+	        	semaphoreDelay = waited ? now() - startTime : 0
+	            semaphore = now()
+	            atomicState[semaphoreName] = semaphore
+	            break
+	        }
+	        waited = true
+	    	pause(250)
+	    }
     }
-    return [
+   	return [
         logging: getLogging(),
     	attributes: attributes(),
         semaphore: semaphore,
@@ -1326,7 +1364,7 @@ public Map getRunTimeData(semaphore) {
         coreVersion: version(),
     	contacts: listAvailableContacts(true),
     	devices: listAvailableDevices(true),
-        virtualDevices: atomicState.virtualDevices ?: virtualDevices(),
+        virtualDevices: virtualDevices(),
         globalVars: listAvailableVariables()
     ]
 }
@@ -1411,11 +1449,11 @@ def webCoREHandler(event) {
             }
 			//fall through to pong
     	case 'pong':
-        	if (data && data.id && data.name && (data.id != hashId(app.id))) {
+        	/*if (data && data.id && data.name && (data.id != hashId(app.id))) {
         		def pong = atomicState.pong ?: [:]
             	pong[data.id] = data.name
                 atomicState.pong = pong
-			}
+			}*/
         	break;
     }
 }
@@ -1478,14 +1516,17 @@ def String md5(String md5) {
     return null;
 }
 
-def String hashId(id) {
+def String hashId(id, updateCache = false) {
 	//enabled hash caching for faster processing
 	def result = state.hash ? state.hash[id] : null
     if (!result) {
+    	log.trace "Getting hash"
 		result = ":${md5("core." + id)}:"
-        def hash = state.hash ?: [:]
-        hash[id] = result
-        state.hash = hash
+        if (updateCache) {
+        	def hash = state.hash ?: [:]
+        	hash[id] = result
+        	state.hash = hash
+        }
     }
     return result
 }
@@ -1879,7 +1920,7 @@ private virtualCommands() {
 		sendPushNotification		: [ n: "Send PUSH notification...",	a: true,	i: "commenting-o",			d: "Send PUSH notification \"{0}\"{1}",									p: [[n:"Message", t:"string"],[n:"Store in Messages", t:"boolean", d:" and store in Messages", s:1]],	],
 		sendSMSNotification			: [ n: "Send SMS notification...",	a: true,	i: "commenting-o",			d: "Send SMS notification \"{0}\" to {1}{2}",							p: [[n:"Message", t:"string"],[n:"Phone number",t:"phone"],[n:"Store in Messages", t:"boolean", d:" and store in Messages", s:1]],	],
 		sendNotificationToContacts	: [ n: "Send notification to contacts...",a: true,i: "commenting-o",		d: "Send notification \"{0}\" to {1}{2}",								p: [[n:"Message", t:"string"],[n:"Contacts",t:"contacts"],[n:"Store in Messages", t:"boolean", d:" and store in Messages", s:1]],	],
-		log							: [ n: "Log to console...",			a: true,	i: "bug",					d: "Log {0} \"{1}\"",													p: [[n:"Log type", t:"enum", o:["info","trace","debug","warn","error"]],[n:"Message",t:"string"],[n:"Store in Messages", t:"boolean", d:" and store in Messages", s:1]],	],
+		log							: [ n: "Log to console...",			a: true,	i: "bug",					d: "Log {0} \"{1}\"{2}",												p: [[n:"Log type", t:"enum", o:["info","trace","debug","warn","error"]],[n:"Message",t:"string"],[n:"Store in Messages", t:"boolean", d:" and store in Messages", s:1]],	],
 		httpRequest					: [ n: "Make a web request",		a: true, 	i: "anchor",				d: "Make a {1} request to {0} with type {2}{3}",				        p: [[n:"URL", t:"uri"],[n:"Method", t:"enum", o:["GET","POST","PUT","DELETE","HEAD"]],[n:"Content Type", t:"enum", o:["JSON","FORM"]],[n:"Send variables", t:"variables", d:" and data {v}"]],	],
         setVariable					: [ n: "Set variable...",			a: true,	i: "superscript",			d: "Set variable {0} = {1}",											p: [[n:"Variable",t:"variable"],[n:"Value", t:"dynamic"]],	],
         setState					: [ n: "Set piston state...",		a: true,	i: "superscript",			d: "Set piston state to \"{0}\"",										p: [[n:"State",t:"string"]],	],
@@ -2090,19 +2131,19 @@ private static List threeAxisOrientations() {
 }
 
 def getIftttKey() {
-	def module = atomicState.modules?.IFTTT
+	def module = state.modules?.IFTTT
 	return (module && module.connected ? module.key : null)
 }
 
 def getLifxToken() {
-	def module = atomicState.modules?.LIFX
+	def module = state.modules?.LIFX
 	return (module && module.connected ? module.token : null)
 }
 
-private Map getLocationModeOptions() {
+private Map getLocationModeOptions(updateCache = false) {
 	def result = [:]
 	for (mode in location.modes) {
-		if (mode) result[hashId(mode.id)] = mode.name;
+		if (mode) result[hashId(mode.id, updateCache)] = mode.name;
 	}
 	return result
 }
@@ -2114,32 +2155,32 @@ private static Map getAlarmSystemStatusOptions() {
     ]
 }
 
-private Map getRoutineOptions() {
+private Map getRoutineOptions(updateCache = false) {
 	def routines = location.helloHome?.getPhrases()
     def result = [:]
     for(routine in routines) {
     	if (routine && routine?.label) 
-    		result[hashId(routine.id)] = routine.label
+    		result[hashId(routine.id, updateCache)] = routine.label
     }
     return result
 }
 
 private Map getAskAlexaOptions() {
-	return atomicState.askAlexaMacros ?: [null:"AskAlexa not installed - please install or open AskAlexa"]
+	return state.askAlexaMacros ?: [null:"AskAlexa not installed - please install or open AskAlexa"]
 }
 
 private Map getEchoSistantOptions() {
-	return atomicState.echoSistantProfiles ?: [null:"EchoSistant not installed - please install or open EchoSistant"]
+	return state.echoSistantProfiles ?: [null:"EchoSistant not installed - please install or open EchoSistant"]
 }
 
-private Map virtualDevices() {
+private Map virtualDevices(updateCache = false) {
 	return [
     	date:				[ n: 'Date',						t: 'date',		],
     	time:				[ n: 'Time',						t: 'time',		],
     	datetime:			[ n: 'Date & Time',					t: 'datetime',	],        
-    	mode:				[ n: 'Location mode',				t: 'enum', 		o: getLocationModeOptions(),				x: true],
+    	mode:				[ n: 'Location mode',				t: 'enum', 		o: getLocationModeOptions(updateCache),		x: true],
     	alarmSystemStatus:	[ n: 'Smart Home Monitor status',	t: 'enum',		o: getAlarmSystemStatusOptions(),			x: true],
-        routine:			[ n: 'Routine',						t: 'enum',		o: getRoutineOptions(),						m: true],
+        routine:			[ n: 'Routine',						t: 'enum',		o: getRoutineOptions(updateCache),			m: true],
         askAlexa:			[ n: 'Ask Alexa',					t: 'enum',		o: getAskAlexaOptions(),					m: true	],
         echoSistant:		[ n: 'EchoSistant',					t: 'enum',		o: getEchoSistantOptions(),					m: true	],
         ifttt:				[ n: 'IFTTT',						t: 'string',												m: true	],
