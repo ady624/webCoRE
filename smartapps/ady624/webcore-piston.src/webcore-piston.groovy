@@ -20,7 +20,7 @@
 */
 public static String version() { return "v0.1.0a1.20170505" }
 /*
- *	05/06/2017 >>> v0.1.0a0.20170505 - BETA M1 - Kill switch was a killer. Killed it.
+ *	05/06/2017 >>> v0.1.0a1.20170505 - BETA M1 - Kill switch was a killer. Killed it.
  *	05/05/2017 >>> v0.1.0a0.20170505 - BETA M1 - Happy Cinco de Mayo
  *	05/04/2017 >>> v0.1.09f.20170504 - BETA M1 - Various improvements, added more expression operators, replaced localStorage with localforage, improvements on parent app memory usage
  *	05/03/2017 >>> v0.1.09e.20170503 - BETA M1 - Added the formatDuration function, added volume to playText, playTextAndResume, and playTextAndRestore

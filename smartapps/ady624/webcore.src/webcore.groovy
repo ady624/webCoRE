@@ -20,7 +20,7 @@
 */
 public static String version() { return "v0.1.0a1.20170505" }
 /*
- *	05/06/2017 >>> v0.1.0a0.20170505 - BETA M1 - Kill switch was a killer. Killed it.
+ *	05/06/2017 >>> v0.1.0a1.20170505 - BETA M1 - Kill switch was a killer. Killed it.
  *	05/05/2017 >>> v0.1.0a0.20170505 - BETA M1 - Happy Cinco de Mayo
  *	05/03/2017 >>> v0.1.09e.20170503 - BETA M1 - Added the formatDuration function, added volume to playText, playTextAndResume, and playTextAndRestore
  *	05/03/2017 >>> v0.1.09d.20170503 - BETA M1 - Fixed a problem where async blocks inside async blocks were not working correctly.
