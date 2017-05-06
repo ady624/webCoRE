@@ -766,6 +766,8 @@ private finalizeEvent(rtData, initialMsg, success = true) {
     for(item in rtData.newCache) rtData.cache[item.key] = item.value
     atomicState.cache = rtData.cache    
 	parent.updateRunTimeData(rtData)
+    //clear the global vars - we already set them
+    rtData.gvCache = null
     //beat race conditions
     //overwrite state, might have changed meanwhile
     state.schedules = atomicState.schedules
@@ -1986,8 +1988,8 @@ private long vcmd_wait(rtData, device, params) {
 }
 
 private long vcmd_waitRandom(rtData, device, params) {
-	def min = params[0]
-    def max = params[1]
+	def min = cast(rtData, params[0], 'long')
+    def max = cast(rtData, params[1], 'long')
     if (max < min) {
     	def v = max
         max = min
