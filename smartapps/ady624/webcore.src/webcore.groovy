@@ -1109,7 +1109,6 @@ private cleanUp() {
 	try {
         List pistons = getChildApps().collect{ hashId(it.id) }    
         for (item in state.findAll{ (it.key.startsWith('sph') && (it.value == 0)) || it.key.contains('-') || (it.key.startsWith(':') && !(it.key in pistons)) }) {
-            log.trace "REMOVING $item.key"
             state.remove(item.key)
         }
         state.remove('chunks')
@@ -1543,7 +1542,6 @@ def String hashId(id, updateCache = false) {
 	//enabled hash caching for faster processing
 	def result = state.hash ? state.hash[id] : null
     if (!result) {
-    	log.trace "Getting hash"
 		result = ":${md5("core." + id)}:"
         if (updateCache) {
         	def hash = state.hash ?: [:]
