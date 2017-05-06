@@ -1405,6 +1405,7 @@ public void updateRunTimeData(data) {
         }
         if (modified) {
             atomicState.vars = vars
+            log.debug "Settings global vars to $vars (piston)"
         }
 	}
     def id = data.id
@@ -1458,6 +1459,7 @@ def webCoREHandler(event) {
         if ((oldVar.t != variable.type) || (oldVar.v != variable.value)) {
 	        vars[variable.name] = [t: variable.type ? variable.type : 'dynamic', v: variable.value]
             atomicState.vars = vars
+            log.debug "Settings global vars to $vars (event)"
         }
         return;
     }    
