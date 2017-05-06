@@ -293,6 +293,7 @@ def get() {
         subscriptions: state.subscriptions,
 	    stats: state.stats,
         state: state.state,
+        logging: state.logging ?: 0,
         logs: state.logs,
         trace: state.trace,
         localVars: state.vars,

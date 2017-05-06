@@ -704,7 +704,6 @@ private api_get_base_result(deviceVersion = 0, updateCache = false) {
             deviceVersion: currentDeviceVersion,
             coreVersion: version(),
             enabled: !settings.disabled,
-            //logging: settings.logging,
             virtualDevices: virtualDevices(updateCache),
             globalVars: listAvailableVariables(),
             contacts: listAvailableContacts(false, updateCache),
@@ -1369,7 +1368,6 @@ public Map getRunTimeData(semaphore) {
 	    }
     }
    	return [
-        //logging: getLogging(),
         enabled: !settings.disabled,
     	attributes: attributes(),
         semaphore: semaphore,
