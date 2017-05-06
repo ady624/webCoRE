@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.1.0a0.20170505" }
+public static String version() { return "v0.1.0a1.20170505" }
 /*
+ *	05/06/2017 >>> v0.1.0a0.20170505 - BETA M1 - Kill switch was a killer. Killed it.
  *	05/05/2017 >>> v0.1.0a0.20170505 - BETA M1 - Happy Cinco de Mayo
  *	05/04/2017 >>> v0.1.09f.20170504 - BETA M1 - Various improvements, added more expression operators, replaced localStorage with localforage, improvements on parent app memory usage
  *	05/03/2017 >>> v0.1.09e.20170503 - BETA M1 - Added the formatDuration function, added volume to playText, playTextAndResume, and playTextAndRestore
@@ -507,11 +508,9 @@ private getRunTimeData(rtData = null, semaphore = null) {
 	    rtData.schedules = []
 	    rtData.cancelations = [statements:[], conditions:[]]
 	    rtData.piston = piston
-        log.trace "HERE"
         def logging = "$state.logging".toString()
         logging = logging.isInteger() ? logging.toInteger() : 0
         rtData.logging = (int) logging
-        log.trace "HERE 2"
 	    rtData.locationId = hashId(location.id)
         rtData.locationModeId = hashId(location.getCurrentMode().id)
 	    //flow control
@@ -585,7 +584,7 @@ def handleEvents(event) {
     Map rtData = getRunTimeData(tempRtData, true)
     if (rtData.logging > 2) debug "RunTime Analysis CS > ${rtData.started - startTime}ms > PS > ${rtData.generatedIn}ms > PE > ${now() - rtData.ended}ms > CE", rtData
     if (!rtData.enabled) {
-    	if (rtData.logging) info "Kill switch is active, aborting piston execution."
+		warn "Kill switch is active, aborting piston execution."
     	return;
     }
     checkVersion(rtData)    
