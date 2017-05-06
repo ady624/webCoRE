@@ -18,9 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.1.09f.20170504" }
+public static String version() { return "v0.1.0a0.20170505" }
 /*
- *	05/04/2017 >>> v0.1.09f.20170504 - BETA M1 - Various improvements, added more expression operators, replaced localStorage with localforage, improvements on parent app memory usage
+ *	05/05/2017 >>> v0.1.0a0.20170505 - BETA M1 - Happy Cinco de Mayo
  *	05/03/2017 >>> v0.1.09e.20170503 - BETA M1 - Added the formatDuration function, added volume to playText, playTextAndResume, and playTextAndRestore
  *	05/03/2017 >>> v0.1.09d.20170503 - BETA M1 - Fixed a problem where async blocks inside async blocks were not working correctly.
  *	05/03/2017 >>> v0.1.09c.20170503 - BETA M1 - Fixes for race conditions where a second almost simultaneous event would miss cache updates from the first event, also improvements on timeout recovery
@@ -426,12 +426,13 @@ def pageSettings() {
 			href "pageChangePassword", title: "Security", description: "Tap here to change your dashboard security settings" 
 		}
 
-		section(title: "Logging") {
-			input "logging", "enum", title: "Logging level", options: ["None", "Minimal", "Medium", "Full"], description: "Logs will be available in your dashboard if this feature is enabled", defaultValue: "None", required: false
-		}
+//		section(title: "Logging") {
+//			input "logging", "enum", title: "Logging level", options: ["None", "Minimal", "Medium", "Full"], description: "Logs will be available in your dashboard if this feature is enabled", defaultValue: "None", required: false
+//		}
 
 		section(title: "Maintenance") {
 			paragraph "Memory usage is at ${mem()}", required: false			           
+			input "disabled", "boolean", title: "Disable all pistons", description: "Disable all pistons belonging to this instance", defaultValue: false, required: false
 			href "pageRebuildCache", title: "Clean up and rebuild data cache", description: "Tap here to change your clean up and rebuild your data cache" 
 		}
 
@@ -667,6 +668,7 @@ mappings {
 	path("/intf/dashboard/piston/set.end") {action: [GET: "api_intf_dashboard_piston_set_end"]}
 	path("/intf/dashboard/piston/pause") {action: [GET: "api_intf_dashboard_piston_pause"]}
 	path("/intf/dashboard/piston/resume") {action: [GET: "api_intf_dashboard_piston_resume"]}
+	path("/intf/dashboard/piston/logging") {action: [GET: "api_intf_dashboard_piston_logging"]}
 	path("/intf/dashboard/piston/delete") {action: [GET: "api_intf_dashboard_piston_delete"]}
 	path("/intf/dashboard/piston/evaluate") {action: [GET: "api_intf_dashboard_piston_evaluate"]}
 	path("/intf/dashboard/piston/activity") {action: [GET: "api_intf_dashboard_piston_activity"]}
@@ -701,7 +703,8 @@ private api_get_base_result(deviceVersion = 0, updateCache = false) {
             uri: state.endpoint,
             deviceVersion: currentDeviceVersion,
             coreVersion: version(),
-            logging: settings.logging,
+            enabled: !settings.disabled,
+            //logging: settings.logging,
             virtualDevices: virtualDevices(updateCache),
             globalVars: listAvailableVariables(),
             contacts: listAvailableContacts(false, updateCache),
@@ -963,6 +966,23 @@ private api_intf_dashboard_piston_resume() {
             updateRunTimeData(rtData)
             //update the state because it will overwrite the atomicState
             //state[piston.id] = state[piston.id]
+			result.status = "ST_SUCCESS"
+        } else {
+	    	result = api_get_error_result("ERR_INVALID_ID")
+        }
+	} else {
+    	result = api_get_error_result("ERR_INVALID_TOKEN")
+    }
+    render contentType: "application/javascript;charset=utf-8", data: "${params.callback}(${result.encodeAsJSON()})"
+}
+
+private api_intf_dashboard_piston_logging() {
+	def result
+    debug "Dashboard: Request received to set piston logging level"
+	if (verifySecurityToken(params.token)) {
+	    def piston = getChildApps().find{ hashId(it.id) == params.id };
+	    if (piston) {
+        	result = piston.setLoggingLevel(params.level)
 			result.status = "ST_SUCCESS"
         } else {
 	    	result = api_get_error_result("ERR_INVALID_ID")
@@ -1350,12 +1370,12 @@ public Map getRunTimeData(semaphore) {
 	    }
     }
    	return [
-        logging: getLogging(),
+        //logging: getLogging(),
+        enabled: !settings.disabled,
     	attributes: attributes(),
         semaphore: semaphore,
         semaphoreName: semaphoreName,
         semaphoreDelay: semaphoreDelay,
-        commands: commands(),
 		commands: [
         	physical: commands(),
 			virtual: virtualCommands()
@@ -1365,7 +1385,10 @@ public Map getRunTimeData(semaphore) {
     	contacts: listAvailableContacts(true),
     	devices: listAvailableDevices(true),
         virtualDevices: virtualDevices(),
-        globalVars: listAvailableVariables()
+        globalVars: listAvailableVariables(),
+        started: startTime,
+        ended: now(),
+        generatedIn: now() - startTime
     ]
 }
 
@@ -1704,7 +1727,7 @@ private static Map capabilities() {
 	]
 }
 
-private Map attributes() {
+private static Map attributes() {
 	return [
 		acceleration				: [ n: "acceleration",			t: "enum",		o: ["active", "inactive"],																			],
 		activities					: [ n: "activities", 			t: "object",																										],
@@ -1720,13 +1743,13 @@ private Map attributes() {
 		colorTemperature			: [ n: "color temperature",		t: "integer",	r: [1000, 30000],	u: "°K",																		],
 		consumableStatus			: [ n: "consumable status",		t: "enum",		o: ["good", "maintenance_required", "missing", "order", "replace"],									],
 		contact						: [ n: "contact",				t: "enum",		o: ["closed", "open"],																				],
-		coolingSetpoint				: [ n: "cooling setpoint",		t: "decimal",	r: [-127, 127],		u: temperatureUnit(),															],
+		coolingSetpoint				: [ n: "cooling setpoint",		t: "decimal",	r: [-127, 127],		u: '°?',															],
 		currentActivity				: [ n: "current activity",		t: "string",																										],
 		door						: [ n: "door",					t: "enum",		o: ["closed", "closing", "open", "opening", "unknown"],					i: true,					],
 		energy						: [ n: "energy",				t: "decimal",	r: [0, null],		u: "kWh",																		],
 		eta							: [ n: "ETA",					t: "datetime",																										],
 		goal						: [ n: "goal",					t: "integer",	r: [0, null],																						],
-		heatingSetpoint				: [ n: "heating setpoint",		t: "decimal",	r: [-127, 127],		u: temperatureUnit(),															],
+		heatingSetpoint				: [ n: "heating setpoint",		t: "decimal",	r: [-127, 127],		u: '°?',															],
 		hex							: [ n: "hexadecimal code",		t: "hexcolor",																										],
 		holdableButton				: [ n: "holdable button",		t: "enum",		o: ["held", "pushed"],								c: "holdableButton",			m: true,		],
 		hue							: [ n: "hue",					t: "integer",	r: [0, 360],		u: "°",																			],
@@ -1740,7 +1763,7 @@ private Map attributes() {
 		lqi							: [ n: "link quality",			t: "integer",	r: [0, 255],																						],
 		motion						: [ n: "motion",				t: "enum",		o: ["active", "inactive"],																			],
 		mute						: [ n: "mute",					t: "enum",		o: ["muted", "unmuted"],																			],
-		orientation					: [ n: "orientation",			t: "enum",		o: threeAxisOrientations(),	s: "threeAxis",															],
+		orientation					: [ n: "orientation",			t: "enum",		o: ["rear side up", "down side up", "left side up", "front side up", "up side up", "right side up"],	s: "threeAxis",															],
 		pH							: [ n: "pH level",				t: "decimal",	r: [0, 14],																							],
 		phraseSpoken				: [ n: "phrase",				t: "string",																										],
 		power						: [ n: "power",					t: "decimal",	r: [0, null],		u: "W",																			],
@@ -1759,11 +1782,11 @@ private Map attributes() {
 		steps						: [ n: "steps",					t: "integer",	r: [0, null],																						],
 		switch						: [ n: "switch",				t: "enum",		o: ["off", "on"],														i: true,					],
 		tamper						: [ n: "tamper",				t: "enum",		o: ["clear", "detected"],																			],
-		temperature					: [ n: "temperature",			t: "decimal",	r: [-460, 10000],	u: temperatureUnit(),															],
+		temperature					: [ n: "temperature",			t: "decimal",	r: [-460, 10000],	u: '°?',															],
 		thermostatFanMode			: [ n: "fan mode",				t: "enum",		o: ["auto", "circulate", "on"],																		],
 		thermostatMode				: [ n: "thermostat mode",		t: "enum",		o: ["auto", "cool", "emergency heat", "heat", "off"],												],
 		thermostatOperatingState	: [ n: "operating state",		t: "enum",		o: ["cooling", "fan only", "heating", "idle", "pending cool", "pending heat", "vent economizer"],	],
-		thermostatSetpoint			: [ n: "setpoint",				t: "decimal",	r: [-127, 127],		u: temperatureUnit(),															],
+		thermostatSetpoint			: [ n: "setpoint",				t: "decimal",	r: [-127, 127],		u: '°?',															],
 		threeAxis					: [ n: "vector",				t: "vector3",																										],
 		timeRemaining				: [ n: "time remaining",		t: "integer",	r: [0, null],		u: "s",																			],
 		touch						: [ n: "touch",					t: "enum",		o: ["touched"],																						],
@@ -1898,7 +1921,7 @@ private static Map commands() {
 	]
 }
 
-private virtualCommands() {
+private static Map virtualCommands() {
 	//a = aggregate
     //d = display
 	//n = name
@@ -1954,7 +1977,7 @@ private virtualCommands() {
 		[ n: "cancelPendingTasks",d: "Cancel pending tasks",			p: ["Scope:enum[Local,Global]"],																														dd: "Cancel all pending {0} tasks",		],
 */		
 	]
-    + (location.contactBookEnabled ? [
+/*    + (location.contactBookEnabled ? [
 		sendNotificationToContacts : [n: "Send notification to contacts", p: ["Message:text","Contacts:contacts","Save notification:bool"], l: true, dd: "Send notification '{0}' to {1}", aggregated: true],
 	] : [:])
 	+ (getIftttKey() ? [
@@ -1962,7 +1985,7 @@ private virtualCommands() {
 	] : [:])
 	+ (getLifxToken() ? [
 		lifxScene: [n: "Activate LIFX scene", p: ["Scene:lifxScenes"], l: true, dd: "Activate LIFX Scene '{0}'", aggregated: true],
-	] : [:])
+	] : [:])*/
 }
 
 
@@ -2084,6 +2107,8 @@ private static Map functions() {
       	format			: [ t: "string",						],
       	string			: [ t: "string",						],
       	replace			: [ t: "string",						],
+      	indexof			: [ t: "integer",	d: "indexOf",		],
+      	lastindexof		: [ t: "integer",	d: "lastIndexOf",	],
       	concat			: [ t: "string",						],
       	text			: [ t: "string",						],
       	lower			: [ t: "string",						],
@@ -2124,10 +2149,6 @@ private static Map functions() {
         isbetween		: [ t: "boolean",	d: "isBetween"		],
         formatduration	: [ t: "string",	d: "formatDuration"	],
 	]
-}
-
-private static List threeAxisOrientations() {
-	return ["rear side up", "down side up", "left side up", "front side up", "up side up", "right side up"]
 }
 
 def getIftttKey() {

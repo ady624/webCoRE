@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.1.09f.20170504" }
+public static String version() { return "v0.1.0a0.20170505" }
 /*
+ *	05/05/2017 >>> v0.1.0a0.20170505 - BETA M1 - Happy Cinco de Mayo
  *	05/04/2017 >>> v0.1.09f.20170504 - BETA M1 - Various improvements, added more expression operators, replaced localStorage with localforage, improvements on parent app memory usage
  *	05/03/2017 >>> v0.1.09e.20170503 - BETA M1 - Added the formatDuration function, added volume to playText, playTextAndResume, and playTextAndRestore
  *	05/03/2017 >>> v0.1.09d.20170503 - BETA M1 - Fixed a problem where async blocks inside async blocks were not working correctly.
@@ -258,6 +259,7 @@ def installed() {
     state.piston = [:]
     state.vars = state.vars?: [:]
     state.subscriptions = state.subscriptions ?: [:]
+    state.logging = 0
 	initialize()
 	return true
 }
@@ -424,7 +426,7 @@ def pause() {
 	state.active = false
     def rtData = getRunTimeData()
 	def msg = timer "Piston successfully stopped", null, -1
-    info "Stopping piston...", rtData, 0
+    if (rtData.logging) info "Stopping piston...", rtData, 0
     checkVersion(rtData)
     state.schedules = []
     rtData.stats.nextSchedule = 0
@@ -433,7 +435,7 @@ def pause() {
     state.trace = [:]
     state.subscriptions = [:]
     state.schedules = []
-    info msg, rtData
+    if (rtData.logging) info msg, rtData
     updateLogs(rtData)
     atomicState.schedules = []
 	atomicState.active = false
@@ -444,18 +446,28 @@ def resume() {
 	state.active = true;
 	def tempRtData = getTemporaryRunTimeData()
     def msg = timer "Piston successfully started", null,  -1
-	info "Starting piston... (${version()})", tempRtData, 0
+	if (tempRtData.logging) info "Starting piston... (${version()})", tempRtData, 0
     def rtData = getRunTimeData(tempRtData)
     checkVersion(rtData)
     state.subscriptions = [:]
     atomicState.schedules = []
     state.schedules = []
     subscribeAll(rtData)    
-    info msg, rtData
+    if (rtData.logging) info msg, rtData
     updateLogs(rtData)
     rtData.result = [active: true, subscriptions: state.subscriptions]
 	atomicState.active = true
     return rtData
+}
+
+
+def setLoggingLevel(level) {
+    def logging = "$level".toString()
+    logging = logging.isInteger() ? logging.toInteger() : 0
+    if (logging < 0) logging = 0
+    if (logging > 3) logging = 3
+	atomicState.logging = logging
+    return [logging: logging]
 }
 
 def execute() {
@@ -466,6 +478,7 @@ private getTemporaryRunTimeData() {
 	return [
     	temporary: true,
        	timestamp: now(),
+        logging: state.logging ?: 0,
         logs:[]
     ]
 }
@@ -481,7 +494,6 @@ private getRunTimeData(rtData = null, semaphore = null) {
 	    rtData.timestamp = timestamp
 	    rtData.logs = [[t: timestamp]]    
 	    if (logs && logs.size()) {
-	    	logs.removeAll{ !it.c || !rtData.logging[it.c] }
 	        rtData.logs = rtData.logs + logs
 	    }
 	    rtData.trace = [t: timestamp, points: [:]]
@@ -494,6 +506,11 @@ private getRunTimeData(rtData = null, semaphore = null) {
 	    rtData.schedules = []
 	    rtData.cancelations = [statements:[], conditions:[]]
 	    rtData.piston = piston
+        log.trace "HERE"
+        def logging = "$state.logging".toString()
+        logging = logging.isInteger() ? logging.toInteger() : 0
+        rtData.logging = (int) logging
+        log.trace "HERE 2"
 	    rtData.locationId = hashId(location.id)
         rtData.locationModeId = hashId(location.getCurrentMode().id)
 	    //flow control
@@ -553,24 +570,30 @@ def executeHandler(event) {
 def handleEvents(event) {
 	//cancel all pending jobs, we'll handle them later
 	unschedule(timeHandler)
-	runIn(30, timeRecoveryHandler)
     if (!state.active) return
 	def startTime = now()
     state.lastExecuted = startTime
     def eventDelay = startTime - event.date.getTime()
 	def msg = timer "Event processed successfully", null, -1
     def tempRtData = getTemporaryRunTimeData()
-    info "Received event [${event.device?:location}].${event.name} = ${event.value} with a delay of ${eventDelay}ms", tempRtData, 0
+	if (tempRtData.logging) info "Received event [${event.device?:location}].${event.name} = ${event.value} with a delay of ${eventDelay}ms", tempRtData, 0
     state.temp = [:]
     //todo start execution
     def ver = version()
-	def msg2 = timer "Runtime successfully initialized ($ver)"
+	def msg2 = timer "Runtime successfully initialized in 0ms ($ver)"
     Map rtData = getRunTimeData(tempRtData, true)
+    if (rtData.logging > 2) debug "RunTime Analysis CS > ${rtData.started - startTime}ms > PS > ${rtData.generatedIn}ms > PE > ${now() - rtData.ended}ms > CE", rtData
+    if (!rtData.enabled) {
+    	if (rtData.logging) info "Kill switch is active, aborting piston execution."
+    	return;
+    }
     checkVersion(rtData)    
+	runIn(30, timeRecoveryHandler)
     if (rtData.semaphoreDelay) {
     	warn "Piston waited at a semaphore for ${rtData.semaphoreDelay}ms", rtData
     }
-    trace msg2, rtData
+    msg2.m = "Runtime (${"$rtData".size()} bytes) successfully initialized in ${rtData.generatedIn}ms ($ver)"
+    if (rtData.logging > 1) trace msg2, rtData
     rtData.stats.timing = [
     	t: startTime,
     	d: eventDelay > 0 ? eventDelay : 0,
@@ -578,7 +601,7 @@ def handleEvents(event) {
     ]
     startTime = now()
 	msg2 = timer "Execution stage complete.", null, -1
-    trace "Execution stage started", rtData, 1
+    if (rtData.logging > 1) trace "Execution stage started", rtData, 1
     def success = true
     def syncTime = false    
     if (event.name != 'time') {
@@ -602,7 +625,7 @@ def handleEvents(event) {
         atomicState.schedules = schedules
         def delay = event.schedule.t - now()
         if (syncTime && (delay > 0)) {
-        	debug "Fast executing schedules, waiting for ${delay}ms to sync up", rtData
+        	if (rtData.logging > 2) debug "Fast executing schedules, waiting for ${delay}ms to sync up", rtData
         	pause delay
         }
         if (event.schedule.i == -3) {
@@ -624,7 +647,7 @@ def handleEvents(event) {
         if (rtData.semaphoreDelay) break
     }
 	rtData.stats.timing.e = now() - startTime
-    trace msg2, rtData
+    if (rtData.logging > 1) trace msg2, rtData
     if (!success) msg.m = "Event processing failed"
     finalizeEvent(rtData, msg, success)
 }
@@ -721,7 +744,7 @@ private finalizeEvent(rtData, initialMsg, success = true) {
 
     if (initialMsg) {
     	if (success) {
-        	info initialMsg, rtData
+        	if (rtData.logging) info initialMsg, rtData
         } else {
         	error initialMsg
         }
@@ -755,7 +778,7 @@ private processSchedules(rtData, scheduleJob = false) {
     def schedules = (atomicState.schedules ?: [])
     for (timer in rtData.piston.s.findAll{ it.t == 'every' }) {
     	if (!schedules.find{ it.s == timer.$ } && !rtData.schedules.find{ it.s == timer.$ }) {
-        	debug "Rescheduling missing timer ${timer.$}", rtData
+        	if (rtData.logging > 2) debug "Rescheduling missing timer ${timer.$}", rtData
     		scheduleTimer(rtData, timer, 0)
         }
     }
@@ -793,7 +816,7 @@ private processSchedules(rtData, scheduleJob = false) {
         	def t = (next.t - now()) / 1000
         	t = (t < 1 ? 1 : t)
         	rtData.stats.nextSchedule = next.t
-        	trace "Setting up scheduled job for ${formatLocalTime(next.t)} (in ${t}s)" + (schedules.size() > 1 ? ', with ' + (schedules.size() - 1).toString() + ' more job' + (schedules.size() > 2 ? 's' : '') + ' pending' : ''), rtData
+        	if (rtData.logging > 1) trace "Setting up scheduled job for ${formatLocalTime(next.t)} (in ${t}s)" + (schedules.size() > 1 ? ', with ' + (schedules.size() - 1).toString() + ' more job' + (schedules.size() > 2 ? 's' : '') + ' pending' : ''), rtData
         	runIn(t, timeHandler, [data: next])
         	runIn(t + 30, timeRecoveryHandler, [data: next])
     	} else {
@@ -859,19 +882,19 @@ private Boolean executeStatement(rtData, statement, async = false) {
     	switch (statement.tep) {
         	case 'c':
             	if (!rtData.conditionStateChanged) {
-                	debug "Skipping execution for statement #${statement.$} because condition state did not change", rtData
+                	if (rtData.logging > 2) debug "Skipping execution for statement #${statement.$} because condition state did not change", rtData
             		return;
                 }
                 break;
         	case 'p':
             	if (!rtData.pistonStateChanged) {
-                	debug "Skipping execution for statement #${statement.$} because piston state did not change", rtData
+                	if (rtData.logging > 2) debug "Skipping execution for statement #${statement.$} because piston state did not change", rtData
                 	return;
                 }
                 break;
         	case 'b':
             	if ((!rtData.conditionStateChanged) && (!rtData.pistonStateChanged)) {
-                	debug "Skipping execution for statement #${statement.$} because neither condition state nor piston state changed", rtData
+                	if (rtData.logging > 2) debug "Skipping execution for statement #${statement.$} because neither condition state nor piston state changed", rtData
                 	return;
                 }
                 break;
@@ -1060,7 +1083,7 @@ private Boolean executeStatement(rtData, statement, async = false) {
                     def implicitBreaks = (statement.ctp == 'i')
                     def fallThrough = !implicitBreaks
                     perform = false
-                    debug "Evaluating switch with values $lo.values", rtData
+                    if (rtData.logging > 2) debug "Evaluating switch with values $lo.values", rtData
                     for (_case in statement.cs) {
                     	def ro = [operand: _case.ro, values: evaluateOperand(rtData, _case, _case.ro)]
                         def ro2 = (_case.t == 'r') ? [operand: _case.ro2, values: evaluateOperand(rtData, _case, _case.ro2, null, false, true)] : null
@@ -1235,7 +1258,7 @@ private Boolean executeTask(rtData, devices, statement, task, async) {
     }
     if (task.m && (task.m instanceof List) && (task.m.size())) {
     	if (!(rtData.locationModeId in task.m)) {
-        	debug "Skipping task ${task.$} because of mode restrictions", rtData
+        	if (rtData.logging > 2) debug "Skipping task ${task.$} because of mode restrictions", rtData
         	return true;
         }
     }
@@ -1265,7 +1288,7 @@ private Boolean executeTask(rtData, devices, statement, task, async) {
             } catch(all) {
 	            executePhysicalCommand(rtData, device, task.c, params)
 			}
-            trace msg, rtData
+            if (rtData.logging > 1) trace msg, rtData
         } else {
             if (vcmd) {
 	        	delay = executeVirtualCommand(rtData, vcmd.a ? devices : device, task, params)
@@ -1284,12 +1307,12 @@ private Boolean executeTask(rtData, devices, statement, task, async) {
     	//we're aiming at waking up with at least 10s left
     	if (reschedule || (timeLeft - delay < 10000) || (delay >= 5000) || async) {
 	        //schedule a wake up
-	        trace "Requesting a wake up for ${formatLocalTime(now() + delay)} (in ${cast(rtData, delay / 1000, 'decimal')}s)", rtData
+	        if (rtData.logging > 1) trace "Requesting a wake up for ${formatLocalTime(now() + delay)} (in ${cast(rtData, delay / 1000, 'decimal')}s)", rtData
             tracePoint(rtData, "t:${task.$}", now() - t, -delay)
             requestWakeUp(rtData, statement, task, delay)
 	        return false
 	    } else {
-	        trace "Waiting for ${delay}ms", rtData
+	        if (rtData.logging > 1) trace "Waiting for ${delay}ms", rtData
 	        pause(delay)
 	    }
 	}
@@ -1303,7 +1326,7 @@ private long executeVirtualCommand(rtData, devices, task, params)
     long delay = 0
     try {
 		delay = "vcmd_${task.c}"(rtData, devices, params)
-	    trace msg, rtData
+	    if (rtData.logging > 1) trace msg, rtData
     } catch(all) {
     	msg.m = "Error executing virtual command ${devices instanceof List ? "$devices" : "[$devices]"}.${task.c}:"
         msg.e = all
@@ -1353,13 +1376,13 @@ private executePhysicalCommand(rtData, device, command, params = [], delay = nul
                     msg.m = "Executed physical command [${device.label}].$command()"
                 }
             }
-            debug msg, rtData
+            if (rtData.logging > 2) debug msg, rtData
         } catch(all) {
             error "Error while executing physical command $device.$command($params):", rtData, null, all
         }
         if (rtData.piston.o?.ced) {
             pause(rtData.piston.o.ced)
-            debug "Injected a ${rtData.piston.o.ced}ms delay after [$device].$command(${params ? "$params" : ''})", rtData
+            if (rtData.logging > 2) debug "Injected a ${rtData.piston.o.ced}ms delay after [$device].$command(${params ? "$params" : ''})", rtData
         }
     }
 }
@@ -1433,7 +1456,7 @@ private scheduleTimer(rtData, timer, long lastRun = 0) {
         	if (nextSchedule < (rightNow - delta)) {
             	//we're behind, let's fast forward to where the next occurrence happens in the future
                 def count = Math.floor((rightNow - nextSchedule) / delta)
-                //debug "Timer fell behind by $count interval${count > 1 ? 's' : ''}, catching up...", rtData
+                //if (rtData.logging > 2) debug "Timer fell behind by $count interval${count > 1 ? 's' : ''}, catching up...", rtData
                	nextSchedule = nextSchedule + delta * count
             }
 	    	nextSchedule = nextSchedule + delta
@@ -1574,7 +1597,7 @@ private scheduleTimeCondition(rtData, condition) {
    	n = v1 < v2 ? v1 : v2
     cancelStatementSchedules(rtData, condition.$)
     if (n > now()) {
-    	debug "Requesting time schedule wake up at ${formatLocalTime(n)}", rtData
+    	if (rtData.logging > 2) debug "Requesting time schedule wake up at ${formatLocalTime(n)}", rtData
 	    requestWakeUp(rtData, condition, [$:0], n)
     }
 }
@@ -2343,7 +2366,7 @@ private long vcmd_httpRequest(rtData, device, params) {
 	}
 	if (internal) {
 		try {
-			debug "Sending internal web request to: $uri", rtData
+			if (rtData.logging > 2) debug "Sending internal web request to: $uri", rtData
 			sendHubCommand(new physicalgraph.device.HubAction(
 				method: method,
 				path: (uri.indexOf("/") > 0) ? uri.substring(uri.indexOf("/")) : "",
@@ -2358,7 +2381,7 @@ private long vcmd_httpRequest(rtData, device, params) {
 		}
 	} else {
 		try {
-			debug "Sending external web request to: $uri", rtData
+			if (rtData.logging > 2) debug "Sending external web request to: $uri", rtData
 			def requestParams = [
 				uri:  "${protocol}://${uri}",
 				query: method == "GET" ? data : null,
@@ -2392,7 +2415,7 @@ private long vcmd_httpRequest(rtData, device, params) {
 							def jsonData = response.data instanceof Map ? response.data : new groovy.json.JsonSlurper().parseText(response.data)
 							importVariables(jsonData, importPrefix)
 						} catch (all) {
-							debug "Error parsing JSON response for web request: $all", null, "error"
+							if (rtData.logging > 2) debug "Error parsing JSON response for web request: $all", null, "error"
 						}
 					}*/
 				}
@@ -2446,7 +2469,7 @@ private Boolean evaluateConditions(rtData, conditions, collection, async) {
     rtData.stack.c = c
     if (!rtData.fastForwardTo) {
     	msg.m = "Condition group #${conditions.$} evaluated $result (${rtData.conditionStateChanged ? 'changed' : 'did not change'})"
-    	debug msg, rtData
+    	if (rtData.logging > 2) debug msg, rtData
     }
 	return result
 }
@@ -2662,12 +2685,12 @@ private Boolean evaluateCondition(rtData, condition, collection, async) {
                                     	//schedule one device schedule
                                         if (!schedules.find{ (it.s == condition.$) && (it.d == dev)  }) {
                                         	//schedule a wake up if there's none, otherwise just move on
-                                            debug "Adding a timed trigger schedule for device $dev for condition ${condition.$}", rtData
+                                            if (rtData.logging > 2) debug "Adding a timed trigger schedule for device $dev for condition ${condition.$}", rtData
 			                            	requestWakeUp(rtData, condition, condition, delay, dev)
                                         }
                                     } else {
                                     	//cancel that one device schedule
-                                        debug "Cancelling any timed trigger schedules for device $dev for condition ${condition.$}", rtData
+                                        if (rtData.logging > 2) debug "Cancelling any timed trigger schedules for device $dev for condition ${condition.$}", rtData
                                 		cancelStatementSchedules(rtData, condition.$, dev)
                                     }
                                 }
@@ -2675,11 +2698,11 @@ private Boolean evaluateCondition(rtData, condition, collection, async) {
                             	if (result) {
                                 	//if we find the comparison true, set a timer if we haven't already
 									if (!schedules.find{ (it.s == condition.$) }) {
-                                		debug "Adding a timed trigger schedule for condition ${condition.$}", rtData
+                                		if (rtData.logging > 2) debug "Adding a timed trigger schedule for condition ${condition.$}", rtData
 		                            	requestWakeUp(rtData, condition, condition, delay)
                                     }
                                 } else {
-                                	debug "Cancelling any timed trigger schedules for condition ${condition.$}", rtData
+                                	if (rtData.logging > 2) debug "Cancelling any timed trigger schedules for condition ${condition.$}", rtData
                                 	cancelStatementSchedules(rtData, condition.$)
                                 }
                             }
@@ -2712,7 +2735,7 @@ private Boolean evaluateCondition(rtData, condition, collection, async) {
     rtData.stack.c = c
     if (!rtData.fastForwardTo) {
 	    msg.m = "Condition #${condition.$} evaluated $result"
-	    debug msg, rtData
+	    if (rtData.logging > 2) debug msg, rtData
     }
     if ((rtData.fastForwardTo <= 0) && condition.s && (condition.t == 'condition') && condition.lo && condition.lo.t == 'v') {
     	switch (condition.lo.v) {
@@ -2729,10 +2752,10 @@ private Boolean evaluateCondition(rtData, condition, collection, async) {
 private updateCache(rtData, value) {
     def oldValue = rtData.cache[value.i]
     if (!oldValue || (oldValue.t != value.v.t) || (oldValue.v != value.v.v)) {
-        //debug "Updating value", rtData
+        //if (rtData.logging > 2) debug "Updating value", rtData
         rtData.newCache[value.i] = value.v + [s: now()]
     } else {
-        //debug "Not updating value", rtData
+        //if (rtData.logging > 2) debug "Not updating value", rtData
     }
 }
 
@@ -2753,7 +2776,7 @@ private Boolean evaluateComparison(rtData, comparison, lo, ro = null, ro2 = null
                     	def msg = timer ""
                         res = "$fn"(rtData, value, null, null, tvalue, tvalue2)
                     	msg.m = "Comparison ${value?.v?.v} $comparison = $res"
-                        debug msg, rtData
+                        if (rtData.logging > 2) debug msg, rtData
                     } else {
                         def rres
                         res = (ro.operand.g == 'any' ? false : true)
@@ -2763,7 +2786,7 @@ private Boolean evaluateComparison(rtData, comparison, lo, ro = null, ro2 = null
                                 def msg = timer ""
                                 rres = "$fn"(rtData, value, rvalue, null, tvalue, tvalue2)
                                 msg.m = "Comparison ${value?.v?.v} $comparison ${rvalue?.v?.v} = $rres"
-                                debug msg, rtData                                
+                                if (rtData.logging > 2) debug msg, rtData                                
                             } else {
                                 rres = (ro2.operand.g == 'any' ? false : true)
                                 //if multiple right2 values, go through each
@@ -2771,7 +2794,7 @@ private Boolean evaluateComparison(rtData, comparison, lo, ro = null, ro2 = null
                                 	def msg = timer ""
                                     def r2res = "$fn"(rtData, value, rvalue, r2value, tvalue, tvalue2)
                                     msg.m = "Comparison ${value?.v?.v} $comparison ${rvalue?.v?.v} .. ${r2value?.v?.v} = $r2res"
-                                    debug msg, rtData
+                                    if (rtData.logging > 2) debug msg, rtData
                                     rres = (ro2.operand.g == 'any' ? rres || r2res : rres && r2res)
                                     if (((ro2.operand.g == 'any') && rres) || ((ro2.operand.g != 'any') && !rres)) break
                                 }
@@ -3124,7 +3147,7 @@ private void subscribeAll(rtData) {
         def statementData = [timer: false]
         def msg = timer "Finished subscribing", null, -1
         unsubscribe()
-        trace "Subscribing to devices...", rtData, 1
+        if (rtData.logging > 1) trace "Subscribing to devices...", rtData, 1
         Map devices = [:]
         Map subscriptions = [:]
         def count = 0
@@ -3354,7 +3377,7 @@ private void subscribeAll(rtData) {
                         case 'datetime':
                         	break;
 						default:
-                            info "Subscribing to $device.${subscription.value.a}...", rtData
+                            if (rtData.logging) info "Subscribing to $device.${subscription.value.a}...", rtData
                             subscribe(device, subscription.value.a, deviceHandler)
                             ss.events = ss.events + 1
                             if (!dds[device.id]) {
@@ -3376,7 +3399,7 @@ private void subscribeAll(rtData) {
         for (d in devices.findAll{ ((it.value.c <= 0) || (rtData.piston.o.des)) && (it.key != rtData.locationId) }) {
             def device = getDevice(rtData, d.key)
             if (device && (device != location)) {
-                trace "Subscribing to $device...", rtData
+                if (rtData.logging > 1) trace "Subscribing to $device...", rtData
                 subscribe(device, "", fakeHandler)
                 ss.controls = ss.controls + 1
                 if (!dds[device.id]) {
@@ -3386,7 +3409,7 @@ private void subscribeAll(rtData) {
             }
         }
         state.subscriptions = ss
-        trace msg, rtData
+        if (rtData.logging > 1) trace msg, rtData
 
 
         def event = [date: new Date(), device: location, name: 'time', value: now(), schedule: [t: 0, s: 0, i: -9]]
@@ -3420,7 +3443,7 @@ private List expandDeviceList(rtData, List devices, localVarsOnly = false) {
 }
 
 def appHandler(evt) {
-    log.debug "app event ${evt.name}:${evt.value} received"
+//    log.debug "app event ${evt.name}:${evt.value} received"
 }
 
 
@@ -4046,7 +4069,7 @@ private Map evaluateExpression(rtData, expression, dataType = null) {
             	        	break
                 	}
 
-					debug "Calculating ($t1) $v1 $o ($t2) $v2 >> ($t) $v", rtData
+					if (rtData.logging > 2) debug "Calculating ($t1) $v1 $o ($t2) $v2 >> ($t) $v", rtData
     	            
                     //set the results
                     items[idx + 1].t = t
@@ -4380,8 +4403,8 @@ private func_mid(rtData, params) { return func_substring(rtData, params) }
 /*** Usage: replace(string, search, replace[, [..], search, replace])		***/
 /******************************************************************************/
 private func_replace(rtData, params) {
-	if (!params || !(params instanceof List) || (params.size() < 3)) {
-    	return [t: "error", v: "Invalid parameters. Expecting replace(string, search, replace)"];
+	if (!params || !(params instanceof List) || (params.size() < 3) || (params.size() %2 != 1)) {
+    	return [t: "error", v: "Invalid parameters. Expecting replace(string, search, replace[, [..], search, replace])"];
     }
     def value = evaluateExpression(rtData, params[0], 'string').v
     int cnt = Math.floor((params.size() - 1) / 2)
@@ -4393,6 +4416,32 @@ private func_replace(rtData, params) {
         value = value.replaceAll(search, evaluateExpression(rtData, params[i * 2 + 2], 'string').v)
     }
     return [t: "string", v: value]
+}
+
+/******************************************************************************/
+/*** indexOf finds the first occurrence of a substring in a string			***/
+/*** Usage: indexOf(string, substring)										***/
+/******************************************************************************/
+private func_indexof(rtData, params) {
+	if (!params || !(params instanceof List) || (params.size() != 2)) {
+    	return [t: "error", v: "Invalid parameters. Expecting indexOf(string, substring)"];
+    }
+    def value = evaluateExpression(rtData, params[0], 'string').v
+    def substring = evaluateExpression(rtData, params[1], 'string').v
+    return [t: "integer", v: value.indexOf(substring)]
+}
+
+/******************************************************************************/
+/*** lastIndexOf finds the first occurrence of a substring in a string		***/
+/*** Usage: lastIndexOf(string, substring)									***/
+/******************************************************************************/
+private func_lastindexof(rtData, params) {
+	if (!params || !(params instanceof List) || (params.size() != 2)) {
+    	return [t: "error", v: "Invalid parameters. Expecting lastIndexOf(string, substring)"];
+    }
+    def value = evaluateExpression(rtData, params[0], 'string').v
+    def substring = evaluateExpression(rtData, params[1], 'string').v
+    return [t: "integer", v: value.lastIndexOf(substring)]
 }
 
 
@@ -5367,9 +5416,9 @@ private log(message, rtData = null, shift = null, err = null, cmd = null, force 
         err = message.e
         message = message.m + " (${now() - message.t}ms)"
     }
-	if (!force && rtData && rtData.logging && !rtData.logging[cmd] && (cmd != "error")) {
-		return
-	}
+	//if (!force && rtData && rtData.logging && !rtData.logging[cmd] && (cmd != "error")) {
+	//	return
+	//}
 	cmd = cmd ? cmd : "debug"
 	//mode is
 	// 0 - initialize level, level set to 1
