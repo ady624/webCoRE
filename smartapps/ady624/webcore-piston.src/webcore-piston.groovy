@@ -3416,8 +3416,9 @@ private void subscribeAll(rtData) {
         if (rtData.piston.r) traverseRestrictions(rtData.piston.r, restrictionTraverser)
         if (rtData.piston.s) traverseStatements(rtData.piston.s, statementTraverser, null, statementData)
         //device variables
-        for(variable in rtData.piston.v.findAll{ (it.t == 'device') && it.v && it.v.v }) {
-            for (deviceId in variable.v.v) {
+        for(variable in rtData.piston.v.findAll{ (it.t == 'device') && it.v && it.v && (it.v instanceof List)}) {
+        	error  " $variable.v", rtData
+            for (deviceId in variable.v) {
                 devices[deviceId] = [c: 0 + (devices[deviceId]?.c ?: 0)]
                 if (deviceId != rtData.locationId) {
                 	rawDevices[deviceId] = rtData.devices[deviceId]
@@ -3459,7 +3460,9 @@ private void subscribeAll(rtData) {
                 }
             }
         }
-        app.updateSetting('dev', [type: 'capability.device', value: rawDevices.collect{ it.value.id }])
+        List deviceIdList = rawDevices.collect{ it && it.value ? it.value.id : null }
+        deviceIdList.removeAll{ it == null }
+        app.updateSetting('dev', [type: 'capability.device', value: deviceIdList])
         //fake subscriptions for controlled devices to force the piston being displayed in those devices' Smart Apps tabs
         for (d in devices.findAll{ ((it.value.c <= 0) || (rtData.piston.o.des)) && (it.key != rtData.locationId) }) {
             def device = getDevice(rtData, d.key)
