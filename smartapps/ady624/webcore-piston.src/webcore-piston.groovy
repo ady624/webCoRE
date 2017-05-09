@@ -540,7 +540,7 @@ private getRunTimeData(rtData = null, semaphore = null, fetchWrappers = false) {
 	    rtData.break = false
         if (!fetchWrappers) {
         	rtData.devices = (settings.dev ? settings.dev.collectEntries{[(hashId(it.id)): it]} : [:])
-        	rtData.contacts = (settings.dev ? settings.contacts.collectEntries{[(hashId(it.id)): it]} : [:])
+        	rtData.contacts = (settings.contacts ? settings.contacts.collectEntries{[(hashId(it.id)): it]} : [:])
         }        
 	    rtData.systemVars = getSystemVariables()
 	    rtData.localVars = getLocalVariables(rtData, piston.v)
