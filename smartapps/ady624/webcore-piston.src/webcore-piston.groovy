@@ -3072,7 +3072,7 @@ private traverseStatements(node, closure, parentNode = null, data = null) {
     if (!node) return
 	//if a statements element, go through each item
 	if (node instanceof List) {
-    	for(item in node) {
+    	for(def item in node) {	    	
         	if (!item.di) {
 	           	boolean lastTimer = (data && data.timer)
     	        if (data && (item.t == 'every')) {
@@ -3205,10 +3205,13 @@ private void subscribeAll(rtData) {
         def hasTriggers = false
         def downgradeTriggers = false
         //traverse all statements
-        //def statementTraverser
-        //def expressionTraverser
-        //def operandTraverser
-        def expressionTraverser = { expression, parentExpression, comparisonType -> 
+        def expressionTraverser
+        def operandTraverser
+        def eventTraverser
+        def conditionTraverser
+		def restrictionTraverser
+		def statementTraverser
+        expressionTraverser = { expression, parentExpression, comparisonType -> 
         	def subscriptionId = null
             def deviceId = null
             def attribute = null
@@ -3236,7 +3239,7 @@ private void subscribeAll(rtData) {
                 }
             }
         }    
-        def operandTraverser = { node, operand, value, comparisonType ->
+        operandTraverser = { node, operand, value, comparisonType ->
         	if (!operand) return
             switch (operand.t) {	
                 case "p": //physical device
@@ -3331,13 +3334,13 @@ private void subscribeAll(rtData) {
                     break
             }
         }
-        def eventTraverser = { event, parentEvent ->
+        eventTraverser = { event, parentEvent ->
             if (event.lo) {
 				def comparisonType = 'trigger'
                 operandTraverser(event, event.lo, null, comparisonType)
             }
         }
-        def conditionTraverser = { condition, parentCondition ->
+        conditionTraverser = { condition, parentCondition ->
             if (condition.co) {
                 def comparison = rtData.comparisons.conditions[condition.co]
                 def comparisonType = 'condition'
@@ -3359,7 +3362,7 @@ private void subscribeAll(rtData) {
             if (condition.ts instanceof List) traverseStatements(condition.ts, statementTraverser, condition, statementData)
             if (condition.fs instanceof List) traverseStatements(condition.fs, statementTraverser, condition, statementData)
         }
-        def restrictionTraverser = { restriction, parentRestriction ->
+        restrictionTraverser = { restriction, parentRestriction ->
             if (restriction.co) {
                 def comparison = rtData.comparisons.conditions[restriction.co]
                 def comparisonType = 'condition'
@@ -3378,7 +3381,7 @@ private void subscribeAll(rtData) {
                 }
             }
         }    
-        def statementTraverser = { node, parentNode, data ->
+        statementTraverser = { node, parentNode, data ->
         	downgradeTriggers = data && data.timer
             if (node.r) traverseRestrictions(node.r, restrictionTraverser)
             for(deviceId in node.d) {
@@ -3389,10 +3392,15 @@ private void subscribeAll(rtData) {
             }
             switch( node.t ) {
             	case 'if':
-                	if (node.ei) traverseStatements(node.ei*.s, statementTraverser, node, data)
+                	if (node.ei) {
+                    	for (ei in node.ei) {
+                        	traverseConditions(ei.c?:[], conditionTraverser)
+                    		traverseStatements(ei.s?:[], statementTraverser, ei, data)
+                        }
+                    }
                 case 'while':
                 case 'repeat':
-                	traverseConditions((node.c?:[]) + (node.ei?node.ei*.c:[]), conditionTraverser)
+                	traverseConditions(node.c, conditionTraverser)
                     break;
                 case 'on':
                 	traverseEvents(node.c?:[], eventTraverser)
@@ -3416,9 +3424,8 @@ private void subscribeAll(rtData) {
         if (rtData.piston.r) traverseRestrictions(rtData.piston.r, restrictionTraverser)
         if (rtData.piston.s) traverseStatements(rtData.piston.s, statementTraverser, null, statementData)
         //device variables
-        for(variable in rtData.piston.v.findAll{ (it.t == 'device') && it.v && it.v && (it.v instanceof List)}) {
-        	error  " $variable.v", rtData
-            for (deviceId in variable.v) {
+        for(variable in rtData.piston.v.findAll{ (it.t == 'device') && it.v && it.v.d && (it.v.d instanceof List)}) {
+            for (deviceId in variable.v.d) {
                 devices[deviceId] = [c: 0 + (devices[deviceId]?.c ?: 0)]
                 if (deviceId != rtData.locationId) {
                 	rawDevices[deviceId] = rtData.devices[deviceId]

@@ -201,7 +201,6 @@ definition(
 	iconX3Url: "https://cdn.rawgit.com/ady624/${handle()}/master/resources/icons/app-CoRE@3x.png"
 )
 
-
 preferences {
 	//UI pages
 	page(name: "pageSettings")
@@ -214,10 +213,6 @@ preferences {
 /*** 																		***/
 /*** CONFIGURATION PAGES													***/
 /*** 																		***/
-/******************************************************************************/
-
-/******************************************************************************/
-/*** COMMON PAGES															***/
 /******************************************************************************/
 def pageSettings() {
     //clear devices cache
@@ -351,12 +346,6 @@ def Map listAvailableContacts(raw = false) {
     return contacts
 }
 
-
-/******************************************************************************/
-/*** 																		***/
-/*** PUBLIC METHODS															***/
-/*** 																		***/
-/******************************************************************************/
 public String mem(showBytes = true) {
 	def bytes = state.toString().length()
 	return Math.round(100.00 * (bytes/ 100000.00)) + "%${showBytes ? " ($bytes bytes)" : ""}"
@@ -392,3 +381,9 @@ def String hashId(id) {
     }
     return result
 }
+
+/******************************************************************************/
+/***																		***/
+/*** END OF CODE															***/
+/***																		***/
+/******************************************************************************/
