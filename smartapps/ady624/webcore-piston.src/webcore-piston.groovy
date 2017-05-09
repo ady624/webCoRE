@@ -452,6 +452,7 @@ def pause() {
     unsubscribe()
     unschedule()
     app.updateSetting('dev', null)
+    state.hash = null
     state.trace = [:]
     state.subscriptions = [:]
     state.schedules = []
@@ -469,6 +470,7 @@ def resume() {
 	if (tempRtData.logging) info "Starting piston... (${version()})", tempRtData, 0
     def rtData = getRunTimeData(tempRtData, null, true)
     checkVersion(rtData)
+    state.hash = null    
     state.subscriptions = [:]
     atomicState.schedules = []
     state.schedules = []
@@ -5197,7 +5199,15 @@ def String md5(String md5) {
 }
 
 def String hashId(id) {
-	return ":${md5("core." + id)}:"
+	//enabled hash caching for faster processing
+	def result = state.hash ? state.hash[id] : null
+    if (!result) {
+		result = ":${md5("core." + id)}:"
+        def hash = state.hash ?: [:]
+        hash[id] = result
+        state.hash = hash
+    }
+    return result
 }
 
 private cast(rtData, value, dataType, srcDataType = null) {
