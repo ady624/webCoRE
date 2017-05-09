@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.1.0a2.20170507" }
+public static String version() { return "v0.1.0a3.20170509" }
 /*
+ *	05/09/2017 >>> v0.1.0a3.20170509 - BETA M1 - DO NOT INSTALL THIS UNLESS ASKED TO - IT WILL BREAK YOUR ENVIRONMENT - IF YOU DID INSTALL IT, DO NOT GO BACK TO A PREVIOUS VERSION
  *	05/07/2017 >>> v0.1.0a2.20170507 - BETA M1 - Added the random() expression function.
  *	05/06/2017 >>> v0.1.0a1.20170506 - BETA M1 - Kill switch was a killer. Killed it.
  *	05/05/2017 >>> v0.1.0a0.20170505 - BETA M1 - Happy Cinco de Mayo
@@ -408,18 +409,23 @@ def pageSettings() {
 			label name: "name", title: "Name", state: (name ? "complete" : null), defaultValue: app.name, required: false
 		}
         
-		section("Available devices") {
-			href "pageSelectDevices", title: "Available devices", description: "Tap here to select which devices are available to pistons" 
+        def storageApp = getStorageApp()
+        if (storageApp) {
+			section("Available devices and contacts") {
+	        	app([title: 'Available devices and contacts', multiple: false, install: true, uninstall: false], 'storage', 'ady624', "${handle()} Storage")
+	        }
+		} else {        
+			section("Available devices") {
+				href "pageSelectDevices", title: "Available devices", description: "Tap here to select which devices are available to pistons" 
+			}
+			section("Available contacts") {
+				if (location.getContactBookEnabled()) {
+					href "pageSelectContacts", title: "Available contacts", description: "Tap here to select which contacts are available to pistons" 
+				} else {
+    	        	paragraph "Your contact book is not enabled."
+        	    }
+			}
 		}
-
-		section("Available contacts") {
-			if (location.getContactBookEnabled()) {
-				href "pageSelectContacts", title: "Available contacts", description: "Tap here to select which contacts are available to pistons" 
-			} else {
-            	paragraph "Your contact book is not enabled."
-            }
-		}
-
 /*		section("Integrations") {
 			href "pageIntegrations", title: "Integrations with other services", description: "Tap here to configure your integrations" 
 		}*/
@@ -526,6 +532,7 @@ def pageIntegrationIFTTTConfirm() {
 		}
 	}
 }
+
 def pageIntegrationTwilio() {
     //clear devices cache
 	dynamicPage(name: "pageIntegrationTwilio", title: "Twilio", install: false, uninstall: false) {
@@ -646,10 +653,19 @@ private initializeWebCoREEndpoint() {
     return false
 }
 
+private getHub() {
+	return location.getHubs().find{ it.getType().toString() == 'PHYSICAL' }
+}
+
 private subscribeAll() {
 	subscribe(location, handle(), webCoREHandler)
 	subscribe(location, "askAlexa", askAlexaHandler)
 	subscribe(location, "echoSistant", echoSistantHandler)    
+    subscribe(location, "HubUpdated", hubUpdatedHandler, [filterEvents: false])
+    subscribe(location, "summary", summaryHandler, [filterEvents: false])
+    //state.powerSupply = 
+    def hub = getHub()
+    //setPowerSource(state.powerSource == 'mains' ? 'battery' : 'mains')
 }
 
 /******************************************************************************/
@@ -694,11 +710,12 @@ private api_get_base_result(deviceVersion = 0, updateCache = false) {
 	def tz = location.getTimeZone()
     def currentDeviceVersion = state.deviceVersion
 	def Boolean sendDevices = (deviceVersion != currentDeviceVersion)
+    def name = handle() + ' Piston'
 	return [
         name: location.name + ' \\ ' + (app.label ?: app.name),
         instance: [
 	    	account: [id: hashId(app.getAccountId(), updateCache)],
-        	pistons: getChildApps().sort{ it.label }.collect{ [ id: hashId(it.id, updateCache), 'name': it.label, 'meta': state[hashId(it.id, updateCache)] ] },
+        	pistons: getChildApps().findAll{ it.name == name }.sort{ it.label }.collect{ [ id: hashId(it.id, updateCache), 'name': it.label, 'meta': state[hashId(it.id, updateCache)] ] },
             id: hashId(app.id, updateCache),
             locationId: hashId(location.id, updateCache),
             name: app.label ?: app.name,
@@ -708,8 +725,7 @@ private api_get_base_result(deviceVersion = 0, updateCache = false) {
             enabled: !settings.disabled,
             virtualDevices: virtualDevices(updateCache),
             globalVars: listAvailableVariables(),
-            contacts: listAvailableContacts(false, updateCache),
-        ] + (sendDevices ? [devices: listAvailableDevices(false, updateCache)] : [:]),
+        ] + (sendDevices ? [contacts: listAvailableContacts(false, updateCache), devices: listAvailableDevices(false, updateCache)] : [:]),
         location: [
             contactBookEnabled: location.getContactBookEnabled(),
             hubs: location.getHubs().collect{ [id: hashId(it.id, updateCache), name: it.name, firmware: it.getFirmwareVersionString(), physical: it.getType().toString().contains('PHYSICAL') ]},
@@ -731,6 +747,8 @@ private api_get_base_result(deviceVersion = 0, updateCache = false) {
 
 private api_intf_dashboard_load() {
 	def result
+    //install storage app
+    getStorageApp(true)
     //debug "Dashboard: Request received to initialize instance"
 	if (verifySecurityToken(params.token)) {
     	result = api_get_base_result(params.dev, true)
@@ -768,7 +786,7 @@ private api_intf_dashboard_piston_create() {
 	if (verifySecurityToken(params.token)) {
     	def piston = addChildApp("ady624", "${handle()} Piston", params.name?:generatePistonName())
         if (params.author || params.bin) {
-        	piston.config([bin: params.bin, author: params.author])
+        	piston.config([bin: params.bin, author: params.author, initialVersion: version()])
         }
         result = [status: "ST_SUCCESS", id: hashId(piston.id)]
 	} else {
@@ -819,11 +837,11 @@ private api_intf_dashboard_piston_get() {
 }
 
 
-private api_intf_dashboard_piston_set_save(id, data) {
+private api_intf_dashboard_piston_set_save(id, data, chunks) {
     def piston = getChildApps().find{ hashId(it.id) == id };
     if (piston) {
 		def p = new groovy.json.JsonSlurper().parseText(new String(data.decodeBase64(), "UTF-8"))
-		return piston.set(p);
+		return piston.set(p, chunks);
     }
     return false;
 }
@@ -835,7 +853,7 @@ private api_intf_dashboard_piston_set() {
 	if (verifySecurityToken(params.token)) {
     	def data = params?.data
         //save the piston here
-        def saved = api_intf_dashboard_piston_set_save(params?.id, data)   
+        def saved = api_intf_dashboard_piston_set_save(params?.id, data, ['chunk:0' : data])   
         if (saved) {
         	if (saved.rtData) {
             	updateRunTimeData(saved.rtData)
@@ -914,7 +932,7 @@ private api_intf_dashboard_piston_set_end() {
             atomicState.chunks = null
             if (ok) {
                 //save the piston here
-                def saved = api_intf_dashboard_piston_set_save(chunks.id, data)
+                def saved = api_intf_dashboard_piston_set_save(chunks.id, data, chunks.findAll{ it.key.startsWith('chunk:') })
                 if (saved) {
                     if (saved.rtData) {
                         updateRunTimeData(saved.rtData)
@@ -1126,6 +1144,35 @@ private cleanUp() {
     }
 }
 
+private getStorageApp(install = false) {
+	def name = handle() + ' Storage'
+	def storageApp = getChildApps().find{ it.name == name }    
+    if (storageApp) {
+    	if (app.label != storageApp.label) {
+    		storageApp.updateLabel(app.label)
+        }
+    	return storageApp
+    }
+    if (!install) return null
+    try {
+    	storageApp = addChildApp("ady624", name, app.label)
+    } catch (all) {
+    	error "Please install the webCoRE Storage SmartApp for better performance"
+        return null
+    }
+    try {
+    	storageApp.initData(settings.collect{ it.key.startsWith('dev:') ? it : null }, settings.contacts)
+    	for (item in settings.collect{ it.key.startsWith('dev:') ? it : null }) {
+        	if (item && item.key) {
+            	app.updateSetting(item.key, [type: 'string', value: null])
+            }
+        }
+		app.updateSetting('contacts', [type: 'string', value: null])
+    } catch (all) {
+    }
+    return storageApp
+}
+
 private String getDashboardInitUrl(register = false) {
 	def url = register ? getDashboardRegistrationUrl() : getDashboardUrl()
     if (!url) return null
@@ -1138,31 +1185,18 @@ private String getDashboardRegistrationUrl() {
 }
 
 private Map listAvailableDevices(raw = false, updateCache = false) {
-	//long t = now()
+	def storageApp = getStorageApp()
+    if (storageApp) return storageApp.listAvailableDevices(raw)
 	if (raw) {
     	return settings.findAll{ it.key.startsWith("dev:") }.collect{ it.value }.flatten().collectEntries{ dev -> [(hashId(dev.id, updateCache)): dev]}
     } else {
     	return settings.findAll{ it.key.startsWith("dev:") }.collect{ it.value }.flatten().collectEntries{ dev -> [(hashId(dev.id, updateCache)): dev]}.collectEntries{ id, dev -> [ (id): [ n: dev.getDisplayName(), cn: dev.getCapabilities()*.name, a: dev.getSupportedAttributes().unique{ it.name }.collect{def x = [n: it.name, t: it.getDataType(), o: it.getValues()]; try {x.v = dev.currentValue(x.n);} catch(all) {}; x}, c: dev.getSupportedCommands().unique{ it.getName() }.collect{[n: it.getName(), p: it.getArguments()]} ]]}
 	}
-/*    def devices = [:]
-    for (devs in settings.findAll{ it.key.startsWith("dev:") }) {
-        for(dev in devs.value) {
-        	def devId = hashId(dev.id);
-        	if (!devices[devId]) {
-            	if (raw) {
-                    devices[devId] = dev
-                } else {
-                	devices[devId] = [n: dev.getDisplayName(), cn: dev.getCapabilities()*.name, a: dev.getSupportedAttributes().unique{ it.getName() }.collect{def x = [n: it.getName(), t: it.getDataType(), o: it.getValues()]; try {x.v = dev.currentValue(x.n);} catch(all) {}; x}, c: dev.getSupportedCommands().unique{ it.getName() }.collect{[n: it.getName(), p: it.getArguments()]}]
-                }
-            }
-        }
-    }
-    log.error "Time for devices: ${now() - t}ms"
-    return devices*/
 }
 
-
 private Map listAvailableContacts(raw = false, updateCache = false) {
+	def storageApp = getStorageApp()
+    if (storageApp) return storageApp.listAvailableContacts(raw)
     def contacts = [:]
     for(contact in settings.contacts) {
         def contactId = hashId(contact.id, updateCache);
@@ -1173,6 +1207,16 @@ private Map listAvailableContacts(raw = false, updateCache = false) {
         }
     }
     return contacts
+}
+
+private setPowerSource(powerSource, atomic = true) {
+	if (state.powerSource == powerSource) return
+    if (atomic) {
+    	atomicState.powerSource = powerSource
+    } else {
+    	state.powerSource = powerSource
+    }
+	sendLocationEvent([name: 'powerSource', value: powerSource, isStateChange: true, linkText: "webCoRE power source event", descriptionText: "${handle()} has detected a new power source: $powerSource"])
 }
 
 private Map listAvailableVariables() {
@@ -1341,6 +1385,10 @@ public String getDashboardUrl() {
 	return "https://dashboard.${domain()}/"
 }
 
+public refreshDevices() {
+	state.deviceVersion = now().toString()
+}
+
 public String getWikiUrl() {
 	return "https://wiki.${domain()}/"
 }
@@ -1349,7 +1397,7 @@ public String mem(showBytes = true) {
 	return Math.round(100.00 * (bytes/ 100000.00)) + "%${showBytes ? " ($bytes bytes)" : ""}"
 }
 
-public Map getRunTimeData(semaphore) {
+public Map getRunTimeData(semaphore, fetchWrappers = false) {
     def startTime = now()
     semaphore = semaphore ?: 0
    	def semaphoreDelay = 0
@@ -1368,7 +1416,8 @@ public Map getRunTimeData(semaphore) {
 	        waited = true
 	    	pause(250)
 	    }
-    }
+    }    
+    def storageApp = !!fetchWrappers ? getStorageApp() : null
    	return [
         enabled: !settings.disabled,
     	attributes: attributes(),
@@ -1381,10 +1430,11 @@ public Map getRunTimeData(semaphore) {
 		],
         comparisons: comparisons(),
         coreVersion: version(),
-    	contacts: listAvailableContacts(true),
-    	devices: listAvailableDevices(true),
+    	contacts: (!!fetchWrappers ? (storageApp ? storageApp.listAvailableContacts(true) : listAvailableContacts(true)) : [:]),
+    	devices: (!!fetchWrappers ? (storageApp ? storageApp.listAvailableDevices(true) : listAvailableDevices(true)) : [:]),
         virtualDevices: virtualDevices(),
         globalVars: listAvailableVariables(),
+        powerSource: state.powerSource ?: 'mains',
         started: startTime,
         ended: now(),
         generatedIn: now() - startTime
@@ -1516,9 +1566,19 @@ def echoSistantHandler(evt) {
 	}
 }
 
+def hubUpdatedHandler(evt) {
+	if (evt.jsonData && (evt.jsonData.hubType == 'PHYSICAL') && evt.jsonData.data && evt.jsonData.data.batteryInUse) {
+    	setPowerSource(evt.jsonData.data.batteryInUse ? 'battery' : 'mains')
+    }
+}
 
+def summaryHandler(evt) {
+	//log.error "$evt.name >>> ${evt.jsonData}"
+}
 
-
+def NewIncidentHandler(evt) {
+	//log.error "$evt.name >>> ${evt.jsonData}"
+}
 
 
 /******************************************************************************/
@@ -1937,6 +1997,8 @@ private static Map virtualCommands() {
 		resumePiston				: [ n: "Resume piston...",			a: true,	i: "clock-o",				d: "Resume piston \"{0}\"",												p: [[n:"Piston", t:"piston"]],	],
 		executeRoutine				: [ n: "Execute routine...",		a: true,	i: "clock-o",				d: "Execute routine \"{0}\"",											p: [[n:"Routine", t:"routine"]],	],
 		toggle						: [ n: "Toggle", r: ["on", "off"], 				i: "toggle-on"																				],
+		toggleRandom				: [ n: "Random toggle", r: ["on", "off"], 		i: "toggle-on",				d: "Random toggle{0}",													p: [[n:"Probability for on", t:"level", d:" with a {v}% probability for on"]],	],
+		setSwitch					: [ n: "Set switch", r: ["on", "off"], 			i: "toggle-on",				d: "Set switch to {0}",													p: [[n:"Switch value", t:"switch"]],																],
 		setHSLColor					: [ n: "Set color... (hsl)", 					i: "barcode",			d: "Set color to H:{0}° / S:{1}% / L%:{2}{3}",				r: ["setColor"],				p: [[n:"Hue",t:"hue"], [n:"Saturation",t:"saturation"], [n:"Level",t:"level"], [n:"Only if switch is...", t:"enum",o:["on","off"], d:" if already {v}"]],  							],
 		toggleLevel					: [ n: "Toggle level...", 						i: "toggle-off",			d: "Toggle level between 0% and {0}%",	r: ["on", "off", "setLevel"],	p: [[n:"Level", t:"level"]],																																	],
 		sendNotification			: [ n: "Send notification...",		a: true,	i: "commenting-o",			d: "Send notification \"{0}\"",											p: [[n:"Message", t:"string"]],												],
@@ -2206,5 +2268,6 @@ private Map virtualDevices(updateCache = false) {
         askAlexa:			[ n: 'Ask Alexa',					t: 'enum',		o: getAskAlexaOptions(),					m: true	],
         echoSistant:		[ n: 'EchoSistant',					t: 'enum',		o: getEchoSistantOptions(),					m: true	],
         ifttt:				[ n: 'IFTTT',						t: 'string',												m: true	],
+        powerSource:		[ n: 'Hub power source',			t: 'enum',		o: [battery: 'battery', mains: 'mains'],					x: true	],
     ]
 }

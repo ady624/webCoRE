@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.1.0a2.20170507" }
+public static String version() { return "v0.1.0a3.20170509" }
 /*
+ *	05/09/2017 >>> v0.1.0a3.20170509 - BETA M1 - DO NOT INSTALL THIS UNLESS ASKED TO - IT WILL BREAK YOUR ENVIRONMENT - IF YOU DID INSTALL IT, DO NOT GO BACK TO A PREVIOUS VERSION
  *	05/07/2017 >>> v0.1.0a2.20170507 - BETA M1 - Added the random() expression function.
  *	05/06/2017 >>> v0.1.0a1.20170506 - BETA M1 - Kill switch was a killer. Killed it.
  *	05/05/2017 >>> v0.1.0a0.20170505 - BETA M1 - Happy Cinco de Mayo
@@ -194,7 +195,7 @@ definition(
     author: "Adrian Caramaliu",
     description: "Do not install this directly, use webCoRE instead",
     category: "Convenience",
-	parent: "ady624:webCoRE",
+	parent: "ady624:${handle()}",
     /* icons courtesy of @chauger - thank you */
 	iconUrl: "https://cdn.rawgit.com/ady624/webCoRE/master/resources/icons/app-CoRE.png",
 	iconX2Url: "https://cdn.rawgit.com/ady624/webCoRE/master/resources/icons/app-CoRE@2x.png",
@@ -215,13 +216,13 @@ preferences {
 def pageMain() {
 	//webCoRE Piston main page
 	return dynamicPage(name: "pageMain", title: "", uninstall: false) {
-    	if (!parent.isInstalled()) {        
+    	if (!parent || !parent.isInstalled()) {        
         	section() {
 				paragraph "Sorry, you cannot install a piston directly from the Marketplace, please use the webCoRE SmartApp instead."
             }
         	section("Installing webCoRE") {
             	paragraph "If you are trying to install webCoRE, please go back one step and choose webCoRE, not webCoRE Piston. You can also visit wiki.webcore.co for more information on how to install and use webCoRE"
-				href "", title: "More information ${parent.getWikiUrl()}", style: "external", url: parent.getWikiUrl(), image: "https://cdn.rawgit.com/ady624/webCoRE/master/resources/icons/app-CoRE.png", required: false
+				if (parent) href "", title: "More information ${parent.getWikiUrl()}", style: "external", url: parent.getWikiUrl(), image: "https://cdn.rawgit.com/ady624/webCoRE/master/resources/icons/app-CoRE.png", required: false
             }
         } else {
             def currentState = state.currentState
@@ -325,7 +326,7 @@ def activity(lastLogTimestamp) {
 }
 
 
-def set(data) {
+def set(data, chunks) {
 	if (!data) return false
 	state.modified = now()
     state.build = (int)(state.build ? (int)state.build + 1 : 1)
@@ -340,10 +341,20 @@ def set(data) {
     ]
     if (data.n) app.updateLabel(data.n)
     setIds(piston)
+    def pc = groovy.json.JsonOutput.toJson(piston)
+    for(chunk in settings.findAll{ it.key.startsWith('chunk:') && !chunks[it.key] }) {
+    	app.updateSetting(chunk.key, [type: 'text', value: ''])
+    }
+    for(chunk in chunks) {
+    	app.updateSetting(chunk.key, [type: 'text', value: chunk.value])
+    }
+    app.updateSetting('bin', [type: 'text', value: state.bin ?: ''])
+    app.updateSetting('author', [type: 'text', value: state.author ?: ''])
     state.piston = piston
     state.trace = [:]
     state.schedules = []
     state.vars = state.vars ?: [:];
+    state.modifiedVersion = version()
     //todo replace this
     Map rtData
     if ((state.build == 1) || (!!state.active)) {
@@ -419,9 +430,14 @@ def config(data) {
     }
 	if (data.bin) {
 		state.bin = data.bin;
+	    app.updateSetting('bin', [type: 'text', value: state.bin ?: ''])        
     }
 	if (data.author) {
 		state.author = data.author;
+	    app.updateSetting('author', [type: 'text', value: state.author ?: ''])
+    }
+	if (data.initialVersion) {
+		state.initialVersion = data.initialVersion;
     }
 }
 
@@ -435,6 +451,7 @@ def pause() {
     rtData.stats.nextSchedule = 0
     unsubscribe()
     unschedule()
+    app.updateSetting('dev', null)
     state.trace = [:]
     state.subscriptions = [:]
     state.schedules = []
@@ -450,7 +467,7 @@ def resume() {
 	def tempRtData = getTemporaryRunTimeData()
     def msg = timer "Piston successfully started", null,  -1
 	if (tempRtData.logging) info "Starting piston... (${version()})", tempRtData, 0
-    def rtData = getRunTimeData(tempRtData)
+    def rtData = getRunTimeData(tempRtData, null, true)
     checkVersion(rtData)
     state.subscriptions = [:]
     atomicState.schedules = []
@@ -486,14 +503,14 @@ private getTemporaryRunTimeData() {
     ]
 }
 
-private getRunTimeData(rtData = null, semaphore = null) {
+private getRunTimeData(rtData = null, semaphore = null, fetchWrappers = false) {
 	def n = now()
 	try {
 		def timestamp = rtData?.timestamp ?: now()
 	    def piston = state.piston
         def appId = hashId(app.id)
 	    def logs = (rtData && rtData.temporary) ? rtData.logs : null
-		rtData = (rtData && !rtData.temporary) ? rtData : parent.getRunTimeData((semaphore && !(piston.o?.pep)) ? appId : null)
+		rtData = (rtData && !rtData.temporary) ? rtData : parent.getRunTimeData((semaphore && !(piston.o?.pep)) ? appId : null, !!fetchWrappers)
 	    rtData.timestamp = timestamp
 	    rtData.logs = [[t: timestamp]]    
 	    if (logs && logs.size()) {
@@ -521,6 +538,10 @@ private getRunTimeData(rtData = null, semaphore = null) {
 	    rtData.statementLevel = 0;
 	    rtData.fastForwardTo = null
 	    rtData.break = false
+        if (!fetchWrappers) {
+        	rtData.devices = (settings.dev ? settings.dev.collectEntries{[(hashId(it.id)): it]} : [:])
+        	rtData.contacts = (settings.dev ? settings.contacts.collectEntries{[(hashId(it.id)): it]} : [:])
+        }        
 	    rtData.systemVars = getSystemVariables()
 	    rtData.localVars = getLocalVariables(rtData, piston.v)
 	} catch(all) {
@@ -2013,8 +2034,28 @@ private long vcmd_waitForDateTime(rtData, device, params) {
     return (time > rightNow) ? time - rightNow : 0
 }
 
+private long vcmd_setSwitch(rtData, device, params) {
+	if (cast(rtData, params[0], 'boolean')) {
+	    executePhysicalCommand(rtData, device, 'on')
+    } else {
+	    executePhysicalCommand(rtData, device, 'off')
+    }
+    return 0
+}
+
 private long vcmd_toggle(rtData, device, params) {
 	if (getDeviceAttributeValue(rtData, device, 'switch') == 'off') {
+	    executePhysicalCommand(rtData, device, 'on')
+    } else {
+	    executePhysicalCommand(rtData, device, 'off')
+    }
+    return 0
+}
+
+private long vcmd_toggleRandom(rtData, device, params) {
+	int probability = cast(rtData, params.size() == 1 ? params[0] : 50, 'integer')
+    if (probability <= 0) probability = 50
+	if (Math.round(100 * Math.random()) <= probability) {
 	    executePhysicalCommand(rtData, device, 'on')
     } else {
 	    executePhysicalCommand(rtData, device, 'off')
@@ -2529,6 +2570,9 @@ private evaluateOperand(rtData, node, operand, index = null, trigger = false, ne
             	case 'mode':
             	case 'alarmSystemStatus':
                 	values = [[i: "${node?.$}:v", v:getDeviceAttribute(rtData, rtData.locationId, operand.v)]];
+                    break;
+            	case 'powerSource':
+                	values = [[i: "${node?.$}:v", v:[t: 'enum', v:rtData.powerSource]]];
                     break;
 				case 'time':
 				case 'date':
@@ -3152,6 +3196,8 @@ private void subscribeAll(rtData) {
         unsubscribe()
         if (rtData.logging > 1) trace "Subscribing to devices...", rtData, 1
         Map devices = [:]
+        Map rawDevices = [:]
+        Map rawContacts = [:]
         Map subscriptions = [:]
         def count = 0
         def hasTriggers = false
@@ -3183,6 +3229,9 @@ private void subscribeAll(rtData) {
                     ct = ct ?: comparisonType
                 }
                 subscriptions[subscriptionId] = [d: deviceId, a: attribute, t: ct, c: (subscriptions[subscriptionId] ? subscriptions[subscriptionId].c : []) + [condition]]
+                if (deviceId != rtData.locationId) {
+                	rawDevices[deviceId] = rtData.devices[deviceId]
+                }
             }
         }    
         def operandTraverser = { node, operand, value, comparisonType ->
@@ -3199,6 +3248,9 @@ private void subscribeAll(rtData) {
                             ct = ct ?: comparisonType
                         }
                         subscriptions["$deviceId${operand.a}"] = [d: deviceId, a: operand.a, t: ct , c: (subscriptions["$deviceId${operand.a}"] ? subscriptions["$deviceId${operand.a}"].c : []) + (comparisonType?[node]:[])]
+                        if (deviceId != rtData.locationId) {
+                            rawDevices[deviceId] = rtData.devices[deviceId]
+                        }
                     }
                     break;
                 case "v": //physical device
@@ -3212,6 +3264,7 @@ private void subscribeAll(rtData) {
                         case 'date':
                         case 'datetime':
                         case 'mode':
+                        case 'powerSource':
                         case 'alarmSystemStatus':
                        		subscriptionId = "$deviceId${operand.v}"
                            	attribute = operand.v
@@ -3328,6 +3381,9 @@ private void subscribeAll(rtData) {
             if (node.r) traverseRestrictions(node.r, restrictionTraverser)
             for(deviceId in node.d) {
                 devices[deviceId] = devices[deviceId] ?: [c: 0]
+                if (deviceId != rtData.locationId) {
+                	rawDevices[deviceId] = rtData.devices[deviceId]
+                }                
             }
             switch( node.t ) {
             	case 'if':
@@ -3358,9 +3414,12 @@ private void subscribeAll(rtData) {
         if (rtData.piston.r) traverseRestrictions(rtData.piston.r, restrictionTraverser)
         if (rtData.piston.s) traverseStatements(rtData.piston.s, statementTraverser, null, statementData)
         //device variables
-        for(variable in rtData.piston.v.findAll{ it.t == 'device' }) {
-            for (deviceId in variable.v) {
+        for(variable in rtData.piston.v.findAll{ (it.t == 'device') && it.v && it.v.v }) {
+            for (deviceId in variable.v.v) {
                 devices[deviceId] = [c: 0 + (devices[deviceId]?.c ?: 0)]
+                if (deviceId != rtData.locationId) {
+                	rawDevices[deviceId] = rtData.devices[deviceId]
+                }                
             }
         }
         def dds = [:]
@@ -3398,12 +3457,13 @@ private void subscribeAll(rtData) {
                 }
             }
         }
+        app.updateSetting('dev', [type: 'capability.device', value: rawDevices.collect{ it.value.id }])
         //fake subscriptions for controlled devices to force the piston being displayed in those devices' Smart Apps tabs
         for (d in devices.findAll{ ((it.value.c <= 0) || (rtData.piston.o.des)) && (it.key != rtData.locationId) }) {
             def device = getDevice(rtData, d.key)
             if (device && (device != location)) {
                 if (rtData.logging > 1) trace "Subscribing to $device...", rtData
-                subscribe(device, "", fakeHandler)
+                //subscribe(device, "", fakeHandler)
                 ss.controls = ss.controls + 1
                 if (!dds[device.id]) {
                     ss.devices = ss.devices + 1
