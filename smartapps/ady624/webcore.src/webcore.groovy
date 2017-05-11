@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.1.0a4.20170509" }
+public static String version() { return "v0.1.0a5.20170511" }
 /*
+ *	05/11/2017 >>> v0.1.0a5.20170511 - BETA M1 - Fixed a bug with time scheduling offsets
  *	05/09/2017 >>> v0.1.0a4.20170509 - BETA M1 - Many structural changes to fix issues like startup-spin-up-time for instances having a lot of devices, as well as wrong name displayed in the device's Recent activity tab. New helper app added, needs to be installed/published. Pause/Resume of all active pistons is required.
  *	05/09/2017 >>> v0.1.0a3.20170509 - BETA M1 - DO NOT INSTALL THIS UNLESS ASKED TO - IT WILL BREAK YOUR ENVIRONMENT - IF YOU DID INSTALL IT, DO NOT GO BACK TO A PREVIOUS VERSION
  *	05/07/2017 >>> v0.1.0a2.20170507 - BETA M1 - Added the random() expression function.
@@ -678,6 +679,7 @@ private subscribeAll() {
 mappings {
 	//path("/dashboard") {action: [GET: "api_dashboard"]}
 	path("/intf/dashboard/load") {action: [GET: "api_intf_dashboard_load"]}
+	path("/intf/dashboard/refresh") {action: [GET: "api_intf_dashboard_refresh"]}
 	path("/intf/dashboard/piston/new") {action: [GET: "api_intf_dashboard_piston_new"]}
 	path("/intf/dashboard/piston/create") {action: [GET: "api_intf_dashboard_piston_create"]}
 	path("/intf/dashboard/piston/get") {action: [GET: "api_intf_dashboard_piston_get"]}
@@ -749,10 +751,15 @@ private api_get_base_result(deviceVersion = 0, updateCache = false) {
 private api_intf_dashboard_load() {
 	def result
     //install storage app
-    getStorageApp(true)
+    def storageApp = getStorageApp(true)
     //debug "Dashboard: Request received to initialize instance"
 	if (verifySecurityToken(params.token)) {
     	result = api_get_base_result(params.dev, true)
+    	if (params.dashboard == "1") {
+            startDashboard()
+         } else {
+         	stopDashboard()
+         }
     } else {
     	if (params.pin) {
         	if (settings.PIN && (md5("pin:${settings.PIN}") == params.pin)) {
@@ -769,6 +776,19 @@ private api_intf_dashboard_load() {
 	render contentType: "application/javascript;charset=utf-8", data: "${params.callback}(${result.encodeAsJSON()})"
 }
 
+private api_intf_dashboard_refresh() {
+    startDashboard()
+	def result
+	if (verifySecurityToken(params.token)) {
+	    def storageApp = getStorageApp(true)
+    	result = storageApp ? storageApp.getDashboardData() : [:]
+    } else {
+        if (!result) result = api_get_error_result("ERR_INVALID_TOKEN")
+    }
+    //for accuracy, use the time as close as possible to the render
+    result.now = now()            
+	render contentType: "application/javascript;charset=utf-8", data: "${params.callback}(${result.encodeAsJSON()})"
+}
 
 private api_intf_dashboard_piston_new() {
 	def result
@@ -1081,10 +1101,10 @@ private api_intf_dashboard_piston_evaluate() {
 }
 
 private api_intf_dashboard_piston_activity() {
-	def result
+	def result    
 	if (verifySecurityToken(params.token)) {
 	    def piston = getChildApps().find{ hashId(it.id) == params.id };
-	    if (piston) {
+	    if (piston) {               
 			result = [status: "ST_SUCCESS", activity: (piston.activity(params.log) ?: [:]) + [globalVars: listAvailableVariables()]]
         } else {
 	    	result = api_get_error_result("ERR_INVALID_ID")
@@ -1147,7 +1167,7 @@ private cleanUp() {
 
 private getStorageApp(install = false) {
 	def name = handle() + ' Storage'
-	def storageApp = getChildApps().find{ it.name == name }    
+	def storageApp = getChildApps().find{ it.name == name }
     if (storageApp) {
     	if (app.label != storageApp.label) {
     		storageApp.updateLabel(app.label)
@@ -1172,6 +1192,24 @@ private getStorageApp(install = false) {
     } catch (all) {
     }
     return storageApp
+}
+
+private getDashboardApp(install = false) {
+	def name = handle() + ' Dashboard'
+    def label = app.label + ' (dashboard)'
+	def dashboardApp = getChildApps().find{ it.name == name }    
+    if (dashboardApp) {
+    	if (label != dashboardApp.label) {
+    		dashboardApp.updateLabel(label)
+        }
+    	return dashboardApp
+    }
+    try {
+    	dashboardApp = addChildApp("ady624", name, app.label)
+    } catch (all) {
+        return null
+    }
+    return dashboardApp
 }
 
 private String getDashboardInitUrl(register = false) {
@@ -1305,6 +1343,19 @@ private getLogging() {
     ]
 }
 
+private boolean startDashboard() {
+	def storageApp = getStorageApp()
+    if (!storageApp) return false
+    def dashboardApp = getDashboardApp()
+    if (!dashboardApp) return false
+    dashboardApp.start(storageApp.listAvailableDevices(true).collect{ it.value }, hashId(app.id))
+}
+
+private boolean stopDashboard() {
+    def dashboardApp = getDashboardApp()
+    if (!dashboardApp) return false
+	dashboardApp.stop()
+}
 
 private testIFTTT() {
 	//setup our security descriptor
