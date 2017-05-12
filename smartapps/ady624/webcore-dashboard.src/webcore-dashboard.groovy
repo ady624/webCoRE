@@ -115,6 +115,7 @@ public void start(devices, instanceId) {
     subscribeToAttribute(devices, 'switch')
     subscribeToAttribute(devices, 'level')
     subscribeToAttribute(devices, 'temperature')
+    subscribeToAttribute(devices, 'color')
     subscribeToAttribute(devices, 'colorTemperature')
     subscribeToAttribute(devices, 'hue')
     subscribeToAttribute(devices, 'saturation')
@@ -122,6 +123,7 @@ public void start(devices, instanceId) {
     subscribeToAttribute(devices, 'presence')
     subscribeToAttribute(devices, 'lock')
     subscribeToAttribute(devices, 'motion')
+    subscribeToAttribute(devices, 'water')
     state.status = 'Listening'
 }
 
@@ -133,8 +135,10 @@ public void stop() {
 }
 
 public dashboardEventHandler(evt) {
+	def iid = state.instanceId
+    if (!iid || !iid.startsWith(':') || !iid.endsWith(':')) return    
     asynchttp_v1.put(null, [
-        uri: 'https://api.webcore.co:9237',
+        uri: "https://api-us-${iid[32]}.webcore.co:9237",
         path: '/event/sink',
         headers: ['ST' : state.instanceId],
         body: [
