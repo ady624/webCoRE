@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.1.0a5.20170511" }
+public static String version() { return "v0.1.0a6.20170512" }
 /*
+ *	05/12/2017 >>> v0.1.0a6.20170512 - BETA M1 - Pistons can now (again) access devices stored in global variables
  *	05/11/2017 >>> v0.1.0a5.20170511 - BETA M1 - Fixed a bug with time scheduling offsets
  *	05/09/2017 >>> v0.1.0a4.20170509 - BETA M1 - Many structural changes to fix issues like startup-spin-up-time for instances having a lot of devices, as well as wrong name displayed in the device's Recent activity tab. New helper app added, needs to be installed/published. Pause/Resume of all active pistons is required.
  *	05/09/2017 >>> v0.1.0a3.20170509 - BETA M1 - DO NOT INSTALL THIS UNLESS ASKED TO - IT WILL BREAK YOUR ENVIRONMENT - IF YOU DID INSTALL IT, DO NOT GO BACK TO A PREVIOUS VERSION
@@ -542,6 +543,7 @@ private getRunTimeData(rtData = null, semaphore = null, fetchWrappers = false) {
 	    rtData.statementLevel = 0;
 	    rtData.fastForwardTo = null
 	    rtData.break = false
+        rtData.updateDevices = false
         if (!fetchWrappers) {
         	rtData.devices = (settings.dev ? settings.dev.collectEntries{[(hashId(it.id)): it]} : [:])
         	rtData.contacts = (settings.contacts ? settings.contacts.collectEntries{[(hashId(it.id)): it]} : [:])
@@ -768,6 +770,9 @@ private finalizeEvent(rtData, initialMsg, success = true) {
 	def startTime = now()
     processSchedules(rtData, true)
 
+	if (rtData.updateDevices) {
+    	updateDeviceList(rtData.devices*.value.id)
+    }
     if (initialMsg) {
     	if (success) {
         	if (rtData.logging) info initialMsg, rtData
@@ -3186,6 +3191,10 @@ private getRoutineById(routineId) {
     return null
 }
 
+private void updateDeviceList(deviceIdList) {
+	app.updateSetting('dev', [type: 'capability.device', value: deviceIdList.unique()])
+}
+
 
 private void subscribeAll(rtData) {
 	try {
@@ -3471,7 +3480,7 @@ private void subscribeAll(rtData) {
         }
         List deviceIdList = rawDevices.collect{ it && it.value ? it.value.id : null }
         deviceIdList.removeAll{ it == null }
-        app.updateSetting('dev', [type: 'capability.device', value: deviceIdList])
+        updateDeviceList(deviceIdList)
         //fake subscriptions for controlled devices to force the piston being displayed in those devices' Smart Apps tabs
         for (d in devices.findAll{ ((it.value.c <= 0) || (rtData.piston.o.des)) && (it.key != rtData.locationId) }) {
             def device = getDevice(rtData, d.key)
@@ -3531,6 +3540,19 @@ private sanitizeVariableName(name) {
 private getDevice(rtData, idOrName) {
 	if (rtData.locationId == idOrName) return location
 	def device = rtData.devices[idOrName] ?: rtData.devices.find{ it.value.name == idOrName }
+    if (!device) {
+    	if (!rtData.allDevices) rtData.allDevices = parent.listAvailableDevices(true)
+        if (rtData.allDevices) {
+			device = rtData.allDevices.find{ (idOrName == it.key) || (idOrName == it.value.getDisplayName()) }
+    	}
+        if (device) {
+            rtData.updateDevices = true
+            rtData.devices[device.key] = device.value
+            device = device.value
+        } else {
+            error "Device ${idOrName} was not found. Please review your piston.", rtData
+        }
+    }
     return device    
 }
 

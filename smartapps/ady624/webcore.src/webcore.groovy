@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.1.0a5.20170511" }
+public static String version() { return "v0.1.0a6.20170512" }
 /*
+ *	05/12/2017 >>> v0.1.0a6.20170512 - BETA M1 - Pistons can now (again) access devices stored in global variables
  *	05/11/2017 >>> v0.1.0a5.20170511 - BETA M1 - Fixed a bug with time scheduling offsets
  *	05/09/2017 >>> v0.1.0a4.20170509 - BETA M1 - Many structural changes to fix issues like startup-spin-up-time for instances having a lot of devices, as well as wrong name displayed in the device's Recent activity tab. New helper app added, needs to be installed/published. Pause/Resume of all active pistons is required.
  *	05/09/2017 >>> v0.1.0a3.20170509 - BETA M1 - DO NOT INSTALL THIS UNLESS ASKED TO - IT WILL BREAK YOUR ENVIRONMENT - IF YOU DID INSTALL IT, DO NOT GO BACK TO A PREVIOUS VERSION
@@ -1223,7 +1224,7 @@ private String getDashboardRegistrationUrl() {
 	return "https://api.${domain()}/dashboard/"
 }
 
-private Map listAvailableDevices(raw = false, updateCache = false) {
+public Map listAvailableDevices(raw = false, updateCache = false) {
 	def storageApp = getStorageApp()
     if (storageApp) return storageApp.listAvailableDevices(raw)
 	if (raw) {
@@ -1508,7 +1509,6 @@ public void updateRunTimeData(data) {
         }
         if (modified) {
             atomicState.vars = vars
-            log.debug "Settings global vars to $vars (piston)"
         }
 	}
     def id = data.id
@@ -1562,7 +1562,6 @@ def webCoREHandler(event) {
         if ((oldVar.t != variable.type) || (oldVar.v != variable.value)) {
 	        vars[variable.name] = [t: variable.type ? variable.type : 'dynamic', v: variable.value]
             atomicState.vars = vars
-            log.debug "Settings global vars to $vars (event)"
         }
         return;
     }    

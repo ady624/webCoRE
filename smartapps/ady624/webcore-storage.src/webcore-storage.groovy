@@ -18,7 +18,7 @@
  *
  *  Version history
 */
-public static String version() { return "v0.1.0a5.20170511" }
+public static String version() { return "v0.1.0a6.20170512" }
 /******************************************************************************/
 /*** webCoRE DEFINITION														***/
 /******************************************************************************/
@@ -179,7 +179,6 @@ def Map getDashboardData() {
 	    }]
     }
 }
-
 
 def Map listAvailableContacts(raw = false) {
     def contacts = [:]
