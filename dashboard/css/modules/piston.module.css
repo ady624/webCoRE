@@ -367,7 +367,12 @@ line[com],
 span[com],
 span.hl.com {
 	color: #008000 !important;
-	/*white-space: pre;*/
+}
+
+line[com][h],
+span[com][h],
+span.hl.com.h {
+	white-space: pre;
 }
 
 line[com] *,
@@ -979,12 +984,12 @@ div[dev] div[col][presence="present"]::before {
 }
 
 div[dev] div[col][motion="inactive"]::before {
-    content: "\f09e";
+    content: "\f0ec";
     color: #ddd;
 }
 
 div[dev] div[col][motion="active"]::before {
-    content: "\f09e";
+    content: "\f0ec";
     color: #444;
 }
 

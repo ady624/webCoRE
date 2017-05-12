@@ -55,6 +55,137 @@ tiles tile content {
 	width: 100% !important;
 	height: 100% !important;
 	background: rgba(0, 0, 0, 0.1);
+	overflow: hidden;
+}
+
+
+tile content refresh {
+	position: absolute;
+	left: 2px;
+	top: 2px;
+	right: 2px;
+	bottom: 2px;
+	z-index: 999;
+	sbackground: rgba(0, 0, 0, 0.01);
+	color: #888;
+	text-align: center;
+}
+
+tile content refresh i {
+	position: relative;
+	top: 50%;
+	margin-top: -30px;
+}
+
+tile content refresh ~ * {
+	opacity: 0.25;
+}
+
+tile content label {
+	display: block;
+	font-size: 10px;
+	font-weight: normal;
+	text-align: center !important;
+	line-height: 12px;
+	height: 32px;
+	padding: 4px;
+	color: rgba(0, 0, 0, 0.4);
+}
+
+
+
+tile device {
+	display: block;
+	color: rgba(0, 0, 0, 0.4);
+	position: relative;
+}
+
+tile device::before {
+	display: block;
+	font-family: FontAwesome;
+	font-size: 12vw;
+	text-align: center;
+	color: rgba(0, 0, 0, 0.05);
+}
+
+tile device,
+tile device::before {
+	transition: all 0.25s ease-in-out;
+    -webkit-transition: all 0.25s ease-in-out;
+    -moz-transition: all 0.25s ease-in-out;
+    -ms-transition: all 0.25s ease-in-out;
+    -o-transition: all 0.25s ease-in-out;
+}
+
+tile device[type=dimmer] {
+}
+
+
+tile device[data-water=wet]::before {
+	color: rgba(255, 64, 64, 0.4);
+}
+tile device[data-presence=present]::before,
+tile device[data-motion=active]::before {
+	color: rgba(0, 128, 255, 0.4);
+}
+
+tile device[data-switch=on]::before {
+	color: rgba(0, 0, 0, 0.4);
+}
+
+tile device[data-color][data-switch=off]::before {
+	text-shadow: none !important;
+}
+
+tile device::before { content: "\0000"; }
+tile device[type=contactSensor]::before { content: "\f1ce"; }
+tile device[type=switch]::before { content: "\f205"; }
+tile device[type=outlet]::before { content: "\f1e6"; }
+tile device[type=dimmer]::before { content: "\f042"; }
+tile device[type=motionSensor]::before { content: "\f0ec"; }
+tile device[type=presenceSensor]::before { content: "\f1ae"; }
+tile device[type=waterSensor]::before { content: "\f043"; }
+tile device[type=whiteBulb]::before, tile device[type=rgbBulb]::before { content: "\f0eb"; }
+
+
+tile device > temperature {
+	position: absolute;
+	display: inline-block;
+	top: 0px;
+	left: 4px;
+}
+
+tile device > battery {
+	position: absolute;
+	display: inline-block;
+	top: 0px;
+	right: 4px;
+}
+
+tile device > battery::before {
+	font-family: FontAwesome;
+	content: "\f244";
+	color: red;
+}
+
+tile device > battery[level="1"]::before {
+	content: "\f243";
+	color: orange;
+}
+
+tile device > battery[level="2"]::before {
+	content: "\f242";
+	color: orange;
+}
+
+tile device > battery[level="3"]::before {
+	content: "\f241" !important;
+	color: inherit;
+}
+
+tile device > battery[level="4"]::before {
+	content: "\f240";
+	color: inherit;
 }
 
 /*
@@ -331,3 +462,30 @@ td[state=false]::after {
 
 	
 }
+
+
+
+
+
+/* column sizes */
+
+/* Small Devices, Tablets */
+    @media only screen and (min-width : 768px) {
+		tile device::before {
+			font-size: 8vw;
+		}
+    }
+
+    /* Medium Devices, Desktops */
+    @media only screen and (min-width : 992px) {
+		tile device::before {
+			font-size: 4vw;
+		}
+    }
+
+    /* Large Devices, Wide Screens */
+    @media only screen and (min-width : 1200px) {
+		tile device::before {
+			font-size: 4vw;
+		}
+    }

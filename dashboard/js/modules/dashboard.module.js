@@ -23,7 +23,7 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 		var currentRequestId = 0 + $scope.requestId;
 		$scope.loading = !$scope.initialized || !$scope.instance;
         dataService.setStatusCallback($scope.setStatus);
-		dataService.loadInstance(instance, uri, pin).then(function(data) {
+		dataService.loadInstance(instance, uri, pin, ($scope.view == 'dashboard')).then(function(data) {
 				if ($scope.$$destroyed) return;
 				if (currentRequestId != $scope.requestId) { return };
 				if (data) {
@@ -95,10 +95,34 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 
 	$scope.showDashboard = function() {
 		$scope.view = 'dashboard';
+		dataService.openWebSocket($scope.onWSUpdate);
 		$scope.dropDownMenu = false;
+		$scope.refreshing = true;
+		dataService.refreshDashboard().then(function(data) {
+			for (deviceId in data) {
+				if (deviceId.startsWith(':')) {
+					var device = $scope.instance.devices[deviceId];
+					if (device) {
+						var attributes = data[deviceId];
+						for (attr in attributes) {
+							for (i in device.a) {
+								if (device.a[i].n == attr) {
+									device.a[i].v = attributes[attr];
+									break;
+								}
+							}
+						}
+						device.data = $scope.getDeviceData(device);
+					}
+				}
+			}
+			$scope.refreshing = false;
+			$scope.setStatus();
+		});
 	}
 
 	$scope.hideDashboard = function() {
+		dataService.closeWebSocket();
 		$scope.view = 'piston';
 		$scope.dropDownMenu = false;
 	}
@@ -136,11 +160,14 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
     $scope.listAvailableDevices = function() {
         var result = [];
         for(deviceIndex in $scope.instance.devices) {
-            var device = $scope.instance.devices[deviceIndex];
-            result.push(mergeObjects({id: deviceIndex}, device));
+            $scope.instance.devices[deviceIndex].id = deviceIndex;
+//			device.id = deviceIndex;
+			result.push($scope.instance.devices[deviceIndex]);
+//            result.push(mergeObjects({id: deviceIndex, dev: device}, device));
         }
         return result.sort($scope.sortByName);
     }
+
 
     $scope.listAvailableVirtualDevices = function() {
         var result = [];
@@ -160,6 +187,7 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
     }
 
 
+
 	$scope.switchInstance = function(instanceId) {
 		if (instanceId != $scope.instance.id) {
 			var instance = dataService.getInstance(instanceId);
@@ -167,6 +195,7 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 				$scope.instance = null;
 		        if (tmrActivity) $timeout.cancel(tmrActivity);
 				tmrActivity = null;
+				$scope.devices = null;
 				$scope.init(instance);
 				$scope.closeNavBar();
 			}
@@ -178,6 +207,52 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
         if (tmrClock) $interval.cancel(tmrClock);
         if (tmrActivity) $timeout.cancel(tmrActivity);
     });
+
+	$scope.getDeviceData = function(device) {
+		var data = {};
+		for(a in device.a) {
+			data[device.a[a].n] = device.a[a].v;
+		}
+		return data;
+	}
+
+	$scope.getBatteryLevel = function(level) {
+		if (isNaN(level)) return 0;
+		level = Math.floor(level / 20);
+		if (level <= 0) return 0;
+		if (level >= 4) return 4;
+		return level;
+	}
+
+	$scope.onWSUpdate = function(evt) {
+		if (evt.isTrusted && evt.data) {
+			try {
+				var data = JSON.parse(evt.data);
+				if (data.d && data.n) {
+					var device = $scope.instance.devices[data.d];
+					if (device) {
+						for (a in device.a) {
+							if (device.a[a].n == data.n) {
+								device.a[a].v = data.v;
+								device.data = $scope.getDeviceData(device);
+								break;
+							}
+						}
+					}
+				}
+				$scope.$apply();
+			} catch (e) {};
+		}
+	}
+
+
+	$scope.getDeviceAttribute = function(device, attribute) {
+		for (a in device.a) {
+			var attr = device.a[a];
+			if (attribute == attr.n) return attr.v;
+		}
+		return '';
+	}
 
     $scope.openPiston = function(id) {
         $scope.loading = true;
@@ -269,12 +344,21 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 
 
 	$scope.logOut = function() {
-		localStorage.clear();
-		$scope.loading = true;
-		$scope.initialized = false;
-		$location.path('register');
+		dataService.logout().then(function() {
+			$scope.loading = true;
+			$scope.initialized = false;
+			$location.path('register');
+		});
 	}
 
+
+	$scope.initAds = function() {
+		$timeout(function() {
+			if (CHITIKA_ADS) {
+				CHITIKA_ADS.make_it_so();
+			}
+		}, 1, false);
+	}
 
 	$scope.authenticate = function() {
 		$scope.closeDialog();
@@ -557,7 +641,6 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 
 
     //init
-	$scope.init();
 	var userAgent = navigator.userAgent || navigator.vendor || window.opera;
 	if( userAgent.match( /Android/i ) ) {
 		$scope.android = true;
@@ -568,4 +651,11 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 	$scope.formatTime = formatTime;
     $scope.utcToString = utcToString;
 	$scope.$$postDigest(function() {$window.FB.XFBML.parse()});
+	var tmrInit = setInterval(function() {
+		if (dataService.ready()) {
+			clearInterval(tmrInit);
+			$scope.init();
+		}
+	}, 1);
+
 }]);

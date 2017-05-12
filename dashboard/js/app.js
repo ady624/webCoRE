@@ -192,6 +192,34 @@ app.directive('help', function($compile) {
 });
 
 
+app.directive('script', function() {
+    return {
+      restrict: 'E',
+      scope: false,
+      link: function(scope, elem, attr) {
+        if (attr.type === 'text/javascript') {
+          var code = elem.text();
+          var f = new Function(code);
+          f();
+        }
+      }
+    };
+  });
+
+app.directive('devData', function ($parse) {
+    return function (scope, element, attrs) {
+		var func = function(scope, element, attrs) {
+	        var data = $parse(attrs.devData)(scope);
+			if (data) {
+				for(attr in data) {
+					element.attr('data-' + attr, data[attr]);
+				}
+			}
+		}
+		scope.$watch(attrs['devData'], function() { func(scope, element, attrs); });
+    };
+});
+
 app.filter('orderObjectBy', function() {
   return function(items, field, reverse) {
     var filtered = [];
@@ -276,6 +304,30 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 	var _dk = 'N7zqL6a8Texs4wY5y&y2YPLzus+_dZ%s';
 	var _ek = _dk;
 	var cbkStatus = null;
+	var ws = null;
+	var wsCallback = null;
+
+	var storage = {};
+	var pendingStorage = 1;
+	var initialized = false;
+
+	if (localforage) {
+		localforage.config({name:'webCoRE'});
+		localforage.keys().then( function(keys) {
+			pendingStorage = keys.length;
+			if (pendingStorage) {
+				localforage.iterate(function(value, key, iterationNumber) {
+					storage[key] = decryptObject(value);
+					pendingStorage--;
+					if (!pendingStorage && !initialized) {
+						initialize();
+					}
+				});
+			} else {
+				initialize();
+			}
+		});
+	}
 
     var dejsonify = function (data) {
         //eval('data = ' + data);
@@ -318,30 +370,53 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
     };
 
     var writeObject = function(key, obj, ek) {
-        $window.localStorage.setItem('core.' + key, encryptObject(obj, ek));
+		localforage.setItem('core:' + key, encryptObject(obj, ek));
+		storage['core:' + key] = obj;
+		return;
     }
 
     var readObject = function(key, ek) {
-        return decryptObject($window.localStorage.getItem('core.' + key), ek);
+		return storage['core:' + key];
 	}
 
 	var setLocation = function(loc) {
 		location = loc;
 		locations[location.id] = location;
 		writeObject('locations', locations);
+		return location;
 	};
 
 	var setInstance = function(inst) {
-		instance = inst;
+		var initial = (!instance);
+		if (!instance || (instance.id != inst.id)) instance = inst;
 		//preserve the token, unless a new one is given
 		var si = store[instance.id];
 		if (!si) si = {};
-		si.token = instance.token ? instance.token : si.token;
-		si.uri = instance.uri ? instance.uri.replace(':443', '') : si.uri;
+		si.token = inst.token ? inst.token : si.token;
+		si.uri = inst.uri ? inst.uri.replace(':443', '') : si.uri;
 		store[instance.id] = si;
 		delete(instance.token);
 		delete(instance.uri);
+		if (inst.contacts) {
+			//rewrite contacts
+			instance.contacts = inst.contacts;
+		}
+		instance.contacts = instance.contacts ? instance.contacts : (instances[instance.id] && instances[instance.id].contacts ? instances[instance.id].contacts : []);
+		if (inst.devices) {
+			//rewrite devices
+			instance.devices = inst.devices;
+			initial = true;
+		}
 		instance.devices = instance.devices ? instance.devices : (instances[instance.id] && instances[instance.id].devices ? instances[instance.id].devices : []);
+		instance.pistons = inst.pistons;
+		instance.globalVars = inst.globalVars;
+		instance.coreVersion = inst.coreVersion;
+		instance.name = inst.name;
+		if (initial && instance.devices) {
+			for (d in instance.devices) {
+				instance.devices[d].t = dataService.determineDeviceType(instance.devices[d]);
+			}
+		}
 		instance.virtualDevices = instance.virtualDevices || {};
 		instances[instance.id] = instance;
 		writeObject('instances', instances);
@@ -349,15 +424,66 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 		writeObject('instance', instance.id, _dk);
 		if ((instance.coreVersion) && (version() != instance.coreVersion)) {
 			if (version() > instance.coreVersion) {
-				status('A newer SmartApp version (' + version() + ') is available, please update and publish both the parent and the child SmartApp in the SmartThings IDE.');
+				status('A newer SmartApp version (' + version() + ') is available, please update and publish the all the webCoRE SmartApps in the SmartThings IDE.');
 			} else {
 				status('A newer UI version (' + instance.coreVersion + ') is available, please hard reload this web page to get the newest version.');
 			}
 		}
+		return instance;
 	};
 
 	var status = function(status) {
 		if (cbkStatus) cbkStatus(status);
+	}
+
+
+
+
+	dataService.openWebSocket = function(callback) {
+		if (callback && instance) {
+			wsCallback = callback;
+			if (ws) return ws;
+			var iid = instance.id;
+			ws = new WebSocket('wss://api-us-' + iid[32] + '.webcore.co:9297');
+			ws.onopen = function(evt) {
+				ws.send(instance.id)
+			};
+		    ws.onclose = function(evt) {
+				ws = null;
+				if (wsCallback) {
+					setTimeout(function(){dataService.openWebSocket(wsCallback)}, 5000);
+				}
+			};
+			ws.onmessage = function(evt) {
+				if(wsCallback)
+				try {
+					wsCallback(evt);
+				} catch(e) {};
+			};
+		    ws.onerror = function(evt) {
+				ws = null;
+				if (wsCallback) {
+					setTimeout(function(){dataService.openWebSocket(wsCallback)}, 5000);
+				}
+			};
+			return ws;
+		} else {
+			wsCallback = null;
+			ws.close();
+			ws = null;
+		}
+	};
+
+	dataService.closeWebSocket = function() {
+		dataService.openWebSocket(null);
+	}
+
+	dataService.ready = function() {
+		return !!initialized;
+	}
+
+	dataService.logout = function() {
+		return localforage.clear();
 	}
 
 	dataService.setStatusCallback = function(cbk) {
@@ -367,6 +493,15 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 	dataService.saveToStore = function(key, value) {
 		return writeObject(key, value);
 	};
+
+	dataService.loadFromStore = function(key) {
+		return readObject(key);
+	};
+
+	dataService.deleteFromStore = function(key) {
+		return localforage.removeItem('core:' + key);
+	};
+
 
 	dataService.loadFromStore = function(key) {
 		return readObject(key);
@@ -427,6 +562,8 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 	};
 
 	dataService.getInstance = function (instanceId) {
+		if (instance && !instanceId) return instance;
+		if (instance && (instance.id == instanceId)) return instance;		
 		if (instanceId) {
 			for(iid in instances) {
 				if (iid == instanceId) {
@@ -452,7 +589,7 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 		return null;
 	}
 
-	dataService.loadInstance = function(inst, uri, pin, success, error) {
+	dataService.loadInstance = function(inst, uri, pin, dashboard) {
 		var si = inst ? store[inst.id] : null;
 		var deviceVersion = !inst || !(inst.devices instanceof Object ) || !(Object.keys(inst.devices).length) ? 0 : (inst.deviceVersion ? inst.deviceVersion : 0);
 		if (!si) {
@@ -480,6 +617,9 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 			}
 		}
 		if (!si) {
+			//temporary here, to be removed before RC
+			localStorage.clear();
+			
 			$location.path('/register');
 			/*
 			if (mobileCheck()) {
@@ -498,7 +638,7 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 			if (error) error.parentNode.removeChild(error);
 		}
 
-    	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/load?token=' + (si && si.token ? si.token : '') + (pin ? '&pin=' + pin : '') + '&dev=' + deviceVersion, {jsonpCallbackParam: 'callback'}).then(function(response) {
+    	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/load?token=' + (si && si.token ? si.token : '') + (pin ? '&pin=' + pin : '') + '&dashboard='+ (dashboard ? 1 : 0) + '&dev=' + deviceVersion, {jsonpCallbackParam: 'callback'}).then(function(response) {
 				var data = response.data;
 				if (data.now) {
 					adjustTimeOffset(data.now);
@@ -510,14 +650,10 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 					setLocation(data.location);
 				}
 				if (data.instance) {
-					setInstance(data.instance);
+					data.instance = setInstance(data.instance);
 				}		
 				return data;	
-				if (success) {	
-					success(data);
-				}
 			}, function(response) {
-				if (error) error(response)
 			});
     };
 
@@ -534,10 +670,24 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 		return si ? si.uri : null;		
 	}
 
+    dataService.refreshDashboard = function () {
+		var inst = dataService.getInstance();
+		si = store && inst ? store[inst.id] : null;
+		var deviceVersion = !inst || !(inst.devices instanceof Object ) || !(Object.keys(inst.devices).length) ? 0 : (inst.deviceVersion ? inst.deviceVersion : 0);
+		status('Loading dashboard...');
+    	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/refresh?token=' + (si && si.token ? si.token : ''), {jsonpCallbackParam: 'callback'})
+			.then(function(response) {
+				data = response.data;
+				return data;
+			}, function(error) {
+				return null;
+			});
+    }
+
     dataService.getPiston = function (pistonId) {
 		var inst = dataService.getPistonInstance(pistonId);
 		if (!inst) { inst = dataService.getInstance() };
-		si = store ? store[inst.id] : null;
+		si = store && inst ? store[inst.id] : null;
 		var deviceVersion = !inst || !(inst.devices instanceof Object ) || !(Object.keys(inst.devices).length) ? 0 : (inst.deviceVersion ? inst.deviceVersion : 0);
         var dbVersion = readObject('db.version', _dk);
 		status('Loading piston...');
@@ -559,9 +709,11 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 					setLocation(data.location);
 				}
 				if (data.instance) {
-					setInstance(data.instance);
+					data.instance = setInstance(data.instance);
 				}
 				return data;
+			}, function(error) {
+				return null;
 			});
     }
 
@@ -579,11 +731,15 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 		var inst = dataService.getInstance();
         return $http({
             method: 'POST',
-            url: 'https://api.myjson.com/bins',
+          //  url: 'https://api.myjson.com/bins',
+            url: 'https://api.webcore.co/bins/' + (publicBin ? '' : md5(inst.account.id)),
             data: data ? (publicBin ? {d: encryptObject(data, _dk)} : {e: encryptObject(data, _dk + inst.account.id)}) : {},
             transformResponse: function(data) {
 				try {
 					data = JSON.parse(data);
+					if (data && data.bin) {
+						return data.bin;
+					}
 					if (data && data.uri) {
 						data = data.uri.split('/');
 						if (data && data.length) {
@@ -607,7 +763,8 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 		}
         return $http({
             method: 'PUT',
-            url: 'https://api.myjson.com/bins/' + binId,
+            //url: 'https://api.myjson.com/bins/' + binId,
+            url: 'https://api.webcore.co/bins/' + md5(inst.account.id) + '/' + binId,
             data: data,
             transformResponse: function(data) {
 				status('Backup bin updated');
@@ -616,7 +773,7 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
         });
     }
 
-    dataService.loadFromBin = function (binId) {
+    dataService.loadFromBin = function (binId, privateBin) {
 		status('Loading piston from backup bin...');
 		var inst = dataService.getInstance();
 		if (!(inst && inst.account && inst.account.id)) {
@@ -624,7 +781,8 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 		}
         return $http({
             method: 'GET',
-            url: 'https://api.myjson.com/bins/' + binId,
+            //url: 'https://api.myjson.com/bins/' + binId,
+            url: 'https://api.webcore.co/bins/' + (privateBin ? md5(inst.account.id) + '/' : '') + binId,
             transformResponse: function(data) {
 				if (binId) {
 					try {
@@ -714,6 +872,18 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
     }
 
 
+    dataService.setPistonLogging = function (pid, level) {
+		var inst = dataService.getPistonInstance(pid);
+		if (!inst) { inst = dataService.getInstance() };
+		si = store ? store[inst.id] : null;
+		status('Setting piston logging level to ' + level + '...');
+    	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/piston/logging?id=' + pid + '&level=' + level + '&token=' + (si && si.token ? si.token : ''), {jsonpCallbackParam: 'callback'})
+			.then(function(response) {
+				status();
+				return response.data;
+			});
+    }
+
     dataService.pausePiston = function (pid) {
 		var inst = dataService.getPistonInstance(pid);
 		if (!inst) { inst = dataService.getInstance() };
@@ -795,36 +965,48 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 	        if (device.cn.indexOf('Motion Sensor') >= 0) return 'motionSensor';
 	        if (device.cn.indexOf('Color Control') >= 0) return 'rgbBulb';
 	        if (device.cn.indexOf('Color Temperature') >= 0) return 'whiteBulb';
-	        if (device.cn.indexOf('Switch Level') >= 0) return 'dimmer';
-	        if (device.cn.indexOf('Switch') >= 0) return 'switch';
+	        if (device.cn.indexOf('Switch Level') >= 0) {
+				var n = device.n.toLowerCase();
+				if (n.indexOf('light') >= 0) return 'whiteBulb';
+				if (n.indexOf('keen') >= 0) return 'vent';
+				if (n.indexOf('vent') >= 0) return 'vent';
+				return 'dimmer';
+			}
 	        if (device.cn.indexOf('Lock') >= 0) return 'lock';
 	        if ((device.cn.indexOf('Button') >= 0) && (device.cn.indexOf('Button') >= 0)) return 'keypad';
 	        if (device.cn.indexOf('Button') >= 0) return 'button';
 	        if (device.cn.indexOf('Temperature Measurement') > 0) return 'temperatureSensor';
+	        if ((device.cn.indexOf('Switch') >= 0) && (device.cn.indexOf('Power Meter') >= 0)) return 'outlet';
+	        if (device.cn.indexOf('Switch') >= 0) return 'switch';
+	        if (device.cn.indexOf('Power Meter') >= 0) return 'powerMeter';
 		}
 		return 'unknownDevice';
 	}
 
 
-	//initialize store
-	store = readObject('store');
-	if (!store) {
-		store = {};
+	var initialize = function() {
+		//initialize store
+		store = readObject('store');
+		if (!store) {
+			store = {};
+		}
+	
+		//initialize locations
+		locations = readObject('locations');
+		if (!locations) {
+			locations = {};
+		}
+	
+		//initialize instances
+		instances = readObject('instances');
+		if (!instances) {
+			instances = {};
+		}
+
+		initialized = true;
+		window.ds = dataService;
 	}
 
-	//initialize locations
-	locations = readObject('locations');
-	if (!locations) {
-		locations = {};
-	}
-
-	//initialize instances
-	instances = readObject('instances');
-	if (!instances) {
-		instances = {};
-	}
-
-	window.ds = dataService;
     return dataService;
 }]);
 
@@ -840,15 +1022,6 @@ app.run(['$rootScope', '$window', '$location', function($rootScope, $window, $lo
         }
     };
 
-	$rootScope.hasLocalStorage = false;
-	try {
-		$window.localStorage.setItem('__initialization__test__', true);
-		$rootScope.hasLocalStorage = true;
-		$window.localStorage.removeItem('__initialization__test__');
-	} catch(e) {
-		console.log("ERROR: " + e);
-	}
-
 	$rootScope.$on('$viewContentLoaded', function(event) {
 		var path = $location.path();
 		if (path.startsWith('/init/')) {
@@ -858,6 +1031,23 @@ app.run(['$rootScope', '$window', '$location', function($rootScope, $window, $lo
 			path = '/piston';
 		}
 	    $window.ga('send', 'pageview', { page: path });
+		var units = null;
+		if (!mobileCheck()) {
+			switch (path) {
+				case '/':
+			        units = [{"calltype":"async[2]","publisher":"ady624","width":160,"height":600,"sid":"Chitika Default"}];
+					break;
+				case '/register':
+			        units = [{"calltype":"async[2]","publisher":"ady624","width":728,"height":90,"sid":"Chitika Default"}];
+					break;
+			}
+		}
+		if (units) {
+			$window.CHITIKA = {units: units};
+ 			if ($window.CHITIKA_ADS) $window.CHITIKA_ADS.make_it_so();
+		} else {
+			delete(window.CHITIKA);
+		}
 	});
 
     $rootScope.bytesToSize = function(bytes) {
@@ -1157,7 +1347,7 @@ function initBootstrapSelect() {
 
 
 window.onerror = function myErrorHandler(errorMsg, url, lineNumber) {
-    alert("Error occured: " + errorMsg + ' at ' + url + ' line ' + lineNumber);//or any message
+    //alert("Error occured: " + errorMsg + ' at ' + url + ' line ' + lineNumber);//or any message
     return false;
 }
 
@@ -1198,4 +1388,4 @@ if (document.selection) {
      document.execCommand("Copy");
 }}
 
-version = function() { return 'v0.1.09d.20170503'; };
+version = function() { return 'v0.1.0a6.20170512'; };

@@ -1,4 +1,5 @@
 	<status ng-if="status" ng-animate ng-bind-html="status" ng-click="setStatus()"></status>
+	<logo ng-if="view != 'dashboard'">webCoRE</logo>
 	<loader ng-if="loading">
 		<ul>
 			<li></li>
@@ -62,7 +63,26 @@
 			</div>
 		</nav>
 		<tiles masonry='{"transitionDuration": "0s", "itemSelector": "tile"}' class="noPreventDefault" ng-wheel="onWheel($event)" ng-swipe-up="onSwipe($event, 'up')" ng-swipe-down="onSwipe($event, 'down')">
-			<tile ng-repeat="device in devices" class="col-lg-1 col-md-1 col-sm-2 col-xs-3" tile-height="{{determineDeviceType(device) == 'presenceSensor' ? 2 : 1}}"><content>{{device.n}}<br/><br/>{{determineDeviceType(device)}}</content></tile>
+			<tile ng-repeat="device in devices" class="col-lg-1 col-md-1 col-sm-2 col-xs-3 col-xxs-6" tile-height="{{determineDeviceType(device) == 'presenceSensor' ? 2 : 1}}">
+				<content>
+					<refresh ng-if="refreshing"><i class="fa fa-refresh fa-spin fa-3x fa-fw"></i></refresh>
+					<device type="{{device.t}}" dev-data="device.data" ng-style="!!device.data.color ? {'text-shadow': '0px 0px 150px ' + device.data.color} : {}">
+						<level ng-if="device.data.level != null"></level>
+						<power ng-if="device.data.power != null"></power>
+						<battery ng-if="device.data.battery != null" level="{{getBatteryLevel(device.data.battery)}}" title="{{device.data.battery}}% left"></battery>
+						<temperature ng-if="device.data.temperature != null">{{device.data.temperature}}°{{location.temperatureScale}}</temperature>
+					</device>
+					<label>{{device.n}}</label>
+<!--					<div ng-if="device.t == 'dimmer'">
+						<device dev-data="device.data" {{device.t}}></device>
+					</div>
+					<div ng-if="device.t == 'switch'">
+						<device switch switch="{{device.data.switch}}"></device>
+						show a switch
+						<div main >{{getDeviceAttribute(device, 'level')}}</div>
+					</div>-->
+				</content>
+			</tile>
 		</tiles>
 	</viewer>
 
@@ -74,6 +94,17 @@
 						<li><a href="" ng-click="showDashboard();">Go to dashboard</a></li>
 						<li><a href="" ng-click="newPiston();">Add a new piston</a></li>
 						<li ng-if="instanceCount > 1"><a href="" ng-click="movePiston();">Move piston(s)</a></li>						
+					</ul>
+
+					<ul class="nav nav-sidebar">
+						<center>Advertisements</center>
+						<!--<script type="text/javascript-lazy" src="//z-na.amazon-adsystem.com/widgets/onejs?MarketPlace=US&adInstanceId=1c018b1f-0af0-4396-a510-867f9bdae50d"></script>-->
+						<iframe src="//rcm-na.amazon-adsystem.com/e/cm?o=1&p=14&l=ur1&category=amzn_echo_launch_0517&banner=1VRDQYTTFJR83DYHRCG2&f=ifr&linkID=b9437932eb682e58cc516ab0f63bda57&t=ady624-20&tracking_id=ady624-20" width="160" height="600" scrolling="no" border="0" marginwidth="0" style="border:none;" frameborder="0"></iframe>
+						<!--<iframe src="//rcm-na.amazon-adsystem.com/e/cm?o=1&p=14&l=ur1&category=amzn_echo_mday_0517&banner=17WAKG9NQNN6YESN1S02&f=ifr&linkID=80d8b4dcce012e37bcee6ce2077e497e&t=ady624-20&tracking_id=ady624-20" width="160" height="600" scrolling="no" border="0" marginwidth="0" style="border:none;" frameborder="0"></iframe>-->
+						<!--<iframe src="//rcm-na.amazon-adsystem.com/e/cm?o=1&p=14&l=ur1&category=electronics&f=ifr&linkID=f56f8ea9e47ad145c3d72a56e98399b8&t=ady624-20&tracking_id=ady624-20" width="160" height="600" scrolling="no" border="0" marginwidth="0" style="border:none;" frameborder="0"></iframe>-->
+<!--						<div id="chitikaAdBlock-0" ng-init="initAds();"></div>-->
+                        <!--ads-->
+<!--                        <script type="text/javascript" src="//cdn.chitika.net/getads.js" async></script>-->
 					</ul>
 
 					<ul class="socialmedia">
@@ -92,6 +123,7 @@
 						<i class="fa fa-frown-o" aria-hidden="true"></i>
 						<div>It's kinda lonely in here...<br/>How about <a ng-click="newPiston();">creating a piston</a>?</div>
 					</div>
+					<!--<div class="alert alert-warning" ng-if="devices && (devices.length > 50)">It is recommended that the list of available devices does not exceed 50 items. You have selected a total of {{devices.length}} available devices for this instance. While not a problem, you may experience slower start-up times for your pistons. If you do, please consider breaking this instance into at least two instances and group the pistons in such a way that each instance requires less than 50 available devices. Multpile instances can safely share the same device.</div>-->
 					<div class="table-responsive no-animate" ng-if="instance && activePistons">
 						<label>Active pistons ({{activePistons}})</label>
 						<table class="table table-striped">

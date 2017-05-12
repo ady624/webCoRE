@@ -8,6 +8,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 	$scope.loading = true;
 	$scope.initialized = false;
 	$scope.mode = 'view';
+	$scope.logging = '0';
 	$scope.data = null;
 	$scope.error = '';
 	$scope.pistonId = $routeParams.pistonId;
@@ -187,6 +188,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 				$scope.stats = response.data.stats ? response.data.stats : {};
 				$scope.state = response.data.state ? response.data.state : '';
 				$scope.trace = response.data.trace ? response.data.trace : {};
+				$scope.logging = '' + (response.data.logging ? response.data.logging : 0);
 				$scope.memory = response.data.memory ? response.data.memory : 0;
 				$scope.lastExecuted = response.data.lastExecuted;
 				$scope.nextSchedule = response.data.nextSchedule;
@@ -194,8 +196,8 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 				
 				$scope.initChart();
 				if ($scope.instance && $scope.instance.devices) $scope.anonymizeDevices($scope.instance.devices);
-				if ($scope.instance && $scope.instance.devices) $scope.anonymizeContacts($scope.instance.contacts);
-				$scope.devices =$scope.listAvailableDevices();
+				if ($scope.instance && $scope.instance.contacts) $scope.anonymizeContacts($scope.instance.contacts);
+				$scope.devices = $scope.listAvailableDevices();
 				$scope.contacts = $scope.listAvailableContacts();
 				$scope.virtualDevices = $scope.listAvailableVirtualDevices();
 				window.scope = $scope;
@@ -424,7 +426,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 
 	$scope.save = function() {
 		$scope.loading = true;
-		var piston = {
+		var piston = $scope.compilePiston({
 			id: $scope.pistonId,
 			o: $scope.piston.o,
 			s: $scope.piston.s,
@@ -434,7 +436,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 			rn: $scope.piston.rn,
 			z: $scope.piston.z,
 			n: $scope.meta.name
-		}
+		});
 		dataService.setPiston(piston, $scope.meta.bin).then(function(response) {
 			$scope.loading = false;
 			if (response && response.data && response.data.build) {
@@ -460,6 +462,14 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		});
 	}
 
+
+	$scope.setLoggingLevel = function(obj) {
+		$scope.loading = true;
+		dataService.setPistonLogging($scope.pistonId, $scope.logging).then(function(data) {
+			$scope.loading = false;
+		});
+	}
+
 	$scope.resume = function() {
 		$scope.loading = true;
 		dataService.resumePiston($scope.pistonId).then(function(data) {
@@ -474,6 +484,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 
 	$scope.del = function() {
 		$scope.loading = true;
+		dataService.deleteFromStore('stack' + $scope.pistonId);
 		dataService.deletePiston($scope.pistonId).then(function(data) {
 			$scope.closeDialog();
 			$location.path('/');
@@ -1135,6 +1146,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		$scope.designer.operand = {data: _case.ro, multiple: false};
 		$scope.designer.operand2 = {data: _case.ro2, multiple: false};
 		$scope.designer.autoDialogs = true;
+		$scope.designer.description = _case.z;
 		//advanced options
 		window.designer = $scope.designer;
 		$scope.validateOperand($scope.designer.operand);
@@ -2321,7 +2333,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 	             if (contact) {
 	                 contactNames.push({n: (contact.f + ' ' + contact.l).trim() + ' (' + contact.t + '/' + (contact.p ? 'PUSH' : 'SMS') + ')', a: contact.an, t: 'cnt'});
 	             } else {
-	                 contactNames.push({ n: '{' + contacts[contactIndex] + '}', a: contact.an, t: 'var'});
+	                 contactNames.push({ n: '{' + contacts[contactIndex] + '}', a: 'Unknown Contact', t: 'var'});
 	             }
 	         }
 			if (contactNames.length) {
@@ -2367,7 +2379,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 
 	$scope.listAvailableCommands = function(devices) {
 		var commands = {}
-		var deviceCount = devices.length;
+		var deviceCount = devices ? devices.length : 0;
 		for (deviceIndex in devices) {
 			var deviceId = devices[deviceIndex] || '';
 			var cmds = [];
@@ -2881,6 +2893,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 				operand.options = ['false', 'true'];
 				break;
 			case 'mode':
+			case 'powerSource':
 			case 'alarmSystemStatus':
 			case 'routine':
 				operand.options = $scope.objectToArray($scope.instance.virtualDevices[dataType].o);
@@ -3114,7 +3127,6 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 	};
 
 	$scope.refreshSelects = function(type) {
-		console.log('refresh!');
 		if (type) {
 			$scope.$$postDigest(function() {
 				$('select[' + type + ']').selectpicker('refresh');
@@ -3883,7 +3895,12 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 					}
 				}
 				for (property in object) {
-					object[property] = traverseObject(object[property], object, object.vt ? object.vt : object.t);
+					var v = object[property];
+					if ((v === false) || (v === null) || (v === '')) {
+						delete(object[property]);
+					} else {
+						object[property] = traverseObject(object[property], object, object.vt ? object.vt : object.t);
+					}
 				}
 				if (!anonymize && !!object && !!object.t && !!object.vt && ((object.t == 'c') || (object.t == 'e'))) {
 					switch (object.t) {
@@ -4272,6 +4289,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		var dq = false;
 		var dv = false;
 		var func = 0;
+		var numExp = /^-?(0(\.\d*)?|([1-9]\d*\.?\d*)|(\.\d+))([Ee][+-]?\d+)?$/;
 		var parenthesis = 0;
 		function location(start, end) {
 			return start == end ? start.toString() : start.toString() + ':' + end.toString();
@@ -4283,7 +4301,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 				if (i-1 > startIndex) {
 					var value = str.slice(startIndex, i-1);
 					var parsedValue = parseFloat(value.trim());
-					if (!isNaN(parsedValue)) {
+					if (!isNaN(parsedValue) && (numExp.test(value.trim()))) {
 						arr.push({t: (value.indexOf('.') > 0 ? 'decimal' : 'integer'), v: parsedValue, l: location(startIndex, i - 2)});
 						return true;
 					}
@@ -4304,7 +4322,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 				if (i-1 > startIndex) {
 					var value = str.slice(startIndex, i-1);
 					var parsedValue = parseFloat(value.trim());
-					if ((dataType != 'phone') && !isNaN(parsedValue)) {
+					if ((dataType != 'phone') && !isNaN(parsedValue) && (numExp.test(value.trim()))) {
 						arr.push({t: (value.indexOf('.') > 0 ? 'decimal' : 'integer'), v: parseInt(parsedValue), l: location(startIndex, i - 2)});
 						return true;
 					}					
@@ -4381,6 +4399,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 					case '-':
 					case '/':
 					case '*':
+					case '~':
 					case '^':
 					case '\\':
 					case '%':
@@ -4396,7 +4415,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 						if (exp && !dv && !sq && !dq) {
 							var c2 = (i < str.length) ? str[i] : '';
 							addOperand();
-							if (['&&', '||', '==', '!=', '!!', '>=', '<=', '<>'].indexOf(c + c2) >= 0) {
+							if (['**', '&&', '||', '^^', '!&', '!|', '!^', '==', '!=', '!!', '>=', '<=', '<>', '<<', '>>'].indexOf(c + c2) >= 0) {
 								i++;
 								c += c2;
 							}
@@ -4609,8 +4628,6 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		});
 	};
 
-	//init
-	$scope.init();
 	var userAgent = navigator.userAgent || navigator.vendor || window.opera;
 	if( userAgent.match( /Android/i ) ) {
 		$scope.android = true;
@@ -4624,6 +4641,14 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 	$scope.utcToDateString = utcToDateString;
 	$scope.formatLogTime = function(timestamp, offset) { return utcToString(timestamp) + '+' + offset; };
 	$scope.md5 = window.md5;
+	//init
+    var tmrInit = setInterval(function() {
+        if (dataService.ready()) {
+            clearInterval(tmrInit);
+            $scope.init();
+        }
+    }, 1);
+
 }]);
 
 function test(value, parseAsString, dataType) {
