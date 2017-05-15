@@ -110,6 +110,7 @@ public void start(devices, instanceId) {
 	if ((state.status?:'Idle') != 'Idle') return
     if (instanceId) state.instanceId = instanceId
     if (!state.instanceId) return
+    state.region = apiServerUrl('/').contains('graph-eu') ? 'eu' : 'us';
     atomicState.status = 'Subscribing'
     unsubscribe()
     subscribeToAttribute(devices, 'switch')
@@ -136,9 +137,10 @@ public void stop() {
 
 public dashboardEventHandler(evt) {
 	def iid = state.instanceId
+    def region = state.region ?: 'us'
     if (!iid || !iid.startsWith(':') || !iid.endsWith(':')) return    
     asynchttp_v1.put(null, [
-        uri: "https://api-us-${iid[32]}.webcore.co:9237",
+        uri: "https://api-${region}-${iid[32]}.webcore.co:9237",
         path: '/event/sink',
         headers: ['ST' : state.instanceId],
         body: [
