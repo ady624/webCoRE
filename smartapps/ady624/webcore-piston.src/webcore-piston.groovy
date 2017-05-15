@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.1.0a6.20170512" }
+public static String version() { return "v0.1.0a7.20170515" }
 /*
+ *	05/15/2017 >>> v0.1.0a7.20170515 - BETA M1 - Added a way to test pistons from the UI - Fixed a bug in UI values where decimal values were converted to integers - those values need to be re-edited to be fixed
  *	05/12/2017 >>> v0.1.0a6.20170512 - BETA M1 - Pistons can now (again) access devices stored in global variables
  *	05/11/2017 >>> v0.1.0a5.20170511 - BETA M1 - Fixed a bug with time scheduling offsets
  *	05/09/2017 >>> v0.1.0a4.20170509 - BETA M1 - Many structural changes to fix issues like startup-spin-up-time for instances having a lot of devices, as well as wrong name displayed in the device's Recent activity tab. New helper app added, needs to be installed/published. Pause/Resume of all active pistons is required.
@@ -495,8 +496,9 @@ def setLoggingLevel(level) {
     return [logging: logging]
 }
 
-def execute() {
-
+def test() {
+	handleEvents([date: new Date(), device: location, name: 'test', value: now()])
+    return [:]
 }
 
 private getTemporaryRunTimeData() {
@@ -1061,9 +1063,9 @@ private Boolean executeStatement(rtData, statement, async = false) {
                 case 'for':
                 case 'each':
                     def devices = []
-                    float startValue = 0
-                    float endValue = 0
-                    float stepValue = 1
+                    double startValue = 0
+                    double endValue = 0
+                    double stepValue = 1
                     if (statement.t == 'each') {
                         devices = evaluateOperand(rtData, null, statement.lo).v ?: []
                         endValue = devices.size() - 1
@@ -3722,6 +3724,7 @@ private Map evaluateExpression(rtData, expression, dataType = null) {
         	break
         case "number":
         case "float":
+        case "double":
         	result = [t: "decimal", v: cast(rtData, expression.v, "decimal")]
 			result = expression
         	break
@@ -3867,6 +3870,7 @@ private Map evaluateExpression(rtData, expression, dataType = null) {
                 	switch (item.t) {
                     	case "integer":
                     	case "float":
+                    	case "double":
                     	case "decimal":
                     	case "number":
                         	def nextType = 'string'
@@ -4597,7 +4601,7 @@ private func_avg(rtData, params) {
 	if (!params || !(params instanceof List) || (params.size() < 1)) {
     	return [t: "error", v: "Invalid parameters. Expecting avg(value1, value2, ..., valueN)"];
     }
-    float sum = 0
+    double sum = 0
     for (param in params) {
     	sum += evaluateExpression(rtData, param, 'decimal').v
     }
@@ -4662,7 +4666,7 @@ private func_sum(rtData, params) {
 	if (!params || !(params instanceof List) || (params.size() < 1)) {
     	return [t: "error", v: "Invalid parameters. Expecting sum(value1, value2, ..., valueN)"];
     }
-    float sum = 0
+    double sum = 0
     for (param in params) {
     	sum += evaluateExpression(rtData, param, 'decimal').v
     }
@@ -4677,14 +4681,14 @@ private func_variance(rtData, params) {
 	if (!params || !(params instanceof List) || (params.size() < 2)) {
     	return [t: "error", v: "Invalid parameters. Expecting variance(value1, value2, ..., valueN)"];
     }
-    float sum = 0
+    double sum = 0
     List values = []
     for (param in params) {
-    	float value = evaluateExpression(rtData, param, 'decimal').v
+    	double value = evaluateExpression(rtData, param, 'decimal').v
         values.push(value)
         sum += value
     }
-    float avg = sum / values.size()
+    double avg = sum / values.size()
     sum = 0
     for(int i  = 0; i < values.size(); i++) {
     	sum += (values[i] - avg) ** 2
@@ -5300,7 +5304,7 @@ private cast(rtData, value, dataType, srcDataType = null) {
                     if (value.isInteger())
                         return (int) value.toInteger()
                     if (value.isFloat())
-                        return (int) Math.floor(value.toFloat())
+                        return (int) Math.floor(value.toDouble())
                     if (value in trueStrings)
                         return (int) 1
                     break
@@ -5322,7 +5326,7 @@ private cast(rtData, value, dataType, srcDataType = null) {
                     if (value.isInteger())
                         return (long) value.toInteger()
                     if (value.isFloat())
-                        return (long) Math.floor(value.toFloat())
+                        return (long) Math.floor(value.toDouble())
                     if (value in trueStrings)
                         return (long) 1
                     break
@@ -5340,22 +5344,22 @@ private cast(rtData, value, dataType, srcDataType = null) {
             	case 'string':
                     value = value.replaceAll(/[^\d.-]/, '')
                     if (value.isFloat())
-                        return (float) value.toFloat()
+                        return (double) value.toDouble()
                     if (value.isLong())
-                        return (float) value.toLong()
+                        return (double) value.toLong()
                     if (value.isInteger())
-                        return (float) value.toInteger()
+                        return (double) value.toInteger()
                     if (value in trueStrings)
-                        return (float) 1
+                        return (double) 1
 					break
-				case 'boolean': return (float) (value ? 1 : 0);
+				case 'boolean': return (double) (value ? 1 : 0);
             }
-			def result = (float) 0
+			def result = (double) 0
 			try {
-				result = (float) value
+				result = (double) value
 			} catch(all) {
 			}
-			return result ? result : (float) 0
+			return result ? result : (double) 0
 		case "boolean":
 			switch (srcDataType) {
             	case 'integer':
@@ -5498,18 +5502,18 @@ private Map hexToColor(hex){
     hex = hex ? "$hex".toString() : '000000'
     if (hex.startsWith('#')) hex = hex.substring(1)
     if (hex.size() != 6) hex = '000000'
-    float r = Integer.parseInt(hex.substring(0, 2), 16) / 255
-    float g = Integer.parseInt(hex.substring(2, 4), 16) / 255
-    float b = Integer.parseInt(hex.substring(4, 6), 16) / 255
-    float min = Math.min(Math.min(r, g), b);
-    float max = Math.max(Math.max(r, g), b)
-    float h = (max + min) / 2.0;
-    float s = h
-    float l = s
+    double r = Integer.parseInt(hex.substring(0, 2), 16) / 255
+    double g = Integer.parseInt(hex.substring(2, 4), 16) / 255
+    double b = Integer.parseInt(hex.substring(4, 6), 16) / 255
+    double min = Math.min(Math.min(r, g), b);
+    double max = Math.max(Math.max(r, g), b)
+    double h = (max + min) / 2.0;
+    double s = h
+    double l = s
     if(max == min){
         h = s = 0; // achromatic
     }else{
-        float d = max - min;
+        double d = max - min;
         s = (l > 0.5) ? d / (2 - max - min) : d / (max + min);
         switch(max){
             case r: h = (g - b) / d + (g < b ? 6 : 0); break;
@@ -5815,7 +5819,7 @@ private getSystemVariableValue(rtData, name) {
 		case "\$nextSunset": return getNextSunsetTime(rtData);
 		case "\$time": def t = localDate(); def h = t.hours; def m = t.minutes; return (h == 0 ? 12 : (h > 12 ? h - 12 : h)) + ":" + (m < 10 ? "0$m" : "$m") + " " + (h <12 ? "A.M." : "P.M.") 
 		case "\$time24": def t = localDate(); def h = t.hours; def m = t.minutes; return h + ":" + (m < 10 ? "0$m" : "$m") 
-		case "\$random": def result = getRandomValue("\$random") ?: (float)Math.random(); setRandomValue("\$random", result); return result 
+		case "\$random": def result = getRandomValue("\$random") ?: (double)Math.random(); setRandomValue("\$random", result); return result 
 		case "\$randomColor": def result = getRandomValue("\$randomColor") ?: colorUtil.RANDOM.rgb; setRandomValue("\$randomColor", result); return result 
 		case "\$randomColorName": def result = getRandomValue("\$randomColorName") ?: colorUtil.RANDOM.name; setRandomValue("\$randomColorName", result); return result 
 		case "\$randomLevel": def result = getRandomValue("\$randomLevel") ?: (int)Math.round(100 * Math.random()); setRandomValue("\$randomLevel", result); return result 
