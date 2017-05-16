@@ -16,7 +16,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-public static String version() { return "v0.1.0a7.20170515" }
+public static String version() { return "v0.1.0a8.20170516" }
 /******************************************************************************/
 /*** webCoRE DEFINITION														***/
 /******************************************************************************/
@@ -136,6 +136,14 @@ public void stop() {
 }
 
 public dashboardEventHandler(evt) {
+	broadcastEvent(hashId(evt.device.id), evt.name, evt.value, evt.date.time)
+}
+
+public updatePiston(pistonId, piston) {
+	broadcastEvent(pistonId, 'piston', piston.s.new, piston.t)	
+}
+
+private void broadcastEvent(deviceId, eventName, eventValue, eventTime) {
 	def iid = state.instanceId
     def region = state.region ?: 'us'
     if (!iid || !iid.startsWith(':') || !iid.endsWith(':')) return    
@@ -144,10 +152,10 @@ public dashboardEventHandler(evt) {
         path: '/event/sink',
         headers: ['ST' : state.instanceId],
         body: [
-        	d: hashId(evt.device.id),
-        	n: evt.name,
-        	v: evt.value,
-        	t: evt.date.time
+        	d: deviceId,
+        	n: eventName,
+        	v: eventValue,
+        	t: eventTime
     	]
     ])    
 }

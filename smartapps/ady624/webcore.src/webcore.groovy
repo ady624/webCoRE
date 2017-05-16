@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.1.0a7.20170515" }
+public static String version() { return "v0.1.0a8.20170516" }
 /*
+ *	05/16/2017 >>> v0.1.0a8.20170516 - BETA M1 - Improved emoji support
  *	05/15/2017 >>> v0.1.0a7.20170515 - BETA M1 - Added a way to test pistons from the UI - Fixed a bug in UI values where decimal values were converted to integers - those values need to be re-edited to be fixed
  *	05/12/2017 >>> v0.1.0a6.20170512 - BETA M1 - Pistons can now (again) access devices stored in global variables
  *	05/11/2017 >>> v0.1.0a5.20170511 - BETA M1 - Fixed a bug with time scheduling offsets
@@ -861,10 +862,16 @@ private api_intf_dashboard_piston_get() {
 }
 
 
+private decodeEmoji(value) {
+	if (!value) return ''
+	return value.replaceAll(/(\:%[0-9A-F]{2}%[0-9A-F]{2}%[0-9A-F]{2}%[0-9A-F]{2}\:)/, { m -> URLDecoder.decode(m[0].substring(1, 13), 'UTF-8') })
+};
+
+
 private api_intf_dashboard_piston_set_save(id, data, chunks) {
     def piston = getChildApps().find{ hashId(it.id) == id };
     if (piston) {
-		def p = new groovy.json.JsonSlurper().parseText(new String(data.decodeBase64(), "UTF-8"))
+		def p = new groovy.json.JsonSlurper().parseText(decodeEmoji(new String(data.decodeBase64(), "UTF-8")))
 		return piston.set(p, chunks);
     }
     return false;
@@ -1369,12 +1376,14 @@ private boolean startDashboard() {
     def dashboardApp = getDashboardApp()
     if (!dashboardApp) return false
     dashboardApp.start(storageApp.listAvailableDevices(true).collect{ it.value }, hashId(app.id))
+    if (state.dashboard != 'active') atomicState.dashboard = 'active'
 }
 
 private boolean stopDashboard() {
     def dashboardApp = getDashboardApp()
     if (!dashboardApp) return false
 	dashboardApp.stop()
+    if (state.dashboard != 'inactive') atomicState.dashboard = 'inactive'
 }
 
 private testIFTTT() {
@@ -1539,7 +1548,6 @@ public void updateRunTimeData(data) {
         s: data.state, //state
     ]
     atomicState[id] = piston
-
     //broadcast variable change events
     for (variable in variableEvents) {
         sendVariableEvent(variable)
@@ -1549,6 +1557,11 @@ public void updateRunTimeData(data) {
     	//release the semaphore
         atomicState[data.semaphoreName] = 0
     }
+	//broadcast to dashboard    
+	if (state.dashboard == 'active') {
+    	def dashboardApp = getDashboardApp()
+        if (dashboardApp) dashboardApp.updatePiston(id, piston)
+    }    
 }
 
 public pausePiston(pistonId) {

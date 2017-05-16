@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.1.0a7.20170515" }
+public static String version() { return "v0.1.0a8.20170516" }
 /*
+ *	05/16/2017 >>> v0.1.0a8.20170516 - BETA M1 - Improved emoji support
  *	05/15/2017 >>> v0.1.0a7.20170515 - BETA M1 - Added a way to test pistons from the UI - Fixed a bug in UI values where decimal values were converted to integers - those values need to be re-edited to be fixed
  *	05/12/2017 >>> v0.1.0a6.20170512 - BETA M1 - Pistons can now (again) access devices stored in global variables
  *	05/11/2017 >>> v0.1.0a5.20170511 - BETA M1 - Fixed a bug with time scheduling offsets
@@ -808,6 +809,7 @@ private finalizeEvent(rtData, initialMsg, success = true) {
 }
 
 private processSchedules(rtData, scheduleJob = false) {
+	//def msg = timer "Processing schedules..."
 	//reschedule stuff
     //todo, override tasks, if any
     def schedules = (atomicState.schedules ?: [])
@@ -822,6 +824,9 @@ private processSchedules(rtData, scheduleJob = false) {
     if (!rtData.piston.o?.mps) {    
     	rtData.state.new = rtData.state.autoNew ?: 'true'
     }
+    
+    //debug msg, rtData
+    
     rtData.state.old = rtData.state.new
 	rtData.pistonStateChanged = false
     schedules = (atomicState.schedules ?: [])
