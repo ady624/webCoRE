@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.1.0a8.20170516" }
+public static String version() { return "v0.1.0a9.20170517" }
 /*
+ *	05/17/2017 >>> v0.1.0a9.20170517 - BETA M1 - Added egress IFTTT integration
  *	05/16/2017 >>> v0.1.0a8.20170516 - BETA M1 - Improved emoji support
  *	05/15/2017 >>> v0.1.0a7.20170515 - BETA M1 - Added a way to test pistons from the UI - Fixed a bug in UI values where decimal values were converted to integers - those values need to be re-edited to be fixed
  *	05/12/2017 >>> v0.1.0a6.20170512 - BETA M1 - Pistons can now (again) access devices stored in global variables
@@ -698,6 +699,7 @@ mappings {
 	path("/intf/dashboard/piston/test") {action: [GET: "api_intf_dashboard_piston_test"]}
 	path("/intf/dashboard/piston/activity") {action: [GET: "api_intf_dashboard_piston_activity"]}
 	path("/intf/dashboard/variable/set") {action: [GET: "api_intf_variable_set"]}
+	path("/intf/dashboard/settings/set") {action: [GET: "api_intf_settings_set"]}
 	path("/ifttt/:eventName") {action: [GET: "api_ifttt", POST: "api_ifttt"]}
 	path("/execute") {action: [POST: "api_execute"]}
 	path("/execute/:pistonName") {action: [GET: "api_execute", POST: "api_execute"]}
@@ -730,6 +732,7 @@ private api_get_base_result(deviceVersion = 0, updateCache = false) {
             deviceVersion: currentDeviceVersion,
             coreVersion: version(),
             enabled: !settings.disabled,
+            settings: state.settings ?: [:],            
             virtualDevices: virtualDevices(updateCache),
             globalVars: listAvailableVariables(),
         ] + (sendDevices ? [contacts: listAvailableContacts(false, updateCache), devices: listAvailableDevices(false, updateCache)] : [:]),
@@ -1102,6 +1105,19 @@ private api_intf_variable_set() {
 		}
         atomicState.vars = globalVars
 		result = [status: "ST_SUCCESS"] + [globalVars: globalVars]
+	} else {
+    	result = api_get_error_result("ERR_INVALID_TOKEN")
+    }
+    render contentType: "application/javascript;charset=utf-8", data: "${params.callback}(${result.encodeAsJSON()})"
+}
+
+private api_intf_settings_set() {
+	def result
+    debug "Dashboard: Request received to set settings"
+	if (verifySecurityToken(params.token)) {
+        def settings = params.settings ? new groovy.json.JsonSlurper().parseText(new String(params.settings.decodeBase64(), "UTF-8")) : null        
+        atomicState.settings = settings
+		result = [status: "ST_SUCCESS"]
 	} else {
     	result = api_get_error_result("ERR_INVALID_TOKEN")
     }
@@ -1515,6 +1531,7 @@ public Map getRunTimeData(semaphore, fetchWrappers = false) {
     	devices: (!!fetchWrappers ? (storageApp ? storageApp.listAvailableDevices(true) : listAvailableDevices(true)) : [:]),
         virtualDevices: virtualDevices(),
         globalVars: listAvailableVariables(),
+        settings: state.settings ?: [:],
         powerSource: state.powerSource ?: 'mains',
         started: startTime,
         ended: now(),
@@ -2106,9 +2123,9 @@ private static Map virtualCommands() {
 		fadeSaturation				: [ n: "Fade saturation...",	 r: ["setSaturation"], 		i: "toggle-on",				d: "Fade saturation{0} to {1}% in {2}{3}",									p: [[n:"Starting saturation",t:"level",d:" from {v}%"],[n:"Final saturation",t:"level"],[n:"Duration",t:"duration"], [n:"Only if switch is...", t:"enum",o:["on","off"], d:" if already {v}"]],																],
 		fadeHue						: [ n: "Fade hue...",			 r: ["setHue"], 		i: "toggle-on",				d: "Fade hue{0} to {1}° in {2}{3}",									p: [[n:"Starting hue",t:"hue",d:" from {v}°"],[n:"Final hue",t:"hue"],[n:"Duration",t:"duration"], [n:"Only if switch is...", t:"enum",o:["on","off"], d:" if already {v}"]],																],
 		fadeColorTemperature		: [ n: "Fade color temperature...",		 r: ["setColorTemperature"], 		i: "toggle-on",				d: "Fade color temperature{0} to {1}°K in {2}{3}",									p: [[n:"Starting color temperature",t:"colorTemperature",d:" from {v}°K"],[n:"Final color temperature",t:"colorTemperature"],[n:"Duration",t:"duration"], [n:"Only if switch is...", t:"enum",o:["on","off"], d:" if already {v}"]],																],
-		flash						: [ n: "Flash...",	 r: ["on", "off"], 		i: "toggle-on",				d: "Flash on {0} / off {1} for {2} times{3}",									p: [[n:"On duration",t:"duration"],[n:"Off duration",t:"duration"],[n:"Number of flashes",t:"integer"], [n:"Only if switch is...", t:"enum",o:["on","off"], d:" if already {v}"]],																],
-
-
+		flash						: [ n: "Flash...",	 r: ["on", "off"], 			i: "toggle-on",				d: "Flash on {0} / off {1} for {2} times{3}",									p: [[n:"On duration",t:"duration"],[n:"Off duration",t:"duration"],[n:"Number of flashes",t:"integer"], [n:"Only if switch is...", t:"enum",o:["on","off"], d:" if already {v}"]],																],
+		iftttMaker					: [ n: "Send an IFTTT Maker event...",a: true,									d: "Send the {0} IFTTT Maker event{1}{2}{3}",											p: [[n:"Event", t:"text"], [n:"Value1", t:"string", d:", passing Value1={v}"], [n:"Value1", t:"string", d:", passing Value1={v}"], [n:"Value1", t:"string", d:", passing Value1={v}"]],				],
+        
 /*		[ n: "waitState",											d: "Wait for piston state change",	p: ["Change to:enum[any,false,true]"],															i: true,	l: true,						dd: "Wait for {0} state"],
 		[ n: "flash",				r: ["on", "off"], 				d: "Flash",							p: ["On interval (milliseconds):number[250..5000]","Off interval (milliseconds):number[250..5000]","Number of flashes:number[1..10]"],					dd: "Flash {0}ms/{1}ms for {2} time(s)",		],
 		[ n: "saveState",		d: "Save state to variable",			p: ["Attributes:attributes","Aggregation:aggregation","?Convert to data t:dataType","Save to state variable:string"],			stateVarEntry: 3,	dd: "Save state of attributes {0} to variable |[{3}]|'",	aggregated: true,	],

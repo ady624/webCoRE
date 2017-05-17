@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.1.0a8.20170516" }
+public static String version() { return "v0.1.0a9.20170517" }
 /*
+ *	05/17/2017 >>> v0.1.0a9.20170517 - BETA M1 - Added egress IFTTT integration
  *	05/16/2017 >>> v0.1.0a8.20170516 - BETA M1 - Improved emoji support
  *	05/15/2017 >>> v0.1.0a7.20170515 - BETA M1 - Added a way to test pistons from the UI - Fixed a bug in UI values where decimal values were converted to integers - those values need to be re-edited to be fixed
  *	05/12/2017 >>> v0.1.0a6.20170512 - BETA M1 - Pistons can now (again) access devices stored in global variables
@@ -2393,6 +2394,35 @@ private long vcmd_wolRequest(rtData, device, params) {
 	))
     return 0
 }
+
+private long vcmd_iftttMaker(rtData, device, params) {
+	def key = (rtData.settings.ifttt_url ?: "").replace('https://maker.ifttt.com/use/', '')
+    if (!key) {
+    	error "Failed to send IFTTT event, because the IFTTT integration is not properly set up. Please visit Settings in your dashboard and configure the IFTTT integration.", rtData
+        return 0
+    }
+	def event = params[0]
+    def value1 = params.size() > 1 ? params[1] : ""
+    def value2 = params.size() > 2 ? params[2] : ""
+    def value3 = params.size() > 3 ? params[3] : ""
+    def body = [:]
+    if (value1) body.value1 = value1
+    if (value2) body.value2 = value2
+    if (value3) body.value3 = value3
+    def requestParams = [
+        uri:  "https://maker.ifttt.com/trigger/${event}/with/key/" + key,
+        requestContentType: "application/json",
+        body: body
+    ]
+    httpPost(requestParams){ response ->
+    	setSystemVariableValue(rtData, '$iftttStatusCode', response.status)
+        setSystemVariableValue(rtData, '$iftttStatusOk', response.status == 200)
+    }
+	return 0
+}
+
+
+
 
 private long vcmd_httpRequest(rtData, device, params) {
 	def uri = params[0].replace(" ", "%20")
