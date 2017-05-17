@@ -109,7 +109,7 @@
 				</div>
 				<div class="col-md-4">
 					<h2>Quick facts</h2>
-					<p>Piston state: {{state}}</p>
+					<p>Piston state: <span ng-bind-html="renderString(state)"></span></p>
 					<p>Last executed: {{lastExecuted ? utcToString(lastExecuted) : 'never'}}</p>
 					<p>Next scheduled: {{nextSchedule ? utcToString(nextSchedule) : 'never'}}</p>
 					<p>Subscriptions: {{subscriptions.events ? subscriptions.events : 'no'}} event{{subscriptions.events != 1 ? 's' : ''}}, {{subscriptions.controls ? subscriptions.controls : 'no'}} control{{subscriptions.controls != 1 ? 's' : ''}}</p>
@@ -138,6 +138,7 @@
 					</p>
 					<div>
 						<button class="btn btn-default" ng-click="edit();" title="Edit the piston">Edit »</button>
+						<button class="btn btn-warning" ng-click="test();" title="Test the piston">Test</button>
 						<button class="btn btn-success" ng-click="snapshot(true);" title="Take an anonymized snapshot of the piston"><i class="fa fa-camera" aria-hidden="true"></i></button>
 						<button class="btn btn-danger" ng-click="snapshot();" title="Take a snapshot of the piston"><i class="fa fa-camera" aria-hidden="true"></i></button>
 						<button class="btn btn-default" ng-click="textSnapshot();" title="Copy piston to clipboard"><i class="fa fa-copy" aria-hidden="true"></i></button>
@@ -160,7 +161,7 @@
 								<tr ng-repeat="log in logs" log="{{log.c}}">
 									<td ng-if="log.t" colspan="2" class="hdr">{{utcToString(log.t) + ' +' + (log.t % 1000) + 'ms'}}</td>
 									<td ng-if-start="log.o != null">+{{log.o}}ms</td>
-									<td ng-if-end>{{log.p}}<span>{{log.m}}</span></td>
+									<td ng-if-end>{{log.p}}<span ng-bind-html="renderString(log.m)"></span></td>
 								</tr>
 							</tbody>
 						</table>
@@ -241,10 +242,11 @@
 		<line com h ng-if-start="!piston.loading">/**************************************************************/</line>
 		<line com h ng-click="editSettings();">{{padComment(meta.name, 64)}}</line>
 		<line com h>/**************************************************************/</line>
-		<line com h>{{padComment('Author   : ' + (meta.author ? meta.author : '(unknown)'), 64)}}</line>
-		<line com h>{{padComment('Created  : ' + utcToString(meta.created), 64)}}</line>
-		<line com h>{{padComment('Modified : ' + utcToString(meta.modified), 64)}}</line>
-		<line com h>{{padComment('Build    : ' + meta.build, 64)}}</line>
+		<line com h>{{padComment('Author    : ' + (meta.author ? meta.author : '(unknown)'), 64)}}</line>
+		<line com h>{{padComment('Created   : ' + utcToString(meta.created), 64)}}</line>
+		<line com h>{{padComment('Modified  : ' + utcToString(meta.modified), 64)}}</line>
+		<line com h>{{padComment('Build     : ' + meta.build, 64)}}</line>
+		<line com h>{{padComment('UI version: ' + version(), 64)}}</line>
 		<line com h>/**************************************************************/</line>
 		<line com h ng-if-start="view.exportBin">{{padComment('To import this piston, use the import code below:', 64)}}</line>
 		<line com h>{{padComment('', 64)}}</line>

@@ -760,6 +760,16 @@ ul.socialmedia a .fa-twitter {
     height: 20px;
 }
 
+
+
+
+
+span.s-b { font-weight: bold; }
+span.s-i { font-style: italic; }
+span.s-u { text-decoration: underline; }
+span.s-s { text-decoration: line-through; }
+
+
 @media only screen and (max-width: 767px) {
 	body > logo {
 		font-size: 80px;

@@ -412,6 +412,7 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 		instance.globalVars = inst.globalVars;
 		instance.coreVersion = inst.coreVersion;
 		instance.name = inst.name;
+		instance.settings = inst.settings;
 		if (initial && instance.devices) {
 			for (d in instance.devices) {
 				instance.devices[d].t = dataService.determineDeviceType(instance.devices[d]);
@@ -436,7 +437,19 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 		if (cbkStatus) cbkStatus(status);
 	}
 
+   	var encodeEmoji = function(value) {
+        if (!value) return '';
+        return value.replace(/([\uD83C-\uDBFF][\uDC00-\uDFFF])/g, function(match) {
+            return ':' + encodeURIComponent(match) + ':';
+        });
+    };
 
+   	var decodeEmoji = function(value) {
+        if (!value) return '';
+        return value.replace(/(\:%[0-9A-F]{2}%[0-9A-F]{2}%[0-9A-F]{2}%[0-9A-F]{2}\:)/g, function(match) {
+            return decodeURIComponent(match.substr(1,12));
+        });
+    };
 
 
 	dataService.openWebSocket = function(callback) {
@@ -444,7 +457,10 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 			wsCallback = callback;
 			if (ws) return ws;
 			var iid = instance.id;
-			ws = new WebSocket('wss://api-us-' + iid[32] + '.webcore.co:9297');
+			var si = store[instance.id];
+			if (!si) si = {};
+			var region = (si && si.uri && si.uri.startsWith('https://graph-eu')) ? 'eu' : 'us';
+			ws = new WebSocket('wss://api-' + region + '-' + iid[32] + '.webcore.co:9297');
 			ws.onopen = function(evt) {
 				ws.send(instance.id)
 			};
@@ -617,9 +633,6 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 			}
 		}
 		if (!si) {
-			//temporary here, to be removed before RC
-			localStorage.clear();
-			
 			$location.path('/register');
 			/*
 			if (mobileCheck()) {
@@ -846,7 +859,7 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 		var inst = dataService.getPistonInstance(piston.id);
 		if (!inst) { inst = dataService.getInstance() };
 		si = store ? store[inst.id] : null;
-		var data = utoa(angular.toJson(piston));
+		var data = utoa(encodeEmoji(angular.toJson(piston)));
 		var maxChunkSize = 3076;
 		if (piston && binId) {
 			dataService.saveToBin(binId, piston);
@@ -908,6 +921,19 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 			});
     }
 
+
+    dataService.testPiston = function (pid) {
+		var inst = dataService.getPistonInstance(pid);
+		if (!inst) { inst = dataService.getInstance() };
+		si = store ? store[inst.id] : null;
+		status('Testing piston...');
+    	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/piston/test?id=' + pid + '&token=' + (si && si.token ? si.token : ''), {jsonpCallbackParam: 'callback'})
+			.then(function(response) {
+				status();
+				return response.data;
+			});
+    }
+
     dataService.deletePiston = function (pid) {
 		var inst = dataService.getPistonInstance(pid);
 		if (!inst) { inst = dataService.getInstance() };
@@ -924,6 +950,16 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 		si = store ? store[inst.id] : null;
 		var data = value ? utoa(angular.toJson(value)) : '';
     	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/variable/set?name=' + name + '&value=' + data + '&token=' + (si && si.token ? si.token : ''), {jsonpCallbackParam: 'callback'})
+			.then(function(response) {
+				return response.data;
+			});
+    }
+
+    dataService.setSettings = function (settings) {
+		var inst = dataService.getInstance();
+		si = store ? store[inst.id] : null;
+		var data = settings ? utoa(angular.toJson(settings)) : '';
+    	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/settings/set?settings=' + data + '&token=' + (si && si.token ? si.token : ''), {jsonpCallbackParam: 'callback'})
 			.then(function(response) {
 				return response.data;
 			});
@@ -1388,4 +1424,4 @@ if (document.selection) {
      document.execCommand("Copy");
 }}
 
-version = function() { return 'v0.1.0a6.20170512'; };
+version = function() { return 'v0.1.0aa.20170517'; };

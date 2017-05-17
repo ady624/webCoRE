@@ -8,7 +8,7 @@
 			<li></li>
 		</ul>
 	</loader>
-	<nav ng-if="initialized && (view == 'piston')" class="navbar navbar-default navbar-fixed-topw">
+	<nav ng-if="initialized && (view != 'dashboard')" class="navbar navbar-default navbar-fixed-topw">
       <div class="container-fluid">
         <div class="navbar-header">
           <button id="navbar-btn" type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
@@ -42,6 +42,8 @@
                             <li ng-if="instanceCount > 1" ng-click="movePiston();"><a>Move piston(s)</a></li>
                             <li role="separator" class="divider"></li>
                             <li><a href="register">Register another instance</a></li>
+                            <li role="separator" class="divider"></li>
+                            <li><a ng-click="showSettings()">Settings</a></li>
                             <li role="separator" class="divider"></li>
                             <li ng-click="logOut();"><a>Log out</a></li>
                         </ul>
@@ -86,7 +88,7 @@
 		</tiles>
 	</viewer>
 
-	<viewer class="pistons" ng-if="initialized && (view == 'piston')" class="no-animate">
+	<viewer class="pistons" ng-if="initialized && ((view == 'piston') || (view == 'settings'))" class="no-animate">
 		<div class="body container-fluid">
 			<div class="row">
 				<div class="sidebar">
@@ -94,6 +96,7 @@
 						<li><a href="" ng-click="showDashboard();">Go to dashboard</a></li>
 						<li><a href="" ng-click="newPiston();">Add a new piston</a></li>
 						<li ng-if="instanceCount > 1"><a href="" ng-click="movePiston();">Move piston(s)</a></li>						
+						<li><a href="" ng-click="showSettings();">Settings</a></li>						
 					</ul>
 
 					<ul class="nav nav-sidebar">
@@ -129,7 +132,7 @@
 						<table class="table table-striped">
 							<tbody>
 								<tr ng-repeat="piston in instance.pistons" ng-click="openPiston(piston.id);" active="true" ng-if="piston.meta && piston.meta.a" title="{{piston.meta.t ? 'Executed ' + timeSince(piston.meta.t) : 'Never executed'}}">
-									<td state="{{piston.meta.s.new}}"><i star class="fa fa-circle" ng-style="{opacity: piston.opacity}" aria-hidden="true"></i>{{piston.name}}<!--<span ng-if="piston.meta.s && piston.meta.s.new" state="{{piston.meta.s.new}}">{{piston.meta.s.new}}</span>--></td>
+									<td><i star class="fa fa-circle" ng-style="{opacity: piston.opacity}" aria-hidden="true"></i>{{piston.name}}<span state ng-bind-html="renderString(piston.meta.s.new)"></span><!--<span ng-if="piston.meta.s && piston.meta.s.new" state="{{piston.meta.s.new}}">{{piston.meta.s.new}}</span>--></td>
 									<td dur class="col-md-1 text-right">{{piston.meta.n ? timeCounter(piston.meta.n) : ''}}</td>
 								</tr>
 							</tbody>
@@ -151,20 +154,51 @@
 		</div>
 	</viewer>
 
+	<viewer class="settings" ng-if="initialized && (view == 'settings')" class="no-animate">
+		<label class="header">Settings</label>
+		<form class="form-horizontal">
+			<panel name="Integrations">
+				<panel name="IFTTT">
+					<p><a target="_blank" href="https://www.ifttt.com">IFTTT</a> is a free web-based service that people use to create chains of simple conditional statements, called applets. An applet is triggered by changes that occur within other web services such as Gmail, Facebook, Instagram, or Pinterest. IFTTT is an initialism for If This Then That<sup><a target="_blank" href="https://en.wikipedia.org/wiki/IFTTT">[wikipedia]</a></sup>.</p>
+					<p>webCoRE can send events to IFTTT's <a target="_blank" href="https://ifttt.com/maker_webhooks">Maker Webhooks channel</a>. Please sign in into your IFTTT account and go to the Maker Webhooks channel's <a target="_blank" href="https://ifttt.com/services/maker_webhooks/settings">settings</a> to enable it and generate a webhooks URL. Copy the provided URL and paste it below:</p>
+						<div class="form-group">
+							<label class="control-label col-sm-3">IFTTT Maker Webhooks URL</label>
+							<div class="col-sm-9">
+								<input type="text" class="form-control" ng-model="instance.settings.ifttt_url">
+							</div>
+						</div>
+				</panel>
+				<panel name="LIFX">
+					<p><a target="_blank" href="https://www.lifx.com">LIFX</a> LIFX (pronounced Life-X) is a line of energy-efficient, multi-color, Wi-Fi enabled LED light bulbs that can be controlled via a Wi-Fi equipped device such as a smartphone or smartwatch. LIFX bulbs are equipped with a Wi-Fi microcontroller that uses master/slave concept. The master light bulb connects to the router via 802.11b/802.11g/802.11n and then to all the other LIFX bulbs in the house via a low power IPv6 802.15.4 mesh network<sup><a target="_blank" href="https://en.wikipedia.org/wiki/LIFX">[wikipedia]</a></sup>.</p>
+					<p>webCoRE can currently list and activate LIFX scenes. Please visit your <a target="_blank" href="https://cloud.lifx.com">LIFX cloud account</a> and go to Settings under your account. Generate a new token and copy it, then paste it into the field below:</p>
+						<div class="form-group">
+							<label class="control-label col-sm-3">LIFX Access Token</label>
+							<div class="col-sm-9">
+								<input type="text" class="form-control" ng-model="instance.settings.lifx_token">
+							</div>
+						</div>
+				</panel>
+			</panel>
+			<panel>
+				<button class="btn btn-danger" ng-click="hideSettings()">Cancel</button>
+				<button class="btn btn-success pull-right" ng-click="saveSettings()">Apply</button>
+			</panel>
+		</form>
+	</viewer>
 
 
 
 <script type="text/ng-template" id="dialog-auth">
 	<designer>
 	    <header>
-         <label>Authentication Required</label>
-     </header>
-     <form>
-         <div class="form-group">
-             <label for="pin">Please enter the password for <b>{{designer.sender}}</b></label>
-             <input type="password" class="form-control" ng-model="designer.password" />
-         </div>
-     </form>
+    	     <label>Authentication Required</label>
+	     </header>
+	     <form>
+    	     <div class="form-group">
+        	     <label for="pin">Please enter the password for <b>{{designer.sender}}</b></label>
+    	         <input type="password" class="form-control" ng-model="designer.password" />
+	         </div>
+	     </form>
 
         <footer>
             <button type="button" class="btn btn-info pull-right" ng-disabled="!designer.password" ng-click="authenticate();">Authenticate</button>

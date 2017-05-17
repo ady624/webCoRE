@@ -46,7 +46,7 @@ piston > gutter {
     box-shadow: inset 0 1px 0 rgba(255,255,255,.15),0 1px 5px rgba(0,0,0,.075);
 }
 
-piston > gutter::after {
+piston > gutter:after {
 	content: "";
 	display: block;
 	position: absolute;
@@ -389,7 +389,7 @@ span.hl.nul {
 
 line[com][exportBin]::after {
 	position: absolute;
-	content: attr(exportBin);
+	content: attr(exportBin) !important;
 	left: 64px;
 	width: 384px;
 	text-align: center;
@@ -491,10 +491,10 @@ piston[anonymized] span[dev] {
 	line-height: 0px !important;
 }
 
-piston[anonymized] span[cnt]::before,
-piston[anonymized] span[dev]::before {
+piston[anonymized] span[cnt]:before,
+piston[anonymized] span[dev]:before {
 	line-height: 17px !important;
-	content: attr(an);
+	content: attr(an) !important;
 	font-size: initial;
 }
 

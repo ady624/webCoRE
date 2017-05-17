@@ -37,6 +37,7 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 						$scope.initialized = true;
 						$scope.location = dataService.getLocation();
 						$scope.instance = dataService.getInstance();
+						$scope.settings = data.settings ? data.settings : {};
 						$scope.currentInstanceId = $scope.instance.id;
 						$scope.instanceCount = dataService.getInstanceCount();
     		            if (!$scope.devices) $scope.devices = $scope.listAvailableDevices();
@@ -92,6 +93,21 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
             tmrStatus = $timeout(function() { $scope.setStatus(); }, 10000);
         }
     }
+
+	$scope.showSettings = function() {
+		$scope.closeNavBar();
+		$scope.view = 'settings';
+	};
+
+	$scope.hideSettings = function() {
+		$scope.view = 'piston';
+	}
+
+	$scope.saveSettings = function() {
+		dataService.setSettings($scope.instance.settings).then(function(data) {
+			$scope.hideSettings();
+		});
+	}
 
 	$scope.showDashboard = function() {
 		$scope.view = 'dashboard';
@@ -223,6 +239,61 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 		if (level >= 4) return 4;
 		return level;
 	}
+
+
+    $scope.renderString = function(value) {
+        var i = 0;      
+		if (!value) return '';
+        
+        var process = function(classList) {
+            var result = '';
+            while (i < value.length) {
+                var c = value[i];
+                switch (c) {
+                    case '<':
+                        result += '&lt;';
+						
+                        break;
+                    case '>':
+                        result += '&gt;';
+                        break;
+                    case '[':   
+                        var p = value.indexOf('|', i);
+                        if (p > i) {
+                            var cl = value.substring(i + 1, p);
+                            i = p + 1;
+                            result += process(cl);
+                        } else {
+                            i++;
+                            result += process()
+                        }
+                        break;
+                    case ']':
+                        if (classList != undefined) {
+                            var cls = classList.trim().replace(/\s/g, ',').split(',');
+                            var className = '';
+                            var color = '';
+                            for (x in cls) {
+                                switch (cls[x]) {
+                                    case 'b': className += 's-b '; break;
+                                    case 'u': className += 's-u '; break;
+                                    case 'i': className += 's-i '; break;
+                                    case 's': className += 's-s '; break;
+                                    default: color = cls[x].replace(/[^#0-9a-z]/gi, '');
+                                }
+                            }
+                            return '<span ' + (className ? 'class="' + className + '" ' : '') + (color ? 'style="color: ' + color + ' !important"' : '') + '>' + result + '</span>';
+                        }
+                    default:
+                        result += c;
+                }
+                i++;
+            }
+            return result;
+        }
+        return $sce.trustAsHtml(process(value));
+    };
+
 
 	$scope.onWSUpdate = function(evt) {
 		if (evt.isTrusted && evt.data) {

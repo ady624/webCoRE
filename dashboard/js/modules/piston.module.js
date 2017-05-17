@@ -51,6 +51,19 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		}
 	}
 
+	$scope.version = function() {
+		return $window.version();
+	}
+
+
+	$scope.encodeEmoji = function(value) {
+		if (!value) return '';
+		//return value.replace(/([\u20a0-\u32ff]|[\u1f000-\u1ffff]|[\ufe4e5-\ufe4ee])/g, function(match) {
+		return value.replace(/([\uD83C-\uDBFF][\uDC00-\uDFFF])/g, function(match) {
+			return encodeURIComponent(match);
+		});
+	};
+
     $scope.listAllPistons = function() {
         var result = [];
         var locations = dataService.listLocations();
@@ -90,6 +103,13 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
             }
         }
         return pistonId;
+    };
+
+    $scope.getLifxSceneName = function(sceneId) {
+		if (!$scope.instance.settings.lifx_scenes) return sceneId;
+		var sceneName = $scope.instance.settings.lifx_scenes[sceneId];
+		if (!sceneName) return sceneId;
+		return sceneName;
     };
 
 	$scope.getModeName = function(modeId) {
@@ -2386,7 +2406,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 			var all = false;
 			if (deviceId.startsWith(':')) {
 				var device = $scope.getDeviceById(devices[deviceIndex]);
-				cmds = device.c;
+				if (device) cmds = device.c;
 			} else {
 				all = true;
 				cmds = $scope.db.commands.physical;
@@ -2786,6 +2806,13 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 				operand.multiple = true;
 				dataType = 'enum';
 			}
+			if (dataType == 'lifxScenes') {
+				operand.multiple = true;
+				dataType = 'lifxScene';
+			}
+			if (dataType == 'lifxscene') {
+				dataType = 'lifxScene';
+			}
 			if (dataType == 'contacts') {
 				operand.multiple = true;
 				dataType = 'contact';
@@ -2903,6 +2930,9 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 				break;
 			case 'contact':
 				operand.options = $scope.contacts;
+				break;
+			case 'lifxScene':
+				operand.options = $scope.objectToArray($scope.instance.settings.lifx_scenes).sort($scope.sortByName);
 				break;
 			case 'integer':
 			case 'decimal':
@@ -3366,6 +3396,9 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 							case 'piston':
 								result = '<span lit>' + $scope.getPistonName(operand.c) + '</span>';
 								break;
+							case 'lifxScene':
+								result = '<span lit>' + $scope.getLifxSceneName(operand.c) + '</span>';
+								break;
 							case 'phone':
 								result = '<span phn>' + operand.c + '</span>';
 								break;
@@ -3706,6 +3739,58 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		return $sce.trustAsHtml(result);
 	};
 
+	$scope.renderString = function(value) {
+		var i = 0;
+		if (!value) return '';
+
+		var process = function(classList) {
+			var result = '';
+			while (i < value.length) {
+				var c = value[i];
+				switch (c) {
+					case '<':
+						result += '&lt;';
+						break;
+					case '>':
+						result += '&gt;';
+						break;
+					case '[':
+						var p = value.indexOf('|', i);
+						if (p > i) {
+							var cl = value.substring(i + 1, p);
+							i = p + 1;
+							result += process(cl);
+						} else {
+							i++;
+							result += process()
+						}
+						break;
+					case ']':
+						if (classList != undefined) {
+							var cls = classList.trim().replace(/\s/g, ',').split(',');
+							var className = '';
+							var color = '';
+							for (x in cls) {
+								switch (cls[x]) {
+									case 'b': className += 's-b '; break;
+									case 'u': className += 's-u '; break;
+									case 'i': className += 's-i '; break;
+									case 's': className += 's-s '; break;
+									default: color = cls[x].replace(/[^#0-9a-z]/gi, '');
+								}
+							}
+							return '<span ' + (className ? 'class="' + className + '" ' : '') + (color ? 'style="color: ' + color + ' !important"' : '') + '>' + result + '</span>';
+						}
+					default:
+						result += c;
+				}
+				i++;
+			}
+			return result;
+		}
+		return $sce.trustAsHtml(process(value));
+	};
+
 	$scope.renderTask = function(task) {
 		var command = $scope.getCommandById(task.c);
 		var display;
@@ -3718,10 +3803,8 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		} else {
 			display = !command.d ? command.n : command.d.replace(/\{(\d)\}/g, function(match, text) {
 				var idx = parseInt(text);
-				if ((idx < 0) || (!task.p) || (idx > task.p.length))
-					return '?';
-				if ((idx < 0) || (!task.p) || (idx > task.p.length))
-					return '?';
+				if ((idx < 0) || (!task.p) || (idx >= task.p.length))
+					return ' (?) ';
 				var value = '';
 				if (command.p[idx].t == 'duration') {
 					var unit = $scope.getDurationUnitName(task.p[idx].vt, true);
@@ -4033,6 +4116,10 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		});
 	};
 
+	$scope.test = function() {
+		dataService.testPiston($scope.pistonId);
+	}
+
 	$scope.togglePiston = function(piston, $event) {
 		if ((!piston) && (!$scope.viewerPiston || !$scope.viewerPiston.app)) return;
 		var pistonId = piston ? piston.i : $scope.pistonId;
@@ -4169,7 +4256,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 	$scope.objectToBlob = function(object, contentType) {
 		contentType = contentType || '';
 		var sliceSize = 1024;
-		var data = btoa($scope.serializeObject(object));
+		var data = utoa($scope.serializeObject(object));
 		data += '|' + data.length.toString();
 		var bytesLength = data.length;
 		var slicesCount = Math.ceil(bytesLength / sliceSize);
@@ -4323,7 +4410,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 					var value = str.slice(startIndex, i-1);
 					var parsedValue = parseFloat(value.trim());
 					if ((dataType != 'phone') && !isNaN(parsedValue) && (numExp.test(value.trim()))) {
-						arr.push({t: (value.indexOf('.') > 0 ? 'decimal' : 'integer'), v: parseInt(parsedValue), l: location(startIndex, i - 2)});
+						arr.push({t: (value.indexOf('.') > 0 ? 'decimal' : 'integer'), v: parsedValue, l: location(startIndex, i - 2)});
 						return true;
 					}					
 					arr.push({t: (['true', 'false'].indexOf(value) >= 0 ? 'boolean' : 'string'), v: value, l: location(startIndex, i - 2)});
