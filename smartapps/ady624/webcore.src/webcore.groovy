@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.1.0a9.20170517" }
+public static String version() { return "v0.1.0aa.20170517" }
 /*
+ *	05/17/2017 >>> v0.1.0aa.20170517 - BETA M1 - Added egress LIFX integration
  *	05/17/2017 >>> v0.1.0a9.20170517 - BETA M1 - Added egress IFTTT integration
  *	05/16/2017 >>> v0.1.0a8.20170516 - BETA M1 - Improved emoji support
  *	05/15/2017 >>> v0.1.0a7.20170515 - BETA M1 - Added a way to test pistons from the UI - Fixed a bug in UI values where decimal values were converted to integers - those values need to be re-edited to be fixed
@@ -195,6 +196,7 @@ public static String version() { return "v0.1.0a9.20170517" }
 /******************************************************************************/
 private static String handle() { return "webCoRE" }
 private static String domain() { return "webcore.co" }
+include 'asynchttp_v1'
 definition(
 	name: "${handle()}",
 	namespace: "ady624",
@@ -1117,6 +1119,7 @@ private api_intf_settings_set() {
 	if (verifySecurityToken(params.token)) {
         def settings = params.settings ? new groovy.json.JsonSlurper().parseText(new String(params.settings.decodeBase64(), "UTF-8")) : null        
         atomicState.settings = settings
+        testLifx()
 		result = [status: "ST_SUCCESS"]
 	} else {
     	result = api_get_error_result("ERR_INVALID_TOKEN")
@@ -1423,48 +1426,19 @@ private testIFTTT() {
 	return false
 }
 
-private testLIFX() {
-	if ((!settings.lifxToken) || (!settings.lifxEnabled)) return false
-	//setup our security descriptor
-	state.modules["LIFX"] = [
-		token: settings.lifxToken,
-		connected: false
-	]
-	if (settings.lifxToken) {
-		//verify the key
-		def requestParams = [
-			uri:  "https://api.lifx.com",
-			path: "/v1/scenes",
-			headers: [
-				"Authorization": "Bearer ${settings.lifxToken}"
-			],
-			requestContentType: "application/json"
-		]
-		try {
-			return httpGet(requestParams) { response ->
-				if (response.status == 200) {
-					if (response.data instanceof List) {
-						state.modules["LIFX"].connected = true
-						def ss = []
-						for(scene in response.data) {
-							def s = [
-								id: scene.uuid,
-								name: scene.name
-							]
-							ss.push(s)
-						}
-						state.modules["LIFX"].scenes = ss
-					}
-					return true;
-				}
-				return false;
-			}
-		}
-		catch(all) {
-			return false
-		}
-	}
-	return false
+private testLifx() {
+	def token = state.settings.lifx_token
+    if (!token) return false
+    def requestParams = [
+        uri:  "https://api.lifx.com",
+        path: "/v1/scenes",
+        headers: [
+            "Authorization": "Bearer ${token}"
+        ],
+        requestContentType: "application/json"
+    ]
+    asynchttp_v1.get(lifxHandler, requestParams)
+	return true
 }
 
 
@@ -1484,6 +1458,7 @@ public String getDashboardUrl() {
 
 public refreshDevices() {
 	state.deviceVersion = now().toString()
+    testLifx()
 }
 
 public String getWikiUrl() {
@@ -1679,6 +1654,19 @@ def summaryHandler(evt) {
 def NewIncidentHandler(evt) {
 	//log.error "$evt.name >>> ${evt.jsonData}"
 }
+
+
+
+def lifxHandler(response, cbkData) {
+	if (response.status == 200) {
+    	def data = response.data instanceof List ? response.data : new groovy.json.JsonSlurper().parseText(response.data)
+		if (data instanceof List) {
+	        state.settings.lifx_scenes = data.collectEntries{[(it.uuid): it.name]}
+            log.trace state.settings.lifx_scenes
+	    }
+	}
+}
+
 
 
 /******************************************************************************/
@@ -2090,8 +2078,8 @@ private static Map virtualCommands() {
 		noop						: [	n: "No operation",				a: true,	i: 'circle',				d: "No operation",																										],
 		wait						: [	n: "Wait...", 					a: true,	i: "clock-o",				d: "Wait {0}",															p: [[n:"Duration", t:"duration"]],				],
 		waitRandom					: [ n: "Wait randomly...",			a: true,	i: "clock-o",				d: "Wait randomly between {0} and {1}",									p: [[n:"At least", t:"duration"],[n:"At most", t:"duration"]],	],
-		waitForTime					: [ n: "Wait for time...",			a: true,	i: "clock-o",				d: "Wait for {0}",														p: [[n:"Time", t:"time"]],	],
-		waitForDateTime				: [ n: "Wait for date & time...",	a: true,	i: "clock-o",				d: "Wait for {0}",														p: [[n:"Date & Time", t:"datetime"]],	],
+		waitForTime					: [ n: "Wait for time...",			a: true,	i: "clock-o",				d: "Wait until {0}",													p: [[n:"Time", t:"time"]],	],
+		waitForDateTime				: [ n: "Wait for date & time...",	a: true,	i: "clock-o",				d: "Wait until {0}",													p: [[n:"Date & Time", t:"datetime"]],	],
 		executePiston				: [ n: "Execute piston...",			a: true,	i: "clock-o",				d: "Execute piston \"{0}\"",											p: [[n:"Piston", t:"piston"], [n:"Arguments", t:"variables", d:" with arguments {v}"]],	],
 		pausePiston					: [ n: "Pause piston...",			a: true,	i: "clock-o",				d: "Pause piston \"{0}\"",												p: [[n:"Piston", t:"piston"]],	],
 		resumePiston				: [ n: "Resume piston...",			a: true,	i: "clock-o",				d: "Resume piston \"{0}\"",												p: [[n:"Piston", t:"piston"]],	],
@@ -2116,16 +2104,16 @@ private static Map virtualCommands() {
 		adjustLevel					: [ n: "Adjust level...",	 r: ["setLevel"], 	i: "toggle-on",				d: "Adjust level by {0}%{1}",											p: [[n:"Adjustment",t:"integer",r:[-100,100]], [n:"Only if switch is...", t:"enum",o:["on","off"], d:" if already {v}"]],																],
 		adjustInfraredLevel			: [ n: "Adjust infrared level...",	 r: ["setInfraredLevel"], 	i: "toggle-on",	d: "Adjust infrared level by {0}%{1}",								p: [[n:"Adjustment",t:"integer",r:[-100,100]], [n:"Only if switch is...", t:"enum",o:["on","off"], d:" if already {v}"]],																],
 		adjustSaturation			: [ n: "Adjust saturation...",	 r: ["setSaturation"], 	i: "toggle-on",		d: "Adjust saturation by {0}%{1}",										p: [[n:"Adjustment",t:"integer",r:[-100,100]], [n:"Only if switch is...", t:"enum",o:["on","off"], d:" if already {v}"]],																],
-		adjustHue					: [ n: "Adjust hue...",	 r: ["setHue"], 	i: "toggle-on",					d: "Adjust hue by {0}°{1}",											p: [[n:"Adjustment",t:"integer",r:[-360,360]], [n:"Only if switch is...", t:"enum",o:["on","off"], d:" if already {v}"]],																],
-		adjustColorTemperature		: [ n: "Adjust color temperature...",	 r: ["setColorTemperature"], 	i: "toggle-on",				d: "Adjust color temperature by {0}°K%{1}",											p: [[n:"Adjustment",t:"integer",r:[-29000,29000]], [n:"Only if switch is...", t:"enum",o:["on","off"], d:" if already {v}"]],																],
+		adjustHue					: [ n: "Adjust hue...",	 r: ["setHue"], 	i: "toggle-on",					d: "Adjust hue by {0}°{1}",												p: [[n:"Adjustment",t:"integer",r:[-360,360]], [n:"Only if switch is...", t:"enum",o:["on","off"], d:" if already {v}"]],																],
+		adjustColorTemperature		: [ n: "Adjust color temperature...",	 r: ["setColorTemperature"], 	i: "toggle-on",				d: "Adjust color temperature by {0}°K%{1}",		p: [[n:"Adjustment",t:"integer",r:[-29000,29000]], [n:"Only if switch is...", t:"enum",o:["on","off"], d:" if already {v}"]],																],
 		fadeLevel					: [ n: "Fade level...",	 r: ["setLevel"], 		i: "toggle-on",				d: "Fade level{0} to {1}% in {2}{3}",									p: [[n:"Starting level",t:"level",d:" from {v}%"],[n:"Final level",t:"level"],[n:"Duration",t:"duration"], [n:"Only if switch is...", t:"enum",o:["on","off"], d:" if already {v}"]],																],
-		fadeInfraredLevel			: [ n: "Fade infrared level...",	 r: ["setInfraredLevel"], 		i: "toggle-on",				d: "Fade infrared level{0} to {1}% in {2}{3}",									p: [[n:"Starting infrared level",t:"level",d:" from {v}%"],[n:"Final infrared level",t:"level"],[n:"Duration",t:"duration"], [n:"Only if switch is...", t:"enum",o:["on","off"], d:" if already {v}"]],																],
-		fadeSaturation				: [ n: "Fade saturation...",	 r: ["setSaturation"], 		i: "toggle-on",				d: "Fade saturation{0} to {1}% in {2}{3}",									p: [[n:"Starting saturation",t:"level",d:" from {v}%"],[n:"Final saturation",t:"level"],[n:"Duration",t:"duration"], [n:"Only if switch is...", t:"enum",o:["on","off"], d:" if already {v}"]],																],
-		fadeHue						: [ n: "Fade hue...",			 r: ["setHue"], 		i: "toggle-on",				d: "Fade hue{0} to {1}° in {2}{3}",									p: [[n:"Starting hue",t:"hue",d:" from {v}°"],[n:"Final hue",t:"hue"],[n:"Duration",t:"duration"], [n:"Only if switch is...", t:"enum",o:["on","off"], d:" if already {v}"]],																],
+		fadeInfraredLevel			: [ n: "Fade infrared level...",	 r: ["setInfraredLevel"], 		i: "toggle-on",				d: "Fade infrared level{0} to {1}% in {2}{3}",		p: [[n:"Starting infrared level",t:"level",d:" from {v}%"],[n:"Final infrared level",t:"level"],[n:"Duration",t:"duration"], [n:"Only if switch is...", t:"enum",o:["on","off"], d:" if already {v}"]],																],
+		fadeSaturation				: [ n: "Fade saturation...",	 r: ["setSaturation"], 		i: "toggle-on",				d: "Fade saturation{0} to {1}% in {2}{3}",					p: [[n:"Starting saturation",t:"level",d:" from {v}%"],[n:"Final saturation",t:"level"],[n:"Duration",t:"duration"], [n:"Only if switch is...", t:"enum",o:["on","off"], d:" if already {v}"]],																],
+		fadeHue						: [ n: "Fade hue...",			 r: ["setHue"], 		i: "toggle-on",				d: "Fade hue{0} to {1}° in {2}{3}",								p: [[n:"Starting hue",t:"hue",d:" from {v}°"],[n:"Final hue",t:"hue"],[n:"Duration",t:"duration"], [n:"Only if switch is...", t:"enum",o:["on","off"], d:" if already {v}"]],																],
 		fadeColorTemperature		: [ n: "Fade color temperature...",		 r: ["setColorTemperature"], 		i: "toggle-on",				d: "Fade color temperature{0} to {1}°K in {2}{3}",									p: [[n:"Starting color temperature",t:"colorTemperature",d:" from {v}°K"],[n:"Final color temperature",t:"colorTemperature"],[n:"Duration",t:"duration"], [n:"Only if switch is...", t:"enum",o:["on","off"], d:" if already {v}"]],																],
-		flash						: [ n: "Flash...",	 r: ["on", "off"], 			i: "toggle-on",				d: "Flash on {0} / off {1} for {2} times{3}",									p: [[n:"On duration",t:"duration"],[n:"Off duration",t:"duration"],[n:"Number of flashes",t:"integer"], [n:"Only if switch is...", t:"enum",o:["on","off"], d:" if already {v}"]],																],
-		iftttMaker					: [ n: "Send an IFTTT Maker event...",a: true,									d: "Send the {0} IFTTT Maker event{1}{2}{3}",											p: [[n:"Event", t:"text"], [n:"Value1", t:"string", d:", passing Value1={v}"], [n:"Value1", t:"string", d:", passing Value1={v}"], [n:"Value1", t:"string", d:", passing Value1={v}"]],				],
-        
+		flash						: [ n: "Flash...",	 r: ["on", "off"], 			i: "toggle-on",				d: "Flash on {0} / off {1} for {2} times{3}",							p: [[n:"On duration",t:"duration"],[n:"Off duration",t:"duration"],[n:"Number of flashes",t:"integer"], [n:"Only if switch is...", t:"enum",o:["on","off"], d:" if already {v}"]],																],
+		iftttMaker					: [ n: "Send an IFTTT Maker event...",a: true,								d: "Send the {0} IFTTT Maker event{1}{2}{3}",							p: [[n:"Event", t:"text"], [n:"Value 1", t:"string", d:", passing value1 = '{v}'"], [n:"Value 2", t:"string", d:", passing value2 = '{v}'"], [n:"Value 3", t:"string", d:", passing value3 = '{v}'"]],				],
+		lifxScene					: [ n: "Activate LIFX scene",		  a: true, 								d: "Activate LIFX Scene '{0}'", 										p: [[n: "Scene", t:"lifxScene"]],					],
 /*		[ n: "waitState",											d: "Wait for piston state change",	p: ["Change to:enum[any,false,true]"],															i: true,	l: true,						dd: "Wait for {0} state"],
 		[ n: "flash",				r: ["on", "off"], 				d: "Flash",							p: ["On interval (milliseconds):number[250..5000]","Off interval (milliseconds):number[250..5000]","Number of flashes:number[1..10]"],					dd: "Flash {0}ms/{1}ms for {2} time(s)",		],
 		[ n: "saveState",		d: "Save state to variable",			p: ["Attributes:attributes","Aggregation:aggregation","?Convert to data t:dataType","Save to state variable:string"],			stateVarEntry: 3,	dd: "Save state of attributes {0} to variable |[{3}]|'",	aggregated: true,	],

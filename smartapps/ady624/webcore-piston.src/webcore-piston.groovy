@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.1.0a9.20170517" }
+public static String version() { return "v0.1.0aa.20170517" }
 /*
+ *	05/17/2017 >>> v0.1.0aa.20170517 - BETA M1 - Added egress LIFX integration
  *	05/17/2017 >>> v0.1.0a9.20170517 - BETA M1 - Added egress IFTTT integration
  *	05/16/2017 >>> v0.1.0a8.20170516 - BETA M1 - Improved emoji support
  *	05/15/2017 >>> v0.1.0a7.20170515 - BETA M1 - Added a way to test pistons from the UI - Fixed a bug in UI values where decimal values were converted to integers - those values need to be re-edited to be fixed
@@ -2417,12 +2418,51 @@ private long vcmd_iftttMaker(rtData, device, params) {
     httpPost(requestParams){ response ->
     	setSystemVariableValue(rtData, '$iftttStatusCode', response.status)
         setSystemVariableValue(rtData, '$iftttStatusOk', response.status == 200)
+        return 0
     }
 	return 0
 }
 
 
 
+private long vcmd_lifxScene(rtData, device, params) {
+	def token = rtData.settings?.lifx_token
+    if (!token) {
+    	error "Sorry, you need to enable the LIFX integration in your dashboard's Settings section before trying to activate a LIFX scene.", rtData
+        return 0
+    }    
+	def sceneId = params[0]
+    if (!rtData.settings?.lifx_scenes) {
+    	error "Sorry, there seems to be no available LIFX scenes, please ensure the LIFX integration is working.", rtData
+        return 0
+    }
+    sceneId = rtData.settings.lifx_scenes.find{ (it.key == sceneId) || (it.value == sceneId) }?.key
+	if (!sceneId) {
+    	error "Sorry, could not find the specified LIFX scene.", rtData
+        return 0
+    }
+    def requestParams = [
+        uri:  "https://api.lifx.com",
+        path: "/v1/scenes/scene_id:${sceneId}/activate",
+        headers: [
+            "Authorization": "Bearer $token"
+        ]
+    ]
+    try {
+        httpPut(requestParams) { response ->
+            if ((response.status >= 200) && (response.status < 300)) {
+                return 0;
+            }
+            error "Error while activating LIFX scene. Result status is ${response.status}.", rtData
+            return 0;
+        }
+    }
+    catch(all) {
+    	error "Error while activating LIFX scene:", rtData, null, all
+        return 0
+    }
+	return 0
+}
 
 private long vcmd_httpRequest(rtData, device, params) {
 	def uri = params[0].replace(" ", "%20")
