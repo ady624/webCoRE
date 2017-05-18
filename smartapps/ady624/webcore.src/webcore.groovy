@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.1.0ab.20170517" }
+public static String version() { return "v0.1.0ac.20170518" }
 /*
+ *	05/18/2017 >>> v0.1.0ac.20170518 - BETA M1 - Preparing the grounds for advanced engine blocks
  *	05/17/2017 >>> v0.1.0ab.20170517 - BETA M1 - Fixed a bug affecting some users, regarding the new LIFX integration
  *	05/17/2017 >>> v0.1.0aa.20170517 - BETA M1 - Added egress LIFX integration
  *	05/17/2017 >>> v0.1.0a9.20170517 - BETA M1 - Added egress IFTTT integration
@@ -215,6 +216,8 @@ definition(
 preferences {
 	//UI pages
 	page(name: "pageMain")
+    page(name: "pageDisclaimer")
+    page(name: "pageEngineBlock")
 	page(name: "pageInitializeDashboard")
 	page(name: "pageFinishInstall")
 	page(name: "pageSelectDevices")
@@ -223,12 +226,6 @@ preferences {
     page(name: "pageChangePassword")
     page(name: "pageSavePassword")
     page(name: "pageRebuildCache")    
-/*	page(name: "pageIntegrations")
-	page(name: "pageIntegrationAskAlexa")
-	page(name: "pageIntegrationIFTTT")
-	page(name: "pageIntegrationIFTTTConfirm")
-	page(name: "pageIntegrationTwilio")
-	page(name: "pageIntegrationTwilioTest")*/
 	page(name: "pageRemove")
 }
 
@@ -278,10 +275,17 @@ def pageMain() {
 	}
 	//webCoRE main page
 	dynamicPage(name: "pageMain", title: "", install: true, uninstall: false) {
-    	section("Engine block") {
-			href "pageEngineBlock", title: "Cast iron", description: app.version(), image: "https://cdn.rawgit.com/ady624/${handle()}/master/resources/icons/app-CoRE.png", required: false
+    	if (settings.agreement == undefined) {
+        	pageSectionDisclaimer()
         }
-		section("") {
+    
+    	if (settings.agreement) {
+    		section("Engine block") {
+				href "pageEngineBlock", title: "Cast iron", description: app.version(), image: "https://cdn.rawgit.com/ady624/${handle()}/master/resources/icons/app-CoRE.png", required: false
+	        }
+		}
+        
+		section("Dashboard") {
 			if (!state.endpoint) {
 				href "pageInitializeDashboard", title: "Dashboard", description: "Tap to initialize", image: "https://cdn.rawgit.com/ady624/CoRE/master/resources/images/icons/dashboard.png", required: false
 			} else {
@@ -289,11 +293,45 @@ def pageMain() {
 				href "", title: "Dashboard", style: "external", url: getDashboardInitUrl(), description: "Tap to open", image: "https://cdn.rawgit.com/ady624/CoRE/master/resources/images/icons/dashboard.png", required: false
 				href "", title: "Register a browser", style: "embedded", url: getDashboardInitUrl(true), description: "Tap to open", image: "https://cdn.rawgit.com/ady624/CoRE/master/resources/images/icons/dashboard.png", required: false
 			}
-		}	
+		}
+        
 		section(title:"Settings") {
 			href "pageSettings", title: "Settings", image: "https://cdn.rawgit.com/ady624/CoRE/master/resources/images/icons/settings.png", required: false
 		}
+
+		section(title:"Disclaimer") {
+			href "pageDisclaimer", title: "Read the disclaimer", image: "https://cdn.rawgit.com/ady624/CoRE/master/resources/images/icons/settings.png", required: false
+		}
+
 	}	
+}
+
+private pageSectionDisclaimer() {
+	section('Disclaimer') {
+    	paragraph "Please read the following information carefully", required: true
+        paragraph "webCoRE is a web-enabled product, which means data travels across the internet. webCoRE is using TLS for encryption of data and NEVER provides real object IDs to any system outside of the SmartThings ecosystem. The IDs are hashed into a string of letters and numbers that cannot be 'decoded' back to their original value. These hashed IDs are stored by your browser and can be cleaned up by using the Logout action under the dashboard."
+        paragraph "Access to a webCoRE SmartApp is done through the browser using a security password provided during the installation of webCoRE. The browser never stores this password and it is only used during the initial registration and authentication of your browser. A security token is generated for each browser and is used for any subsequent communication. This token expires at a preset life length, or when the password is changed, or when the tokens are manually revoked from the webCoRE SmartApp's Settings menu."
+    }
+	section('Server-side features') {
+        paragraph "Some features require that a webcore.co server processes your data. Such features include emails (sending emails out, or triggering pistons with emails), inter-location communication for superglobal variables, fuel streams, backup bins."
+        paragraph "At no time does the server receive any real IDs of SmartThings objects, the instance security password, nor the instance security token that your browser uses to communicate with the SmartApp. The server is therefore unable to access any information that only an authenticated browser can."
+    }
+	section('Information collected by the server') {
+        paragraph "The webcore.co server(s) collect ANONYMIZED hashes of 1) your unique account identifier, 2) your locations, and 3) installed webCoRE instances. It also collects an encrypted version of your SmartApp instances' endpoints that allow the server to trigger pistons on emails (if you use that feature), proxy IFTTT requests to your pistons, or provide inter-location communication between your webCoRE instances. It also allows for automatic browser registration when you use another browser, by providing that browser basic information about your existing instances. You will still need to enter the password to access each of those instances, the server does not have the password, nor the security tokens."
+    }
+	section('Information NOT collected by the server') {
+        paragraph "The webcore.co server(s) do NOT collect any real object IDs from SmartThings, any names, phone numbers, email addresses, physical location information, addresses, or any other personally identifiable information."
+    }
+    section('Agreement') {
+    	paragraph "Certain advanced features may not work if you do not agree to the webcore.co servers collecting the anonymized information described above."
+        input "agreement", "bool", title: "Allow webcore.co to collect basic, anonymized, non-personally identifiable information", defaultValue: true
+    }
+}
+
+private pageDisclaimer() {
+	dynamicPage(name: "pageDisclaimer", title: "") {
+		pageSectionDisclaimer()
+    }
 }
 
 private pageSectionInstructions() {
@@ -324,6 +362,9 @@ private pageInitializeDashboard() {
 					label name: "name", title: "Name", state: (name ? "complete" : null), defaultValue: app.name, required: false
 
                 }
+                
+                pageSectionDisclaimer()
+                
                 section() {
                 	paragraph "${state.installed ? "Tap Done to continue." : "Next, choose a security password for your dashboard. You will need to enter this password when accessing your dashboard for the first time, and possibly from time to time, depending on your settings."}", required: false
 				}
@@ -341,6 +382,15 @@ private pageInitializeDashboard() {
         pageSectionPIN()
 	}
 }
+
+private pageEngineBlock() {
+	dynamicPage(name: "pageEngineBlock", title: "") {
+		section() {
+        	paragraph "Under construction. This will help you upgrade your engine block to get access to extra features such as email triggers, fuel streams, and more."
+        }
+    }
+}
+
 
 private pageSelectDevices() {
 	state.deviceVersion = now().toString()
@@ -640,7 +690,9 @@ private updated() {
 private initialize() {
 	subscribeAll()
     state.vars = state.vars ?: [:]
-    ping()
+    if (state.installed && state.agreement) {
+    	registerInstance()
+    }
 }
 
 private initializeWebCoREEndpoint() {
@@ -1440,6 +1492,25 @@ private testLifx() {
     ]
     asynchttp_v1.get(lifxHandler, requestParams)
 	return true
+}
+
+private registerInstance() {
+	def accountId = hashId(app.getAccountId())
+    def locationId = hashId(location.id)
+    def instanceId = hashId(app.id)
+    def endpoint = state.endpoint
+    def region = endpoint.contains('graph-eu') ? 'eu' : 'us';
+	asynchttp_v1.put(null, [
+        uri: "https://api-${region}-${instanceId[32]}.webcore.co:9247",
+        path: '/instance/register',
+        headers: ['ST' : instanceId],
+        body: [
+        	a: accountId,
+        	l: locationId,
+        	i: instanceId,
+            e: endpoint
+    	]
+    ])
 }
 
 

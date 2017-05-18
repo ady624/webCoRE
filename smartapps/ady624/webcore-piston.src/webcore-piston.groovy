@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.1.0ab.20170517" }
+public static String version() { return "v0.1.0ac.20170518" }
 /*
+ *	05/18/2017 >>> v0.1.0ac.20170518 - BETA M1 - Preparing the grounds for advanced engine blocks
  *	05/17/2017 >>> v0.1.0ab.20170517 - BETA M1 - Fixed a bug affecting some users, regarding the new LIFX integration
  *	05/17/2017 >>> v0.1.0aa.20170517 - BETA M1 - Added egress LIFX integration
  *	05/17/2017 >>> v0.1.0a9.20170517 - BETA M1 - Added egress IFTTT integration
@@ -2398,7 +2399,7 @@ private long vcmd_wolRequest(rtData, device, params) {
 }
 
 private long vcmd_iftttMaker(rtData, device, params) {
-	def key = (rtData.settings.ifttt_url ?: "").replace('https://maker.ifttt.com/use/', '')
+	def key = (rtData.settings.ifttt_url ?: "").replace('https://', '').replace('http://', '').replace('maker.ifttt.com/use/', '')
     if (!key) {
     	error "Failed to send IFTTT event, because the IFTTT integration is not properly set up. Please visit Settings in your dashboard and configure the IFTTT integration.", rtData
         return 0
