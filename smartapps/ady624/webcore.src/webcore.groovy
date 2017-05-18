@@ -690,7 +690,7 @@ private updated() {
 private initialize() {
 	subscribeAll()
     state.vars = state.vars ?: [:]
-    if (state.installed && state.agreement) {
+    if (state.installed && settings.agreement) {
     	registerInstance()
     }
 }
