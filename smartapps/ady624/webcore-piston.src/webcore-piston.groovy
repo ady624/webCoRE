@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.1.0aa.20170517" }
+public static String version() { return "v0.1.0ab.20170517" }
 /*
+ *	05/17/2017 >>> v0.1.0ab.20170517 - BETA M1 - Fixed a bug affecting some users, regarding the new LIFX integration
  *	05/17/2017 >>> v0.1.0aa.20170517 - BETA M1 - Added egress LIFX integration
  *	05/17/2017 >>> v0.1.0a9.20170517 - BETA M1 - Added egress IFTTT integration
  *	05/16/2017 >>> v0.1.0a8.20170516 - BETA M1 - Improved emoji support
