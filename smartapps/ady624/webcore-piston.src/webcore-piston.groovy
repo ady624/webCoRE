@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.1.0ac.20170518" }
+public static String version() { return "v0.1.0ad.20170519" }
 /*
+ *	05/19/2017 >>> v0.1.0ad.20170519 - BETA M1 - Various bug fixes, including broken while loops with a preceeding exit statement (exit and break statements conflicted with async runs)
  *	05/18/2017 >>> v0.1.0ac.20170518 - BETA M1 - Preparing the grounds for advanced engine blocks
  *	05/17/2017 >>> v0.1.0ab.20170517 - BETA M1 - Fixed a bug affecting some users, regarding the new LIFX integration
  *	05/17/2017 >>> v0.1.0aa.20170517 - BETA M1 - Added egress LIFX integration
@@ -860,7 +861,7 @@ private processSchedules(rtData, scheduleJob = false) {
         	def t = (next.t - now()) / 1000
         	t = (t < 1 ? 1 : t)
         	rtData.stats.nextSchedule = next.t
-        	if (rtData.logging > 1) trace "Setting up scheduled job for ${formatLocalTime(next.t)} (in ${t}s)" + (schedules.size() > 1 ? ', with ' + (schedules.size() - 1).toString() + ' more job' + (schedules.size() > 2 ? 's' : '') + ' pending' : ''), rtData
+        	if (rtData.logging) info "Setting up scheduled job for ${formatLocalTime(next.t)} (in ${t}s)" + (schedules.size() > 1 ? ', with ' + (schedules.size() - 1).toString() + ' more job' + (schedules.size() > 2 ? 's' : '') + ' pending' : ''), rtData
         	runIn(t, timeHandler, [data: next])
         	runIn(t + 30, timeRecoveryHandler, [data: next])
     	} else {
@@ -1030,7 +1031,6 @@ private Boolean executeStatement(rtData, statement, async = false) {
                         //automatic piston state                        
                         rtData.state.autoNew = 'true';
                     }
-                    
                     if (perform || !!rtData.fastForwardTo) {
                         if (statement.t in ['if', 'while']) {
                             if (!executeStatements(rtData, statement.s, async)) {
@@ -1180,12 +1180,16 @@ private Boolean executeStatement(rtData, statement, async = false) {
                 	value = executeStatements(rtData, statement.s, async)
                     break
                 case 'break':
-                	rtData.break = true
+                	if (!rtData.fastForwardTo) {
+                		rtData.break = true
+					}
                     value = false
                     break
                 case 'exit':
-                	vcmd_setState(rtData, null, [cast(rtData, evaluateOperand(rtData, null, statement.lo).v, 'string')])
-                    rtData.terminated = true
+                	if (!rtData.fastForwardTo) {
+                		vcmd_setState(rtData, null, [cast(rtData, evaluateOperand(rtData, null, statement.lo).v, 'string')])
+                     	rtData.terminated = true
+                    }
                     value = false
                     break
             }
@@ -1235,7 +1239,7 @@ private Boolean executeStatement(rtData, statement, async = false) {
     rtData.stack.s = rtData.stack.ss.pop()
     setSystemVariableValue(rtData, '$index', parentIndex)
     setSystemVariableValue(rtData, '$device', parentDevice)
-    rtData.conditionStateChanged = parentConditionStateChanged
+    rtData.conditionStateChanged = parentConditionStateChanged   
 	return value || !!rtData.fastForwardTo
 }
 
@@ -1613,7 +1617,9 @@ private scheduleTimeCondition(rtData, condition) {
 		comparison = rtData.comparisons.triggers[condition.co]
 	    if (!comparison) return
     	trigger = true
-    }  
+    }
+    cancelStatementSchedules(rtData, condition.$)
+    if (!comparison.p) return
     def tv1 = evaluateOperand(rtData, null, condition.to)
     def v1 = evaluateExpression(rtData, evaluateOperand(rtData, null, condition.ro), 'datetime').v + (tv1 ? evaluateExpression(rtData, [t: 'duration', v: tv1.v, vt: tv1.vt], 'long').v : 0)    
     def tv2 = comparison.p > 1 ? evaluateOperand(rtData, null, condition.to2) : null
@@ -1639,7 +1645,6 @@ private scheduleTimeCondition(rtData, condition) {
     v1 = (v1 < n) ? v2 : v1
     v2 = (v2 < n) ? v1 : v2
    	n = v1 < v2 ? v1 : v2
-    cancelStatementSchedules(rtData, condition.$)
     if (n > now()) {
     	if (rtData.logging > 2) debug "Requesting time schedule wake up at ${formatLocalTime(n)}", rtData
 	    requestWakeUp(rtData, condition, [$:0], n)
@@ -2399,7 +2404,7 @@ private long vcmd_wolRequest(rtData, device, params) {
 }
 
 private long vcmd_iftttMaker(rtData, device, params) {
-	def key = (rtData.settings.ifttt_url ?: "").replace('https://', '').replace('http://', '').replace('maker.ifttt.com/use/', '')
+	def key = (rtData.settings.ifttt_url ?: "").trim().replace('https://', '').replace('http://', '').replace('maker.ifttt.com/use/', '')
     if (!key) {
     	error "Failed to send IFTTT event, because the IFTTT integration is not properly set up. Please visit Settings in your dashboard and configure the IFTTT integration.", rtData
         return 0
@@ -2973,6 +2978,7 @@ private Boolean evaluateComparison(rtData, comparison, lo, ro = null, ro2 = null
 
 private cancelStatementSchedules(rtData, statementId, data = null) {
 	//cancel all schedules that are pending for statement statementId
+    if (rtData.logging > 2) debug "Cancelling statement #${statementId}'s schedules...", rtData
     if (!(statementId in rtData.cancelations.statements)) {
     	rtData.cancelations.statements.push([id: statementId, data: data])
     }
@@ -2980,6 +2986,7 @@ private cancelStatementSchedules(rtData, statementId, data = null) {
 
 private cancelConditionSchedules(rtData, conditionId) {
 	//cancel all schedules that are pending for condition conditionId
+    if (rtData.logging > 2) debug "Cancelling condition #${conditionId}'s schedules...", rtData
     if (!(conditionId in rtData.cancelations.conditions)) {
     	rtData.cancelations.conditions.push(conditionId)
     }
@@ -3324,8 +3331,9 @@ private void subscribeAll(rtData) {
                     ct = ct ?: comparisonType
                 }
                 subscriptions[subscriptionId] = [d: deviceId, a: attribute, t: ct, c: (subscriptions[subscriptionId] ? subscriptions[subscriptionId].c : []) + [condition]]
-                if (deviceId != rtData.locationId) {
+                if ((deviceId != rtData.locationId) && (deviceId.startsWith(':'))) {
                 	rawDevices[deviceId] = rtData.devices[deviceId]
+                    devices[deviceId] =  [c: (comparisonType ? 1 : 0) + (devices[deviceId]?.c ?: 0)]
                 }
             }
         }    
@@ -3343,7 +3351,7 @@ private void subscribeAll(rtData) {
                             ct = ct ?: comparisonType
                         }
                         subscriptions["$deviceId${operand.a}"] = [d: deviceId, a: operand.a, t: ct , c: (subscriptions["$deviceId${operand.a}"] ? subscriptions["$deviceId${operand.a}"].c : []) + (comparisonType?[node]:[])]
-                        if (deviceId != rtData.locationId) {
+                        if ((deviceId != rtData.locationId) && (deviceId.startsWith(':'))) {
                             rawDevices[deviceId] = rtData.devices[deviceId]
                         }
                     }
@@ -3476,7 +3484,7 @@ private void subscribeAll(rtData) {
             if (node.r) traverseRestrictions(node.r, restrictionTraverser)
             for(deviceId in node.d) {
                 devices[deviceId] = devices[deviceId] ?: [c: 0]
-                if (deviceId != rtData.locationId) {
+                if ((deviceId != rtData.locationId) && (deviceId.startsWith(':'))) {
                 	rawDevices[deviceId] = rtData.devices[deviceId]
                 }                
             }
@@ -3530,7 +3538,7 @@ private void subscribeAll(rtData) {
                 altSub = (condition.sm == 'always') ? condition.sm : ((altSub != 'always') && (condition.sm != 'never') ? condition.sm : altSub)
 			}
             if (!rtData.piston.o.des && !!subscription.value.t && !!subscription.value.c && (altSub != "never") && ((subscription.value.t == "trigger") || (altSub == "always") || !hasTriggers)) {
-                def device = getDevice(rtData, subscription.value.d)
+                def device = subscription.value.d.startsWith(':') ? getDevice(rtData, subscription.value.d) : null
                 if (device) {
 					for (condition in subscription.value.c) if (condition) { condition.s = (condition.sm != 'never') && ((condition.ct == 't') || (condition.sm == 'always') || (!hasTriggers)) }
                 	switch (subscription.value.a) {
@@ -3562,7 +3570,7 @@ private void subscribeAll(rtData) {
         updateDeviceList(deviceIdList)
         //fake subscriptions for controlled devices to force the piston being displayed in those devices' Smart Apps tabs
         for (d in devices.findAll{ ((it.value.c <= 0) || (rtData.piston.o.des)) && (it.key != rtData.locationId) }) {
-            def device = getDevice(rtData, d.key)
+            def device = d.key.startsWith(':') ? getDevice(rtData, d.key) : null
             if (device && (device != location)) {
                 if (rtData.logging > 1) trace "Subscribing to $device...", rtData
                 //subscribe(device, "", fakeHandler)
