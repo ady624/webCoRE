@@ -512,14 +512,13 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 	}
 	$scope.padComment = function(comment, sz) {
 		if (!comment) comment = '';
-		sz = sz - 6 - comment.length;
+		//replace LEFT-TO-RIGHT marks \u200E - Edge keeps adding them to date/times
+		sz = sz - 6 - comment.replace(/\u200E/g, '').trim().length;
 		while (sz > 0) {
 			comment += ' ';
 			sz--;
 		}
-		return '/* ' + comment + ' */';
-		
-		
+		return '/* ' + comment + ' */';		
 	};
 
 	$scope.range = function(n) {
@@ -818,6 +817,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 			name: $scope.meta.name,
 			description: $scope.piston.z,
 			automaticState: $scope.piston.o.mps ? 1 : 0,
+			commandOptimizations: $scope.piston.o.dco ? 1 : 0,
 			conditionOptimizations: $scope.piston.o.cto ? 1 : 0,
 			executionParallelism: $scope.piston.o.pep ? 1 : 0,
 			eventSubscriptions: $scope.piston.o.des ? 1 : 0,
@@ -838,6 +838,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		$scope.piston.z = $scope.designer.description;
 		$scope.piston.o.mps = $scope.designer.automaticState ? 1 : 0;
 		$scope.piston.o.pep = $scope.designer.executionParallelism ? 1 : 0;
+		$scope.piston.o.dco = $scope.designer.commandOptimizations ? 1 : 0;
 		$scope.piston.o.cto = $scope.designer.conditionOptimizations ? 1 : 0;
 		$scope.piston.o.des = $scope.designer.eventSubscriptions ? 1 : 0;
 		$scope.piston.o.ced = isNaN($scope.designer.commandDelay) ? 0 : parseInt($scope.designer.commandDelay);
@@ -929,6 +930,11 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 					designer.operand.onlyAllowConstants = false;
 					designer.operand.hideMilliseconds = true;
 					if (designer.$new) designer.operand.data = {t: 'd'};
+					$scope.validateOperand(designer.operand, true);
+					break;
+				case 'exit':
+					designer.operand.dataType = 'string';
+					if (designer.$new) designer.operand.data = {t: 'c'};
 					$scope.validateOperand(designer.operand, true);
 					break;
 				case 'switch':
@@ -3766,21 +3772,22 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 						}
 						break;
 					case ']':
-						if (classList != undefined) {
-							var cls = classList.trim().replace(/\s/g, ',').split(',');
-							var className = '';
-							var color = '';
-							for (x in cls) {
-								switch (cls[x]) {
-									case 'b': className += 's-b '; break;
-									case 'u': className += 's-u '; break;
-									case 'i': className += 's-i '; break;
-									case 's': className += 's-s '; break;
-									default: color = cls[x].replace(/[^#0-9a-z]/gi, '');
-								}
-							}
-							return '<span ' + (className ? 'class="' + className + '" ' : '') + (color ? 'style="color: ' + color + ' !important"' : '') + '>' + result + '</span>';
+						if (classList == undefined) {
+							return '[' + result + ']';
 						}
+						var cls = classList.trim().replace(/\s/g, ',').split(',');
+						var className = '';
+						var color = '';
+						for (x in cls) {
+							switch (cls[x]) {
+								case 'b': className += 's-b '; break;
+								case 'u': className += 's-u '; break;
+								case 'i': className += 's-i '; break;
+								case 's': className += 's-s '; break;
+								default: color = cls[x].replace(/[^#0-9a-z]/gi, '');
+							}
+						}
+						return '<span ' + (className ? 'class="' + className + '" ' : '') + (color ? 'style="color: ' + color + ' !important"' : '') + '>' + result + '</span>';
 					default:
 						result += c;
 				}
@@ -3788,7 +3795,10 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 			}
 			return result;
 		}
-		return $sce.trustAsHtml(process(value));
+		
+		return $sce.trustAsHtml(process(value).replace(/\:fa-([a-z0-9\-\s]*)\:/gi, function(match) {
+            return '<i class="fa ' + match.replace(/\:/g, '').toLowerCase() + '"></i>';
+        }));
 	};
 
 	$scope.renderTask = function(task) {
@@ -4389,7 +4399,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 					var value = str.slice(startIndex, i-1);
 					var parsedValue = parseFloat(value.trim());
 					if (!isNaN(parsedValue) && (numExp.test(value.trim()))) {
-						arr.push({t: (value.indexOf('.') > 0 ? 'decimal' : 'integer'), v: parsedValue, l: location(startIndex, i - 2)});
+						arr.push({t: (value.indexOf('.') >= 0 ? 'decimal' : 'integer'), v: parsedValue, l: location(startIndex, i - 2)});
 						return true;
 					}
 					if (typeof value == 'string') {
@@ -4405,15 +4415,15 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 				}
 				return false;
 			}
-			function addConstant() {
-				if (i-1 > startIndex) {
+			function addConstant(allowEmpty) {
+				if (i - (allowEmpty ? 0 : 1) > startIndex) {
 					var value = str.slice(startIndex, i-1);
 					var parsedValue = parseFloat(value.trim());
 					if ((dataType != 'phone') && !isNaN(parsedValue) && (numExp.test(value.trim()))) {
-						arr.push({t: (value.indexOf('.') > 0 ? 'decimal' : 'integer'), v: parsedValue, l: location(startIndex, i - 2)});
+						arr.push({t: (value.indexOf('.') >= 0 ? 'decimal' : 'integer'), v: parsedValue, l: location(startIndex, i - 2)});
 						return true;
 					}					
-					arr.push({t: (['true', 'false'].indexOf(value) >= 0 ? 'boolean' : 'string'), v: value, l: location(startIndex, i - 2)});
+					arr.push({t: (['true', 'false'].indexOf(value) >= 0 ? 'boolean' : 'string'), v: (value == 'null' ? null : value), l: location(startIndex, i - 2)});
 				}
 			}
 			function addDevice() {
@@ -4513,14 +4523,14 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 					case '"':
 						if (exp && !dv && !sq) {
 							dq = !dq;
-							(dq ? addOperand() : addConstant());
+							(dq ? addOperand() : addConstant(true));
 							startIndex = i;
 						}
 						continue;
 					case '\'':
 						if (exp && !dq && !dv) {
 							sq = !sq;
-							(sq ? addOperand() : addConstant());
+							(sq ? addOperand() : addConstant(true));
 							startIndex = i;
 						}
 						continue;

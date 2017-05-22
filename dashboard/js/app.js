@@ -1424,4 +1424,4 @@ if (document.selection) {
      document.execCommand("Copy");
 }}
 
-version = function() { return 'v0.1.0aa.20170517'; };
+version = function() { return 'v0.1.0af.20170522'; };

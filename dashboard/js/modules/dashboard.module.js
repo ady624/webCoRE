@@ -269,21 +269,22 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
                         }
                         break;
                     case ']':
-                        if (classList != undefined) {
-                            var cls = classList.trim().replace(/\s/g, ',').split(',');
-                            var className = '';
-                            var color = '';
-                            for (x in cls) {
-                                switch (cls[x]) {
-                                    case 'b': className += 's-b '; break;
-                                    case 'u': className += 's-u '; break;
-                                    case 'i': className += 's-i '; break;
-                                    case 's': className += 's-s '; break;
-                                    default: color = cls[x].replace(/[^#0-9a-z]/gi, '');
-                                }
+                        if (classList == undefined) {
+							return '[' + result + ']';
+						}
+                        var cls = classList.trim().replace(/\s/g, ',').split(',');
+                        var className = '';
+	                    var color = '';
+                        for (x in cls) {
+                            switch (cls[x]) {
+                                case 'b': className += 's-b '; break;
+                                case 'u': className += 's-u '; break;
+                                case 'i': className += 's-i '; break;
+                                case 's': className += 's-s '; break;
+                                default: color = cls[x].replace(/[^#0-9a-z]/gi, '');
                             }
-                            return '<span ' + (className ? 'class="' + className + '" ' : '') + (color ? 'style="color: ' + color + ' !important"' : '') + '>' + result + '</span>';
                         }
+                        return '<span ' + (className ? 'class="' + className + '" ' : '') + (color ? 'style="color: ' + color + ' !important"' : '') + '>' + result + '</span>';
                     default:
                         result += c;
                 }
@@ -291,7 +292,9 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
             }
             return result;
         }
-        return $sce.trustAsHtml(process(value));
+        return $sce.trustAsHtml(process(value).replace(/\:fa-([a-z0-9\-\s]*)\:/gi, function(match) {
+            return '<i class="fa ' + match.replace(/\:/g, '').toLowerCase() + '"></i>';
+        }));
     };
 
 

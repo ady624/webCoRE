@@ -242,11 +242,11 @@
 		<line com h ng-if-start="!piston.loading">/**************************************************************/</line>
 		<line com h ng-click="editSettings();">{{padComment(meta.name, 64)}}</line>
 		<line com h>/**************************************************************/</line>
-		<line com h>{{padComment('Author    : ' + (meta.author ? meta.author : '(unknown)'), 64)}}</line>
-		<line com h>{{padComment('Created   : ' + utcToString(meta.created), 64)}}</line>
-		<line com h>{{padComment('Modified  : ' + utcToString(meta.modified), 64)}}</line>
-		<line com h>{{padComment('Build     : ' + meta.build, 64)}}</line>
-		<line com h>{{padComment('UI version: ' + version(), 64)}}</line>
+		<line com h>{{padComment('Author     : ' + (meta.author ? meta.author : '(unknown)'), 64)}}</line>
+		<line com h>{{padComment('Created    : ' + utcToString(meta.created), 64)}}</line>
+		<line com h>{{padComment('Modified   : ' + utcToString(meta.modified), 64)}}</line>
+		<line com h>{{padComment('Build      : ' + meta.build, 64)}}</line>
+		<line com h>{{padComment('UI version : ' + version(), 64)}}</line>
 		<line com h>/**************************************************************/</line>
 		<line com h ng-if-start="view.exportBin">{{padComment('To import this piston, use the import code below:', 64)}}</line>
 		<line com h>{{padComment('', 64)}}</line>
@@ -254,10 +254,11 @@
 		<line com h>{{padComment('', 64)}}</line>
 		<line com h ng-if-end>/**************************************************************/</line>
 		<line>&nbsp;</line>
-		<line kwd ng-if-start="((mode == 'edit') && view.settings) || piston.o.pep || piston.o.cto || piston.o.ced || piston.o.mps || piston.o.des" ng-click="editSettings();">settings</line>
+		<line kwd ng-if-start="((mode == 'edit') && view.settings) || piston.o.pep || piston.o.cto || piston.o.ced || piston.o.mps || piston.o.dco || piston.o.des" ng-click="editSettings();">settings</line>
 		<container>
 			<line kwd ng-if="piston.o.pep">enable parallelism<span pun>;</span></line>
 			<line kwd ng-if="piston.o.mps">disable automatic piston state<span pun>;</span></line>
+			<line kwd ng-if="piston.o.dco">disable command optimization<span pun>;</span></line>
 			<line kwd ng-if="piston.o.cto">disable condition traversal optimizations<span pun>;</span></line>
 			<line kwd ng-if="piston.o.des">disable event subscriptions<span pun>;</span></line>
 			<line kwd ng-if="piston.o.ced">set command execution delay to {{piston.o.ced}}ms<span pun>;</span></line>
@@ -2054,6 +2055,13 @@
 					<select data-actions-box="true" id="type" selectpicker class="selectpicker show-tick input-addon" data-width="100%" data-style="btn-info" ng-model="designer.executionParallelism" data-mobile="{{mobile}}">
 						<option ng-value="1">Enabled</option>
 						<option ng-value="0">Disabled (default)</option>
+					</select>
+				</div>
+				<div class="form-group">
+					<label class="col-lg-12 no-padding">Command optimizations</label>
+					<select data-actions-box="true" id="type" selectpicker class="selectpicker show-tick input-addon" data-width="100%" data-style="btn-info" ng-model="designer.commandOptimizations" data-mobile="{{mobile}}">
+						<option ng-value="0">Enabled (default)</option>
+						<option ng-value="1">Disabled</option>
 					</select>
 				</div>
 				<div class="form-group">
