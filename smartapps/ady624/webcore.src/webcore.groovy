@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.1.0ae.20170522" }
+public static String version() { return "v0.1.0af.20170522" }
 /*
+ *	05/22/2017 >>> v0.1.0af.20170522 - BETA M1 - Minor fixes (stays away from trigger, contacts not found, etc.), implemented Command Optimizations (turned on by default) and Flash
  *	05/22/2017 >>> v0.1.0ae.20170522 - BETA M1 - Minor fix for very small decimal numbers
  *	05/19/2017 >>> v0.1.0ad.20170519 - BETA M1 - Various bug fixes, including broken while loops with a preceeding exit statement (exit and break statements conflicted with async runs)
  *	05/18/2017 >>> v0.1.0ac.20170518 - BETA M1 - Preparing the grounds for advanced engine blocks
@@ -2034,7 +2035,7 @@ private static Map commands() {
 		beep						: [ n: "Beep",																																																																	],
 		both						: [ n: "Strobe and Siren",																a: "alarm",							v: "both",																																			],
 		cancel						: [ n: "Cancel",																																																																],
-		close						: [ n: "Close",																			a: "door|valve|windowShade",		v: "close",																																			],
+		close						: [ n: "Close",																			a: "doore",							v: "close",																																			],
 		configure					: [ n: "Configure",						i: 'gear',																																																										],
 		cool						: [ n: "Set to Cool",					i: 'asterisk',									a: "thermostatMode",				v: "cool",																																			],
 		deviceNotification			: [ n: "Send device notification...",	d: "Send device notification \"{0}\"",																		p: [[n:"Message",t:"string"]],  																							],
@@ -2051,9 +2052,9 @@ private static Map commands() {
 		lock						: [ n: "Lock",							i: "lock",										a: "lock",							v: "locked",																																		],
 		mute						: [ n: "Mute",							i: 'volume-off',								a: "mute",							v: "muted",																																			],
 		nextTrack					: [ n: "Next track",																																																															],
-		off							: [ n: "Turn off",						i: "circle-o-notch",							a: "switch|alarm|thermostatMode",	v: "off",																																			],
+		off							: [ n: "Turn off",						i: "circle-o-notch",							a: "switch",						v: "off",																																			],
 		on							: [ n: "Turn on",						i: "power-off",									a: "switch",						v: "on",																																			],
-		open						: [ n: "Open",																			a: "door|valve|windowShade",		v: "open",																																			],
+		open						: [ n: "Open",																			a: "door",							v: "open",																																			],
 		pause						: [ n: "Pause",																																																																	],
 		play						: [ n: "Play",																																																																	],
 		playText					: [ n: "Speak text...",					d: "Speak text \"{0}\"",																					p: [[n:"Text",t:"string"], [n:"Volume", t:"level", d:" at volume {v}"]],  													],

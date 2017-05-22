@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.1.0ae.20170522" }
+public static String version() { return "v0.1.0af.20170522" }
 /*
+ *	05/22/2017 >>> v0.1.0af.20170522 - BETA M1 - Minor fixes (stays away from trigger, contacts not found, etc.), implemented Command Optimizations (turned on by default) and Flash
  *	05/22/2017 >>> v0.1.0ae.20170522 - BETA M1 - Minor fix for very small decimal numbers
  *	05/19/2017 >>> v0.1.0ad.20170519 - BETA M1 - Various bug fixes, including broken while loops with a preceeding exit statement (exit and break statements conflicted with async runs)
  *	05/18/2017 >>> v0.1.0ac.20170518 - BETA M1 - Preparing the grounds for advanced engine blocks
@@ -464,6 +465,7 @@ def pause() {
     unsubscribe()
     unschedule()
     app.updateSetting('dev', null)
+    app.updateSetting('contacts', null)
     state.hash = null
     state.trace = [:]
     state.subscriptions = [:]
@@ -555,8 +557,8 @@ private getRunTimeData(rtData = null, semaphore = null, fetchWrappers = false) {
 	    rtData.break = false
         rtData.updateDevices = false
         if (!fetchWrappers) {
-        	rtData.devices = (settings.dev ? settings.dev.collectEntries{[(hashId(it.id)): it]} : [:])
-        	rtData.contacts = (settings.contacts ? settings.contacts.collectEntries{[(hashId(it.id)): it]} : [:])
+        	rtData.devices = (settings.dev && (settings.dev instanceof List) ? settings.dev.collectEntries{[(hashId(it.id)): it]} : [:])
+        	rtData.contacts = (settings.contacts && (settings.contacts instanceof List) ? settings.contacts.collectEntries{[(hashId(it.id)): it]} : [:])
         }        
 	    rtData.systemVars = getSystemVariables()
 	    rtData.localVars = getLocalVariables(rtData, piston.v)
@@ -674,7 +676,7 @@ def handleEvents(event) {
                 if (device) {
                 	//executing scheduled physical command
                     //used by fades, flashes, etc.
-                	executePhysicalCommand(rtData, device, data.c, data.p)
+                	executePhysicalCommand(rtData, device, data.c, data.p, null, null, true)
                 }
 			}
         } else {
@@ -1385,7 +1387,7 @@ private long executeVirtualCommand(rtData, devices, task, params)
     return delay
 }
 
-private executePhysicalCommand(rtData, device, command, params = [], delay = null, scheduleDevice = null) {
+private executePhysicalCommand(rtData, device, command, params = [], delay = null, scheduleDevice = null, disableCommandOptimization = false) {
 	if (!!delay && !!scheduleDevice) {    
     	//we're using schedules instead
         def statement = rtData.currentAction
@@ -1409,21 +1411,42 @@ private executePhysicalCommand(rtData, device, command, params = [], delay = nul
         try {
             params = (params instanceof List) ? params : (params != null ? [params] : [])
             def msg = timer ""
-            if (params.size()) {
-                if (delay) {            	
-                    device."$command"((params as Object[]) + [delay: delay])
-                    msg.m = "Executed physical command [${device.label}].$command($params, [delay: $delay])"
-                } else {
-                    device."$command"(params as Object[])
-                    msg.m = "Executed physical command [${device.label}].$command($params)"
+            def skip = false
+            if (!rtData.piston.o?.dco && !disableCommandOptimization) {
+                def cmd = rtData.commands.physical[command]
+                if (cmd && cmd.a) {
+                    if (cmd.v && !params.size()) {
+                        //commands with no parameter that set an attribute to a preset value
+                        if (getDeviceAttributeValue(rtData, device, cmd.a) == cmd.v) {
+                            skip = true
+                        }
+                    } else if (params.size() == 1) {
+                        if (getDeviceAttributeValue(rtData, device, cmd.a) == params[0]) {
+                            skip = true
+                        }
+                    }
                 }
+            }
+            //if we're skipping, we already have a message
+            if (skip) {
+            	msg.m = "Skipped execution of physical command [${device.label}].$command($params) because it would make no change to the device."
             } else {
-                if (delay) {
-                    device."$command"([delay: delay])
-                    msg.m = "Executed physical command [${device.label}].$command([delay: $delay])"
+                if (params.size()) {
+                    if (delay) {            	
+                        device."$command"((params as Object[]) + [delay: delay])
+                        msg.m = "Executed physical command [${device.label}].$command($params, [delay: $delay])"
+                    } else {
+                        device."$command"(params as Object[])
+                        msg.m = "Executed physical command [${device.label}].$command($params)"
+                    }
                 } else {
-                    device."$command"()
-                    msg.m = "Executed physical command [${device.label}].$command()"
+                    if (delay) {
+                        device."$command"([delay: delay])
+                        msg.m = "Executed physical command [${device.label}].$command([delay: $delay])"
+                    } else {
+                        device."$command"()
+                        msg.m = "Executed physical command [${device.label}].$command()"
+                    }
                 }
             }
             if (rtData.logging > 2) debug msg, rtData
@@ -2267,18 +2290,46 @@ private long vcmd_internal_fade(Map rtData, device, String command, int startLev
     for(def i = 1; i <= steps; i++) {
         int newLevel = Math.round(startLevel + delta * i / steps)
         if (oldLevel != newLevel) {
-           	executePhysicalCommand(rtData, device, command, newLevel, i * interval, scheduleDevice)
+           	executePhysicalCommand(rtData, device, command, newLevel, i * interval, scheduleDevice, true)
         }
         oldLevel = newLevel
     }
     //for good measure, send a last command 100ms after the end of the interval
-    executePhysicalCommand(rtData, device, command, endLevel, duration + 99, scheduleDevice)
+    executePhysicalCommand(rtData, device, command, endLevel, duration + 99, scheduleDevice, true)
     return duration + 100
 }
 
 private long vcmd_flash(rtData, device, params) {
-	error "Sorry, flash is not yet implemented", rtData
-	return 0
+	long onDuration = cast(rtData, params[0], 'long')
+	long offDuration = cast(rtData, params[1], 'long')
+    int cycles = cast(rtData, params[2], 'integer')
+    def state = params.size() > 3 ? params[3] : ""
+    def delay = params.size() > 4 ? params[4] : 0
+    def currentState = getDeviceAttributeValue(rtData, device, 'switch')
+    if (state && (currentState != "$state")) {
+        return 0
+    }
+    long duration = (onDuration + offDuration) * cycles
+    if (duration <= 500) {
+    	//if the flash is too fast, ignore it
+        return 0
+    }
+    //initialize parameters
+    def firstCommand = currentState == 'on' ? 'off' : 'on'
+    long firstDuration = firstCommand == 'on' ? onDuration : offDuration
+    def secondCommand = firstCommand == 'on' ? 'off' : 'on'
+    long secondDuration = firstCommand == 'on' ? offDuration : onDuration    
+    def scheduleDevice = (duration > 10000) ? hashId(device.id) : null
+    long dur = 0
+    for(def i = 1; i <= cycles; i++) {
+    	executePhysicalCommand(rtData, device, firstCommand, [], dur, scheduleDevice, true)
+        dur += firstDuration
+    	executePhysicalCommand(rtData, device, secondCommand, [], dur, scheduleDevice, true)
+        dur += secondDuration
+    }    
+    //for good measure, send a last command 100ms after the end of the interval
+    executePhysicalCommand(rtData, device, currentState, [], duration + 99, scheduleDevice, true)
+	return duration + 100
 }
 
 private long vcmd_sendNotification(rtData, device, params) {
@@ -2629,7 +2680,7 @@ private Boolean evaluateConditions(rtData, conditions, collection, async) {
     //restore condition id
     rtData.stack.c = c
     if (!rtData.fastForwardTo) {
-    	msg.m = "Condition group #${conditions.$} evaluated $result (${rtData.conditionStateChanged ? 'changed' : 'did not change'})"
+    	msg.m = "Condition group #${conditions.$} evaluated $result (state ${rtData.conditionStateChanged ? 'changed' : 'did not change'})"
     	if (rtData.logging > 2) debug msg, rtData
     }
 	return result
@@ -3182,7 +3233,7 @@ private boolean comp_stays_false					(rtData, lv, rv = null, rv2 = null, tv = nu
 private boolean comp_stays_inside_of_range			(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return comp_is_inside_of_range(rtData, lv, rv, rv2, tv, tv2); }
 private boolean comp_stays_outside_of_range			(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return comp_is_outside_of_range(rtData, lv, rv, rv2, tv, tv2); }
 private boolean comp_stays_any_of					(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return comp_is_any_of(rtData, lv, rv, rv2, tv, tv2); }
-private boolean comp_stays_not_any_of				(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return comp_is_not_any_of(rtData, lv, rv, rv2, tv, tv2); }
+private boolean comp_stays_away_from_any_of			(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return comp_is_not_any_of(rtData, lv, rv, rv2, tv, tv2); }
 
 
 private traverseStatements(node, closure, parentNode = null, data = null) {
@@ -3303,6 +3354,10 @@ private getRoutineById(routineId) {
 
 private void updateDeviceList(deviceIdList) {
 	app.updateSetting('dev', [type: 'capability.device', value: deviceIdList.unique()])
+}
+
+private void updateContactList(contactIdList) {
+	app.updateSetting('contacts', [type: 'contact', value: contactIdList.unique()])
 }
 
 
@@ -3451,6 +3506,11 @@ private void subscribeAll(rtData) {
                     }
                 	break;
                 case "c": //constant
+                	if ((operand.vt == 'contact') && (operand.c instanceof List)) {
+                        for (c in operand.c) {
+                            rawContacts[c] = rtData.contacts[c]
+                        }
+                    }
                 case "e": //expression
                     traverseExpressions(operand.exp?.i, expressionTraverser, comparisonType)
                     break
@@ -3513,6 +3573,15 @@ private void subscribeAll(rtData) {
                 }                
             }
             switch( node.t ) {
+            	case 'action':
+                	if (node.k) {
+                    	for (k in node.k) {
+                        	for (p in k.p) {
+                        		operandTraverser(k, p, null, null)
+                            }
+                        }
+                    }
+                    break
             	case 'if':
                 	if (node.ei) {
                     	for (ei in node.ei) {
@@ -3589,9 +3658,14 @@ private void subscribeAll(rtData) {
                 }
             }
         }
+        //save devices
         List deviceIdList = rawDevices.collect{ it && it.value ? it.value.id : null }
         deviceIdList.removeAll{ it == null }
         updateDeviceList(deviceIdList)
+        //save contacts
+        List contactIdList = rawContacts.collect{ it && it.value ? it.value.id : null }
+        contactIdList.removeAll{ it == null }
+        updateContactList(contactIdList)
         //fake subscriptions for controlled devices to force the piston being displayed in those devices' Smart Apps tabs
         for (d in devices.findAll{ ((it.value.c <= 0) || (rtData.piston.o.des)) && (it.key != rtData.locationId) }) {
             def device = d.key.startsWith(':') ? getDevice(rtData, d.key) : null
