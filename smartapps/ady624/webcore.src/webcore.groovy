@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.1.0ad.20170519" }
+public static String version() { return "v0.1.0ae.20170522" }
 /*
+ *	05/22/2017 >>> v0.1.0ae.20170522 - BETA M1 - Minor fix for very small decimal numbers
  *	05/19/2017 >>> v0.1.0ad.20170519 - BETA M1 - Various bug fixes, including broken while loops with a preceeding exit statement (exit and break statements conflicted with async runs)
  *	05/18/2017 >>> v0.1.0ac.20170518 - BETA M1 - Preparing the grounds for advanced engine blocks
  *	05/17/2017 >>> v0.1.0ab.20170517 - BETA M1 - Fixed a bug affecting some users, regarding the new LIFX integration
@@ -1501,7 +1502,7 @@ private registerInstance() {
     def instanceId = hashId(app.id)
     def endpoint = state.endpoint
     def region = endpoint.contains('graph-eu') ? 'eu' : 'us';
-	asynchttp_v1.put(null, [
+	asynchttp_v1.put(instanceRegistrationHandler, [
         uri: "https://api-${region}-${instanceId[32]}.webcore.co:9247",
         path: '/instance/register',
         headers: ['ST' : instanceId],
@@ -1581,6 +1582,8 @@ public Map getRunTimeData(semaphore, fetchWrappers = false) {
         globalVars: listAvailableVariables(),
         settings: state.settings ?: [:],
         powerSource: state.powerSource ?: 'mains',
+		region: state.endpoint.contains('graph-eu') ? 'eu' : 'us',		
+        instanceId: hashId(app.id),
         started: startTime,
         ended: now(),
         generatedIn: now() - startTime
@@ -1678,6 +1681,10 @@ def webCoREHandler(event) {
 			}*/
         	break;
     }
+}
+
+def instanceRegistrationHandler(response, callbackData) {
+	log.trace "$response.data"
 }
 
 def askAlexaHandler(evt) {
@@ -2187,6 +2194,7 @@ private static Map virtualCommands() {
 		flash						: [ n: "Flash...",	 r: ["on", "off"], 			i: "toggle-on",				d: "Flash on {0} / off {1} for {2} times{3}",							p: [[n:"On duration",t:"duration"],[n:"Off duration",t:"duration"],[n:"Number of flashes",t:"integer"], [n:"Only if switch is...", t:"enum",o:["on","off"], d:" if already {v}"]],																],
 		iftttMaker					: [ n: "Send an IFTTT Maker event...",a: true,								d: "Send the {0} IFTTT Maker event{1}{2}{3}",							p: [[n:"Event", t:"text"], [n:"Value 1", t:"string", d:", passing value1 = '{v}'"], [n:"Value 2", t:"string", d:", passing value2 = '{v}'"], [n:"Value 3", t:"string", d:", passing value3 = '{v}'"]],				],
 		lifxScene					: [ n: "Activate LIFX scene",		  a: true, 								d: "Activate LIFX Scene '{0}'", 										p: [[n: "Scene", t:"lifxScene"]],					],
+		writeToFuelStream			: [ n: "Write to fuel stream...",  a: true, 								d: "Write data point '{2}' to fuel stream {0}{1}{3}", 					p: [[n: "Canister", t:"text", d:"{v} \\ "], [n:"Fuel stream name", t:"text"], [n: "Data", t:"dynamic"], [n: "Data source", t:"text", d:" from source '{v}'"]],					],
 /*		[ n: "waitState",											d: "Wait for piston state change",	p: ["Change to:enum[any,false,true]"],															i: true,	l: true,						dd: "Wait for {0} state"],
 		[ n: "flash",				r: ["on", "off"], 				d: "Flash",							p: ["On interval (milliseconds):number[250..5000]","Off interval (milliseconds):number[250..5000]","Number of flashes:number[1..10]"],					dd: "Flash {0}ms/{1}ms for {2} time(s)",		],
 		[ n: "saveState",		d: "Save state to variable",			p: ["Attributes:attributes","Aggregation:aggregation","?Convert to data t:dataType","Save to state variable:string"],			stateVarEntry: 3,	dd: "Save state of attributes {0} to variable |[{3}]|'",	aggregated: true,	],

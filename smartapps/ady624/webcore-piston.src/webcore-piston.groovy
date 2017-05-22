@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.1.0ad.20170519" }
+public static String version() { return "v0.1.0ae.20170522" }
 /*
+ *	05/22/2017 >>> v0.1.0ae.20170522 - BETA M1 - Minor fix for very small decimal numbers
  *	05/19/2017 >>> v0.1.0ad.20170519 - BETA M1 - Various bug fixes, including broken while loops with a preceeding exit statement (exit and break statements conflicted with async runs)
  *	05/18/2017 >>> v0.1.0ac.20170518 - BETA M1 - Preparing the grounds for advanced engine blocks
  *	05/17/2017 >>> v0.1.0ab.20170517 - BETA M1 - Fixed a bug affecting some users, regarding the new LIFX integration
@@ -199,6 +200,7 @@ public static String version() { return "v0.1.0ad.20170519" }
 /*** webCoRE DEFINITION														***/
 /******************************************************************************/
 private static String handle() { return "webCoRE" }
+include 'asynchttp_v1'
 definition(
     name: "webCoRE Piston",
     namespace: "ady624",
@@ -2565,7 +2567,29 @@ private long vcmd_httpRequest(rtData, device, params) {
 }
 
 
-
+private long vcmd_writeToFuelStream(rtData, device, params) {
+	def canister = params[0]
+    def name = params[1]
+    def data = params[2]
+    def source = params[3]
+	def requestParams = [
+        uri:  "https://api-${rtData.region}-${rtData.instanceId[32]}.webcore.co:9247",
+        path: "/fuelStream/write",
+        headers: [
+            'ST' : rtData.instanceId
+        ],
+         body: [
+        	c: canister,
+        	n: name,
+            s: source,
+        	d: data,
+            i: rtData.instanceId
+    	],
+        requestContentType: "application/json"
+    ]
+    asynchttp_v1.put(null, requestParams)
+    return 0
+}
 
 
 
@@ -5352,6 +5376,7 @@ private cast(rtData, value, dataType, srcDataType = null) {
             case {it instanceof Integer}: srcDataType = 'integer'; break;
             case {it instanceof BigInteger}: srcDataType = 'long'; break;
             case {it instanceof Long}: srcDataType = 'long'; break;
+            case {it instanceof Double}: srcDataType = 'decimal'; break;
             case {it instanceof Float}: srcDataType = 'decimal'; break;
             case {it instanceof BigDecimal}: srcDataType = 'decimal'; break;
             default: value = "$value".toString(); srcDataType = 'string'; break;
@@ -5374,6 +5399,9 @@ private cast(rtData, value, dataType, srcDataType = null) {
 		case "text":
         	switch (srcDataType) {
             	case 'boolean': return value ? "true" : "false";
+            	case 'decimal':
+                	if (value instanceof Double) return sprintf('%f', value)
+                    return value.toString()
             	case 'integer':
             	case 'long': if (value > 9999999999) { return formatLocalTime(value) }; break;
                 case 'time': return formatLocalTime(value);
@@ -5427,7 +5455,9 @@ private cast(rtData, value, dataType, srcDataType = null) {
 		case "decimal":
 			switch (srcDataType) {
             	case 'string':
-                    value = value.replaceAll(/[^\d.-]/, '')
+                    value = value.replaceAll(/[^\d.-E]/, '')
+                    if (value.isDouble())
+                        return (double) value.toDouble()
                     if (value.isFloat())
                         return (double) value.toDouble()
                     if (value.isLong())
