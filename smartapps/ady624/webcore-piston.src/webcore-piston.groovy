@@ -2896,6 +2896,7 @@ private Boolean evaluateCondition(rtData, condition, collection, async) {
                             	def schedules = atomicState.schedules
                             	for (value in lo.values) {
                                 	def dev = value.v?.d
+	                                error " SCHEDS $schedules >>> ${condition.$} : $dev", rtData
                                     if (dev in options.devices.matched) {
                                     	//schedule one device schedule
                                         if (!schedules.find{ (it.s == condition.$) && (it.d == dev)  }) {
@@ -2912,6 +2913,7 @@ private Boolean evaluateCondition(rtData, condition, collection, async) {
                             } else {
                             	if (result) {
                                 	//if we find the comparison true, set a timer if we haven't already
+	                            	def schedules = atomicState.schedules
 									if (!schedules.find{ (it.s == condition.$) }) {
                                 		if (rtData.logging > 2) debug "Adding a timed trigger schedule for condition ${condition.$}", rtData
 		                            	requestWakeUp(rtData, condition, condition, delay)
