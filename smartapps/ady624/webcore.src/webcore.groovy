@@ -2382,6 +2382,8 @@ private static Map functions() {
         isbetween		: [ t: "boolean",	d: "isBetween"		],
         formatduration	: [ t: "string",	d: "formatDuration"	],
         random			: [ t: "dynamic",						],
+        strlen			: [ t: "integer",						],
+        length			: [ t: "integer",						],
 	]
 }
 

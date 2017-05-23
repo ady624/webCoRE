@@ -4651,6 +4651,19 @@ private func_right(rtData, params) {
 }
 
 /******************************************************************************/
+/*** strlen returns the length of a string value							***/
+/*** Usage: strlen(string)													***/
+/******************************************************************************/
+private func_strlen(rtData, params) {
+	if (!params || !(params instanceof List) || (params.size() != 1)) {
+    	return [t: "error", v: "Invalid parameters. Expecting strlen(string)"];
+    }
+    def value = evaluateExpression(rtData, params[0], 'string').v
+    return [t: "integer", v: value.size()]
+}
+private func_length(rtData, params) { return func_strlen(rtData, params) }
+
+/******************************************************************************/
 /*** substring returns a substring of a value								***/
 /*** Usage: substring(string, start, count)									***/
 /******************************************************************************/
