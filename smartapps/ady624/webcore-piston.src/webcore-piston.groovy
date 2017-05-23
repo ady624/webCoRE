@@ -18,9 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.1.0af.20170522" }
+public static String version() { return "v0.1.0b0.20170523" }
 /*
- *	05/22/2017 >>> v0.1.0af.20170522 - BETA M1 - Minor fixes (stays away from trigger, contacts not found, etc.), implemented Command Optimizations (turned on by default) and Flash
+ *	05/23/2017 >>> v0.1.0b0.20170523 - BETA M1 - Minor fixes and improvements to command optimizations
  *	05/22/2017 >>> v0.1.0ae.20170522 - BETA M1 - Minor fix for very small decimal numbers
  *	05/19/2017 >>> v0.1.0ad.20170519 - BETA M1 - Various bug fixes, including broken while loops with a preceeding exit statement (exit and break statements conflicted with async runs)
  *	05/18/2017 >>> v0.1.0ac.20170518 - BETA M1 - Preparing the grounds for advanced engine blocks
@@ -708,11 +708,11 @@ private Boolean executeEvent(rtData, event) {
         }
         def srcEvent = event && (event.name == 'time') && event.schedule && event.schedule.evt ? event.schedule.evt : null
        	rtData.args = event ? ((event.name == 'time') && event.schedule && event.schedule.args && (event.schedule.args instanceof Map) ? event.schedule.args : (event.jsonData ?: [:])) : [:]
-        /*if (event && (event.name == 'time') && event.schedule && event.schedule.stack) {
+        if (event && (event.name == 'time') && event.schedule && event.schedule.stack) {
             setSystemVariableValue(rtData, '$index', event.schedule.stack.index)
             setSystemVariableValue(rtData, '$device', event.schedule.stack.device)
             setSystemVariableValue(rtData, '$devices', event.schedule.stack.devices)
-		}*/           
+		}
         rtData.currentEvent = [
             date: event.date.getTime(),
             delay: rtData.stats?.timing?.d ?: 0,
@@ -1412,7 +1412,7 @@ private executePhysicalCommand(rtData, device, command, params = [], delay = nul
             params = (params instanceof List) ? params : (params != null ? [params] : [])
             def msg = timer ""
             def skip = false
-            if (!rtData.piston.o?.dco && !disableCommandOptimization) {
+            if (!rtData.piston.o?.dco && !disableCommandOptimization && !(command in ['setColorTemperature', 'setColor'])) {
                 def cmd = rtData.commands.physical[command]
                 if (cmd && cmd.a) {
                     if (cmd.v && !params.size()) {
@@ -1422,7 +1422,7 @@ private executePhysicalCommand(rtData, device, command, params = [], delay = nul
                         }
                     } else if (params.size() == 1) {
                         if (getDeviceAttributeValue(rtData, device, cmd.a) == params[0]) {
-                            skip = true
+                            skip = (command in ['setLevel', 'setInfraredLevel'] ? getDeviceAttributeValue(rtData, device, 'switch') == 'on' : true)
                         }
                     }
                 }
@@ -1812,11 +1812,11 @@ private requestWakeUp(rtData, statement, task, timeOrDelay, data = null) {
         d: data,
         evt: rtData.currentEvent,
         args: rtData.args,
-        /*stack: [
+        stack: [
         	index: getSystemVariableValue(rtData, '$index'),
         	device: getSystemVariableValue(rtData, '$device'),
         	devices: getSystemVariableValue(rtData, '$devices'),
-        ]*/
+        ]
     ]
     rtData.schedules.push(schedule)
 }
@@ -3508,11 +3508,6 @@ private void subscribeAll(rtData) {
                     }
                 	break;
                 case "c": //constant
-                	if ((operand.vt == 'contact') && (operand.c instanceof List)) {
-                        for (c in operand.c) {
-                            rawContacts[c] = rtData.contacts[c]
-                        }
-                    }
                 case "e": //expression
                     traverseExpressions(operand.exp?.i, expressionTraverser, comparisonType)
                     break
@@ -3576,10 +3571,15 @@ private void subscribeAll(rtData) {
             }
             switch( node.t ) {
             	case 'action':
+                	//we need to get a list of used contacts in tasks...
                 	if (node.k) {
                     	for (k in node.k) {
-                        	for (p in k.p) {
-                        		operandTraverser(k, p, null, null)
+                        	for (operand in k.p) {
+								if ((operand.vt == 'contact') && (operand.c instanceof List)) {
+                        			for (c in operand.c) {
+                            			rawContacts[c] = rtData.contacts[c]
+                        			}
+                    			}
                             }
                         }
                     }
