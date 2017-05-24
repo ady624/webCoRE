@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.1.0b0.20170523" }
+public static String version() { return "v0.1.0b1.20170524" }
 /*
+ *	05/24/2017 >>> v0.1.0b1.20170524 - BETA M1 - Fixes regarding trigger initialization and a situation where time triggers may cancel tasks that should not be cancelled
  *	05/23/2017 >>> v0.1.0b0.20170523 - BETA M1 - Minor fixes and improvements to command optimizations
  *	05/22/2017 >>> v0.1.0ae.20170522 - BETA M1 - Minor fix for very small decimal numbers
  *	05/19/2017 >>> v0.1.0ad.20170519 - BETA M1 - Various bug fixes, including broken while loops with a preceeding exit statement (exit and break statements conflicted with async runs)
@@ -488,7 +489,8 @@ def resume() {
     state.subscriptions = [:]
     atomicState.schedules = []
     state.schedules = []
-    subscribeAll(rtData)    
+    subscribeAll(rtData)   
+    log.trace rtData.cache
     if (rtData.logging) info msg, rtData
     updateLogs(rtData)
     rtData.result = [active: true, subscriptions: state.subscriptions]
@@ -967,7 +969,7 @@ private Boolean executeStatement(rtData, statement, async = false) {
     def perform = false
     def repeat = true
     def index = null
-    def allowed = !statement.r || !(statement.r.length) || evaluateConditions(rtData, statement, 'r', async)
+    def allowed = !statement.r || !(statement.r.length) || evaluateConditions(rtData, statement, 'r', async)    
     if (allowed || !!rtData.fastForwardTo) {
     	while (repeat) {
             switch (statement.t) {
@@ -2492,6 +2494,7 @@ private long vcmd_lifxScene(rtData, device, params) {
         return 0
     }    
 	def sceneId = params[0]
+    double duration = params.size() > 1 ? cast(rtData, params[0], 'long') / 1000 : 0
     if (!rtData.settings?.lifx_scenes) {
     	error "Sorry, there seems to be no available LIFX scenes, please ensure the LIFX integration is working.", rtData
         return 0
@@ -2506,7 +2509,8 @@ private long vcmd_lifxScene(rtData, device, params) {
         path: "/v1/scenes/scene_id:${sceneId}/activate",
         headers: [
             "Authorization": "Bearer $token"
-        ]
+        ],
+        body: duration ? [duration: duration] : null
     ]
     try {
         httpPut(requestParams) { response ->
@@ -2659,7 +2663,7 @@ private Boolean evaluateConditions(rtData, conditions, collection, async) {
     def value = (grouping == 'or' ? false : true)
 	for(condition in conditions[collection]) {
     	def res = evaluateCondition(rtData, condition, collection, async)
-        value = (grouping == 'or') ? value || res : value && res
+		value = (grouping == 'or') ? value || res : value && res
         //conditions optimizations go here
         if (!rtData.fastForwardTo && (!rtData.piston.o?.cto) && (value == (grouping == 'or') ? true : false)) break
     }
@@ -2836,6 +2840,7 @@ private Boolean evaluateCondition(rtData, condition, collection, async) {
     def c = rtData.stack.c    
     rtData.stack.c = condition.$
     def not = false
+    def oldResult = !!rtData.cache["c:${condition.$}"];    
     def result = false
     if (condition.t == 'group') {
     	return evaluateConditions(rtData, condition, collection, async)
@@ -2846,7 +2851,7 @@ private Boolean evaluateCondition(rtData, condition, collection, async) {
         if (!comparison) comparison = rtData.comparisons.conditions[condition.co]
         rtData.wakingUp = (rtData.event.name == 'time') && (!!rtData.event.schedule) && (rtData.event.schedule.s == condition.$)
         if (rtData.fastForwardTo || comparison) {
-            if (!rtData.fastForwardTo) {
+            if (!rtData.fastForwardTo || (rtData.fastForwardTo == -9 /*initial run*/)) {
                 def paramCount = comparison.p ?: 0
                 def lo = null
                 def ro = null
@@ -2896,7 +2901,6 @@ private Boolean evaluateCondition(rtData, condition, collection, async) {
                             	def schedules = atomicState.schedules
                             	for (value in lo.values) {
                                 	def dev = value.v?.d
-	                                error " SCHEDS $schedules >>> ${condition.$} : $dev", rtData
                                     if (dev in options.devices.matched) {
                                     	//schedule one device schedule
                                         if (!schedules.find{ (it.s == condition.$) && (it.d == dev)  }) {
@@ -2933,12 +2937,11 @@ private Boolean evaluateCondition(rtData, condition, collection, async) {
                 rtData.resumed = true
 				result = not ? false : true
         	} else {
-                result = true
+                result = oldResult
             }
         }
     }
     rtData.wakingUp = false
-    def oldResult = !!rtData.cache["c:${condition.$}"];
     rtData.conditionStateChanged = oldResult != result
     if (rtData.conditionStateChanged) {
     	//condition change, perform TCP
@@ -3674,6 +3677,7 @@ private void subscribeAll(rtData) {
             if (device && (device != location)) {
                 if (rtData.logging > 1) trace "Subscribing to $device...", rtData
                 //subscribe(device, "", fakeHandler)
+                
                 ss.controls = ss.controls + 1
                 if (!dds[device.id]) {
                     ss.devices = ss.devices + 1
@@ -3686,10 +3690,13 @@ private void subscribeAll(rtData) {
 
 
         def event = [date: new Date(), device: location, name: 'time', value: now(), schedule: [t: 0, s: 0, i: -9]]
-        executeEvent(rtData, event)
-		processSchedules rtData, true
         subscribe(app, appHandler)
         subscribe(location, hashId(app.id), executeHandler)
+        executeEvent(rtData, event)
+		processSchedules rtData, true
+        //save cache collected through dummy run
+        for(item in rtData.newCache) rtData.cache[item.key] = item.value
+        atomicState.cache = rtData.cache    
     } catch (all) {
     	error "An error has occurred while subscribing: ", rtData, null, all
     }
