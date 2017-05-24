@@ -3225,7 +3225,6 @@ private boolean comp_stays							(rtData, lv, rv = null, rv2 = null, tv = null, 
 private boolean comp_stays_unchanged				(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return true; }
 private boolean comp_stays_not						(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return comp_is_not(rtData, lv, rv, rv2, tv, tv2); }
 private boolean comp_stays_equal_to					(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return comp_is_equal_to(rtData, lv, rv, rv2, tv, tv2); }
-private boolean comp_stays_not_equal_to				(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return comp_is_not_equal_to(rtData, lv, rv, rv2, tv, tv2); }
 private boolean comp_stays_different_than			(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return comp_is_different_than(rtData, lv, rv, rv2, tv, tv2); }
 private boolean comp_stays_less_than				(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return comp_is_less_than(rtData, lv, rv, rv2, tv, tv2); }
 private boolean comp_stays_less_than_or_equal_to	(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return comp_is_less_than_or_equal_to(rtData, lv, rv, rv2, tv, tv2); }
@@ -3238,6 +3237,7 @@ private boolean comp_stays_false					(rtData, lv, rv = null, rv2 = null, tv = nu
 private boolean comp_stays_inside_of_range			(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return comp_is_inside_of_range(rtData, lv, rv, rv2, tv, tv2); }
 private boolean comp_stays_outside_of_range			(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return comp_is_outside_of_range(rtData, lv, rv, rv2, tv, tv2); }
 private boolean comp_stays_any_of					(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return comp_is_any_of(rtData, lv, rv, rv2, tv, tv2); }
+private boolean comp_stays_away_from				(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return comp_is_not_equal_to(rtData, lv, rv, rv2, tv, tv2); }
 private boolean comp_stays_away_from_any_of			(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return comp_is_not_any_of(rtData, lv, rv, rv2, tv, tv2); }
 
 
@@ -4670,6 +4670,23 @@ private func_strlen(rtData, params) {
 }
 private func_length(rtData, params) { return func_strlen(rtData, params) }
 
+
+/******************************************************************************/
+/*** coalesce returns the first non-empty parameter							***/
+/*** Usage: coalesce(value1[, value2[, ..., valueN]])						***/
+/******************************************************************************/
+private func_coalesce(rtData, params) {
+	if (!params || !(params instanceof List) || (params.size() < 1)) {
+    	return [t: "error", v: "Invalid parameters. Expecting coalesce(value1[, value2[, ..., valueN]])"];
+    }
+    for (i = 0; i < params.size(); i++) {
+	    def value = evaluateExpression(rtData, params[0])
+        if (!((value.v instanceof List ? (value.v == [null]) || (value.v == []) || (value.v == ['null']) : false) || (value.v == null) || (value.t == 'error') || (value.v == 'null') || (cast(rtData, value.v, 'string') == ''))) {
+        	return value
+        }
+    }
+    return [t: "dynamic", v: null]
+}
 /******************************************************************************/
 /*** substring returns a substring of a value								***/
 /*** Usage: substring(string, start, count)									***/

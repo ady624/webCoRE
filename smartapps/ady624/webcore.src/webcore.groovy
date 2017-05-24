@@ -2385,6 +2385,7 @@ private static Map functions() {
         random			: [ t: "dynamic",						],
         strlen			: [ t: "integer",						],
         length			: [ t: "integer",						],
+        coalesce		: [ t: "dynamic",						],
 	]
 }
 
