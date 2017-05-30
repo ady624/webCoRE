@@ -768,6 +768,7 @@ span.s-b { font-weight: bold; }
 span.s-i { font-style: italic; }
 span.s-u { text-decoration: underline; }
 span.s-s { text-decoration: line-through; }
+span.s-s { white-space: pre-wrap; }
 
 
 @media only screen and (max-width: 767px) {

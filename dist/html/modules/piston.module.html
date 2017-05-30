@@ -309,6 +309,7 @@
 		<!--action-->
 		<div no-drag class="no-drag" ng-if="statement.t=='action'" no-drag>
 			<line com ng-if="statement.z">/* {{statement.z}} */</line>
+			<line warn ng-repeat="w in statement.w">WARNING: {{w}}</line>
 			<line kwd ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)">only when</line>
 			<restrictions ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)" data-ng-repeat="collection in [statement]" data-ng-include="'restrictions'" dnd-nodrag data-nag-model="statement"></restrictions>
 			<line ng-if-start="((mode=='edit') && view.movable) || ((statement.d) && (statement.d.length)) || ((statement.r) && (statement.r.length)) || ((statement.k) && (statement.k.length==0))" kwd ng-click="select(statement, statements)">
@@ -335,6 +336,7 @@
 		<!--do-->
 		<div no-drag class="no-drag" ng-if="statement.t=='do'" no-drag>
 			<line com ng-if="statement.z">/* {{statement.z}} */</line>
+			<line warn ng-repeat="w in statement.w">WARNING: {{w}}</line>
 			<line kwd ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)">only when</line>
 			<restrictions ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)" data-ng-repeat="collection in [statement]" data-ng-include="'restrictions'" dnd-nodrag data-nag-model="statement"></restrictions>
 			<line kwd ng-click="select(statement, statements)">
@@ -356,6 +358,7 @@
 		<!--on-->
 		<div no-drag class="no-drag" ng-if="statement.t=='on'" no-drag>
 			<line com ng-if="statement.z">/* {{statement.z}} */</line>
+			<line warn ng-repeat="w in statement.w">WARNING: {{w}}</line>
 			<line kwd ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)">only when</line>
 			<restrictions ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)" data-ng-repeat="collection in [statement]" data-ng-include="'restrictions'" dnd-nodrag data-nag-model="statement"></restrictions>
 			<line kwd ng-click="select(statement, statements)">
@@ -371,6 +374,7 @@
 		<!--if-->
 		<div no-drag class="no-drag" ng-if="statement.t=='if'" no-drag>
 			<line com ng-if="statement.z">/* {{statement.z}} */</line>
+			<line warn ng-repeat="w in statement.w">WARNING: {{w}}</line>
 			<line kwd ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)">only when</line>
 			<restrictions ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)" data-ng-repeat="collection in [statement]" data-ng-include="'restrictions'" dnd-nodrag data-nag-model="statement"></restrictions>
 			<line kwd ng-click="select(statement, statements)">
@@ -403,6 +407,7 @@
 		<!--switch-->
 		<div no-drag class="no-drag" ng-if="statement.t=='switch'">
 			<line com ng-if="statement.z">/* {{statement.z}} */</line>
+			<line warn ng-repeat="w in statement.w">WARNING: {{w}}</line>
 			<line kwd ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)">only when</line>
 			<restrictions ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)" data-ng-repeat="collection in [statement]" data-ng-include="'restrictions'" dnd-nodrag data-nag-model="statement"></restrictions>
 			<line kwd ng-click="select(statement, statements)">
@@ -435,6 +440,7 @@
 		<!--for-->
 		<div no-drag class="no-drag" ng-if="statement.t=='for'">
 			<line com ng-if="statement.z">/* {{statement.z}} */</line>
+			<line warn ng-repeat="w in statement.w">WARNING: {{w}}</line>
 			<line kwd ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)">only when</line>
 			<restrictions ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)" data-ng-repeat="collection in [statement]" data-ng-include="'restrictions'" dnd-nodrag data-nag-model="statement"></restrictions>
 			<line kwd ng-click="select(statement, statements)">
@@ -456,6 +462,7 @@
 		<!--each-->
 		<div no-drag class="no-drag" ng-if="statement.t=='each'">
 			<line com ng-if="statement.z">/* {{statement.z}} */</line>
+			<line warn ng-repeat="w in statement.w">WARNING: {{w}}</line>
 			<line kwd ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)">only when</line>
 			<restrictions ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)" data-ng-repeat="collection in [statement]" data-ng-include="'restrictions'" dnd-nodrag data-nag-model="statement"></restrictions>
 			<line kwd ng-click="select(statement, statements)">
@@ -477,6 +484,7 @@
 		<!--while-->
 		<div no-drag class="no-drag" ng-if="statement.t=='while'">
 			<line com ng-if="statement.z">/* {{statement.z}} */</line>
+			<line warn ng-repeat="w in statement.w">WARNING: {{w}}</line>
 			<line kwd ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)">only when</line>
 			<restrictions ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)" data-ng-repeat="collection in [statement]" data-ng-include="'restrictions'" dnd-nodrag data-nag-model="statement"></restrictions>
 			<line kwd ng-click="select(statement, statements)">
@@ -499,6 +507,7 @@
 		<!--repeat-->
 		<div no-drag class="no-drag" ng-if="statement.t=='repeat'">
 			<line com ng-if="statement.z">/* {{statement.z}} */</line>
+			<line warn ng-repeat="w in statement.w">WARNING: {{w}}</line>
 			<line kwd ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)">only when</line>
 			<restrictions ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)" data-ng-repeat="collection in [statement]" data-ng-include="'restrictions'" dnd-nodrag data-nag-model="statement"></restrictions>
 			<line ng-click="select(statement, statements)">
@@ -522,6 +531,7 @@
 		<!--every-->
 		<div no-drag class="no-drag" ng-if="statement.t=='every'">
 			<line com ng-if="statement.z">/* {{statement.z}} */</line>
+			<line warn ng-repeat="w in statement.w">WARNING: {{w}}</line>
 			<line kwd ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)">only when</line>
 			<restrictions ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)" data-ng-repeat="collection in [statement]" data-ng-include="'restrictions'" dnd-nodrag data-nag-model="statement"></restrictions>
 			<line kwd ng-click="select(statement, statements)">
@@ -543,6 +553,7 @@
 		<!--break-->
 		<div no-drag class="no-drag" ng-if="statement.t=='break'">
 			<line com ng-if="statement.z">/* {{statement.z}} */</line>
+			<line warn ng-repeat="w in statement.w">WARNING: {{w}}</line>
 			<line kwd ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)">only when</line>
 			<restrictions ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)" data-ng-repeat="collection in [statement]" data-ng-include="'restrictions'" dnd-nodrag data-nag-model="statement"></restrictions>
 			<line kwd ng-click="select(statement, statements)">
@@ -554,6 +565,7 @@
 		<!--return-->
 		<div no-drag class="no-drag" ng-if="statement.t=='exit'">
 			<line com ng-if="statement.z">/* {{statement.z}} */</line>
+			<line warn ng-repeat="w in statement.w">WARNING: {{w}}</line>
 			<line kwd ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)">only when</line>
 			<restrictions ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)" data-ng-repeat="collection in [statement]" data-ng-include="'restrictions'" dnd-nodrag data-nag-model="statement"></restrictions>
 			<line kwd ng-click="select(statement, statements)">
@@ -1585,7 +1597,7 @@
 			</select>
 			<div class="form-table input-group">
 				<div class="form-table input-group" ng-if="operand.data.t==''">
-					<label class="form-control btn-default"></label>
+					<label class="form-control btn-info">(no value set)</label>
 				</div>
 				<!-- physical devices (variable) -->
 				<div class="form-table input-group" ng-if="operand.data.t=='d'">
@@ -1705,7 +1717,7 @@
 					<label class="form-control btn-default ellipsis" title="{{operand.data.e}}">{{operand.expressionError ? operand.expressionError : operand.data.e}}</label>
 				</div>
 				<!-- last - duration unit -->
-				<div class="form-table input-group pull-left" ng-if="operand.dataType == 'duration'" style="width:25%">
+				<div class="form-table input-group pull-left" ng-if="(operand.data.t != '') && (operand.dataType == 'duration')" style="width:25%">
 					<select data-actions-box="true" selectpicker class="show-tick selectpicker input-group-btn" data-width="100%" ng-model="operand.durationUnit" data-mobile="{{mobile}}" data-style="btn-default" ng-change="validateOperand(operand)" required>
 						<option style="display:none" value="" disabled>Nothing selected</option>
 						<option value="ms" ng-if="!operand.hideMilliseconds">milliseconds</option>

@@ -267,6 +267,11 @@ var config = app.config(['$routeProvider', '$locationProvider', '$sceDelegatePro
         css: cdn + theme + 'css/modules/piston' + ext,
 		reloadOnSearch: false
     }).
+    when('/fuel', {
+        templateUrl: cdn + theme + 'html/modules/fuel.module.html',
+        controller: 'fuel',
+        css: cdn + theme + 'css/modules/fuel' + ext
+    }).
     when('/init/:instId1/:instId2', {
         redirectTo: function(params) {
 			app.initialInstanceUri = params.instId1 + params.instId2;
@@ -634,18 +639,6 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 		}
 		if (!si) {
 			$location.path('/register');
-			/*
-			if (mobileCheck()) {
-				msg = '<p>Oops, you are not logged in!</p>Please open the SmartThings CoRE app and open the dashboard by tapping on the "CoRE Dashboard" link at the top.';
-			} else {
-				msg = '<p>Oops, you are not logged in!</p>Please open the SmartThings IDE, go to Live Logging, then open the SmartThings CoRE app, go to Settings and enable Logging, then tap Done and look for the dashboard URL in the Live Logging page. You will need to open that link for the first time.';
-			}
-			var error = document.createElement('error');
-			error.id = 'error';
-			error.innerHTML = msg;
-			document.body.appendChild(error);
-			inst = 'about:blank#';
-			*/
 		} else {
 			var error = document.getElementById('error');
 			if (error) error.parentNode.removeChild(error);
@@ -983,6 +976,49 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 				return response.data;
 			});
     }
+
+
+	dataService.listFuelStreams = function() {
+		var instance = dataService.getInstance();
+		if (instance) {
+			var iid = instance.id;
+			var si = store[instance.id];
+			if (!si) si = {};
+			var region = (si && si.uri && si.uri.startsWith('https://graph-eu')) ? 'eu' : 'us';
+			var req = {
+				method: 'POST',
+				url: 'https://api-' + region + '-' + iid[32] + '.webcore.co/fuelStreams/list',
+				headers: {
+				'Auth-Token': iid
+				},
+				data: { i: iid }
+			}
+			return $http(req).then(function(response) {
+					return response.data;
+				});
+		}
+	}
+
+	dataService.listFuelStreamData = function(fuelStreamId) {
+		var instance = dataService.getInstance();
+		if (instance) {
+			var iid = instance.id;
+			var si = store[instance.id];
+			if (!si) si = {};
+			var region = (si && si.uri && si.uri.startsWith('https://graph-eu')) ? 'eu' : 'us';
+			var req = {
+				method: 'POST',
+				url: 'https://api-' + region + '-' + iid[32] + '.webcore.co/fuelStreams/get',
+				headers: {
+				'Auth-Token': iid
+				},
+				data: { i: iid, f: fuelStreamId }
+			}
+			return $http(req).then(function(response) {
+					return response.data;
+				});
+		}
+	}
 
 	dataService.registerHandler = function() {
 		navigator.registerProtocolHandler('web+core','https://' + window.location.hostname + '/handler/%s', 'webCoRE');
@@ -1424,4 +1460,4 @@ if (document.selection) {
      document.execCommand("Copy");
 }}
 
-version = function() { return 'v0.1.0af.20170522'; };
+version = function() { return 'v0.1.0b2.20170530'; };

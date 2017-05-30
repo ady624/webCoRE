@@ -109,6 +109,12 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 		});
 	}
 
+	$scope.showFuelStreams = function() {
+		$scope.initialized = false;
+		$scope.loading = true;
+      	$location.path('fuel');
+	}
+
 	$scope.showDashboard = function() {
 		$scope.view = 'dashboard';
 		dataService.openWebSocket($scope.onWSUpdate);
@@ -281,6 +287,7 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
                                 case 'u': className += 's-u '; break;
                                 case 'i': className += 's-i '; break;
                                 case 's': className += 's-s '; break;
+                                case 'pre': className += 's-pre '; break;
                                 default: color = cls[x].replace(/[^#0-9a-z]/gi, '');
                             }
                         }

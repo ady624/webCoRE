@@ -18,6 +18,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 	$scope.dk = 'N7zqL6a8Texs4wY5y&y2YPLzus+_dZ%s';
 	$scope.params = $location.search();
 	$scope.insertIndexes = {};
+	$scope.warnings = {};
 	if ($scope.params) $location.search({});
 	$scope.stack = {
 		undo: [],
@@ -190,6 +191,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 					return;
 				}	
 				$scope.piston = response.data.piston;
+				$scope.validatePiston($scope.piston);
 				$scope.meta = response.data.meta ? response.data.meta : {}
 				//database
 				$scope.db = response.db;
@@ -634,6 +636,9 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		$scope.closeDialog();
 	}
 
+	$scope.doValidatePiston = function() {
+		$scope.validatePiston($scope.piston);
+	}
 
 	$scope.getExpressionConfig = function() {
 		var attributes = [];
@@ -1089,30 +1094,32 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 				$scope.designer.$statement = statement;
 			}
 		}
+		$scope.doValidatePiston();
 		$scope.closeDialog();
 		if (nextDialog) {
 			switch (statement.t) {
 				case 'action':
 					$scope.addTask(statement);
-					break;
+					return;
 				case 'if':
 					$scope.addCondition(statement.c, false, defaultType);
-					break;
+					return;
 				case 'on':
 					$scope.addEvent(statement.c);
-					break;
+					return;
 				case 'while':
 					$scope.addCondition(statement.c);
-					break;
+					return;
 				case 'do':
 				case 'for':
 				case 'each':
 				case 'repeat':
+				case 'every':
 					$scope.addStatement(statement.s);
-					break;
+					return;
 				case 'switch':
 					$scope.addCase(statement.cs);
-					break;
+					return;
 			}
 		}
 	}
@@ -1211,9 +1218,11 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 				$scope.designer.$case = _case;
 			}
 		}
+		$scope.doValidatePiston();
 		$scope.closeDialog();
 		if (nextDialog) {
 			$scope.addStatement(_case.s);
+			return;
 		}
 	}
 
@@ -1293,9 +1302,11 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 				$scope.designer.$event = event;
 			}
 		}
+		$scope.doValidatePiston();
 		$scope.closeDialog();
 		if (event.t && nextDialog) {
 			$scope.addEvent($scope.designer.parent);
+			return;
 		}
 	}
 
@@ -1437,9 +1448,11 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 				$scope.designer.$condition = condition;
 			}
 		}
+		$scope.doValidatePiston();
 		$scope.closeDialog();
 		if (condition.t && nextDialog) {
 			$scope.addCondition(condition.t == 'group' ? condition : $scope.designer.parent);
+			return;
 		}
 	}
 
@@ -1612,9 +1625,11 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
                 $scope.designer.$restriction = restriction;
             }
         }
+		$scope.doValidatePiston();
         $scope.closeDialog();
         if (restriction.t && nextDialog) {
             $scope.addRestriction(restriction.t == 'group' ? restriction : $scope.designer.parent);
+			return;
         }
     }
 		
@@ -1771,9 +1786,11 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 				tasks.splice(insertIndex, 0, tasks.splice(currentIndex, 1)[0]);
 			}
 		}
+		$scope.doValidatePiston();
 		$scope.closeDialog();
 		if (nextDialog) {
 			$scope.addTask($scope.designer.parent);
+			return;
 		}
 	}
 
@@ -1846,9 +1863,11 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		} else {
 			$scope.designer.variable = variable;
 		}
+		$scope.doValidatePiston();
 		$scope.closeDialog();
 		if (nextDialog) {
 			$scope.addVariable();
+			return;
 		}
 	}
 
@@ -1916,9 +1935,11 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 				$scope.updateGlobalVars(data.globalVars);
 			}
 		});
+		$scope.doValidatePiston();
 		$scope.closeDialog();
 		if (nextDialog) {
 			$scope.addGlobalVariable();
+			return;
 		}
 	}
 
@@ -1984,6 +2005,8 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 
 	$scope.drag = function(list, index) {
 		list.splice(index, 1);
+		$scope.autoSave();
+		$scope.doValidatePiston();
 	}
 
 
@@ -2719,6 +2742,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 	$scope.chooseVersion = function(keepLocal) {
 		if (keepLocal) {
 			$scope.piston = $scope.stack.current.data;
+			$scope.validatePiston($scope.piston);
 		} else {
 			$scope.autoSave();
 		}
@@ -2730,6 +2754,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 			$scope.autoSave($scope.stack.redo);
 			$scope.stack.current = $scope.stack.undo.pop();
 			$scope.piston = $scope.stack.current.data;
+			$scope.validatePiston($scope.piston);
 			$scope.saveStack();
 		}
 	}
@@ -2739,6 +2764,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 			$scope.autoSave($scope.stack.undo);
 			$scope.stack.current = $scope.stack.redo.pop();
 			$scope.piston = $scope.stack.current.data;
+			$scope.validatePiston($scope.piston);
 			$scope.saveStack();
 		}
 	}
@@ -2857,7 +2883,8 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 					break;
 			}
 
-			operand.onlyAllowConstants = operand.onlyAllowConstants || (dataType == 'piston') || (dataType == 'routine') || (dataType == 'askAlexaMacro')
+			var disableExpressions = (dataType == 'piston') || (dataType == 'routine') || (dataType == 'askAlexaMacro')
+			operand.onlyAllowConstants = operand.onlyAllowConstants || disableExpressions
 
 			var strict = !!operand.strict;
 			if (operand.onlyAllowConstants || (dataType == 'contact')) {
@@ -2867,7 +2894,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 				operand.allowVirtual = false;
 				operand.allowConstant = (dataType != 'device');;
 				operand.allowVariable = false;
-				operand.allowExpression = false;
+				operand.allowExpression = !disableExpressions;
 			} else {
 				operand.allowDevices = dataType == 'device';
 				operand.allowPhysical = (dataType != 'datetime') && (dataType != 'date') && (dataType != 'time') && (dataType != 'device') && (dataType != 'variable') && (!strict || (dataType != 'boolean')) && (dataType != 'duration');
@@ -3784,6 +3811,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 								case 'u': className += 's-u '; break;
 								case 'i': className += 's-i '; break;
 								case 's': className += 's-s '; break;
+								case 'pre': className += 's-pre '; break;
 								default: color = cls[x].replace(/[^#0-9a-z]/gi, '');
 							}
 						}
@@ -3912,6 +3940,41 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 
 
 
+	$scope.validatePiston = function(piston) {
+		var idx = 0;
+		var level = 0;
+		var warnings = {};
+		var addWarning = function(object, warning) {
+			if (!object) return;
+			object.w = object.w ? object.w : [];
+			object.w.push(warning);
+		}
+		var traverseObject = function(object, parentObject, dataType, parentLevel) {
+			var level = parentLevel + 1;
+			if (object instanceof Array) {
+				for(i in object) {
+					object[i] = traverseObject(object[i], parentObject, dataType, level);
+				}
+				return object;
+			}
+			if (object instanceof Object) {
+				for (property in object) {
+					object[property] = traverseObject(object[property], object, object.vt ? object.vt : object.t, level);
+				}
+				if (!!object.t) {
+					delete(object.w);
+					switch (object.t) {
+						case 'every': if (level > 3) addWarning(object, 'Timers are designed to be top-level statements and should not be used inside other statements. If you need a conditional timer, please look into using a while loop instead.'); break;
+						case 'on': if (level > 3) addWarning(object, 'On event statements are designed to be top-level statements and should not be used inside other statements.'); break;
+					}
+				}
+			}
+			return object;
+		}
+		piston = traverseObject(piston, 'piston', null, 0);
+		$scope.warnings = warnings;
+		return piston;
+	}
 
 
 
@@ -3930,6 +3993,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 	$scope.compilePiston = function(piston, anonymize, legend) {
 		var legend = legend ? legend : {}
 		var idx = 0;
+		var warnings = {};
 		var anonymizeValue = function(key, data) {
 			if (!anonymize) {
 				return (!!legend[key] && !!legend[key].id) ? legend[key].id : key;
@@ -3950,6 +4014,13 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 				legend[key] = { key: safeKey, value: data };
 			}
 			return safeKey;
+		}
+
+
+		var addWarning = function(object, warning) {
+			if (!object) return;
+			object.w = object.w ? object.w : [];
+			object.w.push(warning);
 		}
 		var traverseObject = function(object, parentObject, dataType) {
 			if (object instanceof Array) {
@@ -3987,6 +4058,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 							break;
 					}
 				}
+				delete(object.w);
 				for (property in object) {
 					var v = object[property];
 					if ((v === false) || (v === null) || (v === '')) {
@@ -4051,6 +4123,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		for (l in legend) {
 			piston.l[legend[l].key] = legend[l].value;
 		}
+		$scope.warnings = warnings;
 		return piston;
 	}
 

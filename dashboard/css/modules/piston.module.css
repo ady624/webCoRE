@@ -369,6 +369,15 @@ span.hl.com {
 	color: #008000 !important;
 }
 
+line[warn],
+span[warn],
+span.hl.warn {
+	background: orange !important;
+	color: white !important;
+	padding: 0px 8px;
+	border: double 4px white;
+}
+
 line[com][h],
 span[com][h],
 span.hl.com.h {
