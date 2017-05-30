@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.1.0b2.20170530" }
+public static String version() { return "v0.1.0b3.20170530" }
 /*
+ *	05/30/2017 >>> v0.1.0b3.20170530 - BETA M1 - Various speed improvements - MAY BREAK THINGS
  *	05/30/2017 >>> v0.1.0b2.20170530 - BETA M1 - Various fixes, added IFTTT query string params support in $args
  *	05/24/2017 >>> v0.1.0b1.20170524 - BETA M1 - Fixes regarding trigger initialization and a situation where time triggers may cancel tasks that should not be cancelled
  *	05/23/2017 >>> v0.1.0b0.20170523 - BETA M1 - Minor fixes and improvements to command optimizations
@@ -1536,6 +1537,30 @@ private registerInstance() {
     ])
 }
 
+private utcToLocalTime(time) {
+	return time + location.timeZone.getOffset(time)
+}
+private localToUtcTime(time) {
+	return time - location.timeZone.getOffset(time)
+}
+
+private initSunriseAndSunset() {
+    def rightNow = utcToLocalTime(now())
+    def sunTimes = app.getSunriseAndSunset()
+    state.sunTimes = [
+    	sunrise: localToUtcTime(rightNow - rightNow.mod(86400000) + utcToLocalTime(sunTimes.sunrise.time).mod(86400000)),
+    	sunset: localToUtcTime(rightNow - rightNow.mod(86400000) + utcToLocalTime(sunTimes.sunset.time).mod(86400000)),
+        updated: now()
+    ]
+}
+
+private getLocalSunriseAndSunset() {
+	def updated = state.sunTimes?.updated
+    //we require an update any day at 3am
+    if (updated && (updated >= now() - now().mod(86400000) + 10800000)) return state.sunTimes
+    initSunriseAndSunset()
+    return state.sunTimes
+}
 
 /******************************************************************************/
 /*** 																		***/
@@ -1585,6 +1610,7 @@ public Map getRunTimeData(semaphore, fetchWrappers = false) {
 	    }
     }    
     def storageApp = !!fetchWrappers ? getStorageApp() : null
+    def sunTimes = getLocalSunriseAndSunset()
    	return [
         enabled: !settings.disabled,
     	attributes: attributes(),
@@ -1605,6 +1631,8 @@ public Map getRunTimeData(semaphore, fetchWrappers = false) {
         powerSource: state.powerSource ?: 'mains',
 		region: state.endpoint.contains('graph-eu') ? 'eu' : 'us',		
         instanceId: hashId(app.id),
+        sunrise: sunTimes.sunrise,
+        sunset: sunTimes.sunset,
         started: startTime,
         ended: now(),
         generatedIn: now() - startTime

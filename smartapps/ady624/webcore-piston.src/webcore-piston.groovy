@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.1.0b2.20170530" }
+public static String version() { return "v0.1.0b3.20170530" }
 /*
+ *	05/30/2017 >>> v0.1.0b3.20170530 - BETA M1 - Various speed improvements - MAY BREAK THINGS
  *	05/30/2017 >>> v0.1.0b2.20170530 - BETA M1 - Various fixes, added IFTTT query string params support in $args
  *	05/24/2017 >>> v0.1.0b1.20170524 - BETA M1 - Fixes regarding trigger initialization and a situation where time triggers may cancel tasks that should not be cancelled
  *	05/23/2017 >>> v0.1.0b0.20170523 - BETA M1 - Minor fixes and improvements to command optimizations
@@ -558,6 +559,7 @@ private getRunTimeData(rtData = null, semaphore = null, fetchWrappers = false) {
 	    rtData.fastForwardTo = null
 	    rtData.break = false
         rtData.updateDevices = false
+        state.schedules = atomicState.schedules
         if (!fetchWrappers) {
         	rtData.devices = (settings.dev && (settings.dev instanceof List) ? settings.dev.collectEntries{[(hashId(it.id)): it]} : [:])
         	rtData.contacts = (settings.contacts && (settings.contacts instanceof List) ? settings.contacts.collectEntries{[(hashId(it.id)): it]} : [:])
@@ -651,12 +653,13 @@ def handleEvents(event) {
         syncTime = true
     }
     //process all time schedules in order
+    def t = now()
     while (success && (20000 + rtData.timestamp - now() > 15000)) {
         //we only keep doing stuff if we haven't passed the 10s execution time mark
-        def schedules = atomicState.schedules
+        def schedules = rtData.piston.o?.pep ? atomicState.schedules : state.schedules
         //anything less than 2 seconds in the future is considered due, we'll do some pause to sync with it
         //we're doing this because many times, the scheduler will run a job early, usually 0-1.5 seconds early...
-        if (!schedules || !schedules.size()) break
+        if (!schedules || !schedules.size()) break        
         event = [date: event.date, device: location, name: 'time', value: now(), schedule: schedules.sort{ it.t }.find{ it.t < now() + 2000 }]
         if (!event.schedule) break
         long threshold = now() > event.schedule.t ? now() : event.schedule.t
@@ -664,7 +667,11 @@ def handleEvents(event) {
         schedules.remove(event.schedule)
         //if we have any other pending -3 events (device schedules), we cancel them all
         //if (event.schedule.i > 0) schedules.removeAll{ (it.s == event.schedule.s) && ( it.i == -3 ) }
-        atomicState.schedules = schedules
+        if (rtData.piston.o?.pep) {
+        	atomicState.schedules = state.schedules
+        } else {
+        	state.schedules = schedules
+        }
         def delay = event.schedule.t - now()
         if (syncTime && (delay > 0)) {
         	if (rtData.logging > 2) debug "Fast executing schedules, waiting for ${delay}ms to sync up", rtData
@@ -764,6 +771,7 @@ private Boolean executeEvent(rtData, event) {
                 	ended = true
 		        	tracePoint(rtData, 'end', 0, 0)
 		        }
+		        processSchedules rtData
             } else {
             	warn "Piston execution aborted due to restrictions in effect", rtData
             }
@@ -771,11 +779,10 @@ private Boolean executeEvent(rtData, event) {
         } catch (all) {
         	error "An error occurred while executing the event: ", rtData, null, all
         }
-        processSchedules rtData
 		return true
     } catch(all) {
     	error "An error occurred within executeEvent: ", rtData, null, all
-    }
+    }    
     processSchedules rtData
     return false
 }
@@ -798,7 +805,7 @@ private finalizeEvent(rtData, initialMsg, success = true) {
 	updateLogs(rtData)
 	//update graph data
     rtData.stats.timing.u = now() - startTime
-    def stats = atomicState.stats ?: [:]
+    def stats = (rtData.piston.o?.pep ? atomicState.stats : state.stats) ?: [:]
     stats.timing = stats.timing ?: []
     stats.timing.push(rtData.stats.timing)
     if (stats.timing.size() > 500) stats.timing = stats.timing[stats.timing.size() - 500..stats.timing.size() - 1]
@@ -809,27 +816,33 @@ private finalizeEvent(rtData, initialMsg, success = true) {
     state.trace = rtData.trace
     //flush the new cache value
     for(item in rtData.newCache) rtData.cache[item.key] = item.value
-    atomicState.cache = rtData.cache    
 	parent.updateRunTimeData(rtData)
     //clear the global vars - we already set them
     rtData.gvCache = null
     //beat race conditions
     //overwrite state, might have changed meanwhile
-    state.schedules = atomicState.schedules
-    state.cache = atomicState.cache
+    if (rtData.piston.o?.pep) {
+    	state.schedules = atomicState.schedules
+    	atomicState.cache = rtData.cache
+    }
+	state.cache = rtData.cache
 }
 
 private processSchedules(rtData, scheduleJob = false) {
 	//def msg = timer "Processing schedules..."
 	//reschedule stuff
     //todo, override tasks, if any
-    def schedules = (atomicState.schedules ?: [])
+    
+    def tt = now()
+    def schedules = (rtData.piston.o?.pep ? atomicState.schedules : state.schedules) ?: []
+    /*
     for (timer in rtData.piston.s.findAll{ it.t == 'every' }) {
     	if (!schedules.find{ it.s == timer.$ } && !rtData.schedules.find{ it.s == timer.$ }) {
         	if (rtData.logging > 2) debug "Rescheduling missing timer ${timer.$}", rtData
     		scheduleTimer(rtData, timer, 0)
         }
     }
+    */
 	//reset states
     //if automatic states, we set it based on the autoNew - if any
     if (!rtData.piston.o?.mps) {    
@@ -840,7 +853,7 @@ private processSchedules(rtData, scheduleJob = false) {
     
     rtData.state.old = rtData.state.new
 	rtData.pistonStateChanged = false
-    schedules = (atomicState.schedules ?: [])
+    //schedules = (atomicState.schedules ?: [])
     //cancel statements
 	schedules.removeAll{ schedule -> !!rtData.cancelations.statements.find{ cancelation -> (cancelation.id == schedule.s) && (!cancelation.data || (cancelation.data == schedule.d)) }}
     //cancel on conditions
@@ -852,7 +865,8 @@ private processSchedules(rtData, scheduleJob = false) {
     	schedules.removeAll{ !!it.ps }
     }
     rtData.cancelations = []
-    schedules = (schedules + (rtData.schedules ?: [])).sort{ it.t }
+    rtData.hasNewSchedules = rtData.hasNewSchedules || (rtData.schedules && rtData.schedules.size())
+    schedules = (schedules + (rtData.schedules ?: []))//.sort{ it.t }
     //add traces for all remaining schedules
     /*for (schedule in schedules) {
     	def t = now() - schedule.t
@@ -876,7 +890,8 @@ private processSchedules(rtData, scheduleJob = false) {
     		unschedule(timeRecoveryHandler)    
 	    }
     }
-    atomicState.schedules = schedules
+    if (rtData.piston.o?.pep) atomicState.schedules = schedules
+    state.schedules = schedules
     state.schedules = schedules
     state.nextSchedule = rtData.stats.nextSchedule
     rtData.schedules = []
@@ -905,7 +920,7 @@ private updateLogs(rtData) {
     }
     atomicState.logs = logs
     state.logs = logs
-    rtData.remove('logs')
+    //rtData.remove('logs')
 }
 
 
@@ -2907,7 +2922,7 @@ private Boolean evaluateCondition(rtData, condition, collection, async) {
                         if (tvalue) {
 	                        long delay = evaluateExpression(rtData, [t: 'duration', v: tvalue.v, vt: tvalue.vt], 'long').v
                             if ((lo.operand.t == 'p') && (lo.operand.g == 'any') && lo.values.size() > 1) {
-                            	def schedules = atomicState.schedules
+                            	def schedules = rtData.piston.o?.pep ? atomicState.schedules : state.schedules
                             	for (value in lo.values) {
                                 	def dev = value.v?.d
                                     if (dev in options.devices.matched) {
@@ -2926,7 +2941,7 @@ private Boolean evaluateCondition(rtData, condition, collection, async) {
                             } else {
                             	if (result) {
                                 	//if we find the comparison true, set a timer if we haven't already
-	                            	def schedules = atomicState.schedules
+	                            	def schedules = rtData.piston.o?.pep ? atomicState.schedules : state.schedules
 									if (!schedules.find{ (it.s == condition.$) }) {
                                 		if (rtData.logging > 2) debug "Adding a timed trigger schedule for condition ${condition.$}", rtData
 		                            	requestWakeUp(rtData, condition, condition, delay)
@@ -3746,16 +3761,16 @@ private sanitizeVariableName(name) {
 
 private getDevice(rtData, idOrName) {
 	if (rtData.locationId == idOrName) return location
-	def device = rtData.devices[idOrName] ?: rtData.devices.find{ it.value.name == idOrName }
+	def device = rtData.devices[idOrName] ?: rtData.devices.find{ it.value.getDisplayName() == idOrName }?.value
     if (!device) {
     	if (!rtData.allDevices) rtData.allDevices = parent.listAvailableDevices(true)
         if (rtData.allDevices) {
-			device = rtData.allDevices.find{ (idOrName == it.key) || (idOrName == it.value.getDisplayName()) }
-    	}
-        if (device) {
-            rtData.updateDevices = true
-            rtData.devices[device.key] = device.value
-            device = device.value
+			def deviceMap = rtData.allDevices.find{ (idOrName == it.key) || (idOrName == it.value.getDisplayName()) }
+	        if (deviceMap) {
+            	rtData.updateDevices = true
+            	rtData.devices[deviceMap.key] = deviceMap.value
+            	device = deviceMap.value
+			}
         } else {
             error "Device ${idOrName} was not found. Please review your piston.", rtData
         }
@@ -5887,7 +5902,7 @@ private initSunriseAndSunset(rtData) {
     def rightNow = localTime()
     def sunTimes = app.getSunriseAndSunset()
     rtData.sunrise = localToUtcTime(rightNow - rightNow.mod(86400000) + utcToLocalTime(sunTimes.sunrise.time).mod(86400000))
-    rtData.sunset = localToUtcTime(rightNow - rightNow.mod(86400000) + utcToLocalTime(sunTimes.sunset.time).mod(86400000))
+    rtData.sunset = localToUtcTime(rightNow - rightNow.mod(86400000) + utcToLocalTime(sunTimes.sunset.time).mod(86400000))    
 }
 
 private getSunriseTime(rtData) {
