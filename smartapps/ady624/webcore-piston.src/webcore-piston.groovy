@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.1.0b1.20170524" }
+public static String version() { return "v0.1.0b2.20170530" }
 /*
+ *	05/30/2017 >>> v0.1.0b2.20170530 - BETA M1 - Various fixes, added IFTTT query string params support in $args
  *	05/24/2017 >>> v0.1.0b1.20170524 - BETA M1 - Fixes regarding trigger initialization and a situation where time triggers may cancel tasks that should not be cancelled
  *	05/23/2017 >>> v0.1.0b0.20170523 - BETA M1 - Minor fixes and improvements to command optimizations
  *	05/22/2017 >>> v0.1.0ae.20170522 - BETA M1 - Minor fix for very small decimal numbers
@@ -490,7 +491,6 @@ def resume() {
     atomicState.schedules = []
     state.schedules = []
     subscribeAll(rtData)   
-    log.trace rtData.cache
     if (rtData.logging) info msg, rtData
     updateLogs(rtData)
     rtData.result = [active: true, subscriptions: state.subscriptions]
@@ -1285,8 +1285,16 @@ private Boolean executeAction(rtData, statement, async) {
     }
     */
     rtData.currentAction = statement
-	rtData.systemVars['$devices'].v = deviceIds
     for (task in statement.k) {
+	    if (task.$ == rtData.fastForwardTo) {
+        	//resuming a waiting task, we need to bring back the devices
+            setSystemVariableValue(rtData, '$index', rtData.event.schedule.stack.index)       	
+            setSystemVariableValue(rtData, '$device', rtData.event.schedule.stack.device)
+            setSystemVariableValue(rtData, '$devices', rtData.event.schedule.stack.devices)
+            deviceIds = rtData.event.schedule.stack.devices
+            devices = deviceIds.collect{ getDevice(rtData, it) }
+		}
+		rtData.systemVars['$devices'].v = deviceIds
         result = executeTask(rtData, devices, statement, task, async)
         if (!result && !rtData.fastForwardTo) {
         	break
@@ -1305,6 +1313,7 @@ private Boolean executeTask(rtData, devices, statement, task, async) {
     		//finally found the resuming point, play nicely from hereon
             tracePoint(rtData, "t:${task.$}", now() - t, null)
     		rtData.fastForwardTo = null
+            //restore $device and $devices         
             rtData.resumed = true
         }
        	//we're not doing anything, we're fast forwarding...        
@@ -1815,9 +1824,9 @@ private requestWakeUp(rtData, statement, task, timeOrDelay, data = null) {
         evt: rtData.currentEvent,
         args: rtData.args,
         stack: [
-        	index: getSystemVariableValue(rtData, '$index'),
-        	device: getSystemVariableValue(rtData, '$device'),
-        	devices: getSystemVariableValue(rtData, '$devices'),
+        	index: getVariable(rtData, '$index').v,
+        	device: getVariable(rtData, '$device').v,
+        	devices: getVariable(rtData, '$devices').v,
         ]
     ]
     rtData.schedules.push(schedule)
@@ -3716,6 +3725,10 @@ private List expandDeviceList(rtData, List devices, localVarsOnly = false) {
             } else {
 	        	def var = getVariable(rtData, deviceId)
     	        if (var && (var.t == 'device') && (var.v instanceof List) && var.v.size()) result += var.v
+    	        if (var && (var.t != 'device')) {
+                	var device = getDevice(rtData, cast(rtData, var.v, 'string'))
+                    if (device) result += [hashId(device.id)]
+                }
             }
         }
     }
@@ -3948,8 +3961,13 @@ private Map evaluateExpression(rtData, expression, dataType = null) {
                 def deviceIds = (expression.id instanceof List) ? expression.id : (expression.id ? [expression.id] : [])
                 if (!deviceIds.size()) {
                     def var = getVariable(rtData, expression.x)
-                    if (var && (var.t == 'device')) {
-                        deviceIds = var.v
+                    if (var) {
+                    	if (var.t == 'device') {
+                        	deviceIds = var.v
+                        } else {
+                        	def device = getDevice(rtData, var.v)
+                            if (device) deviceIds = [hashId(device.id)]
+                        }
                     }
                 }
 				result = [t: 'device', v: deviceIds, a: expression.a]
@@ -4256,10 +4274,10 @@ private Map evaluateExpression(rtData, expression, dataType = null) {
                         t = 'decimal'
                     }
                     if ((o == '==') || (o == '!=') || (o == '<') || (o == '>') || (o == '<=') || (o == '>=') || (o == '<>')) {
+                    	if (t1 == 'device') t1 = 'string'
+                    	if (t2 == 'device') t2 = 'string'
                         t1 = t1 == 'string' ? t2 : t1
                         t2 = t2 == 'string' ? t1 : t2
-                    	if ((items[idx].t == 'device') && (items[idx].a)) t1 = 'string'
-                    	if ((items[idx + 1].t == 'device') && (items[idx + 1].a)) t2 = 'string'
                         t = 'boolean'
                     }
                     v1 = evaluateExpression(rtData, items[idx], t1).v

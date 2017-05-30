@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.1.0b1.20170524" }
+public static String version() { return "v0.1.0b2.20170530" }
 /*
+ *	05/30/2017 >>> v0.1.0b2.20170530 - BETA M1 - Various fixes, added IFTTT query string params support in $args
  *	05/24/2017 >>> v0.1.0b1.20170524 - BETA M1 - Fixes regarding trigger initialization and a situation where time triggers may cancel tasks that should not be cancelled
  *	05/23/2017 >>> v0.1.0b0.20170523 - BETA M1 - Minor fixes and improvements to command optimizations
  *	05/22/2017 >>> v0.1.0af.20170522 - BETA M1 - Minor fixes (stays away from trigger, contacts not found, etc.), implemented Command Optimizations (turned on by default) and Flash
@@ -934,6 +935,15 @@ private decodeEmoji(value) {
 private api_intf_dashboard_piston_set_save(id, data, chunks) {
     def piston = getChildApps().find{ hashId(it.id) == id };
     if (piston) {
+    /*
+	    def s = decodeEmoji(new String(data.decodeBase64(), "UTF-8"))
+	    int cs = 512
+	    for (int a = 0; a <= Math.floor(s.size() / cs); a++) {
+	    	int x = a * cs + cs - 1;
+	        if (x >= s.size()) x = s.size() - 1
+	    	log.trace s.substring(a * cs, x)
+    	}
+    */
 		def p = new groovy.json.JsonSlurper().parseText(decodeEmoji(new String(data.decodeBase64(), "UTF-8")))
 		return piston.set(p, chunks);
     }
@@ -1220,7 +1230,15 @@ private api_intf_dashboard_piston_activity() {
 }
 
 def api_ifttt() {
-	def data = request?.JSON
+	def data = request?.JSON ?: [:]
+    if (params) {
+    	data.params = [:]
+        for(param in params) {
+        	if (!(param.key in ['theAccessToken', 'appId', 'action', 'controller'])) {
+            	data.params[param.key] = param.value
+            }
+        }
+    }
 	def eventName = params?.eventName
 	if (eventName) {
 		sendLocationEvent([name: "ifttt", value: eventName, isStateChange: true, linkText: "IFTTT event", descriptionText: "${handle()} has received an IFTTT event: $eventName", data: data])
@@ -1687,7 +1705,7 @@ def webCoREHandler(event) {
 }
 
 def instanceRegistrationHandler(response, callbackData) {
-	log.trace "$response.data"
+	//log.trace "$response.data"
 }
 
 def askAlexaHandler(evt) {
@@ -1745,7 +1763,6 @@ def lifxHandler(response, cbkData) {
     	def data = response.data instanceof List ? response.data : new groovy.json.JsonSlurper().parseText(response.data)
 		if (data instanceof List) {
 	        state.settings.lifx_scenes = data.collectEntries{[(it.uuid): it.name]}
-            log.trace state.settings.lifx_scenes
 	    }
 	}
 }
