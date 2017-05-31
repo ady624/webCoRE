@@ -2519,7 +2519,7 @@ private long vcmd_lifxScene(rtData, device, params) {
         return 0
     }    
 	def sceneId = params[0]
-    double duration = params.size() > 1 ? cast(rtData, params[0], 'long') / 1000 : 0
+    double duration = params.size() > 1 ? cast(rtData, params[1], 'long') / 1000 : 0
     if (!rtData.settings?.lifx_scenes) {
     	error "Sorry, there seems to be no available LIFX scenes, please ensure the LIFX integration is working.", rtData
         return 0
@@ -2633,7 +2633,7 @@ private long vcmd_httpRequest(rtData, device, params) {
 						try {
 							rtData.response = response.data instanceof Map ? response.data : new groovy.json.JsonSlurper().parseText(response.data)
 						} catch (all) {
-							if (rtData.logging > 2) debug "Error parsing JSON response for web request: $all", null, "error"
+                        	rtData.response = response.data
 						}
 					}
 				}
@@ -5913,9 +5913,17 @@ private static Map yearMonths() {
 
 private initSunriseAndSunset(rtData) {
     def rightNow = localTime()
-    def sunTimes = app.getSunriseAndSunset()
-    rtData.sunrise = localToUtcTime(rightNow - rightNow.mod(86400000) + utcToLocalTime(sunTimes.sunrise.time).mod(86400000))
-    rtData.sunset = localToUtcTime(rightNow - rightNow.mod(86400000) + utcToLocalTime(sunTimes.sunset.time).mod(86400000))    
+    if (!rtData.sunTimes) {
+    	def sunTimes = app.getSunriseAndSunset()
+        rtData.sunTimes = [
+    		sunrise: sunTimes.sunrise.time,
+    		sunset: sunTimes.sunset.time,
+        	updated: now()
+    	]
+    } else {
+    }
+    rtData.sunrise = localToUtcTime(rightNow - rightNow.mod(86400000) + utcToLocalTime(rtData.sunTimes.sunrise).mod(86400000))
+    rtData.sunset = localToUtcTime(rightNow - rightNow.mod(86400000) + utcToLocalTime(rtData.sunTimes.sunset).mod(86400000))    
 }
 
 private getSunriseTime(rtData) {

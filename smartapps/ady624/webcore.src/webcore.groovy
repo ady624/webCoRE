@@ -1538,29 +1538,21 @@ private registerInstance() {
     ])
 }
 
-private utcToLocalTime(time) {
-	return time + location.timeZone.getOffset(time)
-}
-private localToUtcTime(time) {
-	return time - location.timeZone.getOffset(time)
-}
-
 private initSunriseAndSunset() {
-    def rightNow = utcToLocalTime(now())
     def sunTimes = app.getSunriseAndSunset()
     state.sunTimes = [
-    	sunrise: localToUtcTime(rightNow - rightNow.mod(86400000) + utcToLocalTime(sunTimes.sunrise.time).mod(86400000)),
-    	sunset: localToUtcTime(rightNow - rightNow.mod(86400000) + utcToLocalTime(sunTimes.sunset.time).mod(86400000)),
+    	sunrise: sunTimes.sunrise.time,
+    	sunset: sunTimes.sunset.time,
         updated: now()
     ]
+    return state.sunTimes
 }
 
-private getLocalSunriseAndSunset() {
+private getSunTimes() {
 	def updated = state.sunTimes?.updated
-    //we require an update any day at 3am
-    if (updated && (updated >= now() - now().mod(86400000) + 10800000)) return state.sunTimes
-    initSunriseAndSunset()
-    return state.sunTimes
+    //we require an update every 4 hours
+    if (now() - updated < 14400000) return state.sunTimes
+    return initSunriseAndSunset()
 }
 
 /******************************************************************************/
@@ -1611,7 +1603,6 @@ public Map getRunTimeData(semaphore, fetchWrappers = false) {
 	    }
     }    
     def storageApp = !!fetchWrappers ? getStorageApp() : null
-    def sunTimes = getLocalSunriseAndSunset()
    	return [
         enabled: !settings.disabled,
     	attributes: attributes(),
@@ -1632,8 +1623,7 @@ public Map getRunTimeData(semaphore, fetchWrappers = false) {
         powerSource: state.powerSource ?: 'mains',
 		region: state.endpoint.contains('graph-eu') ? 'eu' : 'us',		
         instanceId: hashId(app.id),
-        sunrise: sunTimes.sunrise,
-        sunset: sunTimes.sunset,
+        sunTimes: getSunTimes(),
         started: startTime,
         ended: now(),
         generatedIn: now() - startTime
