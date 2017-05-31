@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.1.0b3.20170530" }
+public static String version() { return "v0.1.0b4.20170531" }
 /*
+ *	05/31/2017 >>> v0.0.0b4.20170531 - BETA M1 - Implemented $response and the special $response.<dynamic> variables to read response data from HTTP requests
  *	05/30/2017 >>> v0.1.0b3.20170530 - BETA M1 - Various speed improvements - MAY BREAK THINGS
  *	05/30/2017 >>> v0.1.0b2.20170530 - BETA M1 - Various fixes, added IFTTT query string params support in $args
  *	05/24/2017 >>> v0.1.0b1.20170524 - BETA M1 - Fixes regarding trigger initialization and a situation where time triggers may cancel tasks that should not be cancelled
@@ -2628,14 +2629,13 @@ private long vcmd_httpRequest(rtData, device, params) {
 				"$func"(requestParams) { response ->
 					setSystemVariableValue(rtData, "\$httpStatusCode", response.status)
 					setSystemVariableValue(rtData, "\$httpStatusOk", response.status == 200)
-					/*if (importData && (response.status == 200) && response.data) {
+					if ((response.status == 200) && response.data) {
 						try {
-							def jsonData = response.data instanceof Map ? response.data : new groovy.json.JsonSlurper().parseText(response.data)
-							importVariables(jsonData, importPrefix)
+							rtData.response = response.data instanceof Map ? response.data : new groovy.json.JsonSlurper().parseText(response.data)
 						} catch (all) {
 							if (rtData.logging > 2) debug "Error parsing JSON response for web request: $all", null, "error"
 						}
-					}*/
+					}
 				}
 			}
 		} catch (all) {
@@ -3826,6 +3826,17 @@ private Map getArgument(rtData, name) {
     return [t: 'dynamic', v: "$args".toString()]
 }
 
+private Map getResponse(rtData, name) {
+	List parts = name.tokenize('.');
+    def response = [:] + (rtData.response ?: [:])
+    for(part in parts) {
+    	if (!(response instanceof Map)) return [t: 'dynamic', v: '']
+        response = response[part]
+    }
+    return [t: 'dynamic', v: "$response".toString()]
+}
+
+
 private Map getVariable(rtData, name) {
 	name = sanitizeVariableName(name)
 	if (!name) return [t: "error", v: "Invalid empty variable name"]
@@ -3837,6 +3848,8 @@ private Map getVariable(rtData, name) {
 		if (name.startsWith('$')) {
         	if (name.startsWith('$args.') && (name.size() > 6)) {
             	result = getArgument(rtData, name.substring(6))
+            } else if (name.startsWith('$response.') && (name.size() > 10)) {
+            	result = getResponse(rtData, name.substring(10))
             } else {
 				result = rtData.systemVars[name]
             	if (!(result instanceof Map)) result = [t: "error", v: "Variable '$name' not found"]
@@ -5979,6 +5992,7 @@ def Map getSystemVariablesAndValues(rtData) {
 private static Map getSystemVariables() {
 	return [
         "\$args": [t: "dynamic", d: true],
+        "\$response": [t: "dynamic", d: true],
 		"\$currentEventAttribute": [t: "string", v: null],
 		"\$currentEventDate": [t: "datetime", v: null],
 		"\$currentEventDelay": [t: "integer", v: null],
@@ -6054,6 +6068,7 @@ private static Map getSystemVariables() {
 private getSystemVariableValue(rtData, name) {
 	switch (name) {
     	case '$args': return "${rtData.args}".toString()
+    	case '$response': return "${rtData.response}".toString()
 		case "\$name": return app.label
 		case "\$now": return (long) now()
 		case "\$utc": return (long) now()
