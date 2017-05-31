@@ -1551,7 +1551,7 @@ private initSunriseAndSunset() {
 
 private getSunTimes() {
 	def updated = state.sunTimes?.updated ?: 0
-    //we require an update every 4 hours
+    //we require an update every 8 hours
     if (!updated || (now() - updated < 28800000)) return state.sunTimes
     return initSunriseAndSunset()
 }
