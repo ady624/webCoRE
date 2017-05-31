@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.1.0b4.20170531" }
+public static String version() { return "v0.1.0b5.20170531" }
 /*
+ *	05/31/2017 >>> v0.0.0b5.20170531 - BETA M1 - Bug fixes
  *	05/31/2017 >>> v0.0.0b4.20170531 - BETA M1 - Implemented $response and the special $response.<dynamic> variables to read response data from HTTP requests
  *	05/30/2017 >>> v0.1.0b3.20170530 - BETA M1 - Various speed improvements - MAY BREAK THINGS
  *	05/30/2017 >>> v0.1.0b2.20170530 - BETA M1 - Various fixes, added IFTTT query string params support in $args
@@ -344,6 +345,7 @@ def activity(lastLogTimestamp) {
 
 
 def set(data, chunks) {
+log.trace data
 	if (!data) return false
 	state.modified = now()
     state.build = (int)(state.build ? (int)state.build + 1 : 1)
@@ -2773,7 +2775,7 @@ private evaluateOperand(rtData, node, operand, index = null, trigger = false, ne
 				case 'time':
 				case 'date':
 				case 'datetime':
-                	values = [[i: "${node?.$}:v", v:[t: operand.v, v: cast(rtData, now(), operand.v)]]];
+                	values = [[i: "${node?.$}:v", v:[t: operand.v, v: cast(rtData, now(), operand.v, 'long')]]];
                     break;
 				case 'routine':
                 	values = [[i: "${node?.$}:v", v:[t: 'string', v: (rtData.event.name == 'routineExecuted' ? hashId(rtData.event.value) : null)]]];
@@ -2845,7 +2847,8 @@ private evaluateOperand(rtData, node, operand, index = null, trigger = false, ne
 	        values = [[i: "${node?.$}:$index:0", v: getArgument(rtData, operand.u)]]
             break
     }
-    if (!node) {
+    if (!node) 
+    {
     	if (values.length) return values[0].v
         return [t: 'dynamic', v: null]
     }
@@ -5527,18 +5530,18 @@ private cast(rtData, value, dataType, srcDataType = null) {
     }
 	value = (value instanceof GString) ? "$value".toString() : value
     if (!srcDataType) {
-        switch (value) {
-            case {it instanceof List}: srcDataType = 'device'; break;
-            case {it instanceof Boolean}: srcDataType = 'boolean'; break;
-            case {it instanceof String}: srcDataType = 'string'; break;
-            case {it instanceof String}: srcDataType = 'string'; break;
-            case {it instanceof Integer}: srcDataType = 'integer'; break;
-            case {it instanceof BigInteger}: srcDataType = 'long'; break;
-            case {it instanceof Long}: srcDataType = 'long'; break;
-            case {it instanceof Double}: srcDataType = 'decimal'; break;
-            case {it instanceof Float}: srcDataType = 'decimal'; break;
-            case {it instanceof BigDecimal}: srcDataType = 'decimal'; break;
-            default: value = "$value".toString(); srcDataType = 'string'; break;
+    	if (value instanceof List) { srcDataType = 'device' } else
+		if (value instanceof Boolean) { srcDataType = 'boolean' } else
+		if (value instanceof String) { srcDataType = 'string' } else
+		if (value instanceof String) { srcDataType = 'string' } else
+		if (value instanceof Integer) { srcDataType = 'integer' } else
+		if (value instanceof BigInteger) { srcDataType = 'long' } else
+		if (value instanceof Long) { srcDataType = 'long' } else
+		if (value instanceof Double) { srcDataType = 'decimal' } else
+		if (value instanceof Float) { srcDataType = 'decimal' } else
+		if (value instanceof BigDecimal) { srcDataType = 'decimal' } else {
+            value = "$value".toString()
+            srcDataType = 'string'
         }
 	}
     //overrides
@@ -5912,6 +5915,7 @@ private static Map yearMonths() {
 }
 
 private initSunriseAndSunset(rtData) {
+	def t = now()
     def rightNow = localTime()
     if (!rtData.sunTimes) {
     	def sunTimes = app.getSunriseAndSunset()
@@ -5920,10 +5924,9 @@ private initSunriseAndSunset(rtData) {
     		sunset: sunTimes.sunset.time,
         	updated: now()
     	]
-    } else {
     }
-    rtData.sunrise = localToUtcTime(rightNow - rightNow.mod(86400000) + utcToLocalTime(rtData.sunTimes.sunrise).mod(86400000))
-    rtData.sunset = localToUtcTime(rightNow - rightNow.mod(86400000) + utcToLocalTime(rtData.sunTimes.sunset).mod(86400000))    
+	rtData.sunrise = localToUtcTime(rightNow - rightNow.mod(86400000) + utcToLocalTime(rtData.sunTimes.sunrise).mod(86400000))
+	rtData.sunset = localToUtcTime(rightNow - rightNow.mod(86400000) + utcToLocalTime(rtData.sunTimes.sunset).mod(86400000))    
 }
 
 private getSunriseTime(rtData) {

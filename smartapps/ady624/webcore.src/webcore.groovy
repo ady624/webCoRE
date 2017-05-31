@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.1.0b4.20170531" }
+public static String version() { return "v0.1.0b5.20170531" }
 /*
+ *	05/31/2017 >>> v0.0.0b5.20170531 - BETA M1 - Bug fixes
  *	05/31/2017 >>> v0.0.0b4.20170531 - BETA M1 - Implemented $response and the special $response.<dynamic> variables to read response data from HTTP requests
  *	05/30/2017 >>> v0.1.0b3.20170530 - BETA M1 - Various speed improvements - MAY BREAK THINGS
  *	05/30/2017 >>> v0.1.0b2.20170530 - BETA M1 - Various fixes, added IFTTT query string params support in $args
@@ -1551,7 +1552,7 @@ private initSunriseAndSunset() {
 private getSunTimes() {
 	def updated = state.sunTimes?.updated
     //we require an update every 4 hours
-    if (now() - updated < 14400000) return state.sunTimes
+    //if (now() - updated < 14400000) return state.sunTimes
     return initSunriseAndSunset()
 }
 
