@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.1.0b5.20170531" }
+public static String version() { return "v0.1.0b6.20170602" }
 /*
+ *	06/02/2017 >>> v0.0.0b6.20170602 - BETA M1 - More bug fixes
  *	05/31/2017 >>> v0.0.0b5.20170531 - BETA M1 - Bug fixes
  *	05/31/2017 >>> v0.0.0b4.20170531 - BETA M1 - Implemented $response and the special $response.<dynamic> variables to read response data from HTTP requests
  *	05/30/2017 >>> v0.1.0b3.20170530 - BETA M1 - Various speed improvements - MAY BREAK THINGS
@@ -346,7 +347,6 @@ def activity(lastLogTimestamp) {
 
 
 def set(data, chunks) {
-log.trace data
 	if (!data) return false
 	state.modified = now()
     state.build = (int)(state.build ? (int)state.build + 1 : 1)
@@ -672,7 +672,7 @@ def handleEvents(event) {
         //if we have any other pending -3 events (device schedules), we cancel them all
         //if (event.schedule.i > 0) schedules.removeAll{ (it.s == event.schedule.s) && ( it.i == -3 ) }
         if (rtData.piston.o?.pep) {
-        	atomicState.schedules = state.schedules
+        	atomicState.schedules = schedules
         } else {
         	state.schedules = schedules
         }
@@ -786,7 +786,7 @@ private Boolean executeEvent(rtData, event) {
 		return true
     } catch(all) {
     	error "An error occurred within executeEvent: ", rtData, null, all
-    }    
+    }
     processSchedules rtData
     return false
 }
@@ -1442,7 +1442,7 @@ private executePhysicalCommand(rtData, device, command, params = [], delay = nul
             params = (params instanceof List) ? params : (params != null ? [params] : [])
             def msg = timer ""
             def skip = false
-            if (!rtData.piston.o?.dco && !disableCommandOptimization && !(command in ['setColorTemperature', 'setColor'])) {
+            if (!rtData.piston.o?.dco && !disableCommandOptimization && !(command in ['setColorTemperature', 'setColor', 'setHue', 'setSaturation'])) {
                 def cmd = rtData.commands.physical[command]
                 if (cmd && cmd.a) {
                     if (cmd.v && !params.size()) {
