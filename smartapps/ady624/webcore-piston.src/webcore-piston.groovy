@@ -6073,7 +6073,8 @@ private static Map getSystemVariables() {
 		"\$iftttStatusCode": [t: "integer", v: null], 
 		"\$iftttStatusOk": [t: "boolean", v: null],
 		"\$locationMode": [t: "string", d: true],
-		"\$shmStatus": [t: "string", d: true]
+		"\$shmStatus": [t: "string", d: true],
+        "\$version": [t: "string", d: true]
 	].sort{it.key}
 }
 
@@ -6082,6 +6083,7 @@ private getSystemVariableValue(rtData, name) {
     	case '$args': return "${rtData.args}".toString()
     	case '$response': return "${rtData.response}".toString()
 		case "\$name": return app.label
+		case "\$version": return version()
 		case "\$now": return (long) now()
 		case "\$utc": return (long) now()
 		case "\$localNow": return (long) localTime()
