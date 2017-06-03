@@ -1325,6 +1325,7 @@ private Boolean executeAction(rtData, statement, async) {
 
 private Boolean executeTask(rtData, devices, statement, task, async) {
     //parse parameters
+    //log.trace "${rtData.fastForwardTo} >>> ${task.$}"
    	def virtualDevice = devices.size() ? null : location
     def t = now()
     if (rtData.fastForwardTo) {
@@ -2501,7 +2502,7 @@ private long vcmd_iftttMaker(rtData, device, params) {
     if (value2) body.value2 = value2
     if (value3) body.value3 = value3
     def requestParams = [
-        uri:  "https://maker.ifttt.com/trigger/${event}/with/key/" + key,
+        uri:  "https://maker.ifttt.com/trigger/${java.net.URLEncoder.encode(event, "UTF-8")}/with/key/" + key,
         requestContentType: "application/json",
         body: body
     ]
