@@ -37,7 +37,6 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 						$scope.initialized = true;
 						$scope.location = dataService.getLocation();
 						$scope.instance = dataService.getInstance();
-						$scope.settings = data.settings ? data.settings : {};
 						$scope.currentInstanceId = $scope.instance.id;
 						$scope.instanceCount = dataService.getInstanceCount();
     		            if (!$scope.devices) $scope.devices = $scope.listAvailableDevices();
@@ -96,6 +95,7 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 
 	$scope.showSettings = function() {
 		$scope.closeNavBar();
+		$scope.settings = $scope.instance.settings;
 		$scope.view = 'settings';
 	};
 
@@ -104,7 +104,8 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 	}
 
 	$scope.saveSettings = function() {
-		dataService.setSettings($scope.instance.settings).then(function(data) {
+		dataService.setSettings($scope.settings).then(function(data) {
+			$scope.instance.settings = $scope.settings;
 			$scope.hideSettings();
 		});
 	}

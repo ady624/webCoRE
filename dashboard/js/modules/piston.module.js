@@ -4732,6 +4732,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 							break;
 					case 'variable':
 							if (item.x.startsWith('$args.') && (item.x.length > 6)) break;
+							if (item.x.startsWith('$response.') && (item.x.length > 10)) break;
 							if ($scope.systemVars && $scope.systemVars[item.x]) break;
 							if ($scope.globalVars && $scope.globalVars[item.x]) break;
 							if (!$scope.getVariableByName(item.x)) {

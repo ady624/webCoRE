@@ -617,7 +617,9 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 			if ((app.initialInstanceUri && app.initialInstanceUri.length) || (uri && uri.length)) {
 				uri = app.initialInstanceUri ? app.initialInstanceUri : uri;
 				if (uri && !(uri instanceof Object) && (uri.length >= 69)) {
-					uri = uri.substr(0, 8) == 'https://' ? uri : 'https://' + uri.substr(0, uri.length - 64) + '.api.smartthings.com/api/token/' + uri.substr(-64, 8) + '-' + uri.substr(-56, 4) + '-' + uri.substr(-52, 4) + '-' + uri.substr(-48, 4) + '-' + uri.substr(-44, 12) +  '/smartapps/installations/' + uri.substr(-32, 8) + '-' + uri.substr(-24, 4) + '-' + uri.substr(-20, 4) + '-' + uri.substr(-16, 4) + '-' + uri.substr(-12) + '/';
+					var host = uri.substr(0, uri.length - 64);
+					if (!host.endsWith('.com')) host += '.api.smartthings.com';
+					uri = uri.substr(0, 8) == 'https://' ? uri : 'https://' + host + '/api/token/' + uri.substr(-64, 8) + '-' + uri.substr(-56, 4) + '-' + uri.substr(-52, 4) + '-' + uri.substr(-48, 4) + '-' + uri.substr(-44, 12) +  '/smartapps/installations/' + uri.substr(-32, 8) + '-' + uri.substr(-24, 4) + '-' + uri.substr(-20, 4) + '-' + uri.substr(-16, 4) + '-' + uri.substr(-12) + '/';
 				}
 				si = {uri: uri};
 				for(id in store) {
@@ -1460,4 +1462,4 @@ if (document.selection) {
      document.execCommand("Copy");
 }}
 
-version = function() { return 'v0.1.0b2.20170530'; };
+version = function() { return 'v0.1.0b7.20170603'; };
