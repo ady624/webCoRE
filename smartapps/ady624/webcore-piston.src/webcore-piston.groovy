@@ -5643,10 +5643,10 @@ private cast(rtData, value, dataType, srcDataType = null) {
 					break
 				case 'boolean': return (double) (value ? 1 : 0);
             }
+			def result = (double) 0
 			try {
 				result = (double) value
 			} catch(all) {
-				def result = (double) 0
 			}
 			return result ? result : (double) 0
 		case "boolean":
