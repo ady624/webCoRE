@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.1.0b6.20170602" }
+public static String version() { return "v0.1.0b7.20170603" }
 /*
+ *	06/03/2017 >>> v0.0.0b7.20170603 - BETA M1 - Even more bug fixes - fixed issues with cancel on piston state change, rescheduling timers when ST decides to run early
  *	06/02/2017 >>> v0.0.0b6.20170602 - BETA M1 - More bug fixes
  *	05/31/2017 >>> v0.0.0b5.20170531 - BETA M1 - Bug fixes
  *	05/31/2017 >>> v0.0.0b4.20170531 - BETA M1 - Implemented $response and the special $response.<dynamic> variables to read response data from HTTP requests
@@ -856,7 +857,6 @@ private processSchedules(rtData, scheduleJob = false) {
     //debug msg, rtData
     
     rtData.state.old = rtData.state.new
-	rtData.pistonStateChanged = false
     //schedules = (atomicState.schedules ?: [])
     //cancel statements
 	schedules.removeAll{ schedule -> !!rtData.cancelations.statements.find{ cancelation -> (cancelation.id == schedule.s) && (!cancelation.data || (cancelation.data == schedule.d)) }}
@@ -868,6 +868,7 @@ private processSchedules(rtData, scheduleJob = false) {
     if (rtData.pistonStateChanged) {
     	schedules.removeAll{ !!it.ps }
     }
+    //rtData.pistonStateChanged = false
     rtData.cancelations = []
     rtData.hasNewSchedules = rtData.hasNewSchedules || (rtData.schedules && rtData.schedules.size())
     schedules = (schedules + (rtData.schedules ?: []))//.sort{ it.t }
@@ -998,7 +999,7 @@ private Boolean executeStatement(rtData, statement, async = false) {
                     if (ownEvent || !state.schedules.find{ it.s == statement.$ }) {
                     	//if the time has come for our timer, schedule the next timer
                         //if no next time is found quick enough, a new schedule with i = -2 will be setup so that a new attempt can be made at a later time
-                    	rtData.fastForwardTo = null
+                    	if (ownEvent) rtData.fastForwardTo = null
                         scheduleTimer(rtData, statement, ownEvent ? rtData.event.schedule.t : 0)
                     }
 	                rtData.stack.c = statement.$
@@ -1307,11 +1308,15 @@ private Boolean executeAction(rtData, statement, async) {
     for (task in statement.k) {
 	    if (task.$ == rtData.fastForwardTo) {
         	//resuming a waiting task, we need to bring back the devices
-            setSystemVariableValue(rtData, '$index', rtData.event.schedule.stack.index)       	
-            setSystemVariableValue(rtData, '$device', rtData.event.schedule.stack.device)
-            setSystemVariableValue(rtData, '$devices', rtData.event.schedule.stack.devices)
-            deviceIds = rtData.event.schedule.stack.devices
-            devices = deviceIds.collect{ getDevice(rtData, it) }
+            if (rtData.event && rtData.event.schedule && rtData.event.schedule.stack) {
+	            setSystemVariableValue(rtData, '$index', rtData.event.schedule.stack.index)       	
+    	        setSystemVariableValue(rtData, '$device', rtData.event.schedule.stack.device)
+                if (rtData.event.schedule.stack.devices instanceof List) {
+	        	    setSystemVariableValue(rtData, '$devices', rtData.event.schedule.stack.devices)
+    	            deviceIds = rtData.event.schedule.stack.devices
+        	        devices = deviceIds.collect{ getDevice(rtData, it) }
+                }
+            }
 		}
 		rtData.systemVars['$devices'].v = deviceIds
         result = executeTask(rtData, devices, statement, task, async)
@@ -1325,7 +1330,6 @@ private Boolean executeAction(rtData, statement, async) {
 
 private Boolean executeTask(rtData, devices, statement, task, async) {
     //parse parameters
-    //log.trace "${rtData.fastForwardTo} >>> ${task.$}"
    	def virtualDevice = devices.size() ? null : location
     def t = now()
     if (rtData.fastForwardTo) {
@@ -1496,6 +1500,7 @@ private scheduleTimer(rtData, timer, long lastRun = 0) {
 	//if already scheduled once during this run, don't do it again
     if (rtData.schedules.find{ it.s == timer.$ }) return
 	//complicated stuff follows...
+    debug " schedulling timer with lastRun = $lastRun"
     def t = now()
     def interval = "${evaluateOperand(rtData, null, timer.lo).v}"
     if (!interval.isInteger()) return
@@ -1548,6 +1553,11 @@ private scheduleTimer(rtData, timer, long lastRun = 0) {
     long rightNow = utcToLocalTime(now())
     lastRun = lastRun ? utcToLocalTime(lastRun) : rightNow
     long nextSchedule = lastRun
+    
+    if (lastRun >= rightNow) {
+    	//sometimes ST runs timers early, so we need to make sure we're at least in the near future
+    	rightNow = lastRun + 1
+    }
     
     if (intervalUnit == 'h') {
     	long min = cast(rtData, timer.lo.om, 'long')
@@ -5633,10 +5643,10 @@ private cast(rtData, value, dataType, srcDataType = null) {
 					break
 				case 'boolean': return (double) (value ? 1 : 0);
             }
-			def result = (double) 0
 			try {
 				result = (double) value
 			} catch(all) {
+				def result = (double) 0
 			}
 			return result ? result : (double) 0
 		case "boolean":

@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.1.0b6.20170602" }
+public static String version() { return "v0.1.0b7.20170603" }
 /*
+ *	06/03/2017 >>> v0.0.0b7.20170603 - BETA M1 - Even more bug fixes - fixed issues with cancel on piston state change, rescheduling timers when ST decides to run early
  *	06/02/2017 >>> v0.0.0b6.20170602 - BETA M1 - More bug fixes
  *	05/31/2017 >>> v0.0.0b5.20170531 - BETA M1 - Bug fixes
  *	05/31/2017 >>> v0.0.0b4.20170531 - BETA M1 - Implemented $response and the special $response.<dynamic> variables to read response data from HTTP requests
