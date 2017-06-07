@@ -3812,6 +3812,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 								case 'i': className += 's-i '; break;
 								case 's': className += 's-s '; break;
 								case 'pre': className += 's-pre '; break;
+								case 'flash': className += 's-flash '; break;
 								default: color = cls[x].replace(/[^#0-9a-z]/gi, '');
 							}
 						}

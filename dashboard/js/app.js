@@ -430,7 +430,7 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 		writeObject('instance', instance.id, _dk);
 		if ((instance.coreVersion) && (version() != instance.coreVersion)) {
 			if (version() > instance.coreVersion) {
-				status('A newer SmartApp version (' + version() + ') is available, please update and publish the all the webCoRE SmartApps in the SmartThings IDE.');
+				status('A newer SmartApp version (' + version() + ') is available, please update and publish all the webCoRE SmartApps in the SmartThings IDE.');
 			} else {
 				status('A newer UI version (' + instance.coreVersion + ') is available, please hard reload this web page to get the newest version.');
 			}
@@ -1462,4 +1462,4 @@ if (document.selection) {
      document.execCommand("Copy");
 }}
 
-version = function() { return 'v0.1.0b7.20170603'; };
+version = function() { return 'v0.2.0b8.20170607'; };

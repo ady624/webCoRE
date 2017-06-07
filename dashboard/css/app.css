@@ -768,7 +768,14 @@ span.s-b { font-weight: bold; }
 span.s-i { font-style: italic; }
 span.s-u { text-decoration: underline; }
 span.s-s { text-decoration: line-through; }
-span.s-s { white-space: pre-wrap; }
+span.s-pre { white-space: pre-wrap; }
+span.s-flash { animation: s-flash 1s steps(2) infinite; }
+
+@-webkit-keyframes s-flash { to { opacity: 0; } } }
+@-moz-keyframes s-flash { to { opacity: 0; } } }
+@-ms-keyframes s-flash { to { opacity: 0; } } }
+@-o-keyframes s-flash { to { opacity: 0; } } }
+@keyframes s-flash { to { opacity: 0; } } }
 
 
 @media only screen and (max-width: 767px) {
