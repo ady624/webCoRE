@@ -18,12 +18,13 @@
  *
  *  Version history
 */
-public static String version() { return "v0.1.0b7.20170603" }
+public static String version() { return "v0.2.0b8.20170607" }
 /*
- *	06/03/2017 >>> v0.0.0b7.20170603 - BETA M1 - Even more bug fixes - fixed issues with cancel on piston state change, rescheduling timers when ST decides to run early
- *	06/02/2017 >>> v0.0.0b6.20170602 - BETA M1 - More bug fixes
- *	05/31/2017 >>> v0.0.0b5.20170531 - BETA M1 - Bug fixes
- *	05/31/2017 >>> v0.0.0b4.20170531 - BETA M1 - Implemented $response and the special $response.<dynamic> variables to read response data from HTTP requests
+ *	06/07/2017 >>> v0.2.0b8.20170607 - BETA M2 - Movin' on up
+ *	06/03/2017 >>> v0.1.0b7.20170603 - BETA M1 - Even more bug fixes - fixed issues with cancel on piston state change, rescheduling timers when ST decides to run early
+ *	06/02/2017 >>> v0.1.0b6.20170602 - BETA M1 - More bug fixes
+ *	05/31/2017 >>> v0.1.0b5.20170531 - BETA M1 - Bug fixes
+ *	05/31/2017 >>> v0.1.0b4.20170531 - BETA M1 - Implemented $response and the special $response.<dynamic> variables to read response data from HTTP requests
  *	05/30/2017 >>> v0.1.0b3.20170530 - BETA M1 - Various speed improvements - MAY BREAK THINGS
  *	05/30/2017 >>> v0.1.0b2.20170530 - BETA M1 - Various fixes, added IFTTT query string params support in $args
  *	05/24/2017 >>> v0.1.0b1.20170524 - BETA M1 - Fixes regarding trigger initialization and a situation where time triggers may cancel tasks that should not be cancelled
@@ -647,7 +648,7 @@ def pageIntegrationTwilioTest() {
     def success = false
 	httpPost(requestParams) { response ->
     	if (response.status == 200) {
-			def jsonData = response.data instanceof Map ? response.data : new groovy.json.JsonSlurper().parseText(response.data)
+			def jsonData = response.data instanceof Map ? response.data : (LinkedHashMap) new groovy.json.JsonSlurper().parseText(response.data)
             if (jsonData && (jsonData.result == 'OK')) {
             	success = true
             }
@@ -949,7 +950,7 @@ private api_intf_dashboard_piston_set_save(id, data, chunks) {
 	    	log.trace s.substring(a * cs, x)
     	}
     */
-		def p = new groovy.json.JsonSlurper().parseText(decodeEmoji(new String(data.decodeBase64(), "UTF-8")))
+		def p = (LinkedHashMap) new groovy.json.JsonSlurper().parseText(decodeEmoji(new String(data.decodeBase64(), "UTF-8")))
 		return piston.set(p, chunks);
     }
     return false;
@@ -1162,7 +1163,7 @@ private api_intf_variable_set() {
     debug "Dashboard: Request received to set a variable"
 	if (verifySecurityToken(params.token)) {
     	def name = params.name;
-        def value = params.value ? new groovy.json.JsonSlurper().parseText(new String(params.value.decodeBase64(), "UTF-8")) : null        
+        def value = params.value ? (LinkedHashMap) new groovy.json.JsonSlurper().parseText(new String(params.value.decodeBase64(), "UTF-8")) : null        
         Map globalVars = atomicState.vars ?: [:]
         if (name && !value) {
         	//deleting a variable
@@ -1190,7 +1191,7 @@ private api_intf_settings_set() {
 	def result
     debug "Dashboard: Request received to set settings"
 	if (verifySecurityToken(params.token)) {
-        def settings = params.settings ? new groovy.json.JsonSlurper().parseText(new String(params.settings.decodeBase64(), "UTF-8")) : null        
+        def settings = params.settings ? (LinkedHashMap) new groovy.json.JsonSlurper().parseText(new String(params.settings.decodeBase64(), "UTF-8")) : null        
         atomicState.settings = settings
         testLifx()
 		result = [status: "ST_SUCCESS"]
@@ -1206,7 +1207,7 @@ private api_intf_dashboard_piston_evaluate() {
 	if (verifySecurityToken(params.token)) {
 	    def piston = getChildApps().find{ hashId(it.id) == params.id };
 	    if (piston) {
-			def expression = new groovy.json.JsonSlurper().parseText(new String(params.expression.decodeBase64(), "UTF-8"))
+			def expression = (LinkedHashMap) new groovy.json.JsonSlurper().parseText(new String(params.expression.decodeBase64(), "UTF-8"))
             def msg = timer "Evaluating expression"
 			result = [status: "ST_SUCCESS", value: piston.proxyEvaluateExpression(getRunTimeData(), expression, params.dataType)]
             trace msg
@@ -1727,7 +1728,6 @@ def webCoREHandler(event) {
 }
 
 def instanceRegistrationHandler(response, callbackData) {
-	//log.trace "$response.data"
 }
 
 def askAlexaHandler(evt) {
@@ -1782,7 +1782,7 @@ def NewIncidentHandler(evt) {
 
 def lifxHandler(response, cbkData) {
 	if (response.status == 200) {
-    	def data = response.data instanceof List ? response.data : new groovy.json.JsonSlurper().parseText(response.data)
+    	def data = response.data instanceof List ? response.data : (LinkedHashMap) new groovy.json.JsonSlurper().parseText(response.data)
 		if (data instanceof List) {
 	        state.settings.lifx_scenes = data.collectEntries{[(it.uuid): it.name]}
 	    }
@@ -2015,7 +2015,7 @@ private static Map attributes() {
 		contact						: [ n: "contact",				t: "enum",		o: ["closed", "open"],																				],
 		coolingSetpoint				: [ n: "cooling setpoint",		t: "decimal",	r: [-127, 127],		u: '°?',															],
 		currentActivity				: [ n: "current activity",		t: "string",																										],
-		door						: [ n: "door",					t: "enum",		o: ["closed", "closing", "open", "opening", "unknown"],					i: true,					],
+		door						: [ n: "door",					t: "enum",		o: ["closed", "closing", "open", "opening", "unknown"],					p: true,					],
 		energy						: [ n: "energy",				t: "decimal",	r: [0, null],		u: "kWh",																		],
 		eta							: [ n: "ETA",					t: "datetime",																										],
 		goal						: [ n: "goal",					t: "integer",	r: [0, null],																						],
@@ -2029,7 +2029,7 @@ private static Map attributes() {
 		indicatorStatus				: [ n: "indicator status",		t: "enum",		o: ["never", "when off", "when on"],																],
 		infraredLevel				: [ n: "infrared level",		t: "integer",	r: [0, 100],		u: "%",																			],
 		level						: [ n: "level",					t: "integer",	r: [0, 100],		u: "%",																			],
-		lock						: [ n: "lock",					t: "enum",		o: ["locked", "unknown", "unlocked", "unlocked with timeout"],	c: "lock",			 i: true,		],
+		lock						: [ n: "lock",					t: "enum",		o: ["locked", "unknown", "unlocked", "unlocked with timeout"],	c: "lock",			 p: true,		],
 		lqi							: [ n: "link quality",			t: "integer",	r: [0, 255],																						],
 		motion						: [ n: "motion",				t: "enum",		o: ["active", "inactive"],																			],
 		mute						: [ n: "mute",					t: "enum",		o: ["muted", "unmuted"],																			],
@@ -2050,7 +2050,7 @@ private static Map attributes() {
 		soundPressureLevel			: [ n: "sound pressure level",	t: "integer",	r: [0, null],		u: "dB",																		],
 		status						: [ n: "status",				t: "string",																										],
 		steps						: [ n: "steps",					t: "integer",	r: [0, null],																						],
-		switch						: [ n: "switch",				t: "enum",		o: ["off", "on"],														i: true,					],
+		switch						: [ n: "switch",				t: "enum",		o: ["off", "on"],														p: true,					],
 		tamper						: [ n: "tamper",				t: "enum",		o: ["clear", "detected"],																			],
 		temperature					: [ n: "temperature",			t: "decimal",	r: [-460, 10000],	u: '°?',															],
 		thermostatFanMode			: [ n: "fan mode",				t: "enum",		o: ["auto", "circulate", "on"],																		],

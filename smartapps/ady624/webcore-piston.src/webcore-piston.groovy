@@ -18,12 +18,13 @@
  *
  *  Version history
 */
-public static String version() { return "v0.1.0b7.20170603" }
+public static String version() { return "v0.2.0b8.20170607" }
 /*
- *	06/03/2017 >>> v0.0.0b7.20170603 - BETA M1 - Even more bug fixes - fixed issues with cancel on piston state change, rescheduling timers when ST decides to run early
- *	06/02/2017 >>> v0.0.0b6.20170602 - BETA M1 - More bug fixes
- *	05/31/2017 >>> v0.0.0b5.20170531 - BETA M1 - Bug fixes
- *	05/31/2017 >>> v0.0.0b4.20170531 - BETA M1 - Implemented $response and the special $response.<dynamic> variables to read response data from HTTP requests
+ *	06/07/2017 >>> v0.2.0b8.20170607 - BETA M2 - Movin' on up
+ *	06/03/2017 >>> v0.1.0b7.20170603 - BETA M1 - Even more bug fixes - fixed issues with cancel on piston state change, rescheduling timers when ST decides to run early
+ *	06/02/2017 >>> v0.1.0b6.20170602 - BETA M1 - More bug fixes
+ *	05/31/2017 >>> v0.1.0b5.20170531 - BETA M1 - Bug fixes
+ *	05/31/2017 >>> v0.1.0b4.20170531 - BETA M1 - Implemented $response and the special $response.<dynamic> variables to read response data from HTTP requests
  *	05/30/2017 >>> v0.1.0b3.20170530 - BETA M1 - Various speed improvements - MAY BREAK THINGS
  *	05/30/2017 >>> v0.1.0b2.20170530 - BETA M1 - Various fixes, added IFTTT query string params support in $args
  *	05/24/2017 >>> v0.1.0b1.20170524 - BETA M1 - Fixes regarding trigger initialization and a situation where time triggers may cancel tasks that should not be cancelled
@@ -362,7 +363,6 @@ def set(data, chunks) {
     ]
     if (data.n) app.updateLabel(data.n)
     setIds(piston)
-    def pc = groovy.json.JsonOutput.toJson(piston)
     for(chunk in settings.findAll{ it.key.startsWith('chunk:') && !chunks[it.key] }) {
     	app.updateSetting(chunk.key, [type: 'text', value: ''])
     }
@@ -377,7 +377,7 @@ def set(data, chunks) {
     state.vars = state.vars ?: [:];
     state.modifiedVersion = version()
     //todo replace this
-    Map rtData
+    Map rtData = [:]
     if ((state.build == 1) || (!!state.active)) {
     	rtData = resume()
     }
@@ -462,7 +462,7 @@ def config(data) {
     }
 }
 
-def pause() {
+Map pause() {
 	state.active = false
     def rtData = getRunTimeData()
 	def msg = timer "Piston successfully stopped", null, -1
@@ -485,7 +485,7 @@ def pause() {
     return rtData
 }
 
-def resume() {
+Map resume() {
 	state.active = true;
 	def tempRtData = getTemporaryRunTimeData()
     def msg = timer "Piston successfully started", null,  -1
@@ -2080,7 +2080,7 @@ private long vcmd_sendEmail(rtData, device, params) {
     def success = false
 	httpPost(requestParams) { response ->
     	if (response.status == 200) {
-			def jsonData = response.data instanceof Map ? response.data : new groovy.json.JsonSlurper().parseText(response.data)
+			def jsonData = response.data instanceof Map ? response.data : (LinkedHashMap) new groovy.json.JsonSlurper().parseText(response.data)
             if (jsonData && (jsonData.result == 'OK')) {
             	success = true
             }
@@ -2645,7 +2645,7 @@ private long vcmd_httpRequest(rtData, device, params) {
 					setSystemVariableValue(rtData, "\$httpStatusOk", response.status == 200)
 					if ((response.status == 200) && response.data) {
 						try {
-							rtData.response = response.data instanceof Map ? response.data : new groovy.json.JsonSlurper().parseText(response.data)
+							rtData.response = response.data instanceof Map ? response.data : (LinkedHashMap) new groovy.json.JsonSlurper().parseText(response.data)
 						} catch (all) {
                         	rtData.response = response.data
 						}
@@ -3122,18 +3122,26 @@ private List listPreviousStates(device, attribute, threshold, excludeLast) {
 	def events = device.events([all: true, max: 100]).findAll{it.name == attribute}
 	//if we got any events, let's go through them
 	//if we need to exclude last event, we start at the second event, as the first one is the event that triggered this function. The attribute's value has to be different from the current one to qualify for quiet
-	def thresholdTime = now() - threshold
-	def endTime = now()
-	for(def i = 0; i < events.size(); i++) {
-		def startTime = events[i].date.getTime()
-		def duration = endTime - startTime
-		if ((duration >= 1000) && ((i > 0) || !excludeLast)) {
-			result.push([value: events[i].value, startTime: startTime, duration: duration])
+    if (events.size()) {
+		def thresholdTime = now() - threshold
+		def endTime = now()
+		for(def i = 0; i < events.size(); i++) {
+			def startTime = events[i].date.getTime()
+			def duration = endTime - startTime
+			if ((duration >= 1000) && ((i > 0) || !excludeLast)) {
+				result.push([value: events[i].value, startTime: startTime, duration: duration])
+			}
+			if (startTime < thresholdTime)
+				break
+			endTime = startTime
 		}
-		if (startTime < thresholdTime)
-			break
-		endTime = startTime
-	}
+	} else {
+    	def currentState = devuce.currentState(attribute)
+        if (currentState) {
+	        def startTime = currentState.getDate().getTime()
+    	    result.push([value: currentState.value, startTime: startTime, duration: now() - startTime])
+        }
+    }
 	return result
 }
 
@@ -3701,7 +3709,7 @@ private void subscribeAll(rtData) {
 	                devices[subscription.value.d].c = devices[subscription.value.d].c - 1
                 }
             }
-        }
+        }       
         //save devices
         List deviceIdList = rawDevices.collect{ it && it.value ? it.value.id : null }
         deviceIdList.removeAll{ it == null }
@@ -3715,8 +3723,6 @@ private void subscribeAll(rtData) {
             def device = d.key.startsWith(':') ? getDevice(rtData, d.key) : null
             if (device && (device != location)) {
                 if (rtData.logging > 1) trace "Subscribing to $device...", rtData
-                //subscribe(device, "", fakeHandler)
-                
                 ss.controls = ss.controls + 1
                 if (!dds[device.id]) {
                     ss.devices = ss.devices + 1
@@ -3729,7 +3735,7 @@ private void subscribeAll(rtData) {
 
 
         def event = [date: new Date(), device: location, name: 'time', value: now(), schedule: [t: 0, s: 0, i: -9]]
-        subscribe(app, appHandler)
+        //subscribe(app, appHandler)
         subscribe(location, hashId(app.id), executeHandler)
         executeEvent(rtData, event)
 		processSchedules rtData, true
@@ -5071,7 +5077,8 @@ private func_previousage(rtData, params) {
     def param = evaluateExpression(rtData, params[0], 'device')
     if ((param.t == 'device') && (param.a) && param.v.size()) {
 		def device = getDevice(rtData, param.v[0])
-        if (device) {
+        log.trace "${device.id} >>> ${location.id}"
+        if (device && (device.id != location.id)) {
         	def states = device.statesSince(param.a, new Date(now() - 604500000), [max: 5])
             if (states.size() > 1) {
             	def newValue = states[0].getValue()
@@ -5103,7 +5110,7 @@ private func_previousvalue(rtData, params) {
     	def attribute = rtData.attributes[param.a]
         if (attribute) {
 			def device = getDevice(rtData, param.v[0])
-	        if (device) {
+	        if (device && (device.id != location.id)) {
                 def states = device.statesSince(param.a, new Date(now() - 604500000), [max: 5])
                 if (states.size() > 1) {
                     def newValue = states[0].getValue()
