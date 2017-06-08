@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.2.0b8.20170607" }
+public static String version() { return "v0.2.0b9.20170608" }
 /*
+ *	06/08/2017 >>> v0.2.0b9.20170608 - BETA M2 - Added location mode, SHM mode and hub info to the dashboard
  *	06/07/2017 >>> v0.2.0b8.20170607 - BETA M2 - Movin' on up
  *	06/03/2017 >>> v0.1.0b7.20170603 - BETA M1 - Even more bug fixes - fixed issues with cancel on piston state change, rescheduling timers when ST decides to run early
  *	06/02/2017 >>> v0.1.0b6.20170602 - BETA M1 - More bug fixes
@@ -736,9 +737,8 @@ private subscribeAll() {
 	subscribe(location, "echoSistant", echoSistantHandler)    
     subscribe(location, "HubUpdated", hubUpdatedHandler, [filterEvents: false])
     subscribe(location, "summary", summaryHandler, [filterEvents: false])
-    //state.powerSupply = 
     def hub = getHub()
-    //setPowerSource(state.powerSource == 'mains' ? 'battery' : 'mains')
+    setPowerSource(hub.isBatteryInUse() ? 'battery' : 'mains')
 }
 
 /******************************************************************************/
@@ -805,10 +805,11 @@ private api_get_base_result(deviceVersion = 0, updateCache = false) {
         ] + (sendDevices ? [contacts: listAvailableContacts(false, updateCache), devices: listAvailableDevices(false, updateCache)] : [:]),
         location: [
             contactBookEnabled: location.getContactBookEnabled(),
-            hubs: location.getHubs().collect{ [id: hashId(it.id, updateCache), name: it.name, firmware: it.getFirmwareVersionString(), physical: it.getType().toString().contains('PHYSICAL') ]},
+            hubs: location.getHubs().collect{ [id: hashId(it.id, updateCache), name: it.name, firmware: it.getFirmwareVersionString(), physical: it.getType().toString().contains('PHYSICAL'), powerSource: it.isBatteryInUse() ? 'battery' : 'mains' ]},
             id: hashId(location.id, updateCache),
             mode: hashId(location.getCurrentMode().id, updateCache),
             modes: location.getModes().collect{ [id: hashId(it.id, updateCache), name: it.name ]},
+            shm: location.currentState("alarmSystemStatus")?.value,
             name: location.name,
             temperatureScale: location.getTemperatureScale(),
             timeZone: tz ? [
@@ -1225,7 +1226,7 @@ private api_intf_dashboard_piston_activity() {
 	if (verifySecurityToken(params.token)) {
 	    def piston = getChildApps().find{ hashId(it.id) == params.id };
 	    if (piston) {               
-			result = [status: "ST_SUCCESS", activity: (piston.activity(params.log) ?: [:]) + [globalVars: listAvailableVariables()]]
+			result = [status: "ST_SUCCESS", activity: (piston.activity(params.log) ?: [:]) + [globalVars: listAvailableVariables(), mode: hashId(location.getCurrentMode().id), shm: location.currentState("alarmSystemStatus")?.value, hubs: location.getHubs().collect{ [id: hashId(it.id, updateCache), name: it.name, firmware: it.getFirmwareVersionString(), physical: it.getType().toString().contains('PHYSICAL'), powerSource: it.isBatteryInUse() ? 'battery' : 'mains' ]}]]
         } else {
 	    	result = api_get_error_result("ERR_INVALID_ID")
         }
