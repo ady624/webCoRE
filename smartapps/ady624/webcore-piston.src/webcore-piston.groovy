@@ -516,6 +516,7 @@ def setLoggingLevel(level) {
 }
 
 def test() {
+log.trace location.activeIncidents
 	handleEvents([date: new Date(), device: location, name: 'test', value: now()])
     return [:]
 }
