@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.2.0b9.20170608" }
+public static String version() { return "v0.2.0ba.20170609" }
 /*
+ *	06/09/2017 >>> v0.2.0ba.20170609 - BETA M2 - More bug fixes
  *	06/08/2017 >>> v0.2.0b9.20170608 - BETA M2 - Added location mode, SHM mode and hub info to the dashboard
  *	06/07/2017 >>> v0.2.0b8.20170607 - BETA M2 - Movin' on up
  *	06/03/2017 >>> v0.1.0b7.20170603 - BETA M1 - Even more bug fixes - fixed issues with cancel on piston state change, rescheduling timers when ST decides to run early
@@ -787,6 +788,7 @@ private api_get_base_result(deviceVersion = 0, updateCache = false) {
     def currentDeviceVersion = state.deviceVersion
 	def Boolean sendDevices = (deviceVersion != currentDeviceVersion)
     def name = handle() + ' Piston'
+    def incidentThreshold = now() - 604800000
 	return [
         name: location.name + ' \\ ' + (app.label ?: app.name),
         instance: [
@@ -806,7 +808,7 @@ private api_get_base_result(deviceVersion = 0, updateCache = false) {
         location: [
             contactBookEnabled: location.getContactBookEnabled(),
             hubs: location.getHubs().collect{ [id: hashId(it.id, updateCache), name: it.name, firmware: it.getFirmwareVersionString(), physical: it.getType().toString().contains('PHYSICAL'), powerSource: it.isBatteryInUse() ? 'battery' : 'mains' ]},
-            incidents: location.activeIncidents.collect{[date: it.date.time, title: it.getTitle(), message: it.getMessage(), args: it.getMessageArgs(), sourceType: it.getSourceType()]},
+            incidents: location.activeIncidents.collect{[date: it.date.time, title: it.getTitle(), message: it.getMessage(), args: it.getMessageArgs(), sourceType: it.getSourceType()]}.findAll{ it.date >= incidentThreshold },
             id: hashId(location.id, updateCache),
             mode: hashId(location.getCurrentMode().id, updateCache),
             modes: location.getModes().collect{ [id: hashId(it.id, updateCache), name: it.name ]},

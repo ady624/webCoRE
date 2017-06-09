@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.2.0b9.20170608" }
+public static String version() { return "v0.2.0ba.20170609" }
 /*
+ *	06/09/2017 >>> v0.2.0ba.20170609 - BETA M2 - More bug fixes
  *	06/08/2017 >>> v0.2.0b9.20170608 - BETA M2 - Added location mode, SHM mode and hub info to the dashboard
  *	06/07/2017 >>> v0.2.0b8.20170607 - BETA M2 - Movin' on up
  *	06/03/2017 >>> v0.1.0b7.20170603 - BETA M1 - Even more bug fixes - fixed issues with cancel on piston state change, rescheduling timers when ST decides to run early
@@ -516,7 +517,6 @@ def setLoggingLevel(level) {
 }
 
 def test() {
-log.trace location.activeIncidents
 	handleEvents([date: new Date(), device: location, name: 'test', value: now()])
     return [:]
 }
@@ -2586,6 +2586,10 @@ private long vcmd_httpRequest(rtData, device, params) {
 		protocol = uriParts[0].toLowerCase()
 		uri = uriParts[1]
 	}
+    //support for user:pass@IP
+    if (uri.contains('@')) {
+    	uri = uri.split('@').toList()[1]
+    }
 	def internal = uri.startsWith("10.") || uri.startsWith("192.168.")
 	if ((!internal) && uri.startsWith("172.")) {
 		//check for the 172.16.x.x/12 class
@@ -5079,7 +5083,6 @@ private func_previousage(rtData, params) {
     def param = evaluateExpression(rtData, params[0], 'device')
     if ((param.t == 'device') && (param.a) && param.v.size()) {
 		def device = getDevice(rtData, param.v[0])
-        log.trace "${device.id} >>> ${location.id}"
         if (device && (device.id != location.id)) {
         	def states = device.statesSince(param.a, new Date(now() - 604500000), [max: 5])
             if (states.size() > 1) {
