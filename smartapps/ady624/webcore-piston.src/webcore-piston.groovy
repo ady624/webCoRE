@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.2.0ba.20170609" }
+public static String version() { return "v0.2.0bb.20170609" }
 /*
+ *	06/09/2017 >>> v0.2.0bb.20170609 - BETA M2 - Added support for the webCoRE Connector - an easy way for developers to integrate with webCoRE
  *	06/09/2017 >>> v0.2.0ba.20170609 - BETA M2 - More bug fixes
  *	06/08/2017 >>> v0.2.0b9.20170608 - BETA M2 - Added location mode, SHM mode and hub info to the dashboard
  *	06/07/2017 >>> v0.2.0b8.20170607 - BETA M2 - Movin' on up
@@ -706,6 +707,13 @@ def handleEvents(event) {
     if (rtData.logging > 1) trace msg2, rtData
     if (!success) msg.m = "Event processing failed"
     finalizeEvent(rtData, msg, success)
+    def desc = 'webCore piston \'' + app.label + '\' was executed'
+    sendLocationEvent(name: 'webCoRE', value: 'pistonExecuted', isStateChange: true, displayed: false, linkText: desc, descriptionText: desc, data: [
+    	id: hashId(app.id),
+        name: app.label,
+        event: [date: rtData.currentEvent.date, delay: rtData.currentEvent.delay, duration: now() - rtData.currentEvent.date, device: "$rtData.event.device", name: rtData.currentEvent.name, value: rtData.currentEvent.value, physical: rtData.currentEvent.physical, index: rtData.currentEvent.index],
+        state: [old: rtData.state.old, new: rtData.state.new]
+	])
 }
 
 private Boolean executeEvent(rtData, event) {

@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.2.0ba.20170609" }
+public static String version() { return "v0.2.0bb.20170609" }
 /*
+ *	06/09/2017 >>> v0.2.0bb.20170609 - BETA M2 - Added support for the webCoRE Connector - an easy way for developers to integrate with webCoRE
  *	06/09/2017 >>> v0.2.0ba.20170609 - BETA M2 - More bug fixes
  *	06/08/2017 >>> v0.2.0b9.20170608 - BETA M2 - Added location mode, SHM mode and hub info to the dashboard
  *	06/07/2017 >>> v0.2.0b8.20170607 - BETA M2 - Movin' on up
@@ -733,7 +734,7 @@ private getHub() {
 }
 
 private subscribeAll() {
-	subscribe(location, handle(), webCoREHandler)
+	subscribe(location, "${handle()}.poll", webCoREHandler)
 	subscribe(location, "askAlexa", askAlexaHandler)
 	subscribe(location, "echoSistant", echoSistantHandler)    
     subscribe(location, "HubUpdated", hubUpdatedHandler, [filterEvents: false])
@@ -955,7 +956,9 @@ private api_intf_dashboard_piston_set_save(id, data, chunks) {
     	}
     */
 		def p = (LinkedHashMap) new groovy.json.JsonSlurper().parseText(decodeEmoji(new String(data.decodeBase64(), "UTF-8")))
-		return piston.set(p, chunks);
+        def result = piston.set(p, chunks);
+        broadcastPistonList()
+        return result
     }
     return false;
 }
@@ -1153,6 +1156,7 @@ private api_intf_dashboard_piston_delete() {
 			result = [status: "ST_SUCCESS"]
             state.remove(params.id)
             state.remove('sph${params.id}')
+			broadcastPistonList()            
         } else {
 	    	result = api_get_error_result("ERR_INVALID_ID")
         }
@@ -1700,6 +1704,10 @@ private sendVariableEvent(variable) {
 	sendLocationEvent( [name: handle(), value: variable.name, isStateChange: true, displayed: false, linkText: "${handle()} global variable ${variable.name} changed", descriptionText: "${handle()} global variable ${variable.name} changed", data: [id: hashId(app.id), name: app.label, event: 'variable', variable: variable]])
 }
 
+private broadcastPistonList() {
+    sendLocationEvent([name: handle(), value: 'pistonList', isStateChange: true, displayed: false, data: [id: hashId(app.id), name: app.label, pistons: getChildApps().findAll{ it.name == "${handle()} Piston" }.collect{[id: hashId(it.id), name: it.label]}]])
+}
+
 def webCoREHandler(event) {
     if (!event || (event.name != handle())) return;
     def data = event.jsonData ?: null
@@ -1714,7 +1722,12 @@ def webCoREHandler(event) {
         return;
     }    
     switch (event.value) {
-    	case 'ping':
+    	case 'poll':
+        	int delay = (int) Math.round(2000 * Math.random())
+        	pause(delay)
+            broadcastPistonList()
+       		break;
+/*    	case 'ping':
         	if (data && data.id && data.name && (data.id != hashId(app.id))) {
         		sendLocationEvent( [name: handle(), value: 'pong', isStateChange: true, displayed: false, linkText: "${handle()} ping reply", descriptionText: "${handle()} has received a ping reply and is replying with a pong", data: [id: hashId(app.id), name: app.label]] )
             } else {
@@ -1727,7 +1740,6 @@ def webCoREHandler(event) {
             	pong[data.id] = data.name
                 atomicState.pong = pong
 			}*/
-        	break;
     }
 }
 
