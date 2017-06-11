@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.2.0bb.20170609" }
+public static String version() { return "v0.2.0bc.20170611" }
 /*
+ *	06/11/2017 >>> v0.2.0bc.20170611 - BETA M2 - More bug fixes
  *	06/09/2017 >>> v0.2.0bb.20170609 - BETA M2 - Added support for the webCoRE Connector - an easy way for developers to integrate with webCoRE
  *	06/09/2017 >>> v0.2.0ba.20170609 - BETA M2 - More bug fixes
  *	06/08/2017 >>> v0.2.0b9.20170608 - BETA M2 - Added location mode, SHM mode and hub info to the dashboard
@@ -1527,7 +1528,10 @@ private testLifx() {
         ],
         requestContentType: "application/json"
     ]
-    asynchttp_v1.get(lifxHandler, requestParams)
+    asynchttp_v1.get(lifxHandler, requestParams, [request: 'scenes'])
+    pause(250)
+    requestParams.path = "/v1/lights/all"
+    asynchttp_v1.get(lifxHandler, requestParams, [request: 'lights'])
 	return true
 }
 
@@ -1797,10 +1801,24 @@ def NewIncidentHandler(evt) {
 
 
 def lifxHandler(response, cbkData) {
-	if (response.status == 200) {
-    	def data = response.data instanceof List ? response.data : (LinkedHashMap) new groovy.json.JsonSlurper().parseText(response.data)
+log.trace response
+	if ((response.status == 200)) {
+    	def data = response.data instanceof List ? response.data : new groovy.json.JsonSlurper().parseText(response.data)
+    	cbkData = cbkData instanceof Map ? cbkData : (LinkedHashMap) new groovy.json.JsonSlurper().parseText(cbkData)
+        log.trace data
 		if (data instanceof List) {
-	        state.settings.lifx_scenes = data.collectEntries{[(it.uuid): it.name]}
+        	switch (cbkData.request) {
+            	case 'scenes':
+                	log.trace "got scenes"
+                	state.settings.lifx_scenes = data.collectEntries{[(it.uuid): it.name]}
+                    break
+            	case 'lights':
+                	log.trace "got lights"
+                	state.settings.lifx_lights = data.collectEntries{[(it.uuid): it.label]}
+                	state.settings.lifx_groups = data.collectEntries{[(it.group.id): it.group.name]}
+                	state.settings.lifx_locations = data.collectEntries{[(it.location.id): it.location.name]}
+                    break
+            }
 	    }
 	}
 }
