@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.2.0bc.20170611" }
+public static String version() { return "v0.2.0bd.20170612" }
 /*
+ *	06/11/2017 >>> v0.2.0bd.20170612 - BETA M2 - More bug fixes, work started on capture/restore, DO NOT USE them yet
  *	06/11/2017 >>> v0.2.0bc.20170611 - BETA M2 - More bug fixes
  *	06/09/2017 >>> v0.2.0bb.20170609 - BETA M2 - Added support for the webCoRE Connector - an easy way for developers to integrate with webCoRE
  *	06/09/2017 >>> v0.2.0ba.20170609 - BETA M2 - More bug fixes
@@ -2705,6 +2706,10 @@ private long vcmd_writeToFuelStream(rtData, device, params) {
 }
 
 
+private long vcmd_saveStateLocally(rtData, device, params) {
+	error "Not implemented yet: ${params[0]} >>> ${params[0] instanceof String ? 'string' : 'not a string'}", rtData
+	return 0
+}
 
 
 
@@ -5790,7 +5795,8 @@ private localToUtcTime(dateOrTimeOrString) {
         try {
 			return timeToday(dateOrTimeOrString, location.timeZone).getTime()
 		} catch (all) {
-        	error "Error converting '$dateOrTimeOrString' to date/time: ", rtData, null, all
+        	//error "Error converting '$dateOrTimeOrString' to date/time: ", rtData, null, all
+            return 0
         }
 	}
 	return null

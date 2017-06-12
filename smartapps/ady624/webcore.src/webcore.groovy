@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.2.0bc.20170611" }
+public static String version() { return "v0.2.0bd.20170612" }
 /*
+ *	06/11/2017 >>> v0.2.0bd.20170612 - BETA M2 - More bug fixes, work started on capture/restore, DO NOT USE them yet
  *	06/11/2017 >>> v0.2.0bc.20170611 - BETA M2 - More bug fixes
  *	06/09/2017 >>> v0.2.0bb.20170609 - BETA M2 - Added support for the webCoRE Connector - an easy way for developers to integrate with webCoRE
  *	06/09/2017 >>> v0.2.0ba.20170609 - BETA M2 - More bug fixes
@@ -2242,7 +2243,7 @@ private static Map virtualCommands() {
 		executeRoutine				: [ n: "Execute routine...",		a: true,	i: "clock-o",				d: "Execute routine \"{0}\"",											p: [[n:"Routine", t:"routine"]],	],
 		toggle						: [ n: "Toggle", r: ["on", "off"], 				i: "toggle-on"																				],
 		toggleRandom				: [ n: "Random toggle", r: ["on", "off"], 		i: "toggle-on",				d: "Random toggle{0}",													p: [[n:"Probability for on", t:"level", d:" with a {v}% probability for on"]],	],
-		setSwitch					: [ n: "Set switch", r: ["on", "off"], 			i: "toggle-on",				d: "Set switch to {0}",													p: [[n:"Switch value", t:"switch"]],																],
+		setSwitch					: [ n: "Set switch...", r: ["on", "off"], 			i: "toggle-on",				d: "Set switch to {0}",													p: [[n:"Switch value", t:"switch"]],																],
 		setHSLColor					: [ n: "Set color... (hsl)", 					i: "barcode",			d: "Set color to H:{0}° / S:{1}% / L%:{2}{3}",				r: ["setColor"],				p: [[n:"Hue",t:"hue"], [n:"Saturation",t:"saturation"], [n:"Level",t:"level"], [n:"Only if switch is...", t:"enum",o:["on","off"], d:" if already {v}"]],  							],
 		toggleLevel					: [ n: "Toggle level...", 						i: "toggle-off",			d: "Toggle level between 0% and {0}%",	r: ["on", "off", "setLevel"],	p: [[n:"Level", t:"level"]],																																	],
 		sendNotification			: [ n: "Send notification...",		a: true,	i: "commenting-o",			d: "Send notification \"{0}\"",											p: [[n:"Message", t:"string"]],												],
@@ -2268,9 +2269,11 @@ private static Map virtualCommands() {
 		fadeHue						: [ n: "Fade hue...",			 r: ["setHue"], 		i: "toggle-on",				d: "Fade hue{0} to {1}° in {2}{3}",								p: [[n:"Starting hue",t:"hue",d:" from {v}°"],[n:"Final hue",t:"hue"],[n:"Duration",t:"duration"], [n:"Only if switch is...", t:"enum",o:["on","off"], d:" if already {v}"]],																],
 		fadeColorTemperature		: [ n: "Fade color temperature...",		 r: ["setColorTemperature"], 		i: "toggle-on",				d: "Fade color temperature{0} to {1}°K in {2}{3}",									p: [[n:"Starting color temperature",t:"colorTemperature",d:" from {v}°K"],[n:"Final color temperature",t:"colorTemperature"],[n:"Duration",t:"duration"], [n:"Only if switch is...", t:"enum",o:["on","off"], d:" if already {v}"]],																],
 		flash						: [ n: "Flash...",	 r: ["on", "off"], 			i: "toggle-on",				d: "Flash on {0} / off {1} for {2} times{3}",							p: [[n:"On duration",t:"duration"],[n:"Off duration",t:"duration"],[n:"Number of flashes",t:"integer"], [n:"Only if switch is...", t:"enum",o:["on","off"], d:" if already {v}"]],																],
-		iftttMaker					: [ n: "Send an IFTTT Maker event...",a: true,								d: "Send the {0} IFTTT Maker event{1}{2}{3}",							p: [[n:"Event", t:"text"], [n:"Value 1", t:"string", d:", passing value1 = '{v}'"], [n:"Value 2", t:"string", d:", passing value2 = '{v}'"], [n:"Value 3", t:"string", d:", passing value3 = '{v}'"]],				],
-		lifxScene					: [ n: "Activate LIFX scene",		  a: true, 								d: "Activate LIFX Scene '{0}'{1}", 										p: [[n: "Scene", t:"lifxScene"],[n: "Duration", t:"duration", d:" for {v}"]],					],
-		writeToFuelStream			: [ n: "Write to fuel stream...",  a: true, 								d: "Write data point '{2}' to fuel stream {0}{1}{3}", 					p: [[n: "Canister", t:"text", d:"{v} \\ "], [n:"Fuel stream name", t:"text"], [n: "Data", t:"dynamic"], [n: "Data source", t:"text", d:" from source '{v}'"]],					],
+		iftttMaker					: [ n: "Send an IFTTT Maker event...",	a: true,							d: "Send the {0} IFTTT Maker event{1}{2}{3}",							p: [[n:"Event", t:"text"], [n:"Value 1", t:"string", d:", passing value1 = '{v}'"], [n:"Value 2", t:"string", d:", passing value2 = '{v}'"], [n:"Value 3", t:"string", d:", passing value3 = '{v}'"]],				],
+		lifxScene					: [ n: "Activate LIFX scene",		  	a: true, 							d: "Activate LIFX Scene '{0}'{1}", 										p: [[n: "Scene", t:"lifxScene"],[n: "Duration", t:"duration", d:" for {v}"]],					],
+		writeToFuelStream			: [ n: "Write to fuel stream...",  		a: true, 							d: "Write data point '{2}' to fuel stream {0}{1}{3}", 					p: [[n: "Canister", t:"text", d:"{v} \\ "], [n:"Fuel stream name", t:"text"], [n: "Data", t:"dynamic"], [n: "Data source", t:"text", d:" from source '{v}'"]],					],
+        saveStateLocally			: [ n: "Capture attributes to local store", 								d: "Capture attributes {0} to local state{1}",							p: [[n: "Attributes", t:"attributes"],[n:'Only if state is empty', t:'boolean', d:' only if store is empty']], ],
+        saveStateGlobally			: [ n: "Capture attributes to global store", 								d: "Capture attributes {0} to global state{1}",							p: [[n: "Attributes", t:"attributes"],[n:'Only if state is empty', t:'boolean', d:' only if store is empty']], ],
 /*		[ n: "waitState",											d: "Wait for piston state change",	p: ["Change to:enum[any,false,true]"],															i: true,	l: true,						dd: "Wait for {0} state"],
 		[ n: "flash",				r: ["on", "off"], 				d: "Flash",							p: ["On interval (milliseconds):number[250..5000]","Off interval (milliseconds):number[250..5000]","Number of flashes:number[1..10]"],					dd: "Flash {0}ms/{1}ms for {2} time(s)",		],
 		[ n: "saveState",		d: "Save state to variable",			p: ["Attributes:attributes","Aggregation:aggregation","?Convert to data t:dataType","Save to state variable:string"],			stateVarEntry: 3,	dd: "Save state of attributes {0} to variable |[{3}]|'",	aggregated: true,	],
