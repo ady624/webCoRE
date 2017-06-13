@@ -2645,7 +2645,7 @@ private long vcmd_httpRequest(rtData, device, params) {
 		try {
 			if (rtData.logging > 2) debug "Sending external web request to: $uri", rtData
 			def requestParams = [
-				uri:  "${protocol}://{$userPart}${uri}",
+				uri:  "${protocol}://${userPart}${uri}",
 				query: method == "GET" ? data : null,
 				requestContentType: (method != "GET") && (contentType == "JSON") ? "application/json" : "application/x-www-form-urlencoded",
 				body: method != "GET" ? data : null
