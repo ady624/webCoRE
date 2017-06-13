@@ -18,9 +18,10 @@
  *
  *  Version history
 */
-public static String version() { return "v0.2.0bd.20170612" }
+public static String version() { return "v0.2.0be.20170613" }
 /*
- *	06/11/2017 >>> v0.2.0bd.20170612 - BETA M2 - More bug fixes, work started on capture/restore, DO NOT USE them yet
+ *	06/13/2017 >>> v0.2.0be.20170613 - BETA M2 - 0be happy - capture/restore is here
+ *	06/12/2017 >>> v0.2.0bd.20170612 - BETA M2 - More bug fixes, work started on capture/restore, DO NOT USE them yet
  *	06/11/2017 >>> v0.2.0bc.20170611 - BETA M2 - More bug fixes
  *	06/09/2017 >>> v0.2.0bb.20170609 - BETA M2 - Added support for the webCoRE Connector - an easy way for developers to integrate with webCoRE
  *	06/09/2017 >>> v0.2.0ba.20170609 - BETA M2 - More bug fixes
@@ -1636,6 +1637,7 @@ public Map getRunTimeData(semaphore, fetchWrappers = false) {
     	devices: (!!fetchWrappers ? (storageApp ? storageApp.listAvailableDevices(true) : listAvailableDevices(true)) : [:]),
         virtualDevices: virtualDevices(),
         globalVars: listAvailableVariables(),
+        globalStore: state.store ?: [:],
         settings: state.settings ?: [:],
         powerSource: state.powerSource ?: 'mains',
 		region: state.endpoint.contains('graph-eu') ? 'eu' : 'us',		
@@ -1651,8 +1653,8 @@ public void updateRunTimeData(data) {
 	if (!data || !data.id) return
 	List variableEvents = []
     if (data && data.gvCache) {
-	Map vars = atomicState.vars ?: [:]
-    def modified = false
+		Map vars = atomicState.vars ?: [:]
+    	def modified = false
     	for(var in data.gvCache) {
         	if (var.key && var.key.startsWith('@') && (vars[var.key]) && (var.value.v != vars[var.key].v)) {
             	variableEvents.push([name: var.key, oldValue: vars[var.key].v, value: var.value.v, type: var.value.t])
@@ -1662,6 +1664,21 @@ public void updateRunTimeData(data) {
         }
         if (modified) {
             atomicState.vars = vars
+        }
+	}
+    if (data && data.gvStoreCache) {
+		Map store = atomicState.store ?: [:]
+    	def modified = false
+    	for(var in data.gvStoreCache) {
+        	if (var.value == null) {
+           		store.remove(var.key)
+            } else {
+           		store[var.key] = var.value
+            }
+            modified = true
+        }
+        if (modified) {
+            atomicState.store = store
         }
 	}
     def id = data.id
@@ -1802,7 +1819,6 @@ def NewIncidentHandler(evt) {
 
 
 def lifxHandler(response, cbkData) {
-log.trace response
 	if ((response.status == 200)) {
     	def data = response.data instanceof List ? response.data : new groovy.json.JsonSlurper().parseText(response.data)
     	cbkData = cbkData instanceof Map ? cbkData : (LinkedHashMap) new groovy.json.JsonSlurper().parseText(cbkData)
@@ -2272,8 +2288,10 @@ private static Map virtualCommands() {
 		iftttMaker					: [ n: "Send an IFTTT Maker event...",	a: true,							d: "Send the {0} IFTTT Maker event{1}{2}{3}",							p: [[n:"Event", t:"text"], [n:"Value 1", t:"string", d:", passing value1 = '{v}'"], [n:"Value 2", t:"string", d:", passing value2 = '{v}'"], [n:"Value 3", t:"string", d:", passing value3 = '{v}'"]],				],
 		lifxScene					: [ n: "Activate LIFX scene",		  	a: true, 							d: "Activate LIFX Scene '{0}'{1}", 										p: [[n: "Scene", t:"lifxScene"],[n: "Duration", t:"duration", d:" for {v}"]],					],
 		writeToFuelStream			: [ n: "Write to fuel stream...",  		a: true, 							d: "Write data point '{2}' to fuel stream {0}{1}{3}", 					p: [[n: "Canister", t:"text", d:"{v} \\ "], [n:"Fuel stream name", t:"text"], [n: "Data", t:"dynamic"], [n: "Data source", t:"text", d:" from source '{v}'"]],					],
-        saveStateLocally			: [ n: "Capture attributes to local store", 								d: "Capture attributes {0} to local state{1}",							p: [[n: "Attributes", t:"attributes"],[n:'Only if state is empty', t:'boolean', d:' only if store is empty']], ],
-        saveStateGlobally			: [ n: "Capture attributes to global store", 								d: "Capture attributes {0} to global state{1}",							p: [[n: "Attributes", t:"attributes"],[n:'Only if state is empty', t:'boolean', d:' only if store is empty']], ],
+        saveStateLocally			: [ n: "Capture attributes to local store", 								d: "Capture attributes {0} to local state{1}{2}",						p: [[n: "Attributes", t:"attributes"],[n:'State container name',t:'string',d:' "{v}"'],[n:'Prevent overwriting existing state', t:'enum', o:['true','false'], d:' only if store is empty']], ],
+        saveStateGlobally			: [ n: "Capture attributes to global store", 								d: "Capture attributes {0} to global state{1}{2}",						p: [[n: "Attributes", t:"attributes"],[n:'State container name',t:'string',d:' "{v}"'],[n:'Prevent overwriting existing state', t:'enum', o:['true','false'],, d:' only if store is empty']], ],
+        loadStateLocally			: [ n: "Restore attributes from local store", 								d: "Restore attributes {0} from local state{1}{2}",						p: [[n: "Attributes", t:"attributes"],[n:'State container name',t:'string',d:' "{v}"'],[n:'Empty state after restore', t:'enum', o:['true','false'], d:' and empty the store']], ],
+        loadStateGlobally			: [ n: "Restore attributes from global store", 								d: "Restore attributes {0} from global state{1}{2}",					p: [[n: "Attributes", t:"attributes"],[n:'State container name',t:'string',d:' "{v}"'],[n:'Empty state after restore', t:'enum', o:['true','false'], d:' and empty the store']], ],
 /*		[ n: "waitState",											d: "Wait for piston state change",	p: ["Change to:enum[any,false,true]"],															i: true,	l: true,						dd: "Wait for {0} state"],
 		[ n: "flash",				r: ["on", "off"], 				d: "Flash",							p: ["On interval (milliseconds):number[250..5000]","Off interval (milliseconds):number[250..5000]","Number of flashes:number[1..10]"],					dd: "Flash {0}ms/{1}ms for {2} time(s)",		],
 		[ n: "saveState",		d: "Save state to variable",			p: ["Attributes:attributes","Aggregation:aggregation","?Convert to data t:dataType","Save to state variable:string"],			stateVarEntry: 3,	dd: "Save state of attributes {0} to variable |[{3}]|'",	aggregated: true,	],

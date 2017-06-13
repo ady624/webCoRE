@@ -18,9 +18,10 @@
  *
  *  Version history
 */
-public static String version() { return "v0.2.0bd.20170612" }
+public static String version() { return "v0.2.0be.20170613" }
 /*
- *	06/11/2017 >>> v0.2.0bd.20170612 - BETA M2 - More bug fixes, work started on capture/restore, DO NOT USE them yet
+ *	06/13/2017 >>> v0.2.0be.20170613 - BETA M2 - 0be happy - capture/restore is here
+ *	06/12/2017 >>> v0.2.0bd.20170612 - BETA M2 - More bug fixes, work started on capture/restore, DO NOT USE them yet
  *	06/11/2017 >>> v0.2.0bc.20170611 - BETA M2 - More bug fixes
  *	06/09/2017 >>> v0.2.0bb.20170609 - BETA M2 - Added support for the webCoRE Connector - an easy way for developers to integrate with webCoRE
  *	06/09/2017 >>> v0.2.0ba.20170609 - BETA M2 - More bug fixes
@@ -565,6 +566,7 @@ private getRunTimeData(rtData = null, semaphore = null, fetchWrappers = false) {
 	    //we're reading the old state from atomicState because we might have waited at a semaphore
 	    def oldState = atomicState.state ?: ''
 	    rtData.state = [old: oldState, new: oldState];
+        rtData.store = atomicState.store ?: [:]
 	    rtData.statementLevel = 0;
 	    rtData.fastForwardTo = null
 	    rtData.break = false
@@ -841,13 +843,16 @@ private finalizeEvent(rtData, initialMsg, success = true) {
 	parent.updateRunTimeData(rtData)
     //clear the global vars - we already set them
     rtData.gvCache = null
+    rtData.gvStoreCache = null
     //beat race conditions
     //overwrite state, might have changed meanwhile
     if (rtData.piston.o?.pep) {
     	state.schedules = atomicState.schedules
     	atomicState.cache = rtData.cache
+        atomicState.store = rtData.store
     }
 	state.cache = rtData.cache
+    state.store = rtData.store
 }
 
 private processSchedules(rtData, scheduleJob = false) {
@@ -2591,6 +2596,7 @@ private long vcmd_httpRequest(rtData, device, params) {
 	def variables = params[3]
     if (!uri) return false
 	def protocol = "https"
+    def userPart = ""
 	def uriParts = uri.split("://").toList()
 	if (uriParts.size() > 2) {
 		warn "Invalid URI for web request: $uri", rtData
@@ -2603,7 +2609,9 @@ private long vcmd_httpRequest(rtData, device, params) {
 	}
     //support for user:pass@IP
     if (uri.contains('@')) {
-    	uri = uri.split('@').toList()[1]
+    	def uriSubParts = uri.split('@').toList()
+    	userPart = uriSubParts[0] + '@'
+    	uri = uriSubParts[1]
     }
 	def internal = uri.startsWith("10.") || uri.startsWith("192.168.")
 	if ((!internal) && uri.startsWith("172.")) {
@@ -2625,7 +2633,7 @@ private long vcmd_httpRequest(rtData, device, params) {
 				method: method,
 				path: (uri.indexOf("/") > 0) ? uri.substring(uri.indexOf("/")) : "",
 				headers: [
-					HOST: (uri.indexOf("/") > 0) ? uri.substring(0, uri.indexOf("/")) : uri,
+					HOST: userPart + ((uri.indexOf("/") > 0) ? uri.substring(0, uri.indexOf("/")) : uri),
 				],
 				query: method == "GET" ? data : null, //thank you @destructure00
 				body: method != "GET" ? data : null //thank you @destructure00    
@@ -2637,7 +2645,7 @@ private long vcmd_httpRequest(rtData, device, params) {
 		try {
 			if (rtData.logging > 2) debug "Sending external web request to: $uri", rtData
 			def requestParams = [
-				uri:  "${protocol}://${uri}",
+				uri:  "${protocol}://{$userPart}${uri}",
 				query: method == "GET" ? data : null,
 				requestContentType: (method != "GET") && (contentType == "JSON") ? "application/json" : "application/x-www-form-urlencoded",
 				body: method != "GET" ? data : null
@@ -2706,12 +2714,85 @@ private long vcmd_writeToFuelStream(rtData, device, params) {
 }
 
 
-private long vcmd_saveStateLocally(rtData, device, params) {
-	error "Not implemented yet: ${params[0]} >>> ${params[0] instanceof String ? 'string' : 'not a string'}", rtData
+private long vcmd_saveStateLocally(rtData, device, params, global = false) {
+	def attributes = cast(rtData, params[0], 'string').tokenize(',')
+    def canister = (params.size() > 1 ? cast(rtData, params[1], 'string') + ':' : '') + hashId(device.id) + ':'
+    boolean overwrite = !(params.size() > 2 ? cast(rtData, params[2], 'boolean') : false)
+    for (attr in attributes) {
+    	def n = canister + attr
+    	if (overwrite || (global ? (rtData.globalStore[n] == null) : (rtData.store[n] == null))) {
+        	def value = getDeviceAttributeValue(rtData, device, attr)
+            if (attr == 'hue') value = value * 3.6
+            if (global) {
+                rtData.globalStore[n] = value
+                Map cache = rtData.gvStoreCache ?: [:]
+                cache[n] = value
+                rtData.gvStoreCache = cache
+            } else {
+        		rtData.store[n] = value
+            }
+        }
+    }
 	return 0
 }
 
+private long vcmd_saveStateGlobally(rtData, device, params) {
+	return vcmd_saveStateLocally(rtData, device, params, true)
+}
 
+
+private long vcmd_loadStateLocally(rtData, device, params, global = false) {
+	def attributes = cast(rtData, params[0], 'string').tokenize(',')
+    def canister = (params.size() > 1 ? cast(rtData, params[1], 'string') + ':' : '') + hashId(device.id) + ':'
+    boolean empty = params.size() > 2 ? cast(rtData, params[2], 'boolean') : false
+    for (attr in attributes) {
+    	def n = canister + attr
+        def value = global ? rtData.globalStore[n] : rtData.store[n]
+        if (attr == 'hue') value = cast(rtData, value, 'decimal') / 3.6
+        if (empty) {
+        	if (global) {
+        		rtData.globalStore.remove(n)
+                Map cache = rtData.gvStoreCache ?: [:]
+                cache[n] = null
+                rtData.gvStoreCache = cache
+            } else {
+        		rtData.store.remove(n)
+            }
+        }
+        //find the right command for this attribute
+        if (value == null) continue
+        def exactCommand = null
+        def fuzzyCommand = null
+        for (command in rtData.commands.physical) {
+        	if (command.value.a == attr) {
+            	if (command.value.v == null) {
+                	fuzzyCommand = command.key
+                } else {
+                	if (command.value.v == value) {
+                    	exactCommand = command.key
+                        break
+                    }
+                }
+            }
+        }
+        if (exactCommand) {
+        	debug "Restoring attribute '$attr' to value '$value' using command $exactCommand()", rtData
+			executePhysicalCommand(rtData, device, exactCommand)
+        	continue
+        }
+        if (fuzzyCommand) {
+        	debug "Restoring attribute '$attr' to value '$value' using command $fuzzyCommand($value)", rtData
+			executePhysicalCommand(rtData, device, fuzzyCommand, value)
+        	continue
+        }
+        warn "Could not find a command to set attribute '$attr' to value '$value'", rtData
+    }
+	return 0
+}
+
+private long vcmd_loadStateGlobally(rtData, device, params) {
+	return vcmd_loadStateLocally(rtData, device, params, true)
+}
 
 
 
