@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.2.0be.20170613" }
+public static String version() { return "v0.2.0bf.20170614" }
 /*
+ *	06/14/2017 >>> v0.2.0bf.20170614 - BETA M2 - Some fixes (typo found by @DThompson10), added support for JSON arrays, as well as Parse JSON data task
  *	06/13/2017 >>> v0.2.0be.20170613 - BETA M2 - 0be happy - capture/restore is here
  *	06/12/2017 >>> v0.2.0bd.20170612 - BETA M2 - More bug fixes, work started on capture/restore, DO NOT USE them yet
  *	06/11/2017 >>> v0.2.0bc.20170611 - BETA M2 - More bug fixes
@@ -745,6 +746,8 @@ private Boolean executeEvent(rtData, event) {
             setSystemVariableValue(rtData, '$index', event.schedule.stack.index)
             setSystemVariableValue(rtData, '$device', event.schedule.stack.device)
             setSystemVariableValue(rtData, '$devices', event.schedule.stack.devices)
+            rtData.json = event.schedule.stack.json ?: [:]
+            rtData.response = event.schedule.stack.response ?: [:]
 		}
         rtData.currentEvent = [
             date: event.date.getTime(),
@@ -1879,6 +1882,8 @@ private requestWakeUp(rtData, statement, task, timeOrDelay, data = null) {
         	index: getVariable(rtData, '$index').v,
         	device: getVariable(rtData, '$device').v,
         	devices: getVariable(rtData, '$devices').v,
+        	json: rtData.json ?: [:],
+            response: rtData.response ?: [:]
         ]
     ]
     rtData.schedules.push(schedule)
@@ -2628,7 +2633,7 @@ private long vcmd_httpRequest(rtData, device, params) {
 	}
 	if (internal) {
 		try {
-			if (rtData.logging > 2) debug "Sending internal web request to: $uri", rtData
+			if (rtData.logging > 2) debug "Sending internal web request to: $userPart$uri", rtData
 			sendHubCommand(new physicalgraph.device.HubAction(
 				method: method,
 				path: (uri.indexOf("/") > 0) ? uri.substring(uri.indexOf("/")) : "",
@@ -2794,6 +2799,21 @@ private long vcmd_loadStateGlobally(rtData, device, params) {
 	return vcmd_loadStateLocally(rtData, device, params, true)
 }
 
+private long vcmd_parseJson(rtData, device, params) {
+	def data = params[0]
+	try {
+		if (data.startsWith('{') && data.endsWith('}')) {
+			rtData.json = (LinkedHashMap) new groovy.json.JsonSlurper().parseText(data)
+		} else if (data.startsWith('[') && data.endsWith(']')) {
+			rtData.json = (List) new groovy.json.JsonSlurper().parseText(data)
+        } else {
+        	rtData.json = [:]
+        }
+	} catch (all) {
+    	error "Error parsing JSON data $data", rtData
+    }
+    return 0;
+}
 
 
 private Boolean evaluateConditions(rtData, conditions, collection, async) {
@@ -3242,7 +3262,7 @@ private List listPreviousStates(device, attribute, threshold, excludeLast) {
 			endTime = startTime
 		}
 	} else {
-    	def currentState = devuce.currentState(attribute)
+    	def currentState = device.currentState(attribute)
         if (currentState) {
 	        def startTime = currentState.getDate().getTime()
     	    result.push([value: currentState.value, startTime: startTime, duration: now() - startTime])
@@ -3943,26 +3963,104 @@ private Map getDeviceAttribute(rtData, deviceId, attributeName, subDeviceIndex =
     return [t: "error", v: "Device '${deviceId}' not found"]
 }
 
-private Map getArgument(rtData, name) {
-	List parts = name.tokenize('.');
-    def args = [:] + rtData.args
-    for(part in parts) {
-    	if (!(args instanceof Map)) return [t: 'dynamic', v: '']
-        args = args[part]
+private Map getJsonData(rtData, data, name) {
+	if (data != null) {
+        try {
+            List parts = name.replace(/\]\[/, '].[').tokenize('.');
+            def args = (data instanceof Map ? [:] + data : (data instanceof List ? [] + data : new groovy.json.JsonSlurper().parseText(data)))
+            for(part in parts) {
+                if ((args instanceof String) || (args instanceof GString)) {
+                    if (args.startsWith('{') && args.endsWith('}')) {
+                        args = (LinkedHashMap) new groovy.json.JsonSlurper().parseText(args)
+                    } else if (args.startsWith('[') && args.endsWith(']')) {
+                        args = (List) new groovy.json.JsonSlurper().parseText(args)
+                    }
+                }
+                if (args instanceof List) {
+                    switch (part) {
+                        case 'length':
+                            return [t: 'integer', v: args.size()]
+                        case 'first':
+                            args = args.size() > 0 ? args[0] : ''
+                            break
+                        case 'second':
+                            args = args.size() > 1 ? args[1] : ''
+                            break
+                        case 'third':
+                            args = args.size() > 2 ? args[2] : ''
+                            break
+                        case 'fourth':
+                            args = args.size() > 3 ? args[3] : ''
+                            break
+                        case 'fifth':
+                            args = args.size() > 4 ? args[4] : ''
+                            break
+                        case 'sixth':
+                            args = args.size() > 5 ? args[5] : ''
+                            break
+                        case 'seventh':
+                            args = args.size() > 6 ? args[6] : ''
+                            break
+                        case 'eighth':
+                            args = args.size() > 7 ? args[7] : ''
+                            break
+                        case 'ninth':
+                            args = args.size() > 8 ? args[8] : ''
+                            break
+                        case 'tenth':
+                            args = args.size() > 9 ? args[9] : ''
+                            break
+                        case 'last':
+                            args = args.size() > 0 ? args[args.size() - 1] : ''
+                            break
+                    }
+                    continue
+                }
+                if (!(args instanceof Map)) return [t: 'dynamic', v: '']
+                def idx = 0
+                if (part.endsWith(']')) {
+                    //array index
+                    def start = part.indexOf('[')
+                    if (start) {
+                        idx = part.substring(start + 1, part.size() - 1)
+                        part = part.substring(0, start)
+                        if (idx.isInteger()) {
+                            idx = idx.toInteger()
+                        } else {
+                            idx = cast(rtData, getVariable(rtData, idx).v, 'integer')
+                        }
+                    }
+                    args = args[part]
+                    if (args instanceof List) {
+                        args = args[idx]
+                    } else {
+                        args = ''
+                        break
+                    }
+                    continue
+                }
+                args = args[part]
+            }
+            return [t: 'dynamic', v: "$args".toString()]
+        } catch (all) {
+            error "Error retrieving JSON data part $part", rtData
+            return [t: 'dynamic', v: '']
+        }
     }
-    return [t: 'dynamic', v: "$args".toString()]
+    return [t: 'dynamic', v: '']
+}
+
+private Map getArgument(rtData, name) {
+	return getJsonData(rtData, rtData.args, name)
+}
+
+private Map getJson(rtData, name) {
+	return getJsonData(rtData, rtData.json, name)
 }
 
 private Map getResponse(rtData, name) {
-	List parts = name.tokenize('.');
-    def response = [:] + (rtData.response ?: [:])
-    for(part in parts) {
-    	if (!(response instanceof Map)) return [t: 'dynamic', v: '']
-        response = response[part]
-    }
-    return [t: 'dynamic', v: "$response".toString()]
+	return getJsonData(rtData, rtData.response, name)
 }
-
 
 private Map getVariable(rtData, name) {
 	name = sanitizeVariableName(name)
@@ -3975,6 +4073,8 @@ private Map getVariable(rtData, name) {
 		if (name.startsWith('$')) {
         	if (name.startsWith('$args.') && (name.size() > 6)) {
             	result = getArgument(rtData, name.substring(6))
+        	} else if (name.startsWith('$json.') && (name.size() > 6)) {
+            	result = getJson(rtData, name.substring(6))
             } else if (name.startsWith('$response.') && (name.size() > 10)) {
             	result = getResponse(rtData, name.substring(10))
             } else {
@@ -6127,8 +6227,9 @@ def Map getSystemVariablesAndValues(rtData) {
 
 private static Map getSystemVariables() {
 	return [
-        "\$args": [t: "dynamic", d: true],
-        "\$response": [t: "dynamic", d: true],
+        '$args': [t: "dynamic", d: true],
+        '$json': [t: "dynamic", d: true],
+        '$response': [t: "dynamic", d: true],
 		"\$currentEventAttribute": [t: "string", v: null],
 		"\$currentEventDate": [t: "datetime", v: null],
 		"\$currentEventDelay": [t: "integer", v: null],
@@ -6205,6 +6306,7 @@ private static Map getSystemVariables() {
 private getSystemVariableValue(rtData, name) {
 	switch (name) {
     	case '$args': return "${rtData.args}".toString()
+    	case '$json': return "${rtData.json}".toString()
     	case '$response': return "${rtData.response}".toString()
 		case "\$name": return app.label
 		case "\$version": return version()
