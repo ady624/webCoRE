@@ -188,7 +188,7 @@
 						<div ng-if="globalVars" var ng-repeat="(name, var) in globalVars"><span><span class="vartype">{{var.t}}</span><span>{{name}}</span></span><span class="{{var.v == null ? 'notset' : ''}}" ng-bind-html="formatVariableValue(var)"></span></div>
 						<div novar>(no variables defined)</div>
 						<label var>System variables</label>
-						<div var ng-repeat="i in systemVarNames" ng-if="(!systemVars[i].d || (systemVars[i].v != null)) && (!i.startsWith('$current')) && (!i.startsWith('$previous'))"><span><span class="vartype">{{systemVars[i].t}}</span><span>{{i}}</span></span><span class="{{systemVars[i].v == null ? 'notset' : ''}}" ng-bind-html="formatVariableValue(systemVars[i])"></span></div>
+						<div var ng-repeat="i in systemVarNames" ng-if="(!systemVars[i].d || (systemVars[i].v != null)) && (!i.startsWith('$current')) && (!i.startsWith('$previous'))"><span><span class="vartype">{{systemVars[i].t}}</span><span>{{i}}</span></span><span class="{{systemVars[i].v == null ? 'notset' : ''}}" ng-bind-html="formatVariableValue(systemVars[i], i)"></span></div>
 					</div>
 				</div>
 			</div>

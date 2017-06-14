@@ -544,8 +544,9 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 			variable = $scope.copy(variable);
             variable.v = $scope.localVars[name];
 		}
+		var t = (name == '$localNow') || (name == '$utc') ? 'long' : variable.t;
 		if ((variable.v === '') || (variable.v === null) || ((variable.v instanceof Array) && !variable.v.length)) return '(not set)';
-		switch (variable.t) {
+		switch (t) {
 			case 'time':
 				return utcToTimeString(variable.v);
 			case 'datetime':
@@ -2306,9 +2307,9 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 	}
 
 
-	$scope.buildName = function(name, noQuotes, pedantic, itemPrefix) {
+	$scope.buildName = function(name, noQuotes, pedantic, itemPrefix, grouping) {
 		if ((name == null) || (name == undefined)) return '';
-		if (name instanceof Array) return $scope.buildNameList(name, 'or', '', '', false, noQuotes, pedantic, itemPrefix);
+		if (name instanceof Array) return $scope.buildNameList(name, grouping ? grouping : 'or', '', '', false, noQuotes, pedantic, itemPrefix);
 		if (pedantic || (name.length == 34)) {
 			for (deviceId in $scope.instance.virtualDevices) {
 				var device = $scope.instance.virtualDevices[deviceId];
@@ -2602,6 +2603,15 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		return false;
 	}
 
+	$scope.listAvailableAttributeNames = function(devices, restrictAttribute) {
+	    var result = [];
+	    var list = $scope.listAvailableAttributes(devices, restrictAttribute);
+		for (i in list) {
+			result.push({n: list[i].n, v: list[i].id});
+	    }
+		return result;
+	}
+
 	$scope.listAvailableAttributes = function(devices, restrictAttribute) {
 		var result = [];
 		var device = null;
@@ -2819,6 +2829,10 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 				operand.multiple = true;
 				dataType = 'routine';
 			}
+			if (dataType == 'attributes') {
+				operand.multiple = true;
+				dataType = 'attribute';
+			}
 			if (dataType == 'modes') {
 				operand.multiple = true;
 				dataType = 'mode';
@@ -2883,7 +2897,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 					break;
 			}
 
-			var disableExpressions = (dataType == 'piston') || (dataType == 'routine') || (dataType == 'askAlexaMacro')
+			var disableExpressions = (dataType == 'piston') || (dataType == 'routine') || (dataType == 'askAlexaMacro') || (dataType == 'attribute')
 			operand.onlyAllowConstants = operand.onlyAllowConstants || disableExpressions
 
 			var strict = !!operand.strict;
@@ -2903,7 +2917,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 				operand.allowVariable = (dataType != 'device' || ((dataType == 'device') && operand.multiple)) && (!strict || (dataType != 'boolean'));
 				operand.allowConstant = (!operand.event) && (dataType != 'device') && (dataType != 'variable');
 				operand.allowArgument = (!operand.event) && (dataType != 'device') && (dataType != 'variable');
-				operand.allowExpression = (!operand.event) && (dataType != 'variable') && (dataType != 'enum') && (!strict || (dataType != 'boolean'));
+				operand.allowExpression = (!operand.event) && (dataType != 'variable') && (!strict || (dataType != 'boolean'));
 			}
 			if (((operand.data.t == 'p') && (!operand.allowPhysical)) || ((operand.data.t == 'v') && (!operand.allowVirtual))) operand.data.t = 'c';
 
@@ -2957,6 +2971,10 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 			case 'alarmSystemStatus':
 			case 'routine':
 				operand.options = $scope.objectToArray($scope.instance.virtualDevices[dataType].o);
+				break;
+			case 'attribute':
+				operand.attrs = operand.attrs ? operand.attrs : $scope.listAvailableAttributeNames($scope.designer.parent.d);
+				operand.options = operand.attrs;
 				break;
 			case 'piston':
 				operand.options = $scope.listAllPistons();
@@ -3385,7 +3403,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		}
 	};
 
-	$scope.renderOperand = function(operand, noQuotes, pedantic, noNegatives) {
+	$scope.renderOperand = function(operand, noQuotes, pedantic, noNegatives, grouping = 'or') {
 		var result = '';
 		if (operand) {
 //			if (operand instanceof Array) {
@@ -3449,7 +3467,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 								}
 								var c = operand.c;
 								if (noNegatives && !isNaN(c) && parseInt(c) < 0) c = -parseInt(c);
-								result = '<span ' + m + '>' + scope.buildName(c, noQuotes, pedantic) + '</span>';
+								result = '<span ' + m + '>' + scope.buildName(c, noQuotes, pedantic, null, grouping) + '</span>';
 						}
 						break;
 					case 'u':
@@ -3836,7 +3854,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		if (!command) {
 			display = task.c + '(';
 			for (i in task.p) {
-				display += (parseInt(i) ? ', ' : '') + $scope.renderOperand(task.p[i]);
+				display += (parseInt(i) ? ', ' : '') + $scope.renderOperand(task.p[i], null, null, null, 'and');
 			}
 			display += ')';
 		} else {
@@ -3853,7 +3871,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 						//false optional values, we don't show them
 						value = '';
 					} else {
-						value = $scope.renderOperand(task.p[idx], true);
+						value = $scope.renderOperand(task.p[idx], true, null, null, 'and');
 					}
 				}
 				if (!value) value = '';
@@ -4468,6 +4486,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		function main() {
 			var arr = [];
 			var startIndex = i;
+			var compositeVariable = (str.substr(startIndex, 6) == '$args.') || (str.substr(startIndex, 6) == '$json.') || (str.substr(startIndex, 10) == '$response.')
 			function addOperand() {
 				if (i-1 > startIndex) {
 					var value = str.slice(startIndex, i-1);
@@ -4491,7 +4510,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 			}
 			function addConstant(allowEmpty) {
 				if (i - (allowEmpty ? 0 : 1) > startIndex) {
-					var value = str.slice(startIndex, i-1);
+					var value = str.slice(startIndex, i-1).replace(/\\[\[\]\{\}\'\"0-9abcdefghijklmopqsuvwxyz]/gi, function(match) { return match[1] });
 					var parsedValue = parseFloat(value.trim());
 					if ((dataType != 'phone') && !isNaN(parsedValue) && (numExp.test(value.trim()))) {
 						arr.push({t: (value.indexOf('.') >= 0 ? 'decimal' : 'integer'), v: parsedValue, l: location(startIndex, i - 2)});
@@ -4507,7 +4526,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 					var deviceName = value;
 					var attribute = '';
 					if (pos > 0) {
-						var deviceName = value.substr(0, pos).trim();
+						var deviceName = value.substr(0, pos).trim().replace(/\\[\[\]\{\}\'\"0-9abcdefghijklmopqsuvwxyz]/gi, function(match) { return match[1] });;
 						attribute = value.substr(pos + 1).trim();
 					}
 					var device = $scope.getDeviceByName(deviceName);
@@ -4583,8 +4602,8 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 					case '>':
 					case '?':
 					case ':':
+						var c2 = (i < str.length) ? str[i] : '';
 						if (exp && !dv && !sq && !dq) {
-							var c2 = (i < str.length) ? str[i] : '';
 							addOperand();
 							if (['**', '&&', '||', '^^', '!&', '!|', '!^', '==', '!=', '!!', '>=', '<=', '<>', '<<', '>>'].indexOf(c + c2) >= 0) {
 								i++;
@@ -4592,6 +4611,9 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 							}
 							arr.push({t: 'operator', o: c, l: location(i - 1, i - 1)});
 							startIndex = i;
+						} else if (c == '\\') {
+							i++;
+							c = c2;
 						}
 						continue;
 					case '"':
@@ -4624,14 +4646,14 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 						}
 						continue;
 					case '[':
-						if (exp && !dq && !sq && !dv) {
+						if (!compositeVariable && exp && !dq && !sq && !dv) {
 							dv = true;;
 							addOperand();
 							startIndex = i;
 						}
 						continue;
 					case ']':
-						if (exp && dv && !dq && !sq) {
+						if (!compositeVariable && exp && dv && !dq && !sq) {
 							addDevice();
 							dv = false;
 							startIndex = i;
@@ -4733,6 +4755,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 							break;
 					case 'variable':
 							if (item.x.startsWith('$args.') && (item.x.length > 6)) break;
+							if (item.x.startsWith('$json.') && (item.x.length > 6)) break;
 							if (item.x.startsWith('$response.') && (item.x.length > 10)) break;
 							if ($scope.systemVars && $scope.systemVars[item.x]) break;
 							if ($scope.globalVars && $scope.globalVars[item.x]) break;

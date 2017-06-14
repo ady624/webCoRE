@@ -71,7 +71,7 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 		if (!$scope.initialized) return;
         //do nothing, but rerenders
 		if (!tmrClock) tmrClock = $interval($scope.clock, 1000);
-		if (!tmrActivity) tmrActivity = $timeout($scope.init, 5000);
+		if (!tmrActivity) tmrActivity = $timeout($scope.init, 10000);
     }
 
 
@@ -94,16 +94,19 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
     }
 
 	$scope.showSettings = function() {
+		ga('send', 'event', 'settings', 'show');
 		$scope.closeNavBar();
 		$scope.settings = $scope.instance.settings;
 		$scope.view = 'settings';
 	};
 
 	$scope.hideSettings = function() {
+		ga('send', 'event', 'settings', 'hide');
 		$scope.view = 'piston';
 	}
 
 	$scope.saveSettings = function() {
+		ga('send', 'event', 'settings', 'save');
 		dataService.setSettings($scope.settings).then(function(data) {
 			$scope.instance.settings = $scope.settings;
 			$scope.hideSettings();
@@ -111,6 +114,7 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 	}
 
 	$scope.showFuelStreams = function() {
+		ga('send', 'event', 'fuel', 'show');
 		$scope.initialized = false;
 		$scope.loading = true;
       	$location.path('fuel');
@@ -118,6 +122,7 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 
 	$scope.showDashboard = function() {
 		$scope.view = 'dashboard';
+		ga('send', 'event', 'dashboard', 'show');
 		dataService.openWebSocket($scope.onWSUpdate);
 		$scope.dropDownMenu = false;
 		$scope.refreshing = true;
@@ -145,6 +150,7 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 	}
 
 	$scope.hideDashboard = function() {
+		ga('send', 'event', 'dashboard', 'hide');
 		dataService.closeWebSocket();
 		$scope.view = 'piston';
 		$scope.dropDownMenu = false;
@@ -303,7 +309,7 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
         }
         return $sce.trustAsHtml(process(value).replace(/\:fa-([a-z0-9\-\s]*)\:/gi, function(match) {
             return '<i class="fa ' + match.replace(/\:/g, '').toLowerCase() + '"></i>';
-        }));
+        }).replace(/\\[rn]/gi, '<br/>'));
     };
 
 
@@ -338,6 +344,7 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 	}
 
     $scope.openPiston = function(id) {
+		ga('send', 'event', 'piston', 'view', id);
         $scope.loading = true;
         $scope.initialized = false;
       	$location.path('piston/' + id);
@@ -504,10 +511,32 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 		return 1.0 - time / 60000.0;
 	}
 
+	$scope.getLocationMode = function() {
+		var mode = $scope.location.mode;
+		for(var i=0; i < $scope.location.modes.length; i++) {
+			if ($scope.location.modes[i].id == mode) return $scope.location.modes[i].name;			
+		}
+		return '(unknown)';
+	}
+
+	$scope.getSHMModeName = function() {
+		switch ($scope.location.shm) {
+			case 'away': return 'ARMED (AWAY)';
+			case 'stay': return 'ARMED (HOME)';
+			case 'off': return 'DISARMED';
+		}
+		return '(unknown)';
+	}
 
 
-
-
+	$scope.renderIncident = function(incident) {
+		result = '<span date>' + $scope.utcToString(incident.date) + '</span> - <span title>';
+		result += incident.message.replace(/\{\{(.*)\}\}/gi, function(match) {
+            return incident.args[match.substr(2, match.length - 4).trim()];
+        });
+		result += '</span>';
+		return $sce.trustAsHtml(result);
+	}
 
 
 
@@ -712,7 +741,23 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 	}
 
 
+    $scope.pausePiston = function(pistonId) {
+        $scope.loading = true;
+        dataService.pausePiston(pistonId).then(function(data) {
+            $scope.init();
+        });
+    }
 
+    $scope.resumePiston = function(pistonId) {
+        $scope.loading = true;
+        dataService.resumePiston(pistonId).then(function(data) {
+            $scope.init();
+        });
+    }
+
+    $scope.testPiston = function(pistonId) {
+        dataService.testPiston(pistonId);
+    }
 
 	$scope.determineDeviceType = function(device) {
 		return dataService.determineDeviceType(device);

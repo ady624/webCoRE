@@ -129,13 +129,21 @@
 						<div>It's kinda lonely in here...<br/>How about <a ng-click="newPiston();">creating a piston</a>?</div>
 					</div>
 					<!--<div class="alert alert-warning" ng-if="devices && (devices.length > 50)">It is recommended that the list of available devices does not exceed 50 items. You have selected a total of {{devices.length}} available devices for this instance. While not a problem, you may experience slower start-up times for your pistons. If you do, please consider breaking this instance into at least two instances and group the pistons in such a way that each instance requires less than 50 available devices. Multpile instances can safely share the same device.</div>-->
+					<div class="table-responsive no-animate topinfo" ng-if="instance">
+						<hub ng-repeat="hub in location.hubs" ng-if="hub.physical" power-source="{{hub.powerSource}}"><span>{{hub.name}}</span><span fw>{{hub.firmware}}</span></hub>
+						<location-mode>{{getLocationMode()}}</location-mode>
+						<shm-mode alert="{{location.incidents && (location.incidents.length > 0)}}" mode="{{location.shm}}">{{getSHMModeName()}}</shm-mode>
+						<incident ng-repeat="incident in location.incidents" source-type="{{incident.sourceType}}" ng-bind-html="renderIncident(incident)"></incident>
+					</div>
 					<div class="table-responsive no-animate" ng-if="instance && activePistons">
 						<label>Active pistons ({{activePistons}})</label>
 						<table class="table table-striped">
 							<tbody>
-								<tr ng-repeat="piston in instance.pistons" ng-click="openPiston(piston.id);" active="true" ng-if="piston.meta && piston.meta.a" title="{{piston.meta.t ? 'Executed ' + timeSince(piston.meta.t) : 'Never executed'}}">
-									<td><i star class="fa fa-circle" ng-style="{opacity: piston.opacity}" aria-hidden="true"></i>{{piston.name}}<span state ng-bind-html="renderString(piston.meta.s.new)"></span><!--<span ng-if="piston.meta.s && piston.meta.s.new" state="{{piston.meta.s.new}}">{{piston.meta.s.new}}</span>--></td>
-									<td dur class="col-md-1 text-right">{{piston.meta.n ? timeCounter(piston.meta.n) : ''}}</td>
+								<tr ng-repeat="piston in instance.pistons" active="true" ng-if="piston.meta && piston.meta.a" title="{{piston.meta.t ? 'Executed ' + timeSince(piston.meta.t) : 'Never executed'}}">
+									<td ng-click="openPiston(piston.id);"><span><i star class="fa fa-circle" ng-style="{opacity: piston.opacity}" aria-hidden="true"></i>{{piston.name}}<span state ng-bind-html="renderString(piston.meta.s.new)"></span><!--<span ng-if="piston.meta.s && piston.meta.s.new" state="{{piston.meta.s.new}}">{{piston.meta.s.new}}</span>--></span></td>
+									<td ng-click="openPiston(piston.id);" dur class="col-md-1 text-right">{{piston.meta.n ? timeCounter(piston.meta.n) : ''}}</td>
+									<td ng-if="!mobile" opt><i class="fa fa-ellipsis-v" aria-hidden="true"></i><actions class="animated"><action ng-click="pausePiston(piston.id);" title="Pause piston">Pause</action><action ng-click="testPiston(piston.id);" title="Test piston">Test</action><action ng-click="openPiston(piston.id);" title="View/Edit piston">View</action></actions></td>
+									
 								</tr>
 							</tbody>
 						</table>
@@ -144,9 +152,10 @@
 						<label>Paused pistons ({{pausedPistons}})</label>
 						<table class="table table-striped">
 							<tbody>
-								<tr ng-repeat="piston in instance.pistons" ng-click="openPiston(piston.id);" active="false" ng-if="!piston.meta || !piston.meta.a" title="{{piston.meta.t ? 'Paused on ' + utcToString(piston.meta.t) : ''}}">
-									<td><span>{{piston.name}}</span></td>
-									<td class="col-md-1 text-right">{{piston.meta.n ? timeCounter(piston.meta.n) : ''}}</td>
+								<tr ng-repeat="piston in instance.pistons"  active="false" ng-if="!piston.meta || !piston.meta.a" title="{{piston.meta.t ? 'Paused on ' + utcToString(piston.meta.t) : ''}}">
+									<td ng-click="openPiston(piston.id);"><span>{{piston.name}}</span></td>
+									<td ng-click="openPiston(piston.id);" class="col-md-1 text-right">{{piston.meta.n ? timeCounter(piston.meta.n) : ''}}</td>
+									<td ng-if="!mobile" opt><i class="fa fa-ellipsis-v" aria-hidden="true"></i><actions class="animated"><action ng-click="resumePiston(piston.id);" title="Resume piston">Resume</action><action ng-click="testPiston(piston.id);" title="Test piston">Test</action><action ng-click="openPiston(piston.id);" title="View/Edit piston">View</action></actions></td>
 								</tr>
 							</tbody>
 						</table>

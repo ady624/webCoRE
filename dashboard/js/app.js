@@ -180,16 +180,17 @@ app.directive('tileHeight', function(){
 });
 
 
-app.directive('help', function($compile) {
-	return function(scope, element, attrs) {
-		var data = attrs['help'] ? attrs['help'] : element.text();		
-		var el = angular.element('<wiki ng-click="wiki(\'' + data + '\')" class="fa fa-info-circle"></wiki>');
-		element.append($compile(el)(scope));
-//		el.bind('click', function(){
-//			console.log('here');
-//		});
+app.directive('help', ['$compile', function($compile) {
+	var directive = {
+		restrict: 'A',
+		link: function(scope, element, attrs) {
+			var data = attrs['help'] ? attrs['help'] : element.text();		
+			var el = angular.element('<wiki ng-click="wiki(\'' + data + '\')" class="fa fa-info-circle"></wiki>');
+			element.append($compile(el)(scope));
+		}
 	};
-});
+	return directive;
+}]);
 
 
 app.directive('script', function() {
@@ -311,6 +312,7 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 	var cbkStatus = null;
 	var ws = null;
 	var wsCallback = null;
+	var nagged = false;
 
 	var storage = {};
 	var pendingStorage = 1;
@@ -428,7 +430,8 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 		writeObject('instances', instances);
 		writeObject('store', store);
 		writeObject('instance', instance.id, _dk);
-		if ((instance.coreVersion) && (version() != instance.coreVersion)) {
+		if ((instance.coreVersion) && (version() != instance.coreVersion) && !nagged) {
+			nagged = true;
 			if (version() > instance.coreVersion) {
 				status('A newer SmartApp version (' + version() + ') is available, please update and publish all the webCoRE SmartApps in the SmartThings IDE.');
 			} else {
@@ -789,8 +792,7 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 		}
         return $http({
             method: 'GET',
-            //url: 'https://api.myjson.com/bins/' + binId,
-            url: 'https://api.webcore.co/bins/' + (privateBin ? md5(inst.account.id) + '/' : '') + binId,
+            url: 'https://api.webcore.co/bins/' + md5(inst.account.id) + '/' + binId,
             transformResponse: function(data) {
 				if (binId) {
 					try {
@@ -1462,4 +1464,4 @@ if (document.selection) {
      document.execCommand("Copy");
 }}
 
-version = function() { return 'v0.2.0b8.20170607'; };
+version = function() { return 'v0.2.0bf.20170614'; };
