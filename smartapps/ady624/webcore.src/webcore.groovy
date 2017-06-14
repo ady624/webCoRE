@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.2.0bf.20170614" }
+public static String version() { return "v0.2.0c0.20170614" }
 /*
+ *	06/14/2017 >>> v0.2.0c0.20170614 - BETA M2 - Added support for $weather and external execution of pistons
  *	06/14/2017 >>> v0.2.0bf.20170614 - BETA M2 - Some fixes (typo found by @DThompson10), added support for JSON arrays, as well as Parse JSON data task
  *	06/13/2017 >>> v0.2.0be.20170613 - BETA M2 - 0be happy - capture/restore is here
  *	06/12/2017 >>> v0.2.0bd.20170612 - BETA M2 - More bug fixes, work started on capture/restore, DO NOT USE them yet
@@ -774,8 +775,7 @@ mappings {
 	path("/intf/dashboard/variable/set") {action: [GET: "api_intf_variable_set"]}
 	path("/intf/dashboard/settings/set") {action: [GET: "api_intf_settings_set"]}
 	path("/ifttt/:eventName") {action: [GET: "api_ifttt", POST: "api_ifttt"]}
-	path("/execute") {action: [POST: "api_execute"]}
-	path("/execute/:pistonName") {action: [GET: "api_execute", POST: "api_execute"]}
+	path("/execute/:pistonIdOrName") {action: [GET: "api_execute", POST: "api_execute"]}
 	path("/tap") {action: [POST: "api_tap"]}
 	path("/tap/:tapId") {action: [GET: "api_tap"]}
 }
@@ -1248,15 +1248,18 @@ private api_intf_dashboard_piston_activity() {
 }
 
 def api_ifttt() {
-	def data = request?.JSON ?: [:]
+	def data = [:]
+    def remoteAddr = request.getHeader("X-FORWARDED-FOR") ?: request.getRemoteAddr()
     if (params) {
     	data.params = [:]
         for(param in params) {
         	if (!(param.key in ['theAccessToken', 'appId', 'action', 'controller'])) {
-            	data.params[param.key] = param.value
+            	data[param.key] = param.value
             }
         }
     }
+    data = data + (request?.JSON ?: [:])
+    data.remoteAddr = remoteAddr
 	def eventName = params?.eventName
 	if (eventName) {
 		sendLocationEvent([name: "ifttt", value: eventName, isStateChange: true, linkText: "IFTTT event", descriptionText: "${handle()} has received an IFTTT event: $eventName", data: data])
@@ -1266,7 +1269,31 @@ def api_ifttt() {
 
 
 
-
+private api_execute() {
+	def result = [:]
+	def data = [:]
+    def remoteAddr = request.getHeader("X-FORWARDED-FOR") ?: request.getRemoteAddr()
+    debug "Dashboard: Request received to execute a piston from IP $remoteAddr"
+	if (params) {    	
+    	data = [:]
+        for(param in params) {
+        	if (!(param.key in ['theAccessToken', 'appId', 'action', 'controller', 'pistonIdOrName'])) {
+            	data[param.key] = param.value
+            }
+        }
+    }
+    data = data + (request?.JSON ?: [:])
+    data.remoteAddr = remoteAddr
+	def pistonIdOrName = params?.pistonIdOrName
+    def piston = getChildApps().find{ (it.label == pistonIdOrName) || (hashId(it.id) == pistonIdOrName) };
+    if (piston) {
+    	sendLocationEvent(name: hashId(piston.id), value: remoteAddr, isStateChange: true, displayed: false, linkText: "Execute event", descriptionText: "External piston execute request from IP $remoteAddr", data: data)
+        result.result = 'OK'
+	} else {
+    	result.result = 'ERROR'
+	}
+    render contentType: "application/json;charset=utf-8", data: result
+}
 
 
 

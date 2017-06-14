@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.2.0bf.20170614" }
+public static String version() { return "v0.2.0c0.20170614" }
 /*
+ *	06/14/2017 >>> v0.2.0c0.20170614 - BETA M2 - Added support for $weather and external execution of pistons
  *	06/14/2017 >>> v0.2.0bf.20170614 - BETA M2 - Some fixes (typo found by @DThompson10), added support for JSON arrays, as well as Parse JSON data task
  *	06/13/2017 >>> v0.2.0be.20170613 - BETA M2 - 0be happy - capture/restore is here
  *	06/12/2017 >>> v0.2.0bd.20170612 - BETA M2 - More bug fixes, work started on capture/restore, DO NOT USE them yet
@@ -4062,6 +4063,19 @@ private Map getResponse(rtData, name) {
 	return getJsonData(rtData, rtData.response, name)
 }
 
+private Map getWeather(rtData, name) {
+	List parts = name.tokenize('.');
+    rtData.weather = rtData.weather ?: [:]
+    if (parts.size() > 0) {
+    	def dataFeature = parts[0]
+        if (rtData.weather[dataFeature] == null) {
+        	rtData.weather[dataFeature] = app.getWeatherFeature(dataFeature)
+        }
+    }
+	return getJsonData(rtData, rtData.weather, name)
+    
+}
+
 private Map getVariable(rtData, name) {
 	name = sanitizeVariableName(name)
 	if (!name) return [t: "error", v: "Invalid empty variable name"]
@@ -4077,6 +4091,8 @@ private Map getVariable(rtData, name) {
             	result = getJson(rtData, name.substring(6))
             } else if (name.startsWith('$response.') && (name.size() > 10)) {
             	result = getResponse(rtData, name.substring(10))
+            } else if (name.startsWith('$weather.') && (name.size() > 9)) {
+            	result = getWeather(rtData, name.substring(9))
             } else {
 				result = rtData.systemVars[name]
             	if (!(result instanceof Map)) result = [t: "error", v: "Variable '$name' not found"]
@@ -6230,6 +6246,7 @@ private static Map getSystemVariables() {
         '$args': [t: "dynamic", d: true],
         '$json': [t: "dynamic", d: true],
         '$response': [t: "dynamic", d: true],
+        '$weather': [t: "dynamic", d: true],
 		"\$currentEventAttribute": [t: "string", v: null],
 		"\$currentEventDate": [t: "datetime", v: null],
 		"\$currentEventDelay": [t: "integer", v: null],
@@ -6308,6 +6325,7 @@ private getSystemVariableValue(rtData, name) {
     	case '$args': return "${rtData.args}".toString()
     	case '$json': return "${rtData.json}".toString()
     	case '$response': return "${rtData.response}".toString()
+        case '$weather': return "${rtData.weather}".toString()
 		case "\$name": return app.label
 		case "\$version": return version()
 		case "\$now": return (long) now()
