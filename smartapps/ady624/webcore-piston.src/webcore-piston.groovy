@@ -1954,8 +1954,8 @@ private long cmd_setColorTemperature(rtData, device, params) {
     return 0
 }
 
-private long cmd_setColor(rtData, device, params) {
-    def color = (params[0] == 'Random') ? colorUtil.RANDOM : colorUtil.findByName(params[0])
+private getColor(colorValue) {
+    def color = (colorValue == 'Random') ? colorUtil.RANDOM : colorUtil.findByName(colorValue)
     if (color) {
 		color = [
         	hex: color.rgb,
@@ -1964,7 +1964,7 @@ private long cmd_setColor(rtData, device, params) {
         	level: color.l
     	]
     } else {
-    	color = hexToColor(params[0])
+    	color = hexToColor(colorValue)
         if (color) {
             color = [
                 hex: color.hex,
@@ -1974,6 +1974,11 @@ private long cmd_setColor(rtData, device, params) {
             ]
         }
     }
+    return color
+}
+
+private long cmd_setColor(rtData, device, params) {
+	def color = getColor(params[0])
     if (!color) {
     	error "ERROR: Invalid color $params", rtData
         return 0
@@ -2443,9 +2448,9 @@ private long vcmd_flashLevel(rtData, device, params) {
 }
 
 private long vcmd_flashColor(rtData, device, params) {
-	int color1 = params[0]
+	def color1 = getColor(params[0])
 	long duration1 = cast(rtData, params[1], 'long')
-	int color2 = params[2]
+	def color2 = getColor(params[2])
 	long duration2 = cast(rtData, params[3], 'long')
     int cycles = cast(rtData, params[4], 'integer')
     def state = params.size() > 5 ? params[5] : ""
