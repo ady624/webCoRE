@@ -20,7 +20,7 @@
 */
 public static String version() { return "v0.2.0c2.20170616" }
 /*
- *	06/16/2017 >>> v0.2.0c2.20170616 - BETA M2 - DO NOT UPDATE TO THIS UNLESS ASKED TO - Added support for lock codes, physical interaction
+ *	06/16/2017 >>> v0.2.0c2.20170616 - BETA M2 - Added support for lock codes, physical interaction
  *	06/16/2017 >>> v0.2.0c1.20170616 - BETA M2 - Added support for the emulated $status device attribute, cancel all pending tasks, allow pre-scheduled tasks to execute during restrictions
  *	06/14/2017 >>> v0.2.0c0.20170614 - BETA M2 - Added support for $weather and external execution of pistons
  *	06/14/2017 >>> v0.2.0bf.20170614 - BETA M2 - Some fixes (typo found by @DThompson10), added support for JSON arrays, as well as Parse JSON data task
