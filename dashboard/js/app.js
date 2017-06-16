@@ -662,7 +662,8 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 				}
 				if (data.instance) {
 					data.instance = setInstance(data.instance);
-				}		
+				}
+				data.endpoint = si.uri;
 				return data;	
 			}, function(response) {
 			});
@@ -1464,4 +1465,4 @@ if (document.selection) {
      document.execCommand("Copy");
 }}
 
-version = function() { return 'v0.2.0bf.20170614'; };
+version = function() { return 'v0.2.0c2.20170616'; };

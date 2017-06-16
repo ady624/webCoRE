@@ -13,6 +13,7 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 	$scope.activePistons = 0;
 	$scope.pausedPistons = 0;
 	$scope.dropDownMenu = false;
+	$scope.endpoint = '';
 	$scope.view = 'piston';
 
 	$scope.init = function(instance, uri, pin) {
@@ -27,6 +28,7 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 				if ($scope.$$destroyed) return;
 				if (currentRequestId != $scope.requestId) { return };
 				if (data) {
+					$scope.endpoint=data.endpoint + 'execute/:pistonId:';
 					if (data.error) {
 						switch (data.error) {
 							case 'ERR_INVALID_TOKEN':

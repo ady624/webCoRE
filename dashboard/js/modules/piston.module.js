@@ -3,6 +3,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 	var tmrStatus;
 	var tmrActivity;
 	var tmrClock;
+	var statusAttribute = '$status';
 	$scope.lastLogEntry = 0;
 	$scope.error = '';
 	$scope.loading = true;
@@ -827,6 +828,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 			conditionOptimizations: $scope.piston.o.cto ? 1 : 0,
 			executionParallelism: $scope.piston.o.pep ? 1 : 0,
 			eventSubscriptions: $scope.piston.o.des ? 1 : 0,
+			allowPreSchedules: $scope.piston.o.aps ? 1 : 0,
 			commandDelay: $scope.piston.o.ced ? $scope.piston.o.ced : 0
 		};
 		window.designer = $scope.designer;
@@ -847,6 +849,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		$scope.piston.o.dco = $scope.designer.commandOptimizations ? 1 : 0;
 		$scope.piston.o.cto = $scope.designer.conditionOptimizations ? 1 : 0;
 		$scope.piston.o.des = $scope.designer.eventSubscriptions ? 1 : 0;
+		$scope.piston.o.aps = $scope.designer.allowPreSchedules ? 1 : 0;
 		$scope.piston.o.ced = isNaN($scope.designer.commandDelay) ? 0 : parseInt($scope.designer.commandDelay);
 		$scope.closeDialog();
 	}
@@ -1369,7 +1372,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		$scope.designer.operator = condition.o;
 		$scope.designer.comparison = {
 			type: 'condition',
-			left: {data: condition.lo ? $scope.copy(condition.lo) : {}, showSubDevices: true},
+			left: {data: condition.lo ? $scope.copy(condition.lo) : {}, showSubDevices: true, showInteraction: true},
 			operator: condition.co,
 			right: {data: condition.ro ? $scope.copy(condition.ro) : {}},
 			right2: {data: condition.ro2 ? $scope.copy(condition.ro2) : {}},
@@ -2607,7 +2610,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 	    var result = [];
 	    var list = $scope.listAvailableAttributes(devices, restrictAttribute);
 		for (i in list) {
-			result.push({n: list[i].n, v: list[i].id});
+			if (list[i].n != statusAttribute) result.push({n: list[i].n, v: list[i].id});
 	    }
 		return result;
 	}
@@ -2666,6 +2669,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 					}
 				}
 			}
+			result.push({id: statusAttribute, n: '⌂ ' + statusAttribute, t:'string'});
 			result.sort($scope.sortByName);
 		}
 		return result;
@@ -3039,10 +3043,15 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 						}
 					}
 				}
+				operand.count = 0;
 				if (attribute) {
-					operand.momentary = attribute.m;
-					operand.count = 0;
-					if (operand.momentary && !!attribute.s) {
+					operand.momentary = attribute.m || (!!attribute.s && (operand.data.i instanceof Array) && operand.data.i.length);
+					operand.interactive = !!attribute.p;
+					if (operand.interactive && !operand.data.p) {
+						operand.data.p = 'a';
+					}
+					if (!!attribute.s) {
+						operand.subDeviceName = attribute.sd;
 						//get the number of sub devices
 						//default of 32 buttons, if no description available
 						var countAttributes = attribute.s.split(',');
@@ -3059,15 +3068,16 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 										}
 									}
 								}
-							} else {
-								if (operand.count < 32) operand.count = 32;
 							}
 						}
+						if (operand.count == 0) operand.count = 32;
+					} else {
+						operand.subDeviceName = '';
 					}
 					if (operand.count) {
 						if ((operand.data.i == null) || (operand.data.i == undefined)) {
 							//default sub device index
-							operand.data.i = ['1'];
+							operand.data.i = [];
 						}
 						$scope.refreshSelects();
 					}
@@ -3161,9 +3171,9 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 			operand.error = 'Invalid duration unit';
 		}
 
-		if ((!operand.error) && operand.count && (!operand.data.i || !operand.data.i.length)) {
-			operand.error = 'Invalid sub device selection';
-		}
+		//if ((!operand.error) && operand.count && (!operand.data.i || !operand.data.i.length)) {
+		//	operand.error = 'Invalid sub device selection';
+		//}
 
 		operand.valid = (!operand.error) && (
 			((operand.data.t=='') && (operand.optional)) ||
@@ -3283,12 +3293,15 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		$scope.validateOperand(comparison.left, reinit, true);
 
 		//rebuild the list of comparisons, but only if needed
-		if ((comparison.left.selectedDataType != comparison.dataType) || (comparison.left.selectedMultiple != comparison.selectedMultiple) || (comparison.left.momentary != comparison.momentary) || (comparison.left.data.t == 'v')) {
+		if ((comparison.left.selectedDataType != comparison.dataType) || (comparison.left.selectedMultiple != comparison.selectedMultiple) || (comparison.left.momentary != comparison.momentary) || (comparison.left.data.t == 'v') || (comparison.selectedInteractive != comparison.left.data.p)) {
 			comparison.dataType = comparison.left.selectedDataType;
 			comparison.selectedMultiple = comparison.left.selectedMultiple;
+			comparison.selectedInteractive = comparison.left.data.p;
 			comparison.momentary = comparison.left.momentary;
 			//timed conditions are disabled if not comparing physical devices, or if applying an aggregation function
-			var disableTimedComparisons = (comparison.left.data.t != 'p') || ((comparison.left.data.g != 'any') && (comparison.left.data.g != 'all'));
+			var disableTimedConditions = (comparison.left.data.t != 'p') || ((comparison.left.data.g != 'any') && (comparison.left.data.g != 'all'));
+			var disableConditions = (comparison.left.interactive && ((comparison.left.data.p == 'p') || (comparison.left.data.p == 's')));
+			var disableTimedTriggers = disableConditions;
 			var disableTriggers = (comparison.type == 'restriction');
 			var optionList = [];
 			var options = [];
@@ -3309,18 +3322,20 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 					dt = comparison.dataType.substr(0, 1);
 			}
             dt = (comparison.momentary ? (comparison.left.data.t == 'v' ? 'v' : 'm') : ((dt == 'n' ? 'd' : dt)));
-			for(conditionId in $scope.db.comparisons.conditions) {
-				var condition = $scope.db.comparisons.conditions[conditionId];
-				if (((!dt && (condition.g != 'm')) || (condition.g.indexOf(dt) >= 0)) && (!disableTimedComparisons || !condition.t))  {
-					options.push({ id: conditionId, d: (comparison.selectedMultiple ? (condition.dd ? condition.dd : condition.d) : condition.d), c: 'Conditions' });
+			if (!disableConditions) {
+				for(conditionId in $scope.db.comparisons.conditions) {
+					var condition = $scope.db.comparisons.conditions[conditionId];
+					if (((!dt && (condition.g != 'm')) || (condition.g.indexOf(dt) >= 0)) && (!disableTimedConditions || !condition.t))  {
+						options.push({ id: conditionId, d: (comparison.selectedMultiple ? (condition.dd ? condition.dd : condition.d) : condition.d), c: 'Conditions' });
+					}
 				}
+				optionList = optionList.concat(options.sort($scope.sortByDisplay));
 			}
-			optionList = optionList.concat(options.sort($scope.sortByDisplay));
 			if (!disableTriggers) {
 				options = [];
 				for(triggerId in $scope.db.comparisons.triggers) {
 					var trigger = $scope.db.comparisons.triggers[triggerId];
-					if (trigger.g.indexOf(dt) >= 0) {
+					if ((trigger.g.indexOf(dt) >= 0) && (!disableTimedTriggers || !trigger.t)) {
 						options.push({ id: triggerId, d: (comparison.selectedMultiple ? (trigger.dd ? trigger.dd : trigger.d) : trigger.d), c: 'Triggers' });
 					}
 				}
@@ -3403,7 +3418,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		}
 	};
 
-	$scope.renderOperand = function(operand, noQuotes, pedantic, noNegatives, grouping = 'or') {
+	$scope.renderOperand = function(operand, noQuotes, pedantic, noNegatives, grouping) {
 		var result = '';
 		if (operand) {
 //			if (operand instanceof Array) {
@@ -3514,6 +3529,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		var plural = l && (l.t == 'p') && l.d && (l.d.length > 1) && (l.g == 'all');
 		var noQuotes = false;
 		var unit = '';
+		var a = null;
 		switch (l.t) {
 			case 'v':
 				switch (l.v) {
@@ -3524,13 +3540,19 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 				}
 				break;
 			case 'p':
-				var a = $scope.getAttributeById(l.a);
+				a = $scope.getAttributeById(l.a);
 				if (!!a && !!a.u) unit = a.u;
 				break;
 		}
 		var indexes = '';
-		if ((comparison.g == 'm') && l.i && l.i.length) {
+		if (!!a && !!a.s && (l.i instanceof Array) && l.i.length) {
 			indexes = ' <span num>' + $scope.buildNameList(l.i, 'or', null, null, false, true, false, '#') + '</span>';
+		}
+		if (!!a && !!a.p) {
+			switch (l.p) {
+				case 'p': indexes += ' <span lit>physically</span>'; break;
+				case 's': indexes += ' <span lit>programmatically</span>'; break;
+			}
 		}
 		var offset1 = '';
 		var offset2 = '';
@@ -4486,7 +4508,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		function main() {
 			var arr = [];
 			var startIndex = i;
-			var compositeVariable = (str.substr(startIndex, 6) == '$args.') || (str.substr(startIndex, 6) == '$json.') || (str.substr(startIndex, 10) == '$response.')
+			var compositeVariable = (str.substr(startIndex, 6) == '$args.') || (str.substr(startIndex, 6) == '$json.') || (str.substr(startIndex, 10) == '$response.') || (str.substr(startIndex, 9) == '$weather.')
 			function addOperand() {
 				if (i-1 > startIndex) {
 					var value = str.slice(startIndex, i-1);
@@ -4534,10 +4556,14 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 						//a device was found
 						var a = attribute.toLowerCase();
 						attribute = '';
-						for (attributeIndex in device.a) {
-							var attr = device.a[attributeIndex];
-							if (a == attr.n.toLowerCase()) {
-								attribute = attr.n;
+						if (a == statusAttribute) {
+							attribute = statusAttribute;
+						} else {
+							for (attributeIndex in device.a) {
+								var attr = device.a[attributeIndex];
+								if (a == attr.n.toLowerCase()) {
+									attribute = attr.n;
+								}
 							}
 						}
 						if (!!a && !attribute) attribute = '?';
@@ -4757,6 +4783,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 							if (item.x.startsWith('$args.') && (item.x.length > 6)) break;
 							if (item.x.startsWith('$json.') && (item.x.length > 6)) break;
 							if (item.x.startsWith('$response.') && (item.x.length > 10)) break;
+							if (item.x.startsWith('$weather.') && (item.x.length > 9)) break;
 							if ($scope.systemVars && $scope.systemVars[item.x]) break;
 							if ($scope.globalVars && $scope.globalVars[item.x]) break;
 							if (!$scope.getVariableByName(item.x)) {
