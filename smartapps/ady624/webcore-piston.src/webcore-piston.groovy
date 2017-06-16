@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.2.0c1.20170616" }
+public static String version() { return "v0.2.0c2.20170616" }
 /*
+ *	06/16/2017 >>> v0.2.0c2.20170616 - BETA M2 - DO NOT UPDATE TO THIS UNLESS ASKED TO - Added support for lock codes, physical interaction
  *	06/16/2017 >>> v0.2.0c1.20170616 - BETA M2 - Added support for the emulated $status device attribute, cancel all pending tasks, allow pre-scheduled tasks to execute during restrictions
  *	06/14/2017 >>> v0.2.0c0.20170614 - BETA M2 - Added support for $weather and external execution of pistons
  *	06/14/2017 >>> v0.2.0bf.20170614 - BETA M2 - Some fixes (typo found by @DThompson10), added support for JSON arrays, as well as Parse JSON data task
@@ -2940,8 +2941,9 @@ private evaluateOperand(rtData, node, operand, index = null, trigger = false, ne
             break
         case "p": //physical device
         	def j = 0;
+            def attribute = rtData.attributes[operand.a]            
         	for(deviceId in expandDeviceList(rtData, operand.d)) {
-            	def value = [i: "${deviceId}:${operand.a}", v:getDeviceAttribute(rtData, deviceId, operand.a, operand.i, trigger) + (operand.vt ? [vt: operand.vt] : [:])]
+            	def value = [i: "${deviceId}:${operand.a}", v:getDeviceAttribute(rtData, deviceId, operand.a, operand.i, trigger) + (operand.vt ? [vt: operand.vt] : [:]) + (attribute && attribute.p ? [p: operand.p] : [:])]
                 updateCache(rtData, value)
 	            values.push(value)
 	            j++
@@ -3233,6 +3235,8 @@ private Boolean evaluateComparison(rtData, comparison, lo, ro = null, ro2 = null
             def res = false
             if (value && value.v && (!value.v.x || options.forceAll)) {
                 try {
+                	//physical support
+                	//value.p = lo.operand.p
                     if (!ro) {
                     	def msg = timer ""
                         res = "$fn"(rtData, value, null, null, tvalue, tvalue2)
@@ -3314,8 +3318,12 @@ private cancelConditionSchedules(rtData, conditionId) {
 }
 
 private Boolean matchDeviceSubIndex(list, deviceSubIndex) {
-	if (!list || !(list instanceof List)) return true
+	if (!list || !(list instanceof List) || (list.size() == 0)) return true
     return list.collect{ "$it".toString() }.indexOf("$deviceSubIndex".toString()) >= 0
+}
+
+private Boolean matchDeviceInteraction(option, isPhysical) {
+	return !(((option == 'p') && !isPhysical) || ((option == 's') && !!isPhysical))
 }
 
 private List listPreviousStates(device, attribute, threshold, excludeLast) {
@@ -3443,9 +3451,9 @@ private boolean comp_gets							(rtData, lv, rv = null, rv2 = null, tv = null, t
 private boolean comp_executes						(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return comp_is(rtData, lv, rv, rv2, tv, tv2) }
 private boolean comp_happens_daily_at				(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return rtData.wakingUp }
 
-private boolean comp_changes						(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return valueCacheChanged(rtData, lv); }
-private boolean comp_changes_to						(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return valueCacheChanged(rtData, lv) && ("${lv.v.v}" == "${rv.v.v}"); }
-private boolean comp_changes_away_from				(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { def oldValue = valueCacheChanged(rtData, lv); return oldValue && ("${oldValue.v.v}" == "${rv.v.v}"); }
+private boolean comp_changes						(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return valueCacheChanged(rtData, lv) && matchDeviceInteraction(lv.p, rtData.currentEvent.physical); }
+private boolean comp_changes_to						(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return valueCacheChanged(rtData, lv) && ("${lv.v.v}" == "${rv.v.v}") && matchDeviceInteraction(lv.p, rtData.currentEvent.physical); }
+private boolean comp_changes_away_from				(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { def oldValue = valueCacheChanged(rtData, lv); return oldValue && ("${oldValue.v.v}" == "${rv.v.v}") && matchDeviceInteraction(lv.p, rtData.currentEvent.physical); }
 private boolean comp_drops							(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { def oldValue = valueCacheChanged(rtData, lv); return oldValue && (cast(rtData, oldValue.v.v, 'decimal') > cast(rtData, lv.v.v, 'decimal')); }
 private boolean comp_does_not_drop					(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return !comp_drops(rtData, lv, rv, rv2, tv, tv2); }
 private boolean comp_drops_below					(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { def oldValue = valueCacheChanged(rtData, lv); return oldValue && (cast(rtData, oldValue.v.v, 'decimal') >= cast(rtData, rv.v.v, 'decimal')) && (cast(rtData, lv.v.v, 'decimal') < cast(rtData, rv.v.v, 'decimal')); }
@@ -3467,8 +3475,8 @@ private boolean comp_becomes_odd					(rtData, lv, rv = null, rv2 = null, tv = nu
 private boolean comp_remains_even					(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { def oldValue = valueCacheChanged(rtData, lv); return oldValue && (cast(rtData, oldValue.v.v, 'integer').mod(2) == 0) && (cast(rtData, lv.v.v, 'integer').mod(2) == 0); }
 private boolean comp_remains_odd					(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { def oldValue = valueCacheChanged(rtData, lv); return oldValue && (cast(rtData, oldValue.v.v, 'integer').mod(2) != 0) && (cast(rtData, lv.v.v, 'integer').mod(2) != 0); }
 
-private boolean comp_changes_to_any_of				(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return !!valueCacheChanged(rtData, lv) && comp_is_any_of(rtData, lv, rv, rv2, tv, tv2); }
-private boolean comp_changes_away_from_any_of		(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { def oldValue = valueCacheChanged(rtData, lv); return !!oldValue && comp_is_any_of(rtData, oldValue, rv, rv2); }
+private boolean comp_changes_to_any_of				(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return !!valueCacheChanged(rtData, lv) && comp_is_any_of(rtData, lv, rv, rv2, tv, tv2) && matchDeviceInteraction(lv.p, rtData.currentEvent.physical); }
+private boolean comp_changes_away_from_any_of		(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { def oldValue = valueCacheChanged(rtData, lv); return !!oldValue && comp_is_any_of(rtData, oldValue, rv, rv2) && matchDeviceInteraction(lv.p, rtData.currentEvent.physical); }
 
 private boolean comp_stays							(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return comp_is(rtData, lv, rv, rv2, tv, tv2); }
 private boolean comp_stays_unchanged				(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return true; }
