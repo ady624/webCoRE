@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.2.0c0.20170614" }
+public static String version() { return "v0.2.0c1.20170616" }
 /*
+ *	06/16/2017 >>> v0.2.0c1.20170616 - BETA M2 - Added support for the emulated $status device attribute, cancel all pending tasks, allow pre-scheduled tasks to execute during restrictions
  *	06/14/2017 >>> v0.2.0c0.20170614 - BETA M2 - Added support for $weather and external execution of pistons
  *	06/14/2017 >>> v0.2.0bf.20170614 - BETA M2 - Some fixes (typo found by @DThompson10), added support for JSON arrays, as well as Parse JSON data task
  *	06/13/2017 >>> v0.2.0be.20170613 - BETA M2 - 0be happy - capture/restore is here
@@ -557,7 +558,7 @@ private getRunTimeData(rtData = null, semaphore = null, fetchWrappers = false) {
 	    rtData.cache = atomicState.cache ?: [:]
 	    rtData.newCache = [:]
 	    rtData.schedules = []
-	    rtData.cancelations = [statements:[], conditions:[]]
+	    rtData.cancelations = [statements:[], conditions:[], all: false]
 	    rtData.piston = piston
         def logging = "$state.logging".toString()
         logging = logging.isInteger() ? logging.toInteger() : 0
@@ -691,20 +692,7 @@ def handleEvents(event) {
         	if (rtData.logging > 2) debug "Fast executing schedules, waiting for ${delay}ms to sync up", rtData
         	pause delay
         }
-        if (event.schedule.i == -3) {
-        	def data = event.schedule.d
-            if (data && data.d && data.c) {
-        		//we have a device schedule, execute it
-            	def device = getDevice(rtData, data.d)
-                if (device) {
-                	//executing scheduled physical command
-                    //used by fades, flashes, etc.
-                	executePhysicalCommand(rtData, device, data.c, data.p, null, null, true)
-                }
-			}
-        } else {
-        	success = executeEvent(rtData, event)
-        }
+       	success = executeEvent(rtData, event)
         syncTime = true
         //if we waited at a semaphore, we don't want to process too many events
         if (rtData.semaphoreDelay) break
@@ -793,13 +781,29 @@ private Boolean executeEvent(rtData, event) {
         def ended = false
         try {
 		    def allowed = !rtData.piston.r || !(rtData.piston.r.length) || evaluateConditions(rtData, rtData.piston, 'r', true)
+           	rtData.restricted = !rtData.piston.o?.aps &&!allowed
     		if (allowed || !!rtData.fastForwardTo) {
-            	rtData.restricted = !allowed
-				if (executeStatements(rtData, rtData.piston.s)) {
-                	ended = true
-		        	tracePoint(rtData, 'end', 0, 0)
-		        }
-		        processSchedules rtData
+				if (rtData.fastForwardTo == -3) {
+                	//device related time schedules
+					if (!rtData.restricted) {
+                        def data = event.schedule.d
+                        if (data && data.d && data.c) {
+                            //we have a device schedule, execute it
+                            def device = getDevice(rtData, data.d)
+                            if (device) {
+                                //executing scheduled physical command
+                                //used by fades, flashes, etc.
+                                executePhysicalCommand(rtData, device, data.c, data.p, null, null, true)
+                            }
+                        }
+                    }
+				} else {
+                    if (executeStatements(rtData, rtData.piston.s)) {
+                        ended = true
+                        tracePoint(rtData, 'end', 0, 0)
+                    }
+                    processSchedules rtData
+				}
             } else {
             	warn "Piston execution aborted due to restrictions in effect", rtData
             }
@@ -884,6 +888,9 @@ private processSchedules(rtData, scheduleJob = false) {
     
     rtData.state.old = rtData.state.new
     //schedules = (atomicState.schedules ?: [])
+    if (rtData.cancelations.all) {
+    	schedules.removeAll{ it.i > 0 }
+    }
     //cancel statements
 	schedules.removeAll{ schedule -> !!rtData.cancelations.statements.find{ cancelation -> (cancelation.id == schedule.s) && (!cancelation.data || (cancelation.data == schedule.d)) }}
     //cancel on conditions
@@ -2401,6 +2408,70 @@ private long vcmd_flash(rtData, device, params) {
 	return duration + 100
 }
 
+private long vcmd_flashLevel(rtData, device, params) {
+	int level1 = cast(rtData, params[0], 'int')
+	long duration1 = cast(rtData, params[1], 'long')
+	int level2 = cast(rtData, params[2], 'int')
+	long duration2 = cast(rtData, params[3], 'long')
+    int cycles = cast(rtData, params[4], 'integer')
+    def state = params.size() > 5 ? params[5] : ""
+    def delay = params.size() > 6 ? params[6] : 0
+    def currentState = getDeviceAttributeValue(rtData, device, 'switch')
+    def currentLevel = getDeviceAttributeValue(rtData, device, 'level')
+    if (state && (currentState != "$state")) {
+        return 0
+    }
+    long duration = (duration1 + duration2) * cycles
+    if (duration <= 500) {
+    	//if the flash is too fast, ignore it
+        return 0
+    }
+    //initialize parameters
+    def scheduleDevice = (duration > 10000) ? hashId(device.id) : null
+    long dur = 0
+    for(def i = 1; i <= cycles; i++) {
+    	executePhysicalCommand(rtData, device, 'setLevel', [level1], dur, scheduleDevice, true)
+        dur += duration1
+    	executePhysicalCommand(rtData, device, 'setLevel', [level2], dur, scheduleDevice, true)
+        dur += duration2
+    }    
+    //for good measure, send a last command 100ms after the end of the interval
+    executePhysicalCommand(rtData, device, 'setLevel', [currentLevel], duration + 98, scheduleDevice, true)
+    executePhysicalCommand(rtData, device, currentState, [], duration + 99, scheduleDevice, true)
+	return duration + 100
+}
+
+private long vcmd_flashColor(rtData, device, params) {
+	int color1 = params[0]
+	long duration1 = cast(rtData, params[1], 'long')
+	int color2 = params[2]
+	long duration2 = cast(rtData, params[3], 'long')
+    int cycles = cast(rtData, params[4], 'integer')
+    def state = params.size() > 5 ? params[5] : ""
+    def delay = params.size() > 6 ? params[6] : 0
+    def currentState = getDeviceAttributeValue(rtData, device, 'switch')
+    if (state && (currentState != "$state")) {
+        return 0
+    }
+    long duration = (duration1 + duration2) * cycles
+    if (duration <= 500) {
+    	//if the flash is too fast, ignore it
+        return 0
+    }
+    //initialize parameters
+    def scheduleDevice = (duration > 10000) ? hashId(device.id) : null
+    long dur = 0
+    for(def i = 1; i <= cycles; i++) {
+    	executePhysicalCommand(rtData, device, 'setColor', [color1], dur, scheduleDevice, true)
+        dur += duration1
+    	executePhysicalCommand(rtData, device, 'setColor', [color2], dur, scheduleDevice, true)
+        dur += duration2
+    }    
+    //for good measure, send a last command 100ms after the end of the interval
+    executePhysicalCommand(rtData, device, currentState, [], duration + 99, scheduleDevice, true)
+	return duration + 100
+}
+
 private long vcmd_sendNotification(rtData, device, params) {
 	def message = params[0]
     sendNotificationEvent(message)
@@ -2814,6 +2885,10 @@ private long vcmd_parseJson(rtData, device, params) {
     	error "Error parsing JSON data $data", rtData
     }
     return 0;
+}
+
+private long vcmd_cancelTasks(rtData, device, params) {
+	rtData.cancelations.all = true
 }
 
 
@@ -3930,6 +4005,7 @@ private getDeviceAttributeValue(rtData, device, attributeName) {
 	if (rtData.event && (rtData.event.name == attributeName) && (rtData.event.device.id == device.id)) {
     	return rtData.event.value;
     } else {
+    	if (attributeName == '$status') return device.getStatus()
 		return device.currentValue(attributeName)
     }
 }
