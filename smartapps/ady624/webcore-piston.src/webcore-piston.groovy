@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.2.0c2.20170616" }
+public static String version() { return "v0.2.0c3.20170618" }
 /*
+ *	06/18/2017 >>> v0.2.0c3.20170618 - BETA M2 - Added more LIFX methods like set, toggle, breath, pulse
  *	06/16/2017 >>> v0.2.0c2.20170616 - BETA M2 - Added support for lock codes, physical interaction
  *	06/16/2017 >>> v0.2.0c1.20170616 - BETA M2 - Added support for the emulated $status device attribute, cancel all pending tasks, allow pre-scheduled tasks to execute during restrictions
  *	06/14/2017 >>> v0.2.0c0.20170614 - BETA M2 - Added support for $weather and external execution of pistons
@@ -2650,7 +2651,7 @@ private long vcmd_lifxScene(rtData, device, params) {
     }
     def requestParams = [
         uri:  "https://api.lifx.com",
-        path: "/v1/scenes/scene_id:${sceneId}/activate",
+        path: "/v1/scenes/scene_id:${selector}/activate",
         headers: [
             "Authorization": "Bearer $token"
         ],
@@ -2669,8 +2670,198 @@ private long vcmd_lifxScene(rtData, device, params) {
     	error "Error while activating LIFX scene:", rtData, null, all
         return 0
     }
-	return 0
+	return duration * 1000
 }
+
+
+private getLifxSelector(rtData, selector) {
+	def selectorId = ''
+    if (selector == 'all') return 'all'
+    def obj = rtData.settings.lifx_scenes?.find{ (it.key == selector) || (it.value == selector) }?.key
+    if (obj) {
+    	selectorId = "scene_id:$obj"
+    } else {
+        obj = rtData.settings.lifx_lights?.find{ (it.key == selector) || (it.value == selector) }?.key
+        if (obj) {
+            selectorId = "id:$obj"
+        } else {
+            obj = rtData.settings.lifx_groups?.find{ (it.key == selector) || (it.value == selector) }?.key
+            if (obj) {
+                selectorId = "group_id:$obj"
+            } else {
+                obj = rtData.settings.lifx_locations?.find{ (it.key == selector) || (it.value == selector) }?.key
+                if (obj) {
+                    selectorId = "location_id:$obj"
+                }
+            }
+        }
+    }
+    return selectorId
+}
+
+private long vcmd_lifxState(rtData, device, params) {
+	def token = rtData.settings?.lifx_token
+    if (!token) {
+    	error "Sorry, you need to enable the LIFX integration in your dashboard's Settings section before trying to activate a LIFX scene.", rtData
+        return 0
+    }    
+    error "PARAMS ARE $params", rtData
+    def selector = getLifxSelector(rtData, params[0])
+	if (!selector) {
+    	error "Sorry, could not find the specified LIFX selector.", rtData
+        return 0
+    }
+	def power = params[1]
+    def color = getColor(params[2])
+    def level = params[3]
+    def infraredLevel = params[4]
+    double duration = cast(rtData, params[5], 'long') / 1000
+    def requestParams = [
+        uri:  "https://api.lifx.com",
+        path: "/v1/lights/${selector}/state",
+        headers: [
+            "Authorization": "Bearer $token"
+        ],
+        body: [:] + (power ? ([power: power]) : [:]) + (color ? ([color: color.hex]) : [:]) + (level != null ? ([brightness: level / 100.0]) : [:]) + (infrared != null ? [infrared: infraredLevel] : [:]) + (duration != null ? [duration: duration] : [:])
+    ]
+    error "REQ PARAMS: $requestParams", rtData
+    try {
+        httpPut(requestParams) { response ->
+            if ((response.status >= 200) && (response.status < 300)) {
+                return 0;
+            }
+            error "Error while setting LIFX lights state. Result status is ${response.status}.", rtData
+            return 0;
+        }
+    }
+    catch(all) {
+    	error "Error while setting LIFX lights state:", rtData, null, all
+        return 0
+    }
+	return duration * 1000
+}
+
+private long vcmd_lifxToggle(rtData, device, params) {
+	def token = rtData.settings?.lifx_token
+    if (!token) {
+    	error "Sorry, you need to enable the LIFX integration in your dashboard's Settings section before trying to activate a LIFX scene.", rtData
+        return 0
+    }    
+    def selector = getLifxSelector(rtData, params[0])
+	if (!selector) {
+    	error "Sorry, could not find the specified LIFX selector.", rtData
+        return 0
+    }
+    double duration = cast(rtData, params[1], 'long') / 1000
+    def requestParams = [
+        uri:  "https://api.lifx.com",
+        path: "/v1/lights/${selector}/toggle",
+        headers: [
+            "Authorization": "Bearer $token"
+        ],
+        body: [:] + (duration != null ? [duration: duration] : [:])
+    ]
+    try {
+        httpPost(requestParams) { response ->
+            if ((response.status >= 200) && (response.status < 300)) {
+                return 0;
+            }
+            error "Error while toggling LIFX lights. Result status is ${response.status}.", rtData
+            return 0;
+        }
+    }
+    catch(all) {
+    	error "Error while toggling LIFX lights:", rtData, null, all
+        return 0
+    }
+	return duration * 1000
+}
+
+private long vcmd_lifxBreathe(rtData, device, params) {
+	def token = rtData.settings?.lifx_token
+    if (!token) {
+    	error "Sorry, you need to enable the LIFX integration in your dashboard's Settings section before trying to activate a LIFX scene.", rtData
+        return 0
+    }    
+    def selector = getLifxSelector(rtData, params[0])
+	if (!selector) {
+    	error "Sorry, could not find the specified LIFX selector.", rtData
+        return 0
+    }
+    def color = getColor(params[1])
+    def fromColor = params[2] == null ? null : getColor(params[2])
+    double period = params[3] == null ? null : cast(rtData, params[3], 'long') / 1000
+    def cycles = params[4]
+	def peak = params[5]
+    def powerOn = params[6] == null ? null : cast(rtData, params[6], 'boolean')
+    def persist = params[7] == null ? null : cast(rtData, params[7], 'boolean')
+    def requestParams = [
+        uri:  "https://api.lifx.com",
+        path: "/v1/lights/${selector}/effects/breathe",
+        headers: [
+            "Authorization": "Bearer $token"
+        ],
+        body: [color: color.hex] + (fromColor ? ([from_color: fromColor.hex]) : [:]) + (period != null ? ([period: period]) : [:]) + (cycles ? ([cycles: cycles]) : [:]) + (powerOn != null ? ([power_on: powerOn]) : [:]) + (persist != null ? ([persist: persist]) : [:]) + (peak != null ? ([peak: peak / 100]) : [:])
+    ]
+    try {
+        httpPost(requestParams) { response ->
+            if ((response.status >= 200) && (response.status < 300)) {
+                return 0;
+            }
+            error "Error while setting LIFX lights state. Result status is ${response.status}.", rtData
+            return 0;
+        }
+    }
+    catch(all) {
+    	error "Error while setting LIFX lights state:", rtData, null, all
+        return 0
+    }
+	return (period ? period : 1) * 1000 * (cycles ? cycles : 1)
+}
+
+private long vcmd_lifxPulse(rtData, device, params) {
+	def token = rtData.settings?.lifx_token
+    if (!token) {
+    	error "Sorry, you need to enable the LIFX integration in your dashboard's Settings section before trying to activate a LIFX scene.", rtData
+        return 0
+    }    
+    def selector = getLifxSelector(rtData, params[0])
+	if (!selector) {
+    	error "Sorry, could not find the specified LIFX selector.", rtData
+        return 0
+    }
+    def color = getColor(params[1])
+    def fromColor = params[2] == null ? null : getColor(params[2])
+    double period = params[3] == null ? null : cast(rtData, params[3], 'long') / 1000
+    def cycles = params[4]
+    def powerOn = params[5] == null ? null : cast(rtData, params[5], 'boolean')
+    def persist = params[6] == null ? null : cast(rtData, params[6], 'boolean')
+    def requestParams = [
+        uri:  "https://api.lifx.com",
+        path: "/v1/lights/${selector}/effects/pulse",
+        headers: [
+            "Authorization": "Bearer $token"
+        ],
+        body: [color: color.hex] + (fromColor ? ([from_color: fromColor.hex]) : [:]) + (period != null ? ([period: period]) : [:]) + (cycles ? ([cycles: cycles]) : [:]) + (powerOn != null ? ([power_on: powerOn]) : [:]) + (persist != null ? ([persist: persist]) : [:])
+    ]
+    try {
+        httpPost(requestParams) { response ->
+            if ((response.status >= 200) && (response.status < 300)) {
+                return 0;
+            }
+            error "Error while setting LIFX lights state. Result status is ${response.status}.", rtData
+            return 0;
+        }
+    }
+    catch(all) {
+    	error "Error while setting LIFX lights state:", rtData, null, all
+        return 0
+    }
+	return (period ? period : 1) * 1000 * (cycles ? cycles : 1)
+}
+
+
+
 
 private long vcmd_httpRequest(rtData, device, params) {
 	def uri = params[0].replace(" ", "%20")

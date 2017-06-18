@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.2.0c2.20170616" }
+public static String version() { return "v0.2.0c3.20170618" }
 /*
+ *	06/18/2017 >>> v0.2.0c3.20170618 - BETA M2 - Added more LIFX methods like set, toggle, breath, pulse
  *	06/16/2017 >>> v0.2.0c2.20170616 - BETA M2 - Added support for lock codes, physical interaction
  *	06/16/2017 >>> v0.2.0c1.20170616 - BETA M2 - Added support for the emulated $status device attribute, cancel all pending tasks, allow pre-scheduled tasks to execute during restrictions
  *	06/14/2017 >>> v0.2.0c0.20170614 - BETA M2 - Added support for $weather and external execution of pistons
@@ -979,7 +980,7 @@ private api_intf_dashboard_piston_set() {
 	if (verifySecurityToken(params.token)) {
     	def data = params?.data
         //save the piston here
-        def saved = api_intf_dashboard_piston_set_save(params?.id, data, ['chunk:0' : data])   
+        def saved = api_intf_dashboard_piston_set_save(params?.id, data, ['chunk:0' : data])
         if (saved) {
         	if (saved.rtData) {
             	updateRunTimeData(saved.rtData)
@@ -2318,10 +2319,10 @@ private static Map virtualCommands() {
 		fadeHue						: [ n: "Fade hue...",			 r: ["setHue"], 		i: "toggle-on",				d: "Fade hue{0} to {1}° in {2}{3}",								p: [[n:"Starting hue",t:"hue",d:" from {v}°"],[n:"Final hue",t:"hue"],[n:"Duration",t:"duration"], [n:"Only if switch is...", t:"enum",o:["on","off"], d:" if already {v}"]],																],
 		fadeColorTemperature		: [ n: "Fade color temperature...",		 r: ["setColorTemperature"], 		i: "toggle-on",				d: "Fade color temperature{0} to {1}°K in {2}{3}",									p: [[n:"Starting color temperature",t:"colorTemperature",d:" from {v}°K"],[n:"Final color temperature",t:"colorTemperature"],[n:"Duration",t:"duration"], [n:"Only if switch is...", t:"enum",o:["on","off"], d:" if already {v}"]],																],
 		flash						: [ n: "Flash...",	 r: ["on", "off"], 			i: "toggle-on",				d: "Flash on {0} / off {1} for {2} times{3}",							p: [[n:"On duration",t:"duration"],[n:"Off duration",t:"duration"],[n:"Number of flashes",t:"integer"], [n:"Only if switch is...", t:"enum",o:["on","off"], d:" if already {v}"]],																],
-		flashLevel					: [ n: "Flash (level)...",	 r: ["setLevel"], 			i: "toggle-on",				d: "Flash {0}% {1} / {2}% {3} for {4} times{5}",				p: [[n:"Level 1", t:"level"],[n:"Duration 1",t:"duration"],[n:"Level 2", t:"level"],[n:"Duration 2",t:"duration"],[n:"Number of flashes",t:"integer"], [n:"Only if switch is...", t:"enum",o:["on","off"], d:" if already {v}"]],																],
-		flashColor					: [ n: "Flash (color)...",	 r: ["setColor"], 			i: "toggle-on",				d: "Flash {0} {1} / {2} {3} for {4} times{5}",				p: [[n:"Color 1", t:"color"],[n:"Duration 1",t:"duration"],[n:"Color 2", t:"color"],[n:"Duration 2",t:"duration"],[n:"Number of flashes",t:"integer"], [n:"Only if switch is...", t:"enum",o:["on","off"], d:" if already {v}"]],																],
+		flashLevel					: [ n: "Flash (level)...",	 r: ["setLevel"], 			i: "toggle-on",		d: "Flash {0}% {1} / {2}% {3} for {4} times{5}",						p: [[n:"Level 1", t:"level"],[n:"Duration 1",t:"duration"],[n:"Level 2", t:"level"],[n:"Duration 2",t:"duration"],[n:"Number of flashes",t:"integer"], [n:"Only if switch is...", t:"enum",o:["on","off"], d:" if already {v}"]],																],
+		flashColor					: [ n: "Flash (color)...",	 r: ["setColor"], 			i: "toggle-on",		d: "Flash {0} {1} / {2} {3} for {4} times{5}",							p: [[n:"Color 1", t:"color"],[n:"Duration 1",t:"duration"],[n:"Color 2", t:"color"],[n:"Duration 2",t:"duration"],[n:"Number of flashes",t:"integer"], [n:"Only if switch is...", t:"enum",o:["on","off"], d:" if already {v}"]],																],
 		iftttMaker					: [ n: "Send an IFTTT Maker event...",	a: true,							d: "Send the {0} IFTTT Maker event{1}{2}{3}",							p: [[n:"Event", t:"text"], [n:"Value 1", t:"string", d:", passing value1 = '{v}'"], [n:"Value 2", t:"string", d:", passing value2 = '{v}'"], [n:"Value 3", t:"string", d:", passing value3 = '{v}'"]],				],
-		lifxScene					: [ n: "Activate LIFX scene",		  	a: true, 							d: "Activate LIFX Scene '{0}'{1}", 										p: [[n: "Scene", t:"lifxScene"],[n: "Duration", t:"duration", d:" for {v}"]],					],
+		lifxScene					: [ n: "LIFX - Activate scene...",	  	a: true, 							d: "Activate LIFX Scene '{0}'{1}", 										p: [[n: "Scene", t:"lifxScene"],[n: "Duration", t:"duration", d:" for {v}"]],					],
 		writeToFuelStream			: [ n: "Write to fuel stream...",  		a: true, 							d: "Write data point '{2}' to fuel stream {0}{1}{3}", 					p: [[n: "Canister", t:"text", d:"{v} \\ "], [n:"Fuel stream name", t:"text"], [n: "Data", t:"dynamic"], [n: "Data source", t:"text", d:" from source '{v}'"]],					],
         saveStateLocally			: [ n: "Capture attributes to local store...", 								d: "Capture attributes {0} to local state{1}{2}",						p: [[n: "Attributes", t:"attributes"],[n:'State container name',t:'string',d:' "{v}"'],[n:'Prevent overwriting existing state', t:'enum', o:['true','false'], d:' only if store is empty']], ],
         saveStateGlobally			: [ n: "Capture attributes to global store...", 							d: "Capture attributes {0} to global state{1}{2}",						p: [[n: "Attributes", t:"attributes"],[n:'State container name',t:'string',d:' "{v}"'],[n:'Prevent overwriting existing state', t:'enum', o:['true','false'],, d:' only if store is empty']], ],
@@ -2329,6 +2330,11 @@ private static Map virtualCommands() {
         loadStateGlobally			: [ n: "Restore attributes from global store...", 							d: "Restore attributes {0} from global state{1}{2}",					p: [[n: "Attributes", t:"attributes"],[n:'State container name',t:'string',d:' "{v}"'],[n:'Empty state after restore', t:'enum', o:['true','false'], d:' and empty the store']], ],
         parseJson					: [ n: "Parse JSON data...",			a: true,							d: "Parse JSON data {0}",												p: [[n: "JSON string", t:"string"]],																											],
         cancelTasks					: [ n: "Cancel all pending tasks",		a: true,							d: "Cancel all pending tasks",											p: [],																											],
+        lifxState					: [ n: "LIFX - Set State...",			a: true,							d: "Set LIFX lights matching {0} to {1}{2}{3}{4}{5}",					p: [[n: "Selector", t:"lifxSelector"],[n: "Switch (power)",t:"enum",o:["on","off"],d:" switch '{v}'"],[n: "Color",t:"color",d:" color '{v}'"],[n: "Level (brightness)",t:"level",d:" level {v}%"],[n: "Infrared level",t:"infraredLevel",d:" infrared {v}%"],[n: "Duration",t:"duration",d:" in {v}"]], ],
+        lifxToggle					: [ n: "LIFX - Toggle...",				a: true,							d: "Toggle LIFX lights matching {0}{1}",								p: [[n: "Selector", t:"lifxSelector"],[n: "Duration",t:"duration",d:" in {v}"]], ],
+        lifxBreathe					: [ n: "LIFX - Breathe...",				a: true,							d: "Breathe LIFX lights matching {0} to color {1}{2}{3}{4}{5}{6}{7}",	p: [[n: "Selector", t:"lifxSelector"],[n: "Color",t:"color"],[n: "From color",t:"color",d:" from color '{v}'"],[n: "Period", t:"duration", d:" with a period of {v}"],[n: "Cycles", t:"integer", d:" for {v} cycles"],[n:"Peak",t:"level",d:" with a peak at {v}% of the period"],[n:"Power on",t:"boolean",d:" and power on at start"],[n:"Persist",t:"boolean",d:" and persist"] ], ],
+        lifxPulse					: [ n: "LIFX - Pulse...",				a: true,							d: "Pulse LIFX lights matching {0} to color {1}{2}{3}{4}{5}{6}",		p: [[n: "Selector", t:"lifxSelector"],[n: "Color",t:"color"],[n: "From color",t:"color",d:" from color '{v}'"],[n: "Period", t:"duration", d:" with a period of {v}"],[n: "Cycles", t:"integer", d:" for {v} cycles"],[n:"Power on",t:"boolean",d:" and power on at start"],[n:"Persist",t:"boolean",d:" and persist"] ], ],
+        //lifxCycle					: [ n: "LIFX - Cycle...",				a: true,							d: "Cycle LIFX lights matching {0}",									p: [[n: "Selector", t:"lifxSelector"]], ],
 /*		[ n: "waitState",											d: "Wait for piston state change",	p: ["Change to:enum[any,false,true]"],															i: true,	l: true,						dd: "Wait for {0} state"],
 		[ n: "flash",				r: ["on", "off"], 				d: "Flash",							p: ["On interval (milliseconds):number[250..5000]","Off interval (milliseconds):number[250..5000]","Number of flashes:number[1..10]"],					dd: "Flash {0}ms/{1}ms for {2} time(s)",		],
 		[ n: "saveState",		d: "Save state to variable",			p: ["Attributes:attributes","Aggregation:aggregation","?Convert to data t:dataType","Save to state variable:string"],			stateVarEntry: 3,	dd: "Save state of attributes {0} to variable |[{3}]|'",	aggregated: true,	],
