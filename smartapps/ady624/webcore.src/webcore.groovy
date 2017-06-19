@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.2.0c3.20170618" }
+public static String version() { return "v0.2.0c4.20170619" }
 /*
+ *	06/19/2017 >>> v0.2.0c4.20170619 - BETA M2 - Fixed a bug with LIFX scenes, added more functions: weekDayName, monthName, arrayItem
  *	06/18/2017 >>> v0.2.0c3.20170618 - BETA M2 - Added more LIFX methods like set, toggle, breath, pulse
  *	06/16/2017 >>> v0.2.0c2.20170616 - BETA M2 - Added support for lock codes, physical interaction
  *	06/16/2017 >>> v0.2.0c1.20170616 - BETA M2 - Added support for the emulated $status device attribute, cancel all pending tasks, allow pre-scheduled tasks to execute during restrictions
@@ -2523,6 +2524,9 @@ private static Map functions() {
         strlen			: [ t: "integer",						],
         length			: [ t: "integer",						],
         coalesce		: [ t: "dynamic",						],
+        weekdayname		: [ t: "string",	d: "weekDayName"	],
+        monthname		: [ t: "string",	d: "monthName"		],
+        arrayitem		: [ t: "dynamic",	d: "arrayItem"		]
 	]
 }
 

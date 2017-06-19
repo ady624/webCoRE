@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.2.0c3.20170618" }
+public static String version() { return "v0.2.0c4.20170619" }
 /*
+ *	06/19/2017 >>> v0.2.0c4.20170619 - BETA M2 - Fixed a bug with LIFX scenes, added more functions: weekDayName, monthName, arrayItem
  *	06/18/2017 >>> v0.2.0c3.20170618 - BETA M2 - Added more LIFX methods like set, toggle, breath, pulse
  *	06/16/2017 >>> v0.2.0c2.20170616 - BETA M2 - Added support for lock codes, physical interaction
  *	06/16/2017 >>> v0.2.0c1.20170616 - BETA M2 - Added support for the emulated $status device attribute, cancel all pending tasks, allow pre-scheduled tasks to execute during restrictions
@@ -2653,7 +2654,7 @@ private long vcmd_lifxScene(rtData, device, params) {
     }
     def requestParams = [
         uri:  "https://api.lifx.com",
-        path: "/v1/scenes/scene_id:${selector}/activate",
+        path: "/v1/scenes/scene_id:${sceneId}/activate",
         headers: [
             "Authorization": "Bearer $token"
         ],
@@ -5898,6 +5899,50 @@ private func_addweeks(rtData, params) {
     long delta = evaluateExpression(rtData, params[1], 'long').v * 604800000
     return [t: "datetime", v: value + delta]
 }
+
+
+/******************************************************************************/
+/*** weekDayName returns the name of the week day							***/
+/*** Usage: weekDayName(dateTimeOrWeekDayIndex)								***/
+/******************************************************************************/
+private func_weekdayname(rtData, params) {
+	if (!params || !(params instanceof List) || (params.size() != 1)) {
+    	return [t: "error", v: "Invalid parameters. Expecting weekDayName(dateTimeOrWeekDayIndex)"];
+    }
+    long value = evaluateExpression(rtData, params[0], 'long').v
+    int index = ((value >= 86400000) ? utcToLocalDate(value).day : value) % 7
+    return [t: "string", v: weekDays()[index]]
+}
+
+/******************************************************************************/
+/*** monthName returns the name of the month								***/
+/*** Usage: monthName(dateTimeOrMonthNumber)								***/
+/******************************************************************************/
+private func_monthname(rtData, params) {
+	if (!params || !(params instanceof List) || (params.size() != 1)) {
+    	return [t: "error", v: "Invalid parameters. Expecting monthName(dateTimeOrMonthNumber)"];
+    }
+    long value = evaluateExpression(rtData, params[0], 'long').v
+   	int index = ((value >= 86400000) ? utcToLocalDate(value).month : value - 1) % 12 + 1    
+    return [t: "string", v: yearMonths()[index]]
+}
+
+/******************************************************************************/
+/*** arrayItem returns the nth item in the parameter list					***/
+/*** Usage: arrayItem(index, item0[, item1[, .., itemN]])					***/
+/******************************************************************************/
+private func_arrayitem(rtData, params) {
+	if (!params || !(params instanceof List) || (params.size() < 2)) {
+    	return [t: "error", v: "Invalid parameters. Expecting arrayItem(index, item0[, item1[, .., itemN]])"];
+    }
+    int index = evaluateExpression(rtData, params[0], 'integer').v
+    int sz = params.size() - 1
+    if ((index < 0) || (index >= sz)) {
+    	return [t: "error", v: "Array item index is outside of bounds."];
+    }
+    return params[index + 1]
+}
+
 
 /******************************************************************************/
 /*** isBetween returns true if value >= startValue and value <= endValue	***/
