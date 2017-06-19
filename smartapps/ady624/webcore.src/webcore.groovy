@@ -1865,7 +1865,7 @@ def lifxHandler(response, cbkData) {
                     break
             	case 'lights':
                 	log.trace "got lights"
-                	state.settings.lifx_lights = data.collectEntries{[(it.uuid): it.label]}
+                	state.settings.lifx_lights = data.collectEntries{[(it.id): it.label]}
                 	state.settings.lifx_groups = data.collectEntries{[(it.group.id): it.group.name]}
                 	state.settings.lifx_locations = data.collectEntries{[(it.location.id): it.location.name]}
                     break

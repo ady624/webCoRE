@@ -2724,7 +2724,6 @@ private long vcmd_lifxState(rtData, device, params) {
         ],
         body: [:] + (power ? ([power: power]) : [:]) + (color ? ([color: color.hex]) : [:]) + (level != null ? ([brightness: level / 100.0]) : [:]) + (infrared != null ? [infrared: infraredLevel] : [:]) + (duration != null ? [duration: duration] : [:])
     ]
-    error "REQ PARAMS: $requestParams", rtData
     try {
         httpPut(requestParams) { response ->
             if ((response.status >= 200) && (response.status < 300)) {
@@ -2808,12 +2807,12 @@ private long vcmd_lifxBreathe(rtData, device, params) {
             if ((response.status >= 200) && (response.status < 300)) {
                 return 0;
             }
-            error "Error while setting LIFX lights state. Result status is ${response.status}.", rtData
+            error "Error while breathing LIFX lights. Result status is ${response.status}.", rtData
             return 0;
         }
     }
     catch(all) {
-    	error "Error while setting LIFX lights state:", rtData, null, all
+    	error "Error while breathing LIFX lights:", rtData, null, all
         return 0
     }
 	return (period ? period : 1) * 1000 * (cycles ? cycles : 1)
@@ -2849,12 +2848,12 @@ private long vcmd_lifxPulse(rtData, device, params) {
             if ((response.status >= 200) && (response.status < 300)) {
                 return 0;
             }
-            error "Error while setting LIFX lights state. Result status is ${response.status}.", rtData
+            error "Error while pulsing LIFX lights. Result status is ${response.status}.", rtData
             return 0;
         }
     }
     catch(all) {
-    	error "Error while setting LIFX lights state:", rtData, null, all
+    	error "Error while pulsing LIFX lights:", rtData, null, all
         return 0
     }
 	return (period ? period : 1) * 1000 * (cycles ? cycles : 1)
