@@ -1480,6 +1480,8 @@ private executePhysicalCommand(rtData, device, command, params = [], delay = nul
     } else {
         try {
             params = (params instanceof List) ? params : (params != null ? [params] : [])
+            //cleanup the params so that SONOS works
+            while (params.size() && (params[params.size()-1] == null)) params.pop()
             def msg = timer ""
             def skip = false
             if (!rtData.piston.o?.dco && !disableCommandOptimization && !(command in ['setColorTemperature', 'setColor', 'setHue', 'setSaturation'])) {
