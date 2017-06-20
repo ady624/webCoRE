@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.2.0c5.20170620" }
+public static String version() { return "v0.2.0c6.20170620" }
 /*
+ *	06/20/2017 >>> v0.2.0c6.20170620 - BETA M2 - Bug fix for timers - last time refactoring affected timers (timezone offset miscalculations)
  *	06/20/2017 >>> v0.2.0c5.20170620 - BETA M2 - Refactored date and time to be more user friendly and consistent to their data type. Added formatDateTime - see https://docs.oracle.com/javase/tutorial/i18n/format/simpleDateFormat.html for more details
  *	06/19/2017 >>> v0.2.0c4.20170619 - BETA M2 - Fixed a bug with LIFX scenes, added more functions: weekDayName, monthName, arrayItem
  *	06/18/2017 >>> v0.2.0c3.20170618 - BETA M2 - Added more LIFX methods like set, toggle, breath, pulse
@@ -1570,7 +1571,7 @@ private scheduleTimer(rtData, timer, long lastRun = 0) {
    
     if (!delta) {
     	//let's get the offset
-        time = evaluateOperand(rtData, null, timer.lo2).v
+        time = evaluateExpression(rtData, evaluateOperand(rtData, null, timer.lo2), 'datetime').v
         if (timer.lo2.t != 'c') {
         	def offset = evaluateOperand(rtData, null, timer.lo3)
         	time += (long) evaluateExpression(rtData, [t: 'duration', v: offset.v, vt: offset.vt], 'long').v
@@ -3246,9 +3247,7 @@ private evaluateOperand(rtData, node, operand, index = null, trigger = false, ne
         	switch (operand.vt) {
             	case 'time':
                     def offset = cast(rtData, operand.c, 'integer')
-                    def v = localDate().clearTime()
-                    v.set(hourOfDay: (int) Math.floor(offset / 60), minute: (int) offset.mod(60))
-                    values = [[i: "${node?.$}:$index:0", v: [t: 'time', v:localToUtcTime(v)]]]
+                    values = [[i: "${node?.$}:$index:0", v: [t: 'time', v:(offset % 1440) * 60000]]]
                     break
             	case 'date':
             	case 'datetime':
@@ -4470,22 +4469,22 @@ private Map evaluateExpression(rtData, expression, dataType = null) {
         case "time":
         case "date":
         case "datetime":
-        	result = [t: expression.t, v: cast(rtData, expression.v, expression.t)]
+        	result = [t: expression.t, v: cast(rtData, expression.v, expression.t, expression.t)]
         	break
         case "enum":
         case "error":
         case "phone":
         case "uri":
         case "text":
-        	result = [t: 'string', v: cast(rtData, expression.v, 'string')]
+        	result = [t: 'string', v: cast(rtData, expression.v, 'string', expression.t)]
         	break        
 		case "bool":
-        	result = [t: "boolean", v: cast(rtData, expression.v, "boolean")]
+        	result = [t: "boolean", v: cast(rtData, expression.v, "boolean", expression.t)]
         	break
         case "number":
         case "float":
         case "double":
-        	result = [t: "decimal", v: cast(rtData, expression.v, "decimal")]
+        	result = [t: "decimal", v: cast(rtData, expression.v, "decimal", expression.t)]
 			result = expression
         	break
         case "duration":
@@ -6259,15 +6258,17 @@ private cast(rtData, value, dataType, srcDataType = null) {
             }
 			return !!value
 		case "time":
-        	if (value && (value instanceof Long) && (value < 86400000)) return value
+        	if (value.isNumber() && (value < 86400000)) return value
         	def n = localTime()
             //log.error " TIME ${localToUtcTime(n - (n % 86400000) + (utcToLocalTime((srcDataType == 'string') ? localToUtcTime(value) : cast(rtData, value, "long")) % 86400000))} >>> ${localToUtcTime(n - (n % 86400000) + (utcToLocalTime((srcDataType == 'string') ? localToUtcTime(value) : cast(rtData, value, "long")) % 86400000)) % 86400000}"
 			//return localToUtcTime(n - (n % 86400000) + (utcToLocalTime((srcDataType == 'string') ? localToUtcTime(value) : cast(rtData, value, "long")) % 86400000)) % 86400000
 			return utcToLocalTime((srcDataType == 'string') ? localToUtcTime(value) : cast(rtData, value, "long")) % 86400000
 		case "date":
+        	if (value.isNumber() && (value < 86400000)) value += getMidnightTime()
 			def d = utcToLocalTime((srcDataType == 'string') ? localToUtcTime(value) : cast(rtData, value, "long"))
             return localToUtcTime(d - (d % 86400000))
 		case "datetime":
+        	if (value.isNumber() && (value < 86400000)) value += getMidnightTime()
 			return ((srcDataType == 'string') ? localToUtcTime(value) : cast(rtData, value, "long"))
 		case "vector3":
 			return value instanceof String ? 0 : cast(rtData, value, "long")
@@ -6354,7 +6355,7 @@ private localToUtcTime(dateOrTimeOrString) {
 		//get unix time
 		dateOrTimeOrString = dateOrTimeOrString.getTime()
 	}
-	if (dateOrTimeOrString instanceof Long) {
+	if (dateOrTimeOrString.isNumber()) {
     	if (dateOrTimeOrString < 86400000) dateOrTimeOrString += getMidnightTime()
 		return dateOrTimeOrString - location.timeZone.getOffset(dateOrTimeOrString)
 	}
@@ -6371,7 +6372,7 @@ private localToUtcTime(dateOrTimeOrString) {
 }
 
 private formatLocalTime(time, format = "EEE, MMM d yyyy @ h:mm:ss a z") {
-	if (time instanceof Long) {
+	if (time.isNumber()) {
     	if (time < 86400000) time += getMidnightTime()
 		time = new Date(time)
 	}
