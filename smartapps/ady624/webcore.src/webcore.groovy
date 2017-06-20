@@ -968,7 +968,7 @@ private api_intf_dashboard_piston_set_save(id, data, chunks) {
 	    	log.trace s.substring(a * cs, x)
     	}
     */
-		def p = (LinkedHashMap) new groovy.json.JsonSlurper().parseText(decodeEmoji(new String(data.decodeBase64(), "UTF-8")))
+    	def p = (LinkedHashMap) new groovy.json.JsonSlurper().parseText(decodeEmoji(new String(data.decodeBase64(), "UTF-8")))
         def result = piston.set(p, chunks);
         broadcastPistonList()
         return result
@@ -983,6 +983,7 @@ private api_intf_dashboard_piston_set() {
 	if (verifySecurityToken(params.token)) {
     	def data = params?.data
         //save the piston here
+        log.trace params
         def saved = api_intf_dashboard_piston_set_save(params?.id, data, ['chunk:0' : data])
         if (saved) {
         	if (saved.rtData) {

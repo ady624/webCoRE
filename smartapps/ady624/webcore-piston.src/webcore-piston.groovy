@@ -6264,11 +6264,11 @@ private cast(rtData, value, dataType, srcDataType = null) {
 			//return localToUtcTime(n - (n % 86400000) + (utcToLocalTime((srcDataType == 'string') ? localToUtcTime(value) : cast(rtData, value, "long")) % 86400000)) % 86400000
 			return utcToLocalTime((srcDataType == 'string') ? localToUtcTime(value) : cast(rtData, value, "long")) % 86400000
 		case "date":
-        	if (value.isNumber() && (value < 86400000)) value += getMidnightTime()
+        	if ((srcDataType == 'time') && (value < 86400000)) value += getMidnightTime()
 			def d = utcToLocalTime((srcDataType == 'string') ? localToUtcTime(value) : cast(rtData, value, "long"))
             return localToUtcTime(d - (d % 86400000))
 		case "datetime":
-        	if (value.isNumber() && (value < 86400000)) value += getMidnightTime()
+        	if ((srcDataType == 'time') && (value < 86400000)) value += getMidnightTime()
 			return ((srcDataType == 'string') ? localToUtcTime(value) : cast(rtData, value, "long"))
 		case "vector3":
 			return value instanceof String ? 0 : cast(rtData, value, "long")
