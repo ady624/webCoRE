@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.2.0c4.20170619" }
+public static String version() { return "v0.2.0c5.20170620" }
 /*
+ *	06/20/2017 >>> v0.2.0c5.20170620 - BETA M2 - Refactored date and time to be more user friendly and consistent to their data type. Added formatDateTime - see https://docs.oracle.com/javase/tutorial/i18n/format/simpleDateFormat.html for more details
  *	06/19/2017 >>> v0.2.0c4.20170619 - BETA M2 - Fixed a bug with LIFX scenes, added more functions: weekDayName, monthName, arrayItem
  *	06/18/2017 >>> v0.2.0c3.20170618 - BETA M2 - Added more LIFX methods like set, toggle, breath, pulse
  *	06/16/2017 >>> v0.2.0c2.20170616 - BETA M2 - Added support for lock codes, physical interaction
@@ -3088,6 +3089,7 @@ private long vcmd_parseJson(rtData, device, params) {
 
 private long vcmd_cancelTasks(rtData, device, params) {
 	rtData.cancelations.all = true
+    return 0
 }
 
 
@@ -4791,47 +4793,60 @@ private Map evaluateExpression(rtData, expression, dataType = null) {
     	            items[idx + 1].t = 'device'
                     items[idx + 1].v = v
                 } else {
-                    if ((o == '*') || (o == '/') || (o == '-') || (o == '**')) {
-                        if ((t1 != 'number') && (t1 != 'integer') && (t1 != 'decimal') && (t1 != 'float') && (t1 != 'datetime') && (t1 != 'date') && (t1 != 'time')) t1 = 'decimal'
-                        if ((t2 != 'number') && (t2 != 'integer') && (t2 != 'decimal') && (t2 != 'float') && (t2 != 'datetime') && (t2 != 'date') && (t2 != 'time')) t2 = 'decimal'
-                        t = (t1 == 'datetime') || (t2 == 'datetime') ? 'datetime' : ((t1 == 'date') || (t2 == 'date') ? 'date' : ((t1 == 'time') || (t2 == 'time') ? 'time' : 'decimal'))
-                    }
-                    if ((o == '\\') || (o == '%') || (o == '&') || (o == '|') || (o == '^') || (o == '~&') || (o == '~|') || (o == '~^') || (o == '<<') || (o == '>>')) {
-                        t1 = 'integer'
-                        t2 = 'integer'
-                        t = 'integer'
-                    }
-                    if ((o == '&&') || (o == '||') || (o == '^^') || (o == '!&') || (o == '!|') || (o == '!^') || (o == '!') || (o == '!!')) {
-                        t1 = 'boolean'
-                        t2 = 'boolean'
-                        t = 'boolean'
-                    }
-                    if ((o == '+') && ((t1 == 'string') || (t1 == 'text') || (t2 == 'string') || (t2 == 'text'))) {
-                        t1 = 'string';
-                        t2 = 'string';
-                        t = 'string'
-                    }
-                    if ((((t1 == 'number') || (t1 == 'integer')) && ((t2 == 'decimal') || (t2 == 'float'))) || (((t2 == 'number') || (t2 == 'integer')) && ((t1 == 'decimal') || (t1 == 'float')))) {
-                        t1 = 'decimal'
-                        t2 = 'decimal'
-                        t = 'decimal'
-                    }
-                    if ((t != 'datetime') && (t != 'date') && (t != 'time') && ((t1 == 'integer') || (t2 == 'integer'))) {
-                        t1 = 'integer'
-                        t2 = 'integer'
-                        t = 'integer'
-                    }
-                    if ((t != 'datetime') && (t != 'date') && (t != 'time') && ((t1 == 'number') || (t2 == 'number') || (t1 == 'decimal') || (t2 == 'decimal') || (t1 == 'float') || (t2 == 'float'))) {
-                        t1 = 'decimal'
-                        t2 = 'decimal'
-                        t = 'decimal'
-                    }
-                    if ((o == '==') || (o == '!=') || (o == '<') || (o == '>') || (o == '<=') || (o == '>=') || (o == '<>')) {
-                    	if (t1 == 'device') t1 = 'string'
-                    	if (t2 == 'device') t2 = 'string'
-                        t1 = t1 == 'string' ? t2 : t1
-                        t2 = t2 == 'string' ? t1 : t2
-                        t = 'boolean'
+                	def t1d = (t1 == 'datetime') || (t1 == 'date') || (t1 == 'time')
+                    def t2d = (t2 == 'datetime') || (t2 == 'date') || (t2 == 'time')
+                	def t1i = (t1 == 'number') || (t1 == 'integer') || (t1 == 'long')
+                	def t2i = (t2 == 'number') || (t2 == 'integer') || (t2 == 'long')
+                	def t1f = (t1 == 'decimal') || (t1 == 'float')
+                	def t2f = (t2 == 'decimal') || (t2 == 'float')
+                	def t1n = t1i || t1f
+                	def t2n = t2i || t2f
+                    //warn "Precalc ($t1) $v1 $o ($t2) $v2 >>> t1d = $t1d, t2d = $t2d, t1n = $t1n, t2n = $t2n", rtData
+                	if (((o == '+') || (o == '-')) && (t1d || t2d) && (t1d || t1n) && (t2n || t2d)) {
+                    	//if dealing with date +/- date/numeric then
+                        if (t1n) {
+                        	t = t2
+                        } else if (t2n) {
+                        	t = t1
+                        } else {
+                        	t = (t1 == 'date') && (t2 == 'date') ? 'date' : ((t1 == 'time') && (t2 == 'time') ? 'time' : 'datetime')
+                        }
+                    } else {
+                        if ((o == '*') || (o == '/') || (o == '-') || (o == '**')) {
+                        	t = (t1i && t2i) ? 'integer' : 'decimal'
+                            t1 = t
+                            t2 = t
+                            //if ((t1 != 'number') && (t1 != 'integer') && (t1 != 'decimal') && (t1 != 'float') && (t1 != 'datetime') && (t1 != 'date') && (t1 != 'time')) t1 = 'decimal'
+                            //if ((t2 != 'number') && (t2 != 'integer') && (t2 != 'decimal') && (t2 != 'float') && (t2 != 'datetime') && (t2 != 'date') && (t2 != 'time')) t2 = 'decimal'
+                            //t = (t1 == 'datetime') || (t2 == 'datetime') ? 'datetime' : ((t1 == 'date') && (t2 == 'date') ? 'date' : ((t1 == 'time') && (t2 == 'time') ? 'time' : (((t1 == 'date') && (t2 == 'time')) || ((t1 == 'time') && (t2 == 'date')) ? 'datetime' : 'decimal')))
+                        }
+                        if ((o == '\\') || (o == '%') || (o == '&') || (o == '|') || (o == '^') || (o == '~&') || (o == '~|') || (o == '~^') || (o == '<<') || (o == '>>')) {
+                            t1 = 'integer'
+                            t2 = 'integer'
+                            t = 'integer'
+                        }
+                        if ((o == '&&') || (o == '||') || (o == '^^') || (o == '!&') || (o == '!|') || (o == '!^') || (o == '!') || (o == '!!')) {
+                            t1 = 'boolean'
+                            t2 = 'boolean'
+                            t = 'boolean'
+                        }
+                        if ((o == '+') && ((t1 == 'string') || (t1 == 'text') || (t2 == 'string') || (t2 == 'text'))) {
+                            t1 = 'string';
+                            t2 = 'string';
+                            t = 'string'
+                        }
+                        if (t1n && t2n) {
+                            t = (t1i && t2i) ? 'integer' : 'decimal'
+                            t1 = t
+                            t2 = t
+                        }
+                        if ((o == '==') || (o == '!=') || (o == '<') || (o == '>') || (o == '<=') || (o == '>=') || (o == '<>')) {
+                            if (t1 == 'device') t1 = 'string'
+                            if (t2 == 'device') t2 = 'string'
+                            t1 = t1 == 'string' ? t2 : t1
+                            t2 = t2 == 'string' ? t1 : t2
+                            t = 'boolean'
+                        }
                     }
                     v1 = evaluateExpression(rtData, items[idx], t1).v
 	                v2 = evaluateExpression(rtData, items[idx + 1], t2).v
@@ -4959,7 +4974,7 @@ private Map evaluateExpression(rtData, expression, dataType = null) {
         }
     }
     if (dataType) {
-    	result = [t: dataType, v: cast(rtData, result.v, dataType)] + (result.a ? [a: result.a] : [:]) + (result.i ? [a: result.i] : [:])
+    	result = [t: dataType, v: cast(rtData, result.v, dataType, result.t)] + (result.a ? [a: result.a] : [:]) + (result.i ? [a: result.i] : [:])
     }
     result.d = now() - time;
 	return result
@@ -5812,6 +5827,18 @@ private func_isempty(rtData, params) {
 }
 
 /******************************************************************************/
+/*** datetime returns the value as a datetime type							***/
+/*** Usage: datetime(value)													***/
+/******************************************************************************/
+private func_datetime(rtData, params) {
+	if (!params || !(params instanceof List) || (params.size() != 1)) {
+    	return [t: "error", v: "Invalid parameters. Expecting datetime(value)"];
+    }
+    long value = evaluateExpression(rtData, params[0], 'datetime').v
+    return [t: "datetime", v: value]
+}
+
+/******************************************************************************/
 /*** date returns the value as a date type									***/
 /*** Usage: date(value)														***/
 /******************************************************************************/
@@ -6024,6 +6051,19 @@ private func_formatduration(rtData, params) {
 }
 
 /******************************************************************************/
+/*** formatDateTime returns a datetime in a readable format					***/
+/*** Usage: formatDateTime(value[, format])									***/
+/******************************************************************************/
+private func_formatdatetime(rtData, params) {
+	if (!params || !(params instanceof List) || (params.size() < 1) || (params.size() > 2)) {
+    	return [t: "error", v: "Invalid parameters. Expecting formatDateTime(value[, format])"];
+    }
+    long value = evaluateExpression(rtData, params[0], 'datetime').v
+	def format = params.size() > 1 ? evaluateExpression(rtData, params[1], 'string').v : null
+    return [t: 'string', v: (format ? formatLocalTime(value, format) : formatLocalTime(value))]
+}
+
+/******************************************************************************/
 /*** random returns a random value											***/
 /*** Usage: random([range | value1, value2[, ..,valueN]])	***/
 /******************************************************************************/
@@ -6086,6 +6126,7 @@ def String hashId(id) {
 }
 
 private cast(rtData, value, dataType, srcDataType = null) {
+	//error " Casting ($srcDataType) $value to $dataType", rtData
 	if (dataType == 'dynamic') return value
 	def trueStrings = ["1", "true", "on", "open", "locked", "active", "wet", "detected", "present", "occupied", "muted", "sleeping"]
 	def falseStrings = ["0", "false", "off", "closed", "unlocked", "inactive", "dry", "clear", "not detected", "not present", "not occupied", "unmuted", "not sleeping"]
@@ -6132,8 +6173,8 @@ private cast(rtData, value, dataType, srcDataType = null) {
                     return value.toString()
             	case 'integer':
             	case 'long': if (value > 9999999999) { return formatLocalTime(value) }; break;
-                case 'time': return formatLocalTime(value);
-                case 'date':
+                case 'time': return formatLocalTime(value, 'h:mm:ss a z');
+                case 'date': return formatLocalTime(value, 'EEE, MMM d yyyy');
                 case 'datetime': return formatLocalTime(value);
                 case 'device': return buildDeviceList(rtData, value);
             }
@@ -6218,8 +6259,11 @@ private cast(rtData, value, dataType, srcDataType = null) {
             }
 			return !!value
 		case "time":
+        	if (value && (value instanceof Long) && (value < 86400000)) return value
         	def n = localTime()
-			return localToUtcTime(n - (n % 86400000) + (utcToLocalTime((srcDataType == 'string') ? localToUtcTime(value) : cast(rtData, value, "long")) % 86400000))
+            //log.error " TIME ${localToUtcTime(n - (n % 86400000) + (utcToLocalTime((srcDataType == 'string') ? localToUtcTime(value) : cast(rtData, value, "long")) % 86400000))} >>> ${localToUtcTime(n - (n % 86400000) + (utcToLocalTime((srcDataType == 'string') ? localToUtcTime(value) : cast(rtData, value, "long")) % 86400000)) % 86400000}"
+			//return localToUtcTime(n - (n % 86400000) + (utcToLocalTime((srcDataType == 'string') ? localToUtcTime(value) : cast(rtData, value, "long")) % 86400000)) % 86400000
+			return utcToLocalTime((srcDataType == 'string') ? localToUtcTime(value) : cast(rtData, value, "long")) % 86400000
 		case "date":
 			def d = utcToLocalTime((srcDataType == 'string') ? localToUtcTime(value) : cast(rtData, value, "long"))
             return localToUtcTime(d - (d % 86400000))
@@ -6311,6 +6355,7 @@ private localToUtcTime(dateOrTimeOrString) {
 		dateOrTimeOrString = dateOrTimeOrString.getTime()
 	}
 	if (dateOrTimeOrString instanceof Long) {
+    	if (dateOrTimeOrString < 86400000) dateOrTimeOrString += getMidnightTime()
 		return dateOrTimeOrString - location.timeZone.getOffset(dateOrTimeOrString)
 	}
 	if (dateOrTimeOrString instanceof String) {
@@ -6326,7 +6371,9 @@ private localToUtcTime(dateOrTimeOrString) {
 }
 
 private formatLocalTime(time, format = "EEE, MMM d yyyy @ h:mm:ss a z") {
+	log.error "FORMATTING LOCAL TIME $time"
 	if (time instanceof Long) {
+    	if (time < 86400000) time += getMidnightTime()
 		time = new Date(time)
 	}
 	if (time instanceof String) {

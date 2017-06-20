@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.2.0c4.20170619" }
+public static String version() { return "v0.2.0c5.20170620" }
 /*
+ *	06/20/2017 >>> v0.2.0c5.20170620 - BETA M2 - Refactored date and time to be more user friendly and consistent to their data type. Added formatDateTime - see https://docs.oracle.com/javase/tutorial/i18n/format/simpleDateFormat.html for more details
  *	06/19/2017 >>> v0.2.0c4.20170619 - BETA M2 - Fixed a bug with LIFX scenes, added more functions: weekDayName, monthName, arrayItem
  *	06/18/2017 >>> v0.2.0c3.20170618 - BETA M2 - Added more LIFX methods like set, toggle, breath, pulse
  *	06/16/2017 >>> v0.2.0c2.20170616 - BETA M2 - Added support for lock codes, physical interaction
@@ -2511,6 +2512,7 @@ private static Map functions() {
         not				: [ t: "boolean",						],
         isempty			: [ t: "boolean",	d: "isEmpty",		],
         if				: [ t: "dynamic",						],
+        datetime		: [ t: "datetime",						],
         date			: [ t: "date",							],
         time			: [ t: "time",							],
         addseconds		: [ t: "datetime",	d: "addSeconds"		],
@@ -2520,6 +2522,7 @@ private static Map functions() {
         addweeks		: [ t: "datetime",	d: "addWeeks"		],
         isbetween		: [ t: "boolean",	d: "isBetween"		],
         formatduration	: [ t: "string",	d: "formatDuration"	],
+        formatdatetime	: [ t: "string",	d: "formatDateTime"	],
         random			: [ t: "dynamic",						],
         strlen			: [ t: "integer",						],
         length			: [ t: "integer",						],
