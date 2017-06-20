@@ -6371,7 +6371,6 @@ private localToUtcTime(dateOrTimeOrString) {
 }
 
 private formatLocalTime(time, format = "EEE, MMM d yyyy @ h:mm:ss a z") {
-	log.error "FORMATTING LOCAL TIME $time"
 	if (time instanceof Long) {
     	if (time < 86400000) time += getMidnightTime()
 		time = new Date(time)
