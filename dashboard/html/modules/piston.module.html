@@ -616,7 +616,7 @@
 		<bar ng-if="(mode=='edit') || (collection.c && (collection.c.length > 1))"></bar>
 		<trace ng-if="(view.trace && (mode=='view') && (collection.c) && (collection.c.length > 1) && trace && trace.points && trace.points['c:' + collection.$])"><span>+{{point.o}}ms</span><span dur eval="{{trace.points['c:' + collection.$].v}}">{{point.d}}ms</span></trace>
 		<div no-drag class="no-drag" dnd-list="collection.c" dnd-allowed-types="['condition']" ng-selected="selection == collection">
-			<line com ng-if="collection.z">/* {{collection.z}} */</line>
+			<line com ng-if="collection.z && (collection.t == 'group || collection.t == 'condition')">/* {{collection.z}} */</line>
 			<line pun data-ng-if-start="(collection.t == 'group') || !!collection.n" ng-click="select(collection, (collection.t == 'group' ? ($parent.$parent.parentCollection ? $parent.$parent.parentCollection.c : statement.c) : null), 'conditions')"><span pun ng-click="editConditionGroup(collection, (collection.t == 'group' ? ($parent.$parent.parentCollection ? $parent.$parent.parentCollection.c : statement.c) : null));">{{collection.n ? 'not ' : ''}}(</span><span ng-if="view.trace && (mode=='view')" nul> /* #{{collection.$}} */</span></line>
 			<container dnd-list="collection.c" dnd-allowed-types="['condition']">
 				<condition data-ng-repeat-start="condition in collection.c" ng-init="parentCollection = collection" data-ng-include="'condition'" dnd-nodrag data-nag-model="collection.c" dnd-draggable="condition" dnd-nodrag dnd-type="'condition'" dnd-moved="drag(collection.c, $index);" dnd-effect-allowed="copyMove"></condition>
