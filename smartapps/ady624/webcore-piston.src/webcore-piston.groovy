@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.2.0c7.20170621" }
+public static String version() { return "v0.2.0c8.20170622" }
 /*
+ *	06/22/2017 >>> v0.2.0c8.20170622 - BETA M2 - Improved support for JSON parsing, including support for named properties $json[element] - element can be an integer index, a variable name, or a string (no quotes), fixed a bug with Wait for time
  *	06/21/2017 >>> v0.2.0c7.20170621 - BETA M2 - A bug fix for boolean and dynamic types - thoroughly inspect their values rather than rely on the data type
  *	06/20/2017 >>> v0.2.0c6.20170620 - BETA M2 - Bug fix for timers - last time refactoring affected timers (timezone offset miscalculations)
  *	06/20/2017 >>> v0.2.0c5.20170620 - BETA M2 - Refactored date and time to be more user friendly and consistent to their data type. Added formatDateTime - see https://docs.oracle.com/javase/tutorial/i18n/format/simpleDateFormat.html for more details
@@ -2161,7 +2162,7 @@ private long vcmd_waitRandom(rtData, device, params) {
 
 private long vcmd_waitForTime(rtData, device, params) {
 	long time = now()
-    time = cast(rtData, params[0], 'time')
+    time = cast(rtData, cast(rtData, params[0], 'time'), 'datetime', 'time')
     long rightNow = now()
     while (time < rightNow) time += 86400000
     return time - rightNow
@@ -4377,6 +4378,8 @@ private Map getVariable(rtData, name) {
 		if (name.startsWith('$')) {
         	if (name.startsWith('$args.') && (name.size() > 6)) {
             	result = getArgument(rtData, name.substring(6))
+        	} else if (name.startsWith('$args[') && (name.size() > 6)) {
+            	result = getArgument(rtData, name.substring(5))
         	} else if (name.startsWith('$json.') && (name.size() > 6)) {
             	result = getJson(rtData, name.substring(6))
         	} else if (name.startsWith('$json[') && (name.size() > 6)) {
