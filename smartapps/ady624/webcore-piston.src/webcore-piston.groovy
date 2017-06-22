@@ -4251,7 +4251,7 @@ private Map getDeviceAttribute(rtData, deviceId, attributeName, subDeviceIndex =
 private Map getJsonData(rtData, data, name) {
 	if (data != null) {
         try {
-            List parts = name.replace(/\]\[/, '].[').tokenize('.');
+            List parts = name.replace(/][/, '].[').tokenize('.');
             def args = (data instanceof Map ? [:] + data : (data instanceof List ? [] + data : new groovy.json.JsonSlurper().parseText(data)))
             for(part in parts) {
                 if ((args instanceof String) || (args instanceof GString)) {
@@ -4267,61 +4267,67 @@ private Map getJsonData(rtData, data, name) {
                             return [t: 'integer', v: args.size()]
                         case 'first':
                             args = args.size() > 0 ? args[0] : ''
+                            continue
                             break
                         case 'second':
                             args = args.size() > 1 ? args[1] : ''
+                            continue
                             break
                         case 'third':
                             args = args.size() > 2 ? args[2] : ''
+                            continue
                             break
                         case 'fourth':
                             args = args.size() > 3 ? args[3] : ''
+                            continue
                             break
                         case 'fifth':
                             args = args.size() > 4 ? args[4] : ''
+                            continue
                             break
                         case 'sixth':
                             args = args.size() > 5 ? args[5] : ''
+                            continue
                             break
                         case 'seventh':
                             args = args.size() > 6 ? args[6] : ''
+                            continue
                             break
                         case 'eighth':
                             args = args.size() > 7 ? args[7] : ''
+                            continue
                             break
                         case 'ninth':
                             args = args.size() > 8 ? args[8] : ''
+                            continue
                             break
                         case 'tenth':
                             args = args.size() > 9 ? args[9] : ''
+                            continue
                             break
                         case 'last':
                             args = args.size() > 0 ? args[args.size() - 1] : ''
+                            continue
                             break
                     }
-                    continue
                 }
-                if (!(args instanceof Map)) return [t: 'dynamic', v: '']
+                if (!(args instanceof Map) && !(args instanceof List)) return [t: 'dynamic', v: '']
                 def idx = 0
                 if (part.endsWith(']')) {
                     //array index
                     def start = part.indexOf('[')
-                    if (start) {
+                    if (start >= 0) {
                         idx = part.substring(start + 1, part.size() - 1)
                         part = part.substring(0, start)
                         if (idx.isInteger()) {
                             idx = idx.toInteger()
                         } else {
-                            idx = cast(rtData, getVariable(rtData, idx).v, 'integer')
+                            def var = getVariable(rtData, idx)
+                            idx = var && (var.t != 'error') ? var.v : idx
                         }
                     }
-                    args = args[part]
-                    if (args instanceof List) {
-                        args = args[idx]
-                    } else {
-                        args = ''
-                        break
-                    }
+                    if (part) args = args[part]
+                    args = args[idx]
                     continue
                 }
                 args = args[part]
@@ -4373,8 +4379,12 @@ private Map getVariable(rtData, name) {
             	result = getArgument(rtData, name.substring(6))
         	} else if (name.startsWith('$json.') && (name.size() > 6)) {
             	result = getJson(rtData, name.substring(6))
+        	} else if (name.startsWith('$json[') && (name.size() > 6)) {
+            	result = getJson(rtData, name.substring(5))
             } else if (name.startsWith('$response.') && (name.size() > 10)) {
             	result = getResponse(rtData, name.substring(10))
+            } else if (name.startsWith('$response[') && (name.size() > 10)) {
+            	result = getResponse(rtData, name.substring(9))
             } else if (name.startsWith('$weather.') && (name.size() > 9)) {
             	result = getWeather(rtData, name.substring(9))
             } else {
@@ -5553,7 +5563,7 @@ private func_max(rtData, params) {
 /******************************************************************************/
 private func_count(rtData, params) {
 	if (!params || !(params instanceof List) || (params.size() < 1)) {
-    	return [t: "error", v: "Invalid parameters. Expecting count(value1, value2, ..., valueN)"];
+    	return [t: "integer", v: 0];
     }
     def count = 0
     for (param in params) {
