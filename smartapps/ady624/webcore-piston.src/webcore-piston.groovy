@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.2.0c8.20170622" }
+public static String version() { return "v0.2.0c9.20170622" }
 /*
+ *	06/22/2017 >>> v0.2.0c9.20170622 - BETA M2 - Added orientation support (not fully tested)
  *	06/22/2017 >>> v0.2.0c8.20170622 - BETA M2 - Improved support for JSON parsing, including support for named properties $json[element] - element can be an integer index, a variable name, or a string (no quotes), fixed a bug with Wait for time
  *	06/21/2017 >>> v0.2.0c7.20170621 - BETA M2 - A bug fix for boolean and dynamic types - thoroughly inspect their values rather than rely on the data type
  *	06/20/2017 >>> v0.2.0c6.20170620 - BETA M2 - Bug fix for timers - last time refactoring affected timers (timezone offset miscalculations)
@@ -4095,6 +4096,7 @@ private void subscribeAll(rtData) {
 			}
             if (!rtData.piston.o.des && !!subscription.value.t && !!subscription.value.c && (altSub != "never") && ((subscription.value.t == "trigger") || (altSub == "always") || !hasTriggers)) {
                 def device = subscription.value.d.startsWith(':') ? getDevice(rtData, subscription.value.d) : null
+				def a = subscription.value.a == 'orientation' ? 'threeAxis' : subscription.value.a
                 if (device) {
 					for (condition in subscription.value.c) if (condition) { condition.s = (condition.sm != 'never') && ((condition.ct == 't') || (condition.sm == 'always') || (!hasTriggers)) }
                 	switch (subscription.value.a) {
@@ -4103,8 +4105,8 @@ private void subscribeAll(rtData) {
                         case 'datetime':
                         	break;
 						default:
-                            if (rtData.logging) info "Subscribing to $device.${subscription.value.a}...", rtData
-                            subscribe(device, subscription.value.a, deviceHandler)
+                            if (rtData.logging) info "Subscribing to $device.${a}...", rtData
+                            subscribe(device, a, deviceHandler)
                             ss.events = ss.events + 1
                             if (!dds[device.id]) {
                                 ss.devices = ss.devices + 1
@@ -4112,7 +4114,7 @@ private void subscribeAll(rtData) {
                             }
                     }
                 } else {
-                    error "Failed subscribing to $device.${subscription.value.a}, device not found", rtData
+                    error "Failed subscribing to $device.${a}, device not found", rtData
                 }
             } else {
 				for (condition in subscription.value.c) if (condition) { condition.s = false }
@@ -4215,6 +4217,9 @@ private getDeviceAttributeValue(rtData, device, attributeName) {
     	return rtData.event.value;
     } else {
     	if (attributeName == '$status') return device.getStatus()
+    	if (attributeName == 'orientation') {
+        	return getThreeAxisOrientation(rtData.event && (rtData.event.name == 'threeAxis') && (rtData.event.device.id == device.id) ? rtData.event.xyzValue : device.currentValue('threeAxis'))
+        }
 		return device.currentValue(attributeName)
     }
 }
@@ -6136,6 +6141,22 @@ def String hashId(id) {
         state.hash = hash
     }
     return result
+}
+
+private getThreeAxisOrientation(value, getIndex = false) {
+	if (value instanceof Map) {
+		if ((value.x != null) && (value.y != null) && (value.z != null)) {
+			def x = Math.abs(value.x)
+			def y = Math.abs(value.y)
+			def z = Math.abs(value.z)
+			def side = (x > y ? (x > z ? 0 : 2) : (y > z ? 1 : 2))
+			side = side + (((side == 0) && (value.x < 0)) || ((side == 1) && (value.y < 0)) || ((side == 2) && (value.z < 0)) ? 3 : 0)
+			def orientations = ['rear', 'down', 'left', 'front', 'up', 'right']
+			def result = getIndex ? side : orientations[side] + ' side up'
+			return result
+		}
+	}
+	return value
 }
 
 private cast(rtData, value, dataType, srcDataType = null) {

@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.2.0c8.20170622" }
+public static String version() { return "v0.2.0c9.20170622" }
 /*
+ *	06/22/2017 >>> v0.2.0c9.20170622 - BETA M2 - Added orientation support (not fully tested)
  *	06/22/2017 >>> v0.2.0c8.20170622 - BETA M2 - Improved support for JSON parsing, including support for named properties $json[element] - element can be an integer index, a variable name, or a string (no quotes), fixed a bug with Wait for time
  *	06/21/2017 >>> v0.2.0c7.20170621 - BETA M2 - A bug fix for boolean and dynamic types - thoroughly inspect their values rather than rely on the data type
  *	06/20/2017 >>> v0.2.0c6.20170620 - BETA M2 - Bug fix for timers - last time refactoring affected timers (timezone offset miscalculations)
@@ -2124,7 +2125,7 @@ private static Map attributes() {
 		lqi							: [ n: "link quality",			t: "integer",	r: [0, 255],																						],
 		motion						: [ n: "motion",				t: "enum",		o: ["active", "inactive"],																			],
 		mute						: [ n: "mute",					t: "enum",		o: ["muted", "unmuted"],																			],
-		orientation					: [ n: "orientation",			t: "enum",		o: ["rear side up", "down side up", "left side up", "front side up", "up side up", "right side up"],	s: "threeAxis",															],
+		orientation					: [ n: "orientation",			t: "enum",		o: ["rear side up", "down side up", "left side up", "front side up", "up side up", "right side up"],															],
 		pH							: [ n: "pH level",				t: "decimal",	r: [0, 14],																							],
 		phraseSpoken				: [ n: "phrase",				t: "string",																										],
 		power						: [ n: "power",					t: "decimal",	r: [0, null],		u: "W",																			],
