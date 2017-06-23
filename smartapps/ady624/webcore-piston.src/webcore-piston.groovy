@@ -4803,13 +4803,23 @@ private Map evaluateExpression(rtData, expression, dataType = null) {
                 //we're onto something
                 def v = null
                 def o = items[idx].o
+                def a1 = items[idx].a
                 def t1 = items[idx].t
                 def v1 = items[idx].v
+                def a2 = items[idx + 1].a
                 def t2 = items[idx + 1].t
                 def v2 = items[idx + 1].v
                 def t = t1
                 //fix-ups
                 //integer with decimal gives decimal, also *, / require decimals
+                if ((t1 == 'device') && a1) {
+                	def attr = rtData.attributes[a1]
+                    t1 = attr ? attr.t : 'string'
+                }
+                if ((t2 == 'device') && a2) {
+                	def attr = rtData.attributes[a2]
+                    t2 = attr ? attr.t : 'string'
+                }
                 if ((t1 == 'device') && (t2 == 'device') && ((o == '+') || (o == '-'))) {
 					v1 = (v1 instanceof List) ? v1 : [v1]
 					v2 = (v2 instanceof List) ? v2 : [v2]
