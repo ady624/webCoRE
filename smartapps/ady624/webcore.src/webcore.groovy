@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.2.0c9.20170622" }
+public static String version() { return "v0.2.0ca.20170623" }
 /*
+ *	06/23/2017 >>> v0.2.0ca.20170623 - BETA M2 - Minor bug and fixes, UI support for followed by - SmartApp does not yet implement it
  *	06/22/2017 >>> v0.2.0c9.20170622 - BETA M2 - Added orientation support (not fully tested)
  *	06/22/2017 >>> v0.2.0c8.20170622 - BETA M2 - Improved support for JSON parsing, including support for named properties $json[element] - element can be an integer index, a variable name, or a string (no quotes), fixed a bug with Wait for time
  *	06/21/2017 >>> v0.2.0c7.20170621 - BETA M2 - A bug fix for boolean and dynamic types - thoroughly inspect their values rather than rely on the data type
@@ -1641,7 +1642,7 @@ public String mem(showBytes = true) {
 	return Math.round(100.00 * (bytes/ 100000.00)) + "%${showBytes ? " ($bytes bytes)" : ""}"
 }
 
-public Map getRunTimeData(semaphore, fetchWrappers = false) {
+public Map getRunTimeData(semaphore = null, fetchWrappers = false) {
     def startTime = now()
     semaphore = semaphore ?: 0
    	def semaphoreDelay = 0

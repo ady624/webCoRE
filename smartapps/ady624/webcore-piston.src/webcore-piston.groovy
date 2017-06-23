@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.2.0c9.20170622" }
+public static String version() { return "v0.2.0ca.20170623" }
 /*
+ *	06/23/2017 >>> v0.2.0ca.20170623 - BETA M2 - Minor bug and fixes, UI support for followed by - SmartApp does not yet implement it
  *	06/22/2017 >>> v0.2.0c9.20170622 - BETA M2 - Added orientation support (not fully tested)
  *	06/22/2017 >>> v0.2.0c8.20170622 - BETA M2 - Improved support for JSON parsing, including support for named properties $json[element] - element can be an integer index, a variable name, or a string (no quotes), fixed a bug with Wait for time
  *	06/21/2017 >>> v0.2.0c7.20170621 - BETA M2 - A bug fix for boolean and dynamic types - thoroughly inspect their values rather than rely on the data type
@@ -4220,7 +4221,13 @@ private getDeviceAttributeValue(rtData, device, attributeName) {
     	if (attributeName == 'orientation') {
         	return getThreeAxisOrientation(rtData.event && (rtData.event.name == 'threeAxis') && (rtData.event.device.id == device.id) ? rtData.event.xyzValue : device.currentValue('threeAxis'))
         }
-		return device.currentValue(attributeName)
+        def result
+        try {
+        	result = device.currentValue(attributeName)
+        } catch (all) {
+        	error "Error reading current value for $device.$attributeName:", rtData, all
+        }
+		return result ?: ''
     }
 }
 
