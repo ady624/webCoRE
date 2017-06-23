@@ -4837,6 +4837,16 @@ private Map evaluateExpression(rtData, expression, dataType = null) {
                         	t = (t1 == 'date') && (t2 == 'date') ? 'date' : ((t1 == 'time') && (t2 == 'time') ? 'time' : 'datetime')
                         }
                     } else {
+                    	if ((o == '+') || (o == '-')) {
+                        	//devices and others play nice
+                        	if (t1 == 'device') {
+                            	t = t2
+                                t1 = t2
+                            } else if (t2 == 'device') {
+                            	t = t1
+                                t2 = t1
+							}
+                        }
                         if ((o == '*') || (o == '/') || (o == '-') || (o == '**')) {
                         	t = (t1i && t2i) ? 'integer' : 'decimal'
                             t1 = t
