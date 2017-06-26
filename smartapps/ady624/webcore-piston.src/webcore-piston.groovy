@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.2.0ca.20170623" }
+public static String version() { return "v0.2.0cb.20170626" }
 /*
+ *	06/26/2017 >>> v0.2.0cb.20170626 - BETA M2 - Minor bug fixes (including a fix with json data arrays), and added string functions trim, trimLeft/ltrim, and trimRight/rtrim
  *	06/23/2017 >>> v0.2.0ca.20170623 - BETA M2 - Minor bug and fixes, UI support for followed by - SmartApp does not yet implement it
  *	06/22/2017 >>> v0.2.0c9.20170622 - BETA M2 - Added orientation support (not fully tested)
  *	06/22/2017 >>> v0.2.0c8.20170622 - BETA M2 - Improved support for JSON parsing, including support for named properties $json[element] - element can be an integer index, a variable name, or a string (no quotes), fixed a bug with Wait for time
@@ -268,7 +269,7 @@ def pageMain() {
             def currentState = state.currentState
 
             section ("General") {
-                label name: "name", title: "Name", required: true, state: (name ? "complete" : null), defaultValue: parent.generatePistonName()
+                label name: "name", title: "Name", required: true, state: (name ? "complete" : null), defaultValue: parent.generatePistonName(), submitOnChange: true
             }
 
             section("Dashboard") {        
@@ -959,6 +960,7 @@ private updateLogs(rtData) {
             	logs = []
             }
     	}
+        state.logs = logs
         if ("$state".size() > 75000) {
         	maxLogSize -= 50
         } else {
@@ -4340,6 +4342,7 @@ private Map getJsonData(rtData, data, name) {
                         }
                     }
                     if (part) args = args[part]
+                    if (args instanceof List) idx = cast(rtData, idx, 'integer')
                     args = args[idx]
                     continue
                 }
@@ -5318,6 +5321,46 @@ private func_coalesce(rtData, params) {
     }
     return [t: "dynamic", v: null]
 }
+
+
+/******************************************************************************/
+/*** trim removes leading and trailing spaces from a string					***/
+/*** Usage: trim(value)														***/
+/******************************************************************************/
+private func_trim(rtData, params) {
+	if (!params || !(params instanceof List) || (params.size() != 1)) {
+    	return [t: "error", v: "Invalid parameters. Expecting trim(value)"];
+    }
+    def value = evaluateExpression(rtData, params[0], 'string').v.trim()
+    return [t: "string", v: value]
+}
+
+/******************************************************************************/
+/*** trimleft removes leading spaces from a string							***/
+/*** Usage: trimLeft(value)													***/
+/******************************************************************************/
+private func_trimleft(rtData, params) {
+	if (!params || !(params instanceof List) || (params.size() != 1)) {
+    	return [t: "error", v: "Invalid parameters. Expecting trimLeft(value)"];
+    }
+    def value = evaluateExpression(rtData, params[0], 'string').v.replaceAll('^\\s+', '')
+    return [t: "string", v: value]
+}
+private func_ltrim(rtData, params) { return func_trimleft(rtData, params) }
+
+/******************************************************************************/
+/*** trimright removes trailing spaces from a string						***/
+/*** Usage: trimRight(value)												***/
+/******************************************************************************/
+private func_trimright(rtData, params) {
+	if (!params || !(params instanceof List) || (params.size() != 1)) {
+    	return [t: "error", v: "Invalid parameters. Expecting trimRight(value)"];
+    }
+    def value = evaluateExpression(rtData, params[0], 'string').v.replaceAll('\\s+$', '')
+    return [t: "string", v: value]
+}
+private func_rtrim(rtData, params) { return func_trimright(rtData, params) }
+
 /******************************************************************************/
 /*** substring returns a substring of a value								***/
 /*** Usage: substring(string, start, count)									***/
@@ -5867,108 +5910,109 @@ private func_isempty(rtData, params) {
     	return [t: "error", v: "Invalid parameters. Expecting isEmpty(value)"];
     }
     def value = evaluateExpression(rtData, params[0])
-    boolean result = (value.v instanceof List ? (value.v == [null]) || (value.v == []) || (value.v == ['null']) : false) || (value.v == null) || (value.t == 'error') || (value.v == 'null') || (cast(rtData, value.v, 'string') == '')
+    error " param is ${params[0]}, value is |${value}|", rtData
+    boolean result = (value.v instanceof List ? (value.v == [null]) || (value.v == []) || (value.v == ['null']) : false) || (value.v == null) || (value.t == 'error') || (value.v == 'null') || (cast(rtData, value.v, 'string') == '') || ("$value.v" == '')
     return [t: "boolean", v: result]
 }
 
 /******************************************************************************/
 /*** datetime returns the value as a datetime type							***/
-/*** Usage: datetime(value)													***/
+/*** Usage: datetime([value])												***/
 /******************************************************************************/
 private func_datetime(rtData, params) {
-	if (!params || !(params instanceof List) || (params.size() != 1)) {
-    	return [t: "error", v: "Invalid parameters. Expecting datetime(value)"];
+	if (!(params instanceof List) || (params.size() > 1)) {
+    	return [t: "error", v: "Invalid parameters. Expecting datetime([value])"];
     }
-    long value = evaluateExpression(rtData, params[0], 'datetime').v
+    long value = params.size() > 0 ? evaluateExpression(rtData, params[0], 'datetime').v : now()
     return [t: "datetime", v: value]
 }
 
 /******************************************************************************/
 /*** date returns the value as a date type									***/
-/*** Usage: date(value)														***/
+/*** Usage: date([value])													***/
 /******************************************************************************/
 private func_date(rtData, params) {
-	if (!params || !(params instanceof List) || (params.size() != 1)) {
-    	return [t: "error", v: "Invalid parameters. Expecting date(value)"];
+	if (!(params instanceof List) || (params.size() > 1)) {
+    	return [t: "error", v: "Invalid parameters. Expecting date([value])"];
     }
-    long value = evaluateExpression(rtData, params[0], 'date').v
+    long value = params.size() > 0 ? evaluateExpression(rtData, params[0], 'date').v : cast(rtData, now(), 'date', 'datetime')
     return [t: "date", v: value]
 }
 
 /******************************************************************************/
 /*** time returns the value as a time type									***/
-/*** Usage: time(value)														***/
+/*** Usage: time([value])													***/
 /******************************************************************************/
 private func_time(rtData, params) {
-	if (!params || !(params instanceof List) || (params.size() != 1)) {
-    	return [t: "error", v: "Invalid parameters. Expecting time(value)"];
+	if (!(params instanceof List) || (params.size() > 1)) {
+    	return [t: "error", v: "Invalid parameters. Expecting time([value])"];
     }
-    long value = evaluateExpression(rtData, params[0], 'time').v
+    long value = params.size() > 0 ? evaluateExpression(rtData, params[0], 'time').v : cast(rtData, now(), 'time', 'datetime')
     return [t: "time", v: value]
 }
 
 /******************************************************************************/
 /*** addSeconds returns the value as a time type							***/
-/*** Usage: addSeconds(dateTime, seconds)									***/
+/*** Usage: addSeconds([dateTime, ]seconds)									***/
 /******************************************************************************/
 private func_addseconds(rtData, params) {
-	if (!params || !(params instanceof List) || (params.size() != 2)) {
-    	return [t: "error", v: "Invalid parameters. Expecting addSeconds(dateTime, seconds)"];
+	if (!params || !(params instanceof List) || (params.size() < 1) || (params.size() > 2)) {
+    	return [t: "error", v: "Invalid parameters. Expecting addSeconds([dateTime, ]seconds)"];
     }
-    long value = evaluateExpression(rtData, params[0], 'datetime').v
-    long delta = evaluateExpression(rtData, params[1], 'long').v * 1000
+    long value = params.size() == 2 ? evaluateExpression(rtData, params[0], 'datetime').v : now()
+    long delta = evaluateExpression(rtData, (params.size() == 2 ? params[1] : params[0]), 'long').v * 1000
     return [t: "datetime", v: value + delta]
 }
 
 /******************************************************************************/
 /*** addMinutes returns the value as a time type							***/
-/*** Usage: addMinutes(dateTime, minutes)									***/
+/*** Usage: addMinutes([dateTime, ]minutes)									***/
 /******************************************************************************/
 private func_addminutes(rtData, params) {
-	if (!params || !(params instanceof List) || (params.size() != 2)) {
-    	return [t: "error", v: "Invalid parameters. Expecting addMinutes(dateTime, minutes)"];
+	if (!params || !(params instanceof List) || (params.size() < 1) || (params.size() > 2)) {
+    	return [t: "error", v: "Invalid parameters. Expecting addMinutes([dateTime, ]minutes)"];
     }
-    long value = evaluateExpression(rtData, params[0], 'datetime').v
-    long delta = evaluateExpression(rtData, params[1], 'long').v * 60000
+    long value = params.size() == 2 ? evaluateExpression(rtData, params[0], 'datetime').v : now()
+    long delta = evaluateExpression(rtData, (params.size() == 2 ? params[1] : params[0]), 'long').v * 60000
     return [t: "datetime", v: value + delta]
 }
 
 /******************************************************************************/
 /*** addHours returns the value as a time type								***/
-/*** Usage: addHours(dateTime, hours)										***/
+/*** Usage: addHours([dateTime, ]hours)										***/
 /******************************************************************************/
 private func_addhours(rtData, params) {
-	if (!params || !(params instanceof List) || (params.size() != 2)) {
-    	return [t: "error", v: "Invalid parameters. Expecting addHours(dateTime, hours)"];
+	if (!params || !(params instanceof List) || (params.size() < 1) || (params.size() > 2)) {
+    	return [t: "error", v: "Invalid parameters. Expecting addHours([dateTime, ]hours)"];
     }
-    long value = evaluateExpression(rtData, params[0], 'datetime').v
-    long delta = evaluateExpression(rtData, params[1], 'long').v * 3600000
+    long value = params.size() == 2 ? evaluateExpression(rtData, params[0], 'datetime').v : now()
+    long delta = evaluateExpression(rtData, (params.size() == 2 ? params[1] : params[0]), 'long').v * 3600000
     return [t: "datetime", v: value + delta]
 }
 
 /******************************************************************************/
 /*** addDays returns the value as a time type								***/
-/*** Usage: addDays(dateTime, days)											***/
+/*** Usage: addDays([dateTime, ]days)										***/
 /******************************************************************************/
 private func_adddays(rtData, params) {
-	if (!params || !(params instanceof List) || (params.size() != 2)) {
-    	return [t: "error", v: "Invalid parameters. Expecting addDays(dateTime, days)"];
+	if (!params || !(params instanceof List) || (params.size() < 1) || (params.size() > 2)) {
+    	return [t: "error", v: "Invalid parameters. Expecting addDays([dateTime, ]days)"];
     }
-    long value = evaluateExpression(rtData, params[0], 'datetime').v
-    long delta = evaluateExpression(rtData, params[1], 'long').v * 86400000
+    long value = params.size() == 2 ? evaluateExpression(rtData, params[0], 'datetime').v : now()
+    long delta = evaluateExpression(rtData, (params.size() == 2 ? params[1] : params[0]), 'long').v * 86400000
     return [t: "datetime", v: value + delta]
 }
 
 /******************************************************************************/
 /*** addWeeks returns the value as a time type								***/
-/*** Usage: addWeeks(dateTime, weeks)										***/
+/*** Usage: addWeeks([dateTime, ]weeks)										***/
 /******************************************************************************/
 private func_addweeks(rtData, params) {
-	if (!params || !(params instanceof List) || (params.size() != 2)) {
-    	return [t: "error", v: "Invalid parameters. Expecting addWeeks(dateTime, weeks)"];
+	if (!params || !(params instanceof List) || (params.size() < 1) || (params.size() > 2)) {
+    	return [t: "error", v: "Invalid parameters. Expecting addWeeks([dateTime, ]weeks)"];
     }
-    long value = evaluateExpression(rtData, params[0], 'datetime').v
-    long delta = evaluateExpression(rtData, params[1], 'long').v * 604800000
+    long value = params.size() == 2 ? evaluateExpression(rtData, params[0], 'datetime').v : now()
+    long delta = evaluateExpression(rtData, (params.size() == 2 ? params[1] : params[0]), 'long').v * 604800000
     return [t: "datetime", v: value + delta]
 }
 
