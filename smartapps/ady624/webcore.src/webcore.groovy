@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.2.0ca.20170623" }
+public static String version() { return "v0.2.0cb.20170626" }
 /*
+ *	06/26/2017 >>> v0.2.0cb.20170626 - BETA M2 - Minor bug fixes (including a fix with json data arrays), and added string functions trim, trimLeft/ltrim, and trimRight/rtrim
  *	06/23/2017 >>> v0.2.0ca.20170623 - BETA M2 - Minor bug and fixes, UI support for followed by - SmartApp does not yet implement it
  *	06/22/2017 >>> v0.2.0c9.20170622 - BETA M2 - Added orientation support (not fully tested)
  *	06/22/2017 >>> v0.2.0c8.20170622 - BETA M2 - Improved support for JSON parsing, including support for named properties $json[element] - element can be an integer index, a variable name, or a string (no quotes), fixed a bug with Wait for time
@@ -2535,7 +2536,12 @@ private static Map functions() {
         coalesce		: [ t: "dynamic",						],
         weekdayname		: [ t: "string",	d: "weekDayName"	],
         monthname		: [ t: "string",	d: "monthName"		],
-        arrayitem		: [ t: "dynamic",	d: "arrayItem"		]
+        arrayitem		: [ t: "dynamic",	d: "arrayItem"		],
+        trim			: [ t: "string"							],
+        trimleft		: [ t: "string", 	d: "trimLeft"		],
+        ltrim			: [ t: "string"							],
+        trimright		: [ t: "string",	d: "trimRight"		],
+        rtrim			: [ t: "string"							],
 	]
 }
 
