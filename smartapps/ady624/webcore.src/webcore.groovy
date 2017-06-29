@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.2.0cb.20170626" }
+public static String version() { return "v0.2.0cc.20170629" }
 /*
+ *	06/29/2017 >>> v0.2.0cc.20170629 - BETA M2 - Fixes to date, datetime, and time - datetime(string) was returning a 0, fixed it
  *	06/26/2017 >>> v0.2.0cb.20170626 - BETA M2 - Minor bug fixes (including a fix with json data arrays), and added string functions trim, trimLeft/ltrim, and trimRight/rtrim
  *	06/23/2017 >>> v0.2.0ca.20170623 - BETA M2 - Minor bug and fixes, UI support for followed by - SmartApp does not yet implement it
  *	06/22/2017 >>> v0.2.0c9.20170622 - BETA M2 - Added orientation support (not fully tested)
