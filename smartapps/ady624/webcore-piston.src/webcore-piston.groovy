@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.2.0cc.20170629" }
+public static String version() { return "v0.2.0cd.20170629" }
 /*
+ *	06/29/2017 >>> v0.2.0cd.20170629 - BETA M2 - [DO NOT UPDATE UNLESS REQUESTED TO] - Adds typed list support
  *	06/29/2017 >>> v0.2.0cc.20170629 - BETA M2 - Fixes to date, datetime, and time - datetime(string) was returning a 0, fixed it
  *	06/26/2017 >>> v0.2.0cb.20170626 - BETA M2 - Minor bug fixes (including a fix with json data arrays), and added string functions trim, trimLeft/ltrim, and trimRight/rtrim
  *	06/23/2017 >>> v0.2.0ca.20170623 - BETA M2 - Minor bug and fixes, UI support for followed by - SmartApp does not yet implement it
@@ -1399,7 +1400,7 @@ private Boolean executeTask(rtData, devices, statement, task, async) {
     	def p
     	switch (param.vt) {
         	case 'variable':
-            	p = param.x;
+            	p = param.x + (param.xi != null ? '[' + param.xi + ']' : '');
                 break;
             default:
             	def v = evaluateOperand(rtData, null, param)
@@ -2541,10 +2542,28 @@ private long vcmd_sendNotificationToContacts(rtData, device, params) {
     return 0
 }
 
+
+private Map parseVariableName(name) {
+	Map result = [
+    	name: name,
+        index: null
+    ]
+	if (name.endsWith(']')) {
+    	def parts = name.replace(']', '').tokenize('[')
+        if (parts.size() == 2) {
+        	result = [
+            	name: parts[0],
+                index: parts[1]
+            ]
+        }
+    }
+    return result
+}
+
 private long vcmd_setVariable(rtData, device, params) {
 	def name = params[0]
     def value = params[1]
-	setVariable(rtData, name, value)    
+	setVariable(rtData, name, value)
     return 0
 }
 
@@ -3249,7 +3268,7 @@ private evaluateOperand(rtData, node, operand, index = null, trigger = false, ne
                     values = [[i: "${node?.$}:$index:0", v:[t: 'device', v: sum] + (operand.vt ? [vt: operand.vt] : [:])]]
                 }
             } else {
-	        	values = [[i: "${node?.$}:$index:0", v:getVariable(rtData, operand.x) + (operand.vt ? [vt: operand.vt] : [:])]]
+	        	values = [[i: "${node?.$}:$index:0", v:getVariable(rtData, operand.x + (operand.xi != null ? '[' + operand.xi + ']' : '')) + (operand.vt ? [vt: operand.vt] : [:])]]
             }
             break
         case "c": //constant
@@ -4386,7 +4405,8 @@ private Map getWeather(rtData, name) {
 }
 
 private Map getVariable(rtData, name) {
-	name = sanitizeVariableName(name)
+	def var = parseVariableName(name)
+	name = sanitizeVariableName(var.name)
 	if (!name) return [t: "error", v: "Invalid empty variable name"]
     def result
 	if (name.startsWith("@")) {
@@ -4416,11 +4436,32 @@ private Map getVariable(rtData, name) {
 	            }
             }
 		} else {
-			result = rtData.localVars[name]
-            if (!(result instanceof Map)) result = [t: "error", v: "Variable '$name' not found"]
+			def localVar = rtData.localVars[name]
+            if (!(localVar instanceof Map)) {
+            	result = [t: "error", v: "Variable '$name' not found"]
+            } else {
+            	result = [t: localVar.t, v: localVar.v]
+                //make a local copy of the list
+                if (result.v instanceof List) result.v = [] + result.v
+                //make a local copy of the map
+                if (result.v instanceof Map) result.v = [:] + result.v
+            }
 		}
 	}
-    if (result && (result.t == 'dev55ice')) {
+    if (result && (result.t.endsWith(']'))) {
+    	result.t = result.t.replace('[]', '')
+    	if ((result.v instanceof Map) && (var.index != null) && (var.index != '')) {
+        	Map indirectVar = getVariable(rtData, var.index)
+            //indirect variable addressing
+            if (indirectVar && (indirectVar.t != 'error')) {
+            	var.index = cast(rtData, indirectVar.v, 'string', indirectVar.t)
+            }
+        	result.v = result.v[var.index]
+        } else {
+        	result.v = "$result.v"
+        }
+    }
+    if (result && (result.t == 'device')) {
 	   	def deviceIds = []
         def devices = []
         for(deviceId in ((result.v instanceof List) ? result.v : [result.v])) {
@@ -4435,7 +4476,8 @@ private Map getVariable(rtData, name) {
 }
 
 private Map setVariable(rtData, name, value) {
-	name = sanitizeVariableName(name)
+	def var = parseVariableName(name)
+	name = sanitizeVariableName(var.name)
 	if (!name) return [t: "error", v: "Invalid empty variable name"]
 	if (name.startsWith("@")) {
     	def variable = rtData.globalVars[name]
@@ -4447,11 +4489,22 @@ private Map setVariable(rtData, name, value) {
             rtData.gvCache = cache
             return variable
         }
-	} else {
-		def variable = rtData.localVars[name]
+	} else {    	
+		def variable = rtData.localVars[var.name]
         if (variable instanceof Map) {
             //set value
-            variable.v = cast(rtData, value, variable.t)
+            if (variable.t.endsWith(']')) {
+            	//we're dealing with a list           
+                variable.v = (variable.v instanceof Map) ? variable.v : [:]
+                Map indirectVar = getVariable(rtData, var.index)
+                //indirect variable addressing
+                if (indirectVar && (indirectVar.t != 'error')) {
+                    var.index = cast(rtData, indirectVar.v, 'string', indirectVar.t)
+                }                
+                variable.v[var.index] = cast(rtData, value, variable.t.replace('[]', ''))
+            } else {
+            	variable.v = cast(rtData, value, variable.t)
+            }
             if (!variable.f) {
             	def vars = state.vars
                 vars[name] = variable.v
@@ -4536,7 +4589,7 @@ private Map evaluateExpression(rtData, expression, dataType = null) {
         case "variable":
         	//get variable as {n: name, t: type, v: value}
            	result = [t: 'error', v: 'Invalid variable']
-        	result = getVariable(rtData, expression.x)
+        	result = getVariable(rtData, expression.x + (expression.xi != null ? '[' + expression.xi + ']' : ''))
         	break
         case "device":
         	//get variable as {n: name, t: type, v: value}
@@ -6705,8 +6758,8 @@ private Map getLocalVariables(rtData, vars) {
 	Map result = [:]
     def values = atomicState.vars
 	for (var in vars) {
-    	def variable = [t: var.t, v: var.v ?: cast(rtData, values[var.n], var.t), f: !!var.v] //f means fixed value - we won't save this to the state
-        if (rtData && var.v && (var.a == 's')) {
+    	def variable = [t: var.t, v: var.v ?: (var.t.endsWith(']') ? (values[var.n] instanceof Map ? values[var.n] : {}) : cast(rtData, values[var.n], var.t)), f: !!var.v] //f means fixed value - we won't save this to the state
+        if (rtData && var.v && (var.a == 's') && !var.t.endsWith(']')) {
         	variable.v = evaluateExpression(rtData, evaluateOperand(rtData, null, var.v), var.t).v
         }
         result[var.n] = variable
