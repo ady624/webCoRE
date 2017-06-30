@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.2.0cd.20170629" }
+public static String version() { return "v0.2.0ce.20170629" }
 /*
+ *	06/29/2017 >>> v0.2.0ce.20170629 - BETA M2 - Fix for broken time scheduling and device variables
  *	06/29/2017 >>> v0.2.0cd.20170629 - BETA M2 - [DO NOT UPDATE UNLESS REQUESTED TO] - Adds typed list support
  *	06/29/2017 >>> v0.2.0cc.20170629 - BETA M2 - Fixes to date, datetime, and time - datetime(string) was returning a 0, fixed it
  *	06/26/2017 >>> v0.2.0cb.20170626 - BETA M2 - Minor bug fixes (including a fix with json data arrays), and added string functions trim, trimLeft/ltrim, and trimRight/rtrim
@@ -1579,7 +1580,7 @@ private scheduleTimer(rtData, timer, long lastRun = 0) {
    
     if (!delta) {
     	//let's get the offset
-        time = evaluateExpression(rtData, evaluateOperand(rtData, null, timer.lo2), 'datetime').v % 86400000 + getMidnightTime()
+        time = evaluateExpression(rtData, evaluateOperand(rtData, null, timer.lo2), 'datetime').v
         if (timer.lo2.t != 'c') {
         	def offset = evaluateOperand(rtData, null, timer.lo3)
         	time += (long) evaluateExpression(rtData, [t: 'duration', v: offset.v, vt: offset.vt], 'long').v
@@ -1740,8 +1741,8 @@ private scheduleTimeCondition(rtData, condition) {
     def v2 = trigger ? v1 : ((comparison.p > 1) ? (evaluateExpression(rtData, evaluateOperand(rtData, null, condition.ro2, null, false, true), 'datetime').v + (tv2 ? evaluateExpression(rtData, [t: 'duration', v: tv2.v, vt: tv2.vt]).v : 0)) : (condition.lo.v == 'time' ? getMidnightTime(rtData) : v1))
     def n = now() + 2000
     if (condition.lo.v == 'time') {
-    	v1 = (v1 % 86400000) + getMidnightTime()
-    	v2 = (v2 % 86400000) + getMidnightTime()
+    	//v1 = (v1 % 86400000) + getMidnightTime()
+    	//v2 = (v2 % 86400000) + getMidnightTime()
 	    while (v1 < n) v1 += 86400000
     	while (v2 < n) v2 += 86400000
 /*        int cnt = 100
@@ -3670,7 +3671,7 @@ private boolean comp_did_not_change					(rtData, lv, rv = null, rv2 = null, tv =
 private boolean comp_is_any							(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return true; }
 private boolean comp_is_before						(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { long offset1 = tv ? evaluateExpression(rtData, [t: 'duration', v: tv.v, vt: tv.vt], 'long').v : 0; return cast(rtData, evaluateExpression(rtData, lv.v, 'datetime').v + 2000, lv.v.t) < cast(rtData, evaluateExpression(rtData, rv.v, 'datetime').v + offset1, lv.v.t); }
 private boolean comp_is_after						(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { long offset1 = tv ? evaluateExpression(rtData, [t: 'duration', v: tv.v, vt: tv.vt], 'long').v : 0; return cast(rtData, evaluateExpression(rtData, lv.v, 'datetime').v + 2000, lv.v.t) >= cast(rtData, evaluateExpression(rtData, rv.v, 'datetime').v + offset1, lv.v.t); }
-private boolean comp_is_between						(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { long offset1 = tv ? evaluateExpression(rtData, [t: 'duration', v: tv.v, vt: tv.vt], 'long').v : 0; long offset2 = tv2 ? evaluateExpression(rtData, [t: 'duration', v: tv2.v, vt: tv2.vt], 'long').v : 0; long v = cast(rtData, evaluateExpression(rtData, lv.v, 'datetime').v + 2000, lv.v.t); long v1 = cast(rtData, evaluateExpression(rtData, rv.v, 'datetime').v + offset1, lv.v.t); long v2 = cast(rtData, evaluateExpression(rtData, rv2.v, 'datetime').v + offset2, lv.v.t); return (v1 < v2) ? (v >= v1) && (v < v2) : (v < v2) || (v >= v1); }
+private boolean comp_is_between						(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { long offset1 = tv ? evaluateExpression(rtData, [t: 'duration', v: tv.v, vt: tv.vt], 'long').v : 0; long offset2 = tv2 ? evaluateExpression(rtData, [t: 'duration', v: tv2.v, vt: tv2.vt], 'long').v : 0; long v = cast(rtData, evaluateExpression(rtData, lv.v, 'datetime').v + 2000, lv.v.t); long v1 = cast(rtData, evaluateExpression(rtData, rv.v, 'datetime').v + offset1, lv.v.t); long v2 = cast(rtData, evaluateExpression(rtData, rv2.v, 'datetime').v + offset2, lv.v.t); error " comparing $v1 < $v < $v2", rtData; return (v1 < v2) ? (v >= v1) && (v < v2) : (v < v2) || (v >= v1); }
 private boolean comp_is_not_between					(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return !comp_is_between(rtData, lv, rv, rv2, tv, tv2); }
 
 /*triggers*/
@@ -4461,14 +4462,14 @@ private Map getVariable(rtData, name) {
         	result.v = "$result.v"
         }
     }
-    if (result && (result.t == 'device')) {
+    /*if (result && (result.t == 'device')) {
 	   	def deviceIds = []
         def devices = []
         for(deviceId in ((result.v instanceof List) ? result.v : [result.v])) {
             deviceIds.push(deviceId)
         }
 	    result = [t: result.t, v: deviceIds]
-    } else if (result.v instanceof Map) {
+    } else*/ if (result.v instanceof Map) {
     	//we're dealing with an operand, let's parse it
         result = evaluateExpression(rtData, evaluateOperand(rtData, null, result.v), result.t)
     }
