@@ -2549,7 +2549,7 @@ private Map parseVariableName(name) {
     	name: name,
         index: null
     ]
-	if (name.endsWith(']')) {
+	if (name && name.endsWith(']')) {
     	def parts = name.replace(']', '').tokenize('[')
         if (parts.size() == 2) {
         	result = [
