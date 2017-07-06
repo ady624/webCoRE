@@ -778,6 +778,7 @@ mappings {
 	path("/intf/dashboard/refresh") {action: [GET: "api_intf_dashboard_refresh"]}
 	path("/intf/dashboard/piston/new") {action: [GET: "api_intf_dashboard_piston_new"]}
 	path("/intf/dashboard/piston/create") {action: [GET: "api_intf_dashboard_piston_create"]}
+	path("/intf/dashboard/piston/backup") {action: [GET: "api_intf_dashboard_piston_backup"]}
 	path("/intf/dashboard/piston/get") {action: [GET: "api_intf_dashboard_piston_get"]}
 	path("/intf/dashboard/piston/set") {action: [GET: "api_intf_dashboard_piston_set"]}
 	path("/intf/dashboard/piston/set.start") {action: [GET: "api_intf_dashboard_piston_set_start"]}
@@ -958,6 +959,29 @@ private api_intf_dashboard_piston_get() {
     render contentType: "application/javascript;charset=utf-8", data: "${params.callback}(${result.encodeAsJSON()})"
 }
 
+
+private api_intf_dashboard_piston_backup() {
+	def result = [pistons: []]
+    debug "Dashboard: Request received to backup pistons ${params?.id}"
+	if (verifySecurityToken(params.token)) {
+        def pistonIds = (params.ids ?: '').tokenize(',')
+        for(pistonId in pistonIds) {
+        	if (pistonId) {
+	            def piston = getChildApps().find{ hashId(it.id) == pistonId };
+    	        if (piston) {
+                	def pd = piston.get(true)
+                    pd.instance = [id: hashId(app.id), name: app.label]
+                    if (pd) result.pistons.push(pd)
+            	}
+        	}
+		}
+	} else {
+    	result = api_get_error_result("ERR_INVALID_TOKEN")
+    }
+    //for accuracy, use the time as close as possible to the render
+    result.now = now()            
+    render contentType: "application/javascript;charset=utf-8", data: "${params.callback}(${result.encodeAsJSON()})"
+}
 
 private decodeEmoji(value) {
 	if (!value) return ''

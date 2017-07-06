@@ -324,7 +324,7 @@ def initialize() {
     }
 }
 
-def get() {
+def get(boolean minimal = false) {
 	return [
     	meta: [
 			id: hashId(app.id),
@@ -335,8 +335,9 @@ def get() {
 	    	build: state.build,
 	    	bin: state.bin,
 	    	active: state.active
-		],
-        piston: state.piston,
+			],
+        piston: state.piston
+	] + (minimal ? [:] : [
         systemVars: getSystemVariablesAndValues(),
         subscriptions: state.subscriptions,
 	    stats: state.stats,
@@ -349,7 +350,7 @@ def get() {
         lastExecuted: state.lastExecuted,
         nextSchedule: state.nextSchedule,
         schedules: state.schedules
-    ]
+    ])
 }
 
 def activity(lastLogTimestamp) {
