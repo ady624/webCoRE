@@ -6572,24 +6572,28 @@ private localToUtcTime(dateOrTimeOrString) {
 	if (dateOrTimeOrString instanceof String) {
 		//get unix time
         try {
-        	return (new Date()).parse(dateOrTimeOrString + (location.timeZone && !(dateOrTimeOrString =~ /(\s[A-Z]{3}((\+|\-)[0-9]{2}\:[0-9]{2}|\s[0-9]{4})?$)/)? ' ' + location.timeZone.getID() : ''))
+        	return (new Date()).parse(dateOrTimeOrString + (!(dateOrTimeOrString =~ /(\s[A-Z]{3}((\+|\-)[0-9]{2}\:[0-9]{2}|\s[0-9]{4})?$)/)? ' ' + formatLocalTime(now(), 'z') : ''))
 		} catch (all) {
         	try {
-            	def tz = location.timeZone
-                if (dateOrTimeOrString =~ /\s[A-Z]{3}$/) {
-                	try {
-                    	tz = TimeZone.getTimeZone(dateOrTimeOrString[-3..-1])
-                        dateOrTimeOrString = dateOrTimeOrString.take(dateOrTimeOrString.size() - 3).trim()
-                    } catch (all3) {
+	        	return (new Date(dateOrTimeOrString)).getTime()
+			} catch(all2) {
+                try {
+                    def tz = location.timeZone
+                    if (dateOrTimeOrString =~ /\s[A-Z]{3}$/) {
+                        try {
+                            tz = TimeZone.getTimeZone(dateOrTimeOrString[-3..-1])
+                            dateOrTimeOrString = dateOrTimeOrString.take(dateOrTimeOrString.size() - 3).trim()
+                        } catch (all4) {
+                        }
                     }
+                    long time = timeToday(dateOrTimeOrString, tz).getTime()
+                    //adjust for PM - timeToday has no clue....
+                    if (dateOrTimeOrString.trim().toLowerCase().endsWith('pm')) time += 43200000
+                    return time
+                } catch (all3) {
+                    return (new Date()).getTime()
                 }
-          		long time = timeToday(dateOrTimeOrString, tz).getTime()
-                //adjust for PM - timeToday has no clue....
-                if (dateOrTimeOrString.trim().toLowerCase().endsWith('pm')) time += 43200000
-                return time
-            } catch (all2) {
-            	return (new Date()).getTime()
-			}
+            }
         }
 	}
 	return null
