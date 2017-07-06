@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.2.0ce.20170629" }
+public static String version() { return "v0.2.0cf.20170706" }
 /*
+ *	07/06/2017 >>> v0.2.0cf.20170706 - BETA M2 - Fix for parsing string date and times, implemented local http request response support - local web requests will wait for a response for up to 20 seconds - JSON response, if any, is available via $response
  *	06/29/2017 >>> v0.2.0ce.20170629 - BETA M2 - Fix for broken time scheduling and device variables
  *	06/29/2017 >>> v0.2.0cd.20170629 - BETA M2 - [DO NOT UPDATE UNLESS REQUESTED TO] - Adds typed list support
  *	06/29/2017 >>> v0.2.0cc.20170629 - BETA M2 - Fixes to date, datetime, and time - datetime(string) was returning a 0, fixed it
@@ -676,7 +677,7 @@ def handleEvents(event) {
     if (rtData.logging > 1) trace "Execution stage started", rtData, 1
     def success = true
     def syncTime = false    
-    if (event.name != 'time') {
+    if ((event.name != 'time') && (event.name != 'hubResponse')) {
     	success = executeEvent(rtData, event)
         syncTime = true
     }
@@ -688,11 +689,28 @@ def handleEvents(event) {
         //anything less than 2 seconds in the future is considered due, we'll do some pause to sync with it
         //we're doing this because many times, the scheduler will run a job early, usually 0-1.5 seconds early...
         if (!schedules || !schedules.size()) break        
-        event = [date: event.date, device: location, name: 'time', value: now(), schedule: schedules.sort{ it.t }.find{ it.t < now() + 2000 }]
+        if (event.name == 'hubResponse') {
+        	event.schedule = schedules.sort{ it.t }.find{ it.d == 'httpRequest' }            
+        } else {
+        	event = [date: event.date, device: location, name: 'time', value: now(), schedule: schedules.sort{ it.t }.find{ it.t < now() + 2000 }]
+       }
         if (!event.schedule) break
         long threshold = now() > event.schedule.t ? now() : event.schedule.t
         //schedules.removeAll{ (it.t <= threshold) && (it.s == event.schedule.s) && (it.i == event.schedule.i) }
         schedules.remove(event.schedule)
+        if (event.name == 'hubResponse') {
+        	if (event.schedule.stack) event.schedule.stack.response = event.jsonData
+            event.name = 'time'
+            event.value = now()
+            int responseCode = cast(rtData, event.responseCode, 'integer')
+            setSystemVariableValue(rtData, '$httpStatusCode', responseCode)
+            setSystemVariableValue(rtData, '$httpStatusOk', (responseCode >= 200) && (responseCode <= 299))
+        } else {
+        	if (event.schedule.d == 'httpRequest') {
+            	setSystemVariableValue(rtData, '$httpStatusCode', 408)
+            	setSystemVariableValue(rtData, '$httpStatusOk', false)
+            }
+        }
         //if we have any other pending -3 events (device schedules), we cancel them all
         //if (event.schedule.i > 0) schedules.removeAll{ (it.s == event.schedule.s) && ( it.i == -3 ) }
         if (rtData.piston.o?.pep) {
@@ -1443,7 +1461,7 @@ private Boolean executeTask(rtData, devices, statement, task, async) {
 	        //schedule a wake up
 	        if (rtData.logging > 1) trace "Requesting a wake up for ${formatLocalTime(now() + delay)} (in ${cast(rtData, delay / 1000, 'decimal')}s)", rtData
             tracePoint(rtData, "t:${task.$}", now() - t, -delay)
-            requestWakeUp(rtData, statement, task, delay)
+            requestWakeUp(rtData, statement, task, delay, task.c)
 	        return false
 	    } else {
 	        if (rtData.logging > 1) trace "Waiting for ${delay}ms", rtData
@@ -2894,7 +2912,31 @@ private long vcmd_lifxPulse(rtData, device, params) {
 }
 
 
-
+public localHttpRequestHandler(physicalgraph.device.HubResponse hubResponse) {
+	def responseCode = ''
+	for (header in hubResponse.headers) {
+    	if (header.key.startsWith('http')) {
+        	def parts = header.key.tokenize(' ')
+            if (parts.size() > 2) {
+            	responseCode = parts[1]
+            }
+        }
+    }
+	def data = hubResponse.body
+    def json = [:]
+    try {
+    	if (data.startsWith('{') && data.endsWith('}')) {
+				json = (LinkedHashMap) new groovy.json.JsonSlurper().parseText(data)
+			} else if (data.startsWith('[') && data.endsWith(']')) {
+				json = (List) new groovy.json.JsonSlurper().parseText(data)
+	        } else {
+	        	json = [:]
+	        }
+	} catch (all) {
+    	json = [:]
+    }
+	handleEvents([date: new Date(), device: location, name: 'hubResponse', value: hubResponse.requestId, jsonData: json, responseCode: responseCode])
+}
 
 private long vcmd_httpRequest(rtData, device, params) {
 	def uri = params[0].replace(" ", "%20")
@@ -2929,22 +2971,29 @@ private long vcmd_httpRequest(rtData, device, params) {
 			internal = (b >= 16) && (b <= 31)
 		}
 	}
-	def data = [:]
-	for(variable in variables) {
-		data[variable] = getVariable(rtData, variable).v
-	}
+	def data = null
+	if (variables instanceof List) {
+    	for(variable in variables) {
+        	data  = data ?: [:]
+			data[variable] = getVariable(rtData, variable).v
+		}
+    }
 	if (internal) {
 		try {
 			if (rtData.logging > 2) debug "Sending internal web request to: $userPart$uri", rtData
-			sendHubCommand(new physicalgraph.device.HubAction(
+            def ip = ((uri.indexOf("/") > 0) ? uri.substring(0, uri.indexOf("/")) : uri)
+            if (!ip.contains(':')) ip += ':80'
+            Map requestParams = [
 				method: method,
 				path: (uri.indexOf("/") > 0) ? uri.substring(uri.indexOf("/")) : "",
 				headers: [
-					HOST: userPart + ((uri.indexOf("/") > 0) ? uri.substring(0, uri.indexOf("/")) : uri),
+					HOST: userPart + ip,
 				],
 				query: method == "GET" ? data : null, //thank you @destructure00
 				body: method != "GET" ? data : null //thank you @destructure00    
-			))
+			]
+			sendHubCommand(new physicalgraph.device.HubAction(requestParams, null, [callback: localHttpRequestHandler]))
+            return 20000
 		} catch (all) {
 			error "Error executing internal web request: ", rtData, null, all
 		}
@@ -2978,7 +3027,7 @@ private long vcmd_httpRequest(rtData, device, params) {
 			if (func) {
 				"$func"(requestParams) { response ->
 					setSystemVariableValue(rtData, "\$httpStatusCode", response.status)
-					setSystemVariableValue(rtData, "\$httpStatusOk", response.status == 200)
+					setSystemVariableValue(rtData, "\$httpStatusOk", (response.status >= 200) && (response.status <= 299))
 					if ((response.status == 200) && response.data) {
 						try {
 							rtData.response = response.data instanceof Map ? response.data : (LinkedHashMap) new groovy.json.JsonSlurper().parseText(response.data)
@@ -6287,7 +6336,6 @@ private getThreeAxisOrientation(value, getIndex = false) {
 }
 
 private cast(rtData, value, dataType, srcDataType = null) {
-	//error " Casting ($srcDataType) $value to $dataType", rtData
 	if (dataType == 'dynamic') return value
 	def trueStrings = ["1", "true", "on", "open", "locked", "active", "wet", "detected", "present", "occupied", "muted", "sleeping"]
 	def falseStrings = ["0", "false", "off", "closed", "unlocked", "inactive", "dry", "clear", "not detected", "not present", "not occupied", "unmuted", "not sleeping"]
@@ -6422,8 +6470,6 @@ private cast(rtData, value, dataType, srcDataType = null) {
 		case "time":
         	if (value.isNumber() && (value < 86400000)) return value
         	def n = localTime()
-            //log.error " TIME ${localToUtcTime(n - (n % 86400000) + (utcToLocalTime((srcDataType == 'string') ? localToUtcTime(value) : cast(rtData, value, "long")) % 86400000))} >>> ${localToUtcTime(n - (n % 86400000) + (utcToLocalTime((srcDataType == 'string') ? localToUtcTime(value) : cast(rtData, value, "long")) % 86400000)) % 86400000}"
-			//return localToUtcTime(n - (n % 86400000) + (utcToLocalTime((srcDataType == 'string') ? localToUtcTime(value) : cast(rtData, value, "long")) % 86400000)) % 86400000
 			return utcToLocalTime((srcDataType == 'string') ? localToUtcTime(value) : cast(rtData, value, "long")) % 86400000
 		case "date":
         	if ((srcDataType == 'time') && (value < 86400000)) value += getMidnightTime()
@@ -6463,7 +6509,8 @@ private utcToLocalDate(dateOrTimeOrString = null) {
 	if (dateOrTimeOrString instanceof String) {
 		//get UTC time
         try {        
-			dateOrTimeOrString = timeToday(dateOrTimeOrString, location.timeZone).getTime()
+			//dateOrTimeOrString = timeToday(dateOrTimeOrString, location.timeZone).getTime()
+			dateOrTimeOrString = localToUtcTime(dateOrTimeOrString)
         } catch (all) {
         	error "Error converting $dateOrTimeOrString to Date: ", null, null, all
         }
@@ -6485,7 +6532,8 @@ private localDate() { return utcToLocalDate() }
 private utcToLocalTime(dateOrTimeOrString = null) {
 	if (dateOrTimeOrString instanceof String) {
 		//get UTC time
-		dateOrTimeOrString = timeToday(dateOrTimeOrString, location.timeZone).getTime()
+//		dateOrTimeOrString = timeToday(dateOrTimeOrString, location.timeZone).getTime()
+		dateOrTimeOrString = localToUtcTime(dateOrTimeOrString)
 	}
 	if (dateOrTimeOrString instanceof Date) {
 		//get unix time
@@ -6524,11 +6572,24 @@ private localToUtcTime(dateOrTimeOrString) {
 	if (dateOrTimeOrString instanceof String) {
 		//get unix time
         try {
-        	return new Date(dateOrTimeOrString).getTime()
-			//return timeToday(dateOrTimeOrString, location.timeZone).getTime()
+        	return (new Date()).parse(dateOrTimeOrString + (location.timeZone && !(dateOrTimeOrString =~ /(\s[A-Z]{3}((\+|\-)[0-9]{2}\:[0-9]{2}|\s[0-9]{4})?$)/)? ' ' + location.timeZone.getID() : ''))
 		} catch (all) {
-        	//error "Error converting '$dateOrTimeOrString' to date/time: ", rtData, null, all
-            return 0
+        	try {
+            	def tz = location.timeZone
+                if (dateOrTimeOrString =~ /\s[A-Z]{3}$/) {
+                	try {
+                    	tz = TimeZone.getTimeZone(dateOrTimeOrString[-3..-1])
+                        dateOrTimeOrString = dateOrTimeOrString.take(dateOrTimeOrString.size() - 3).trim()
+                    } catch (all3) {
+                    }
+                }
+          		long time = timeToday(dateOrTimeOrString, tz).getTime()
+                //adjust for PM - timeToday has no clue....
+                if (dateOrTimeOrString.trim().toLowerCase().endsWith('pm')) time += 43200000
+                return time
+            } catch (all2) {
+            	return (new Date()).getTime()
+			}
         }
 	}
 	return null
@@ -6541,7 +6602,8 @@ private formatLocalTime(time, format = "EEE, MMM d yyyy @ h:mm:ss a z") {
 	}
 	if (time instanceof String) {
 		//get UTC time
-		time = timeToday(time, location.timeZone)
+		//time = timeToday(time, location.timeZone)
+		time = new Date(localToUtcTime(time))
 	}
     if (!(time instanceof Date)) {
 		return null
