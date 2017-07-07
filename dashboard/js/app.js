@@ -874,7 +874,7 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 				});
 		} else {
 			status('Saving piston...');
-	    	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/piston/set?id=' + piston.id + '&data=' + data + '&bin=' + encodeURIComponent(binId) + '&token=' + (si && si.token ? si.token : ''), {jsonpCallbackParam: 'callback'})
+	    	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/piston/set?id=' + piston.id + '&data=' + encodeURIComponent(data) + '&bin=' + encodeURIComponent(binId) + '&token=' + (si && si.token ? si.token : ''), {jsonpCallbackParam: 'callback'})
 				.then(function(response) {
 					status();
 					return response;
@@ -947,7 +947,7 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 		var inst = dataService.getInstance();
 		si = store ? store[inst.id] : null;
 		var data = value ? utoa(angular.toJson(value)) : '';
-    	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/variable/set?name=' + name + '&value=' + data + '&token=' + (si && si.token ? si.token : ''), {jsonpCallbackParam: 'callback'})
+    	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/variable/set?name=' + name + '&value=' + encodeURIComponent(data) + '&token=' + (si && si.token ? si.token : ''), {jsonpCallbackParam: 'callback'})
 			.then(function(response) {
 				return response.data;
 			});
@@ -957,7 +957,7 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 		var inst = dataService.getInstance();
 		si = store ? store[inst.id] : null;
 		var data = settings ? utoa(angular.toJson(settings)) : '';
-    	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/settings/set?settings=' + data + '&token=' + (si && si.token ? si.token : ''), {jsonpCallbackParam: 'callback'})
+    	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/settings/set?settings=' + encodeURIComponent(data) + '&token=' + (si && si.token ? si.token : ''), {jsonpCallbackParam: 'callback'})
 			.then(function(response) {
 				return response.data;
 			});
@@ -968,7 +968,7 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 		if (!inst) { inst = dataService.getInstance() };
 		si = store ? store[inst.id] : null;
 		var data = utoa(angular.toJson(expression));
-    	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/piston/evaluate?id=' + pid + '&expression=' + data + '&dataType=' + (dataType ? encodeURIComponent(dataType) : '') + '&token=' + (si && si.token ? si.token : ''), {jsonpCallbackParam: 'callback'})
+    	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/piston/evaluate?id=' + pid + '&expression=' + encodeURIComponent(data) + '&dataType=' + (dataType ? encodeURIComponent(dataType) : '') + '&token=' + (si && si.token ? si.token : ''), {jsonpCallbackParam: 'callback'})
 			.then(function(response) {
 				return response.data;
 			});
