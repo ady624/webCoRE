@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.2.0cf.20170706" }
+public static String version() { return "v0.2.0d0.20170708" }
 /*
+ *	07/08/2017 >>> v0.2.0d0.20170708 - BETA M2 - Fixed a bug allowing the script to continue outside of timers, added Followed By support - basic tests performed
  *	07/06/2017 >>> v0.2.0cf.20170706 - BETA M2 - Fix for parsing string date and times, implemented local http request response support - local web requests will wait for a response for up to 20 seconds - JSON response, if any, is available via $response
  *	06/29/2017 >>> v0.2.0ce.20170629 - BETA M2 - Fix for broken time scheduling and device variables
  *	06/29/2017 >>> v0.2.0cd.20170629 - BETA M2 - [DO NOT UPDATE UNLESS REQUESTED TO] - Adds typed list support
@@ -1069,12 +1070,14 @@ private Boolean executeStatement(rtData, statement, async = false) {
                         scheduleTimer(rtData, statement, ownEvent ? rtData.event.schedule.t : 0)
                     }
 	                rtData.stack.c = statement.$
+					if (ownEvent) rtData.fastForwardTo = null
                     if (!!rtData.fastForwardTo || (ownEvent && allowed && !rtData.restricted)) {
                     	//we don't want to run this if there are piston restrictions in effect
                     	//we only execute the every if i = -1 (for rapid timers with large restrictions i.e. every second, but only on Mondays) we need to make sure we don't block execution while trying
                         //to find the next execution scheduled time, so we give up after too many attempts and schedule a rerun with i = -2 to give us the chance to try again at that later time
                     	if (!!rtData.fastForwardTo || (rtData.event.schedule.i == -1)) executeStatements(rtData, statement.s, true);
                         //we always exit a timer, this only runs on its own schedule, nothing else is executed
+                        rtData.terminated = true
                         value = false
                         break
                     }
@@ -1089,7 +1092,7 @@ private Boolean executeStatement(rtData, statement, async = false) {
                         if (!rtData.fastForwardTo) break
                     }
                     value = true
-                    perform = !evaluateConditions(rtData, statement, 'c', async)
+                    perform = (evaluateConditions(rtData, statement, 'c', async) == false)
                     break
                 case 'on':
                     perform = false
@@ -1134,7 +1137,7 @@ private Boolean executeStatement(rtData, statement, async = false) {
                             if (!rtData.fastForwardTo) break
                         }
                     }
-                    if (!perform || !!rtData.fastForwardTo) {
+                    if ((perform == false) || !!rtData.fastForwardTo) {
                         if (statement.t == 'if') {
                             //look for else-ifs
                             for (elseIf in statement.ei) {
@@ -3172,8 +3175,11 @@ private long vcmd_cancelTasks(rtData, device, params) {
     return 0
 }
 
+private evaluateFollowedByCondition(rtData, condition, collection, async, ladderUpdated) {
+	def result = evaluateCondition(rtData, condition, collection, async)
+}
 
-private Boolean evaluateConditions(rtData, conditions, collection, async) {
+private evaluateConditions(rtData, conditions, collection, async) {
 	def t = now()
     def msg = timer ''
     //override condition id
@@ -3182,32 +3188,106 @@ private Boolean evaluateConditions(rtData, conditions, collection, async) {
     def not = (collection == 'c') ? !!conditions.n : !!conditions.rn
     def grouping = (collection == 'c') ? conditions.o : conditions.rop
     def value = (grouping == 'or' ? false : true)
-	for(condition in conditions[collection]) {
-    	def res = evaluateCondition(rtData, condition, collection, async)
-		value = (grouping == 'or') ? value || res : value && res
-        //conditions optimizations go here
-        if (!rtData.fastForwardTo && (!rtData.piston.o?.cto) && (value == (grouping == 'or') ? true : false)) break
-    }
-    def result = not ? !value : !!value
-    if (!rtData.fastForwardTo) tracePoint(rtData, "c:${conditions.$}", now() - t, result)
-    def oldResult = !!rtData.cache["c:${conditions.$}"];
-    rtData.conditionStateChanged = (oldResult != result)
-    if (rtData.conditionStateChanged) {
-    	//condition change, perform TCP
-        cancelConditionSchedules(rtData, conditions.$)
-    }
-    rtData.cache["c:${conditions.$}"] = result
-    //true/false actions
-    if (collection == 'c') {
-	    if ((result || rtData.fastForwardTo) && conditions.ts && conditions.ts.length) executeStatements(rtData, conditions.ts, async) 
-    	if ((!result || rtData.fastForwardTo) && conditions.fs && conditions.fs.length) executeStatements(rtData, conditions.fs, async)
+    
+    
+    if ((grouping == 'followed by') && (collection == 'c')) {
+    	if (!rtData.fastForwardTo || (rtData.fastForwardTo == conditions.$)) {
+            //we're dealing with a followed by condition
+            int ladderIndex = cast(rtData, rtData.cache["c:fbi:${conditions.$}"], 'integer')
+            long ladderUpdated = cast(rtData, rtData.cache["c:fbt:${conditions.$}"], 'datetime')
+            int steps = conditions[collection] ? conditions[collection].size() : 0
+            if (ladderIndex >= steps) {
+                value = false
+            } else {
+                def condition = conditions[collection][ladderIndex]
+                long duration = 0
+                if (ladderIndex) {
+                    def tv = evaluateOperand(rtData, null, condition.wd)
+                    duration = evaluateExpression(rtData, [t: 'duration', v: tv.v, vt: tv.vt], 'long').v
+                }
+                if (ladderUpdated && duration && (ladderUpdated + duration < now())) {
+                    //time has expired
+                    value = (condition.wt == 'n')
+                    if (!value) {
+	                    if (rtData.logging > 2) debug "Conditional ladder step failed due to a timeout", rtData
+                    }
+                } else {
+                    value = evaluateCondition(rtData, condition, collection, async)
+                    if (condition.wt == 'n') {
+                    	if (value) {
+                        	value = false
+                       	} else {
+                        	value = null
+                        }
+                    }
+                    //we allow loose matches to work even if other events happen
+                    if ((condition.wt == 'l') && (!value)) value = null
+                }
+                if (value) {
+                    //successful step, move on
+                    ladderIndex += 1
+                    ladderUpdated = now()
+                    cancelStatementSchedules(rtData, conditions.$)                
+                    if (rtData.logging > 2) debug "Condition group #${conditions.$} made progress up the ladder, currently at step $ladderIndex of $steps", rtData
+                    if (ladderIndex < steps) {
+                        //delay decision, there are more steps to go through
+                        value = null
+                        condition = conditions[collection][ladderIndex]
+                        def tv = evaluateOperand(rtData, null, condition.wd)
+                        duration = evaluateExpression(rtData, [t: 'duration', v: tv.v, vt: tv.vt], 'long').v
+                        requestWakeUp(rtData, conditions, conditions, duration)
+                    }
+                }
+            }
+
+            switch (value) {
+                case null:
+                    //we need to exit time events set to work out the timeouts...
+                    if (rtData.fastForwardTo == conditions.$) rtData.terminated = true
+                	break
+                case true:
+                case false:
+                    //ladder either collapsed or finished, reset data
+                    ladderIndex = 0
+                	ladderUpdated = 0
+                    cancelStatementSchedules(rtData, conditions.$)                
+                	break
+            }
+            if (rtData.fastForwardTo == conditions.$) rtData.fastForwardTo = null
+            rtData.cache["c:fbi:${conditions.$}"] = ladderIndex
+            rtData.cache["c:fbt:${conditions.$}"] = ladderUpdated
+        }
+    } else {
+        for(condition in conditions[collection]) {
+            def res = evaluateCondition(rtData, condition, collection, async)
+            value = (grouping == 'or') ? value || res : value && res
+            //conditions optimizations go here
+            if (!rtData.fastForwardTo && (!rtData.piston.o?.cto) && ((value && (grouping == 'or')) || (!value && (grouping == 'and')))) break
+        }
+	}
+	def result
+    if (value != null) {
+        result = not ? !value : !!value
+        if (!rtData.fastForwardTo) tracePoint(rtData, "c:${conditions.$}", now() - t, result)
+        def oldResult = !!rtData.cache["c:${conditions.$}"];
+        rtData.conditionStateChanged = (oldResult != result)
+        if (rtData.conditionStateChanged) {
+            //condition change, perform TCP
+            cancelConditionSchedules(rtData, conditions.$)
+        }
+        rtData.cache["c:${conditions.$}"] = result
+        //true/false actions
+        if (collection == 'c') {
+            if ((result || rtData.fastForwardTo) && conditions.ts && conditions.ts.length) executeStatements(rtData, conditions.ts, async) 
+            if ((!result || rtData.fastForwardTo) && conditions.fs && conditions.fs.length) executeStatements(rtData, conditions.fs, async)
+        }
+        if (!rtData.fastForwardTo) {
+            msg.m = "Condition group #${conditions.$} evaluated $result (state ${rtData.conditionStateChanged ? 'changed' : 'did not change'})"
+            if (rtData.logging > 2) debug msg, rtData
+        }
     }
     //restore condition id
     rtData.stack.c = c
-    if (!rtData.fastForwardTo) {
-    	msg.m = "Condition group #${conditions.$} evaluated $result (state ${rtData.conditionStateChanged ? 'changed' : 'did not change'})"
-    	if (rtData.logging > 2) debug msg, rtData
-    }
 	return result
 }
 
