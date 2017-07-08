@@ -6919,6 +6919,7 @@ private static Map getSystemVariables() {
 		"\$iftttStatusOk": [t: "boolean", v: null],
 		"\$locationMode": [t: "string", d: true],
 		"\$shmStatus": [t: "string", d: true],
+        "\$shmIncidentDetected": [t: "boolean", v: null],
         "\$version": [t: "string", d: true]
 	].sort{it.key}
 }
@@ -6964,6 +6965,7 @@ private getSystemVariableValue(rtData, name) {
 		case "\$randomHue": def result = getRandomValue("\$randomHue") ?: (int)Math.round(360 * Math.random()); setRandomValue("\$randomHue", result); return result 
   		case "\$locationMode": return location.getMode()
 		case "\$shmStatus": switch (location.currentState("alarmSystemStatus")?.value) { case 'off': return 'Disarmed'; case 'stay': return 'Armed/Stay'; case 'away': return 'Armed/Away'; }; return null;
+        case "\$shmIncidentDetected": return location.incidents != null && location.incidents.length > 0;
     }
 }
 
