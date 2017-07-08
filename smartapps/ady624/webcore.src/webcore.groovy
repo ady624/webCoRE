@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.2.0d0.20170708" }
+public static String version() { return "v0.2.0d1.20170708" }
 /*
+ *	07/08/2017 >>> v0.2.0d1.20170708 - BETA M2 - Added Piston recovery procedures to the main app
  *	07/08/2017 >>> v0.2.0d0.20170708 - BETA M2 - Fixed a bug allowing the script to continue outside of timers, added Followed By support - basic tests performed
  *	07/06/2017 >>> v0.2.0cf.20170706 - BETA M2 - Fix for parsing string date and times, implemented local http request response support - local web requests will wait for a response for up to 20 seconds - JSON response, if any, is available via $response
  *	06/29/2017 >>> v0.2.0ce.20170629 - BETA M2 - Fix for broken time scheduling and device variables
@@ -542,6 +543,11 @@ def pageSettings() {
 			href "pageRebuildCache", title: "Clean up and rebuild data cache", description: "Tap here to change your clean up and rebuild your data cache" 
 		}
 
+		section(title: "Recovery") {
+        	paragraph "webCoRE can run a recovery procedure every so often. This augments the built-in automatic recovery procedures that allows webCoRE to rely on all healthy pistons to keep the failed ones running."
+			input "recovery", "enum", title: "Run recovery", options: ["Never", "Every 5 minutes", "Every 10 minutes", "Every 15 minutes", "Every 30 minutes", "Every 1 hour", "Every 3 hours"], description: "Allows recovery procedures to run every so often", defaultValue: "Every 30 minutes", required: true
+		}
+
 		section("Uninstall") {
 			href "pageRemove", title: "Uninstall ${handle()}", description: "Tap here to uninstall ${handle()}" 
 		}
@@ -721,7 +727,9 @@ private installed() {
 }
 
 private updated() {
+	warn "Updating webCoRE ${version()}"
 	unsubscribe()
+    unschedule()
 	initialize()
 	return true
 }
@@ -729,8 +737,15 @@ private updated() {
 private initialize() {
 	subscribeAll()
     state.vars = state.vars ?: [:]
+    state.version = version()
     if (state.installed && settings.agreement) {
     	registerInstance()
+    }
+    def recoveryMethod = (settings.recovery ?: 'Every 30 minutes').replace('Every ', 'Every').replace(' minute', 'Minute').replace(' hour', 'Hour')
+    if (recoveryMethod != 'Never') {
+    	try {
+        	"run$recoveryMethod"(recoveryHandler)
+        } catch (all) { }
     }
 }
 
@@ -853,6 +868,7 @@ private api_get_base_result(deviceVersion = 0, updateCache = false) {
 
 private api_intf_dashboard_load() {
 	def result
+    recoveryHandler()
     //install storage app
     def storageApp = getStorageApp(true)
     //debug "Dashboard: Request received to initialize instance"
@@ -1344,6 +1360,26 @@ private api_execute() {
 
 
 
+def recoveryHandler() {
+	def t = now()
+    def lastRecovered = state.lastRecovered
+    if (lastRecovered && (now() - lastRecovered < 30000)) return
+    atomicState.lastRecovered = now()
+    def name = handle() + ' Piston'
+    long threshold = now() - 30000
+	def failedPistons = getChildApps().findAll{ it.name == name }.collect{ [ id: hashId(it.id, updateCache), 'name': it.label, 'meta': state[hashId(it.id, updateCache)] ] }.findAll{ it.meta && it.meta.a && it.meta.n && (it.meta.n < threshold) }
+    if (!failedPistons.size()) return
+    for (piston in failedPistons) {
+	    warn "Piston $piston.name was sent a recovery signal because it was ${now() - piston.meta.n}ms late"
+    	sendLocationEvent(name: piston.id, value: 'recovery', isStateChange: true, displayed: false, linkText: "Recovery event", descriptionText: "Recovery event for piston $piston.name")
+    }
+	if (state.version != version()) {
+    	//updated        
+        atomicState.version = version()
+        updated()
+    }
+	//log.trace "RECOVERY took ${now() - t}ms"
+}
 
 
 
@@ -1776,6 +1812,7 @@ public void updateRunTimeData(data) {
     	def dashboardApp = getDashboardApp()
         if (dashboardApp) dashboardApp.updatePiston(id, piston)
     }    
+    recoveryHandler()
 }
 
 public pausePiston(pistonId) {
