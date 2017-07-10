@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.2.0d1.20170708" }
+public static String version() { return "v0.2.0d2.20170710" }
 /*
+ *	07/10/2017 >>> v0.2.0d2.20170710 - BETA M2 - Added long integer support to variables and fixed a bug where time comparisons would apply a previously set offset to custom times
  *	07/08/2017 >>> v0.2.0d1.20170708 - BETA M2 - Added Piston recovery procedures to the main app
  *	07/08/2017 >>> v0.2.0d0.20170708 - BETA M2 - Fixed a bug allowing the script to continue outside of timers, added Followed By support - basic tests performed
  *	07/06/2017 >>> v0.2.0cf.20170706 - BETA M2 - Fix for parsing string date and times, implemented local http request response support - local web requests will wait for a response for up to 20 seconds - JSON response, if any, is available via $response
@@ -1758,9 +1759,9 @@ private scheduleTimeCondition(rtData, condition) {
     }
     cancelStatementSchedules(rtData, condition.$)
     if (!comparison.p) return
-    def tv1 = evaluateOperand(rtData, null, condition.to)
+    def tv1 = condition.ro && (condition.ro.t != 'c') ? evaluateOperand(rtData, null, condition.to) : null
     def v1 = evaluateExpression(rtData, evaluateOperand(rtData, null, condition.ro), 'datetime').v + (tv1 ? evaluateExpression(rtData, [t: 'duration', v: tv1.v, vt: tv1.vt], 'long').v : 0)    
-    def tv2 = comparison.p > 1 ? evaluateOperand(rtData, null, condition.to2) : null
+    def tv2 = condition.ro2 && (condition.ro2.t != 'c') && (comparison.p > 1) ? evaluateOperand(rtData, null, condition.to2) : null
     def v2 = trigger ? v1 : ((comparison.p > 1) ? (evaluateExpression(rtData, evaluateOperand(rtData, null, condition.ro2, null, false, true), 'datetime').v + (tv2 ? evaluateExpression(rtData, [t: 'duration', v: tv2.v, vt: tv2.vt]).v : 0)) : (condition.lo.v == 'time' ? getMidnightTime(rtData) : v1))
     def n = now() + 2000
     if (condition.lo.v == 'time') {
@@ -5049,7 +5050,7 @@ private Map evaluateExpression(rtData, expression, dataType = null) {
 							}
                         }
                         if ((o == '*') || (o == '/') || (o == '-') || (o == '**')) {
-                        	t = (t1i && t2i) ? 'integer' : 'decimal'
+                        	t = (t1i && t2i) ? ((t1 == 'long') || (t2 == 'long') ? 'long' : 'integer') : 'decimal'
                             t1 = t
                             t2 = t
                             //if ((t1 != 'number') && (t1 != 'integer') && (t1 != 'decimal') && (t1 != 'float') && (t1 != 'datetime') && (t1 != 'date') && (t1 != 'time')) t1 = 'decimal'
@@ -5057,9 +5058,9 @@ private Map evaluateExpression(rtData, expression, dataType = null) {
                             //t = (t1 == 'datetime') || (t2 == 'datetime') ? 'datetime' : ((t1 == 'date') && (t2 == 'date') ? 'date' : ((t1 == 'time') && (t2 == 'time') ? 'time' : (((t1 == 'date') && (t2 == 'time')) || ((t1 == 'time') && (t2 == 'date')) ? 'datetime' : 'decimal')))
                         }
                         if ((o == '\\') || (o == '%') || (o == '&') || (o == '|') || (o == '^') || (o == '~&') || (o == '~|') || (o == '~^') || (o == '<<') || (o == '>>')) {
-                            t1 = 'integer'
-                            t2 = 'integer'
-                            t = 'integer'
+                            t = (t1 == 'long') || (t2 == 'long') ? 'long' : 'integer'
+                            t1 = t
+                            t2 = t
                         }
                         if ((o == '&&') || (o == '||') || (o == '^^') || (o == '!&') || (o == '!|') || (o == '!^') || (o == '!') || (o == '!!')) {
                             t1 = 'boolean'
@@ -5072,7 +5073,7 @@ private Map evaluateExpression(rtData, expression, dataType = null) {
                             t = 'string'
                         }
                         if (t1n && t2n) {
-                            t = (t1i && t2i) ? 'integer' : 'decimal'
+                            t = (t1i && t2i) ? ((t1 == 'long') || (t2 == 'long') ? 'long' : 'integer') : 'decimal'
                             t1 = t
                             t2 = t
                         }
@@ -6463,7 +6464,7 @@ private cast(rtData, value, dataType, srcDataType = null) {
                 	if (value instanceof Double) return sprintf('%f', value)
                     return value.toString()
             	case 'integer':
-            	case 'long': if (value > 9999999999) { return formatLocalTime(value) }; break;
+            	case 'long': break; if (value > 9999999999) { return formatLocalTime(value) }; break;
                 case 'time': return formatLocalTime(value, 'h:mm:ss a z');
                 case 'date': return formatLocalTime(value, 'EEE, MMM d yyyy');
                 case 'datetime': return formatLocalTime(value);

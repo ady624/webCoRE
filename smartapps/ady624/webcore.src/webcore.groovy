@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.2.0d1.20170708" }
+public static String version() { return "v0.2.0d2.20170710" }
 /*
+ *	07/10/2017 >>> v0.2.0d2.20170710 - BETA M2 - Added long integer support to variables and fixed a bug where time comparisons would apply a previously set offset to custom times
  *	07/08/2017 >>> v0.2.0d1.20170708 - BETA M2 - Added Piston recovery procedures to the main app
  *	07/08/2017 >>> v0.2.0d0.20170708 - BETA M2 - Fixed a bug allowing the script to continue outside of timers, added Followed By support - basic tests performed
  *	07/06/2017 >>> v0.2.0cf.20170706 - BETA M2 - Fix for parsing string date and times, implemented local http request response support - local web requests will wait for a response for up to 20 seconds - JSON response, if any, is available via $response
@@ -1368,10 +1369,11 @@ def recoveryHandler() {
     def name = handle() + ' Piston'
     long threshold = now() - 30000
 	def failedPistons = getChildApps().findAll{ it.name == name }.collect{ [ id: hashId(it.id, updateCache), 'name': it.label, 'meta': state[hashId(it.id, updateCache)] ] }.findAll{ it.meta && it.meta.a && it.meta.n && (it.meta.n < threshold) }
-    if (!failedPistons.size()) return
-    for (piston in failedPistons) {
-	    warn "Piston $piston.name was sent a recovery signal because it was ${now() - piston.meta.n}ms late"
-    	sendLocationEvent(name: piston.id, value: 'recovery', isStateChange: true, displayed: false, linkText: "Recovery event", descriptionText: "Recovery event for piston $piston.name")
+    if (failedPistons.size()) {
+    	for (piston in failedPistons) {
+		    warn "Piston $piston.name was sent a recovery signal because it was ${now() - piston.meta.n}ms late"
+	    	sendLocationEvent(name: piston.id, value: 'recovery', isStateChange: true, displayed: false, linkText: "Recovery event", descriptionText: "Recovery event for piston $piston.name")
+	    }
     }
 	if (state.version != version()) {
     	//updated        
@@ -1651,6 +1653,10 @@ private registerInstance() {
     def instanceId = hashId(app.id)
     def endpoint = state.endpoint
     def region = endpoint.contains('graph-eu') ? 'eu' : 'us';
+    def name = handle() + ' Piston'
+    def pistons = getChildApps().findAll{ it.name == name }.collect{ [ a: state[hashId(it.id, false)]?.a ] }
+    def pa = pistons.findAll{ it.a }.size()
+    def pd = pistons.size() - pa
 	asynchttp_v1.put(instanceRegistrationHandler, [
         uri: "https://api-${region}-${instanceId[32]}.webcore.co:9247",
         path: '/instance/register',
@@ -1659,7 +1665,11 @@ private registerInstance() {
         	a: accountId,
         	l: locationId,
         	i: instanceId,
-            e: endpoint
+            e: endpoint,
+            v: version(),
+            r: region,
+            pa: pa,
+            pd: pd
     	]
     ])
 }
