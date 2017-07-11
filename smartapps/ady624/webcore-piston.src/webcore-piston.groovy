@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.2.0d2.20170710" }
+public static String version() { return "v0.2.0d3.20170711" }
 /*
+ *	07/11/2017 >>> v0.2.0d3.20170711 - BETA M2 - Lots of bug fixes and improvements
  *	07/10/2017 >>> v0.2.0d2.20170710 - BETA M2 - Added long integer support to variables and fixed a bug where time comparisons would apply a previously set offset to custom times
  *	07/08/2017 >>> v0.2.0d1.20170708 - BETA M2 - Added Piston recovery procedures to the main app
  *	07/08/2017 >>> v0.2.0d0.20170708 - BETA M2 - Fixed a bug allowing the script to continue outside of timers, added Followed By support - basic tests performed
@@ -360,7 +361,7 @@ def activity(lastLogTimestamp) {
 	def logs = state.logs
     def llt = lastLogTimestamp && lastLogTimestamp instanceof String && lastLogTimestamp.isLong() ? lastLogTimestamp.toLong() : 0
     def index = llt ? logs.findIndexOf{ it.t == llt } : 0
-    index = index > 0 ? index : 0
+    index = index > 0 ? index : (llt ? 0 : logs.size())
 	return [
     	name: app.label,
         state: state.state,
@@ -374,9 +375,17 @@ def activity(lastLogTimestamp) {
     ]    
 }
 
+def clearLogs() {
+	atomicState.logs = []
+    return [:]
+}
+
 
 def set(data, chunks) {
 	if (!data) return false
+    state.trace = [:]
+    state.logs = []
+    state.hash = [:]
 	state.modified = now()
     state.build = (int)(state.build ? (int)state.build + 1 : 1)
     def piston = [
@@ -487,6 +496,15 @@ def config(data) {
 	if (data.initialVersion) {
 		state.initialVersion = data.initialVersion;
     }
+}
+
+def setBin(bin) {
+	if (!bin || !!state.bin) {
+    	return false;
+    }
+	atomicState.bin = bin;
+    app.updateSetting('bin', [type: 'text', value: bin ?: ''])
+    return [:]
 }
 
 Map pause() {
@@ -1079,7 +1097,7 @@ private Boolean executeStatement(rtData, statement, async = false) {
                         //to find the next execution scheduled time, so we give up after too many attempts and schedule a rerun with i = -2 to give us the chance to try again at that later time
                     	if (!!rtData.fastForwardTo || (rtData.event.schedule.i == -1)) executeStatements(rtData, statement.s, true);
                         //we always exit a timer, this only runs on its own schedule, nothing else is executed
-                        rtData.terminated = true
+                        if (ownEvent) rtData.terminated = true
                         value = false
                         break
                     }
@@ -1107,6 +1125,9 @@ private Boolean executeStatement(rtData, statement, async = false) {
                             	switch (operand.t) {
                                 	case 'p':
                                     	if (!!deviceId && (rtData.event.name == operand.a) && !!operand.d && (deviceId in expandDeviceList(rtData, operand.d, true))) perform = true
+                                    	break;
+                                	case 'v':
+                                    	if (rtData.event.name == operand.v) perform = true
                                     	break;
                                    	case 'x':
                                     	if ((rtData.event.value == operand.x) && (rtData.event.name == handle())) perform = true                                        
@@ -4343,7 +4364,6 @@ private List expandDeviceList(rtData, List devices, localVarsOnly = false) {
 }
 
 def appHandler(evt) {
-//    log.debug "app event ${evt.name}:${evt.value} received"
 }
 
 
@@ -4537,6 +4557,18 @@ private Map getWeather(rtData, name) {
     
 }
 
+private Map getIncidents(rtData, name) {
+	initIncidents(rtData)
+	return getJsonData(rtData, rtData.incidents, name)
+}
+
+
+private initIncidents(rtData) {
+	if (rtData.incidents instanceof List) return;
+	def incidentThreshold = now() - 604800000
+	rtData.incidents = location.activeIncidents.collect{[date: it.date.time, title: it.getTitle(), message: it.getMessage(), args: it.getMessageArgs(), sourceType: it.getSourceType()]}.findAll{ it.date >= incidentThreshold }
+}
+
 private Map getVariable(rtData, name) {
 	def var = parseVariableName(name)
 	name = sanitizeVariableName(var.name)
@@ -4561,6 +4593,10 @@ private Map getVariable(rtData, name) {
             	result = getResponse(rtData, name.substring(9))
             } else if (name.startsWith('$weather.') && (name.size() > 9)) {
             	result = getWeather(rtData, name.substring(9))
+        	} else if (name.startsWith('$incidents.') && (name.size() > 11)) {
+            	result = getIncidents(rtData, name.substring(11))
+        	} else if (name.startsWith('$incidents[') && (name.size() > 11)) {
+            	result = getIncidents(rtData, name.substring(10))
             } else {
 				result = rtData.systemVars[name]
             	if (!(result instanceof Map)) result = [t: "error", v: "Variable '$name' not found"]
@@ -6932,6 +6968,8 @@ private static Map getSystemVariables() {
         '$json': [t: "dynamic", d: true],
         '$response': [t: "dynamic", d: true],
         '$weather': [t: "dynamic", d: true],
+        '$incidents': [t: "dynamic", d: true],
+        '$shmTripped': [t: "boolean", d: true],
 		"\$currentEventAttribute": [t: "string", v: null],
 		"\$currentEventDate": [t: "datetime", v: null],
 		"\$currentEventDelay": [t: "integer", v: null],
@@ -7011,6 +7049,8 @@ private getSystemVariableValue(rtData, name) {
     	case '$json': return "${rtData.json}".toString()
     	case '$response': return "${rtData.response}".toString()
         case '$weather': return "${rtData.weather}".toString()
+        case '$incidents': return "${rtData.incidents}".toString()
+        case '$shmTripped': initIncidents(rtData); return !!((rtData.incidents instanceof List) && (rtData.incidents.size()))
 		case "\$name": return app.label
 		case "\$version": return version()
 		case "\$now": return (long) now()

@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.2.0d2.20170710" }
+public static String version() { return "v0.2.0d3.20170711" }
 /*
+ *	07/11/2017 >>> v0.2.0d3.20170711 - BETA M2 - Lots of bug fixes and improvements
  *	07/10/2017 >>> v0.2.0d2.20170710 - BETA M2 - Added long integer support to variables and fixed a bug where time comparisons would apply a previously set offset to custom times
  *	07/08/2017 >>> v0.2.0d1.20170708 - BETA M2 - Added Piston recovery procedures to the main app
  *	07/08/2017 >>> v0.2.0d0.20170708 - BETA M2 - Fixed a bug allowing the script to continue outside of timers, added Followed By support - basic tests performed
@@ -803,7 +804,9 @@ mappings {
 	path("/intf/dashboard/piston/set.end") {action: [GET: "api_intf_dashboard_piston_set_end"]}
 	path("/intf/dashboard/piston/pause") {action: [GET: "api_intf_dashboard_piston_pause"]}
 	path("/intf/dashboard/piston/resume") {action: [GET: "api_intf_dashboard_piston_resume"]}
+	path("/intf/dashboard/piston/set.bin") {action: [GET: "api_intf_dashboard_piston_set_bin"]}
 	path("/intf/dashboard/piston/logging") {action: [GET: "api_intf_dashboard_piston_logging"]}
+	path("/intf/dashboard/piston/clear.logs") {action: [GET: "api_intf_dashboard_piston_clear_logs"]}
 	path("/intf/dashboard/piston/delete") {action: [GET: "api_intf_dashboard_piston_delete"]}
 	path("/intf/dashboard/piston/evaluate") {action: [GET: "api_intf_dashboard_piston_evaluate"]}
 	path("/intf/dashboard/piston/test") {action: [GET: "api_intf_dashboard_piston_test"]}
@@ -1034,7 +1037,6 @@ private api_intf_dashboard_piston_set() {
 	if (verifySecurityToken(params.token)) {
     	def data = params?.data
         //save the piston here
-        log.trace params
         def saved = api_intf_dashboard_piston_set_save(params?.id, data, ['chunk:0' : data])
         if (saved) {
         	if (saved.rtData) {
@@ -1058,6 +1060,7 @@ private api_intf_dashboard_piston_set_start() {
     	def chunks = "${params?.chunks}";
         chunks = chunks.isInteger() ? chunks.toInteger() : 0;
         if ((chunks > 0) && (chunks < 100)) {
+        	atomicState.hash = [:]
 	        atomicState.chunks = [id: params?.id, count: chunks];
     		result = [status: "ST_READY"]
         } else {
@@ -1194,6 +1197,23 @@ private api_intf_dashboard_piston_test() {
     render contentType: "application/javascript;charset=utf-8", data: "${params.callback}(${result.encodeAsJSON()})"
 }
 
+private api_intf_dashboard_piston_set_bin() {
+	def result
+    debug "Dashboard: Request received to set piston bin"
+	if (verifySecurityToken(params.token)) {
+	    def piston = getChildApps().find{ hashId(it.id) == params.id };
+	    if (piston) {
+        	result = piston.setBin(params.bin)
+			result.status = "ST_SUCCESS"
+        } else {
+	    	result = api_get_error_result("ERR_INVALID_ID")
+        }
+	} else {
+    	result = api_get_error_result("ERR_INVALID_TOKEN")
+    }
+    render contentType: "application/javascript;charset=utf-8", data: "${params.callback}(${result.encodeAsJSON()})"
+}
+
 private api_intf_dashboard_piston_logging() {
 	def result
     debug "Dashboard: Request received to set piston logging level"
@@ -1211,6 +1231,22 @@ private api_intf_dashboard_piston_logging() {
     render contentType: "application/javascript;charset=utf-8", data: "${params.callback}(${result.encodeAsJSON()})"
 }
 
+private api_intf_dashboard_piston_clear_logs() {
+	def result
+    debug "Dashboard: Request received to clear piston logs"
+	if (verifySecurityToken(params.token)) {
+	    def piston = getChildApps().find{ hashId(it.id) == params.id };
+	    if (piston) {
+        	result = piston.clearLogs()
+			result.status = "ST_SUCCESS"
+        } else {
+	    	result = api_get_error_result("ERR_INVALID_ID")
+        }
+	} else {
+    	result = api_get_error_result("ERR_INVALID_TOKEN")
+    }
+    render contentType: "application/javascript;charset=utf-8", data: "${params.callback}(${result.encodeAsJSON()})"
+}
 private api_intf_dashboard_piston_delete() {
 	def result
     debug "Dashboard: Request received to delete a piston"
@@ -1941,15 +1977,12 @@ def lifxHandler(response, cbkData) {
 	if ((response.status == 200)) {
     	def data = response.data instanceof List ? response.data : new groovy.json.JsonSlurper().parseText(response.data)
     	cbkData = cbkData instanceof Map ? cbkData : (LinkedHashMap) new groovy.json.JsonSlurper().parseText(cbkData)
-        log.trace data
-		if (data instanceof List) {
+        if (data instanceof List) {
         	switch (cbkData.request) {
             	case 'scenes':
-                	log.trace "got scenes"
                 	state.settings.lifx_scenes = data.collectEntries{[(it.uuid): it.name]}
                     break
             	case 'lights':
-                	log.trace "got lights"
                 	state.settings.lifx_lights = data.collectEntries{[(it.id): it.label]}
                 	state.settings.lifx_groups = data.collectEntries{[(it.group.id): it.group.name]}
                 	state.settings.lifx_locations = data.collectEntries{[(it.location.id): it.location.name]}
