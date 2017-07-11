@@ -1,0 +1,146 @@
+viewer,
+ng-view {
+	display: block;
+	top: 0px;
+}
+
+div.main {
+	position: fixed;
+	left:  0px;
+	top:  0px;
+	right: 0px;
+	bottom: 0px;
+}
+
+/*
+ * Main content
+ */
+graph {
+	position: fixed;
+	top: 50%;
+	height: 50%;
+	left: 0px;
+	right: 0px;
+	bottom: 0px;
+	display: block;
+	border-top: solid 1px #ddd;
+	background: #eee;
+}
+
+graph > label {
+	height: 44px;
+	line-height: 44px;
+	padding: 0px 8px;
+	display: block;
+	width: 100%;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	border-bottom: solid 1px #ddd;
+}
+
+graph > canvas {
+	position: absolute;
+	left: 0px;
+	top: 0px;
+	right: 0px;
+	bottom: 0px;
+	width: 100%;
+	height: 100%;
+}
+
+li {
+	list-style: none;
+	line-height: 32px;
+	sheight: 32px;
+	padding: 0px;
+	margin: 0px;
+	z-index: 1;
+}
+
+li label {
+	width: 100%;
+	padding: 0px 0px 0px 8px;
+	margin: 0px;
+	cursor: pointer;
+}
+
+li created {
+	display: inline;
+	float: right;
+	font-size: 0.75em;
+	padding: 0px 4px;
+	color: #ccc;
+}
+
+li[selected] {
+	z-index: 2;
+}
+
+li[selected] > label {
+	background: rgba(128, 224, 255, 0.2);
+	cursor: default;
+}
+
+ul[canisters] {
+	margin: 0px;
+	padding: 0px;
+	overflow: hidden;
+	overflow-y: auto;
+	width: 100%;
+	height: 50%;	
+}
+
+ul[fuelStreams] {
+	display: none;
+	margin: 0px;
+	padding: 0px;
+}
+
+li[canister][selected] ul[fuelStreams] {
+	display: block;
+}
+
+@media (min-width: 768px) {
+	ul[canisters] {
+		position: fixed;
+		left: 0px;
+		top: 0px;
+		width: 50%;
+	}
+
+	ul[fuelStreams] {
+		position: fixed;
+		left: 50%;
+		top: 0px;
+		height: 50%;
+		width: 50%;
+		border-left: solid 1px #ccc;
+		padding: 0px;
+	}
+
+
+}
+
+
+@media (max-width: 767px) {
+
+	.li {
+		height: initial;
+		sline-height: 44px !important;
+	}
+
+	ul[fuelStreams] label {
+		border-left: solid 16px #fff;
+	}
+
+	ul[fuelStreams] > li[selected] {
+	}
+
+	ul[fuelStreams] > li[selected] > label {
+		border-left: 0px;
+		padding-left: 24px;
+		background: rgba(128, 224, 255, 0.3);
+	}
+
+}

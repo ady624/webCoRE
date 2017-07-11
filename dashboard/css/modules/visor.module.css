@@ -1,0 +1,184 @@
+ng-view {
+	display: block;
+	position: absolute;
+	left: 0px;
+	top: 0px;
+	bottom: 0px;
+	right: 0px;
+}
+
+statusbar {
+	display: block;
+	position: fixed;
+	top: 0px;
+	left: 0px;
+	right: 0px;
+	height:  48px;
+	background: rgba(0, 0, 0, 0.9);
+	box-shadow: 0px 2px 50px rgba(0, 0, 0, 0.5);
+}
+
+book {
+	display: block;
+	position: fixed;
+	top: 48px;
+	left: 0px;
+	right: 0px;
+	bottom: 0px;
+
+}
+
+page {
+	transform-origin: left top;
+	display: block;
+	position:  absolute;
+	top:  8px;
+}
+
+tiles {
+	position: relative;
+	display: block;
+	width: 100%;
+	height: 100%;
+}
+
+tiles tile {
+	position: absolute;
+	display: block;
+	padding: 4px;
+	z-index: 2;
+}
+
+tiles placeholder {
+	position: absolute;
+	display: block;
+	padding: 4px;
+	z-index: 1;
+	color: rgba(0, 0, 0, 0.05);
+	cursor: pointer;
+}
+
+tiles placeholder::before {
+	content: "";
+	display: block;
+	width: 100%;
+	height: 100%;
+	border-radius: 4px;
+	border: dashed 4px rgba(0, 0, 0, 0.05);
+	vertical-align: middle;
+}
+
+tiles placeholder::after {
+	content: "+";
+	position: absolute;
+	display: block;
+	top: 50%;
+	margin-top: -16px;
+	left: 50%;
+	margin-left: -16px;
+	width: 32px;
+	height: 32px;
+	line-height: 32px;
+	text-align: center;
+	font-size: 32px;
+	font-weight: bold;
+	text-align: center;
+	vertical-align: middle;
+}
+
+tiles[moving=true] placeholder {
+	z-index: 10001 !important;
+}
+
+tiles[moving=true] placeholder::after {
+	content: "◎";
+}
+
+tiles[moving=true] placeholder[selected]::after {
+	content: "✎";
+}
+
+tiles placeholder:hover {
+	color: rgba(0, 0, 0, 0.5);	
+}
+
+tiles placeholder:hover::before {
+	border: dashed 4px rgba(0, 0, 0, 0.5);
+}
+
+tiles tile content {
+	display: block;
+	width: 100%;
+	height: 100%;
+	background: #eeeeee;
+	border-radius:  4px;
+	box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+tiles tile content label {
+	display: block;
+	text-align: center;
+	font-weight: normal;
+	line-height: 16px;
+}
+
+tiles tile[selected] {
+	z-index: 10000 !important;
+}
+
+tiles tile[selected]::after {
+	content: "";
+	display: block;
+	position: absolute;
+	left: 4px;
+	top: 4px;
+	right: 4px;
+	bottom: 4px;
+	border-radius: 4px;
+	background: rgba(128, 192, 255, 0.25);
+}
+
+
+div.row[items] {
+    padding: 0px 8px;
+}
+
+div[items] div[item] {
+    padding: 8px;
+}
+
+div[items] div[item] item {
+    position: relative;
+    display: block;
+    min-height: 192px;
+    background: rgba(0, 0, 0, 0.05);
+    border-radius: 8px;
+    padding: 16px;
+    margin: 0px;
+}
+
+div[items] div[item] item div.title {
+    font-size: 15px;
+    margin-bottom: 8px;
+	font-weight: bold;
+	text-align: center;
+	border-bottom: solid 1px #ccc;
+}
+
+div[items] div[item] item icon {
+    text-align: center;
+	font-size: 32px;
+	margin-bottom: 8px;
+	display: block;
+}
+
+
+div[items] div[item] item p {
+    text-align: justify;
+}
+
+div[items] div[item] item button {
+    position: absolute;
+    right: 16px;
+    bottom: 16px;
+}
