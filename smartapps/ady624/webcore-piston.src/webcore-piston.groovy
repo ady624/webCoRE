@@ -4576,6 +4576,7 @@ private Map getVariable(rtData, name) {
     def result
 	if (name.startsWith("@")) {
     	result = rtData.globalVars[name]
+        result.v = cast(rtData, result.v, result.t)
         if (!(result instanceof Map)) result = [t: "error", v: "Variable '$name' not found"]
 	} else {
 		if (name.startsWith('$')) {
