@@ -255,6 +255,9 @@ definition(
 preferences {
 	//common pages
 	page(name: "pageMain")
+	page(name: "pageRun")
+	page(name: "pageClear")
+	page(name: "pageClearAll")
 }
 
 /******************************************************************************/
@@ -291,11 +294,56 @@ def pageMain() {
             }
 
             section(title:"Application Info") {
+                if (state.bin) {
+                	paragraph state.bin, title: "Automatic backup bin code"
+                }
                 paragraph version(), title: "Version"
                 paragraph mem(), title: "Memory Usage"
             }
+            
+            section(title:"Recovery") {
+            	href "pageRun", title: "Force-run this piston"
+                href "pageClear", title: "Clear all data except variables", description: "You will lose all logs, trace points, statistics, but no variables"
+                href "pageClearAll", title: "Clear all data", description: "You will lose all data stored in any variables"
+            }
         }
 	}
+}
+
+def pageRun() {
+	test()
+	return dynamicPage(name: "pageRun", title: "", uninstall: false) {
+    	section("Run") {
+        	paragraph "OK - under construction"
+        }
+    }
+}
+
+def pageClear() {
+	state.cache = [:]
+    state.hash = [:]
+    state.logs = []
+    state.stats = [:]
+    state.trace = [:]
+	return dynamicPage(name: "pageClear", title: "", uninstall: false) {
+    	section("Clear") {
+        	paragraph "All non-essential data has been cleared."
+        }
+    }
+}
+
+def pageClearAll() {
+	state.cache = [:]
+    state.hash = [:]
+    state.logs = []
+    state.stats = [:]
+    state.trace = [:]
+    state.vars = [:]
+	return dynamicPage(name: "pageClearAll", title: "", uninstall: false) {
+    	section("Clear All") {
+        	paragraph "All data has been cleared."
+        }
+    }
 }
 
 /******************************************************************************/
@@ -824,7 +872,7 @@ private Boolean executeEvent(rtData, event) {
         setSystemVariableValue(rtData, '$currentEventDate', rtData.currentEvent.date ?: now())
         setSystemVariableValue(rtData, '$currentEventDelay', rtData.currentEvent.delay ?: 0)
         setSystemVariableValue(rtData, '$currentEventDevice', [rtData.currentEvent?.device])
-        setSystemVariableValue(rtData, '$currentEventDeviceIndex', rtData.currentEvent.index ?: 0)
+        setSystemVariableValue(rtData, '$currentEventDeviceIndex', (rtData.currentEvent.index != '') && (rtData.currentEvent.index != null) ? rtData.currentEvent.index : 0)
         setSystemVariableValue(rtData, '$currentEventAttribute', rtData.currentEvent.name ?: '')
         setSystemVariableValue(rtData, '$currentEventValue', rtData.currentEvent.value ?: '')
         setSystemVariableValue(rtData, '$currentEventUnit', rtData.currentEvent.unit ?: '')
