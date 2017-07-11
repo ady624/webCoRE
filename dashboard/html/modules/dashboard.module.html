@@ -97,6 +97,7 @@
 						<li><a href="" ng-click="newPiston();">Add a new piston</a></li>
 						<li><a href="" ng-click="showDashboard();">Go to dashboard (beta)</a></li>
 						<li><a href="" ng-click="showFuelStreams();">View fuel streams (beta)</a></li>
+						<li><a href="" ng-click="backup();">Backup piston(s)</a></li>						
 						<li ng-if="instanceCount > 1"><a href="" ng-click="movePiston();">Move piston(s)</a></li>						
 						<li><a href="" ng-click="showSettings();">Settings</a></li>						
 					</ul>
@@ -135,6 +136,7 @@
 						<shm-mode alert="{{location.incidents && (location.incidents.length > 0)}}" mode="{{location.shm}}">{{getSHMModeName()}}</shm-mode>
 						<incident ng-repeat="incident in location.incidents" source-type="{{incident.sourceType}}" ng-bind-html="renderIncident(incident)"></incident>
 					</div>
+					<div class="no-animate alert alert-warning" ng-if="instance && permanentStatus" role="alert" ng-bind-html="permanentStatus"></div>
 					<div class="table-responsive no-animate" ng-if="instance && activePistons">
 						<label>Active pistons ({{activePistons}})</label>
 						<table class="table table-striped">
@@ -384,6 +386,53 @@
 
         <footer>
             <button type="button" class="btn btn-info pull-right" ng-disabled="!designer.pistons || !designer.pistons.length || !designer.instance" ng-click="movePistons();">Move</button>
+            <button type="button" class="btn btn-default" ng-click="closeDialog();">Cancel</button>
+        </footer>
+    </designer>
+</script>
+
+
+<script type="text/ng-template" id="dialog-backup-piston">
+	<designer>
+        <header>
+            <label>Backup piston(s)</label>
+        </header>
+		<form ng-if="designer.page==0">
+			<div class="form-group">
+				<label for="piston">Select the piston(s) you want to backup</label>
+				<select data-actions-box="true" id="piston" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-default" ng-model="designer.pistons" data-mobile="{{mobile}}" ng-init="instances = listAllInstances()" multiple>
+					<option style="display:none" value="" disabled>Nothing selected...</option>
+					<optgroup ng-repeat="i in instances" label="{{i.name}}">
+	                	<option ng-repeat="p in i.pistons" value="{{i.id}}{{p.id}}">{{p.name}}</option>
+					</optgroup>
+				</select>
+			</div>
+        </form>
+		<form ng-if="designer.page==1">
+			<div class="form-group">
+				<label for="piston">Retrieving selected pistons, please wait...</label>
+				<div class="progress">
+					<div class="progress-bar" role="progressbar" aria-valuenow="1" aria-valuemin="0" aria-valuemax="{{designer.piston.length}}" style="width:{{100.0 * designer.progress / designer.pistons.length}}%">
+				    	<span>{{designer.progress}} of {{designer.pistons.length}}</span>
+					</div>
+				</div> 
+			</div>
+        </form>
+		<form ng-if="designer.page==2">
+			<div class="form-group">
+				<label>Please select a password to protect your backup...</label>
+				<input class="form-control" type="password" ng-model="designer.password"/>
+			</div>
+        </form>
+		<form ng-if="designer.page==3">
+			<div class="form-group">
+				<label for="piston">An error has occurred while retrieving backup...</label>
+				<div>Please navigate to each installed instance before attempting a backup to ensure you have a fresh list of existing pistons and that the security tokens are not expired, then try again.</div>
+			</div>
+        </form>
+        <footer>
+            <button ng-if="designer.page==0" type="button" class="btn btn-info pull-right" ng-disabled="!designer.pistons || !designer.pistons.length" ng-click="backupPistons();">Backup</button>
+            <button ng-if="designer.page==2" type="button" class="btn btn-info pull-right" ng-disabled="!designer.pistons || !designer.pistons.length" ng-click="saveBackup();">Save</button>
             <button type="button" class="btn btn-default" ng-click="closeDialog();">Cancel</button>
         </footer>
     </designer>

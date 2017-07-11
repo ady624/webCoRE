@@ -86,7 +86,11 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 		}
 	};
 
-    $scope.setStatus = function(status) {
+    $scope.setStatus = function(status, permanent) {
+		if (permanent) {
+			$scope.permanentStatus = status
+			return;
+		}
         if (tmrStatus) $timeout.cancel(tmrStatus);
         tmrStatus = null;
         $scope.status = status;
@@ -255,65 +259,9 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 		return level;
 	}
 
-
     $scope.renderString = function(value) {
-        var i = 0;      
-		if (!value) return '';
-        
-        var process = function(classList) {
-            var result = '';
-            while (i < value.length) {
-                var c = value[i];
-                switch (c) {
-                    case '<':
-                        result += '&lt;';
-						
-                        break;
-                    case '>':
-                        result += '&gt;';
-                        break;
-                    case '[':   
-                        var p = value.indexOf('|', i);
-                        if (p > i) {
-                            var cl = value.substring(i + 1, p);
-                            i = p + 1;
-                            result += process(cl);
-                        } else {
-                            i++;
-                            result += process()
-                        }
-                        break;
-                    case ']':
-                        if (classList == undefined) {
-							return '[' + result + ']';
-						}
-                        var cls = classList.trim().replace(/\s/g, ',').split(',');
-                        var className = '';
-	                    var color = '';
-                        for (x in cls) {
-                            switch (cls[x]) {
-                                case 'b': className += 's-b '; break;
-                                case 'u': className += 's-u '; break;
-                                case 'i': className += 's-i '; break;
-                                case 's': className += 's-s '; break;
-                                case 'pre': className += 's-pre '; break;
-                                case 'flash': className += 's-flash '; break;
-                                default: color = cls[x].replace(/[^#0-9a-z]/gi, '');
-                            }
-                        }
-                        return '<span ' + (className ? 'class="' + className + '" ' : '') + (color ? 'style="color: ' + color + ' !important"' : '') + '>' + result + '</span>';
-                    default:
-                        result += c;
-                }
-                i++;
-            }
-            return result;
-        }
-        return $sce.trustAsHtml(process(value).replace(/\:fa-([a-z0-9\-\s]*)\:/gi, function(match) {
-            return '<i class="fa ' + match.replace(/\:/g, '').toLowerCase() + '"></i>';
-        }).replace(/\\[rn]/gi, '<br/>'));
+        return $sce.trustAsHtml(renderString(value));
     };
-
 
 	$scope.onWSUpdate = function(evt) {
 		if (evt.isTrusted && evt.data) {
@@ -379,6 +327,82 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 		});
     };
 
+
+	$scope.backup = function() {
+		$scope.designer = {
+			page: 0,
+			pistons: []
+		}
+   	    $scope.designer.dialog = ngDialog.open({
+       	    template: 'dialog-backup-piston',
+           	className: 'ngdialog-theme-default ngdialog-large',
+            closeByDocument: false,
+   	        disableAnimation: true,
+       	    scope: $scope
+        });
+	};
+
+	$scope.backupPistons = function() {
+		$scope.designer.progress = 0;
+		$scope.designer.page = 1;
+		$scope.designer.instances = {};
+		for (i in $scope.designer.pistons) {
+			var iid = $scope.designer.pistons[i].substr(0, 34);
+			var pid = $scope.designer.pistons[i].substr(34);
+			$scope.designer.instances[iid] = $scope.designer.instances[iid] ? $scope.designer.instances[iid] : [];
+			$scope.designer.instances[iid].push({
+				pid: pid,
+				requested: false
+			});
+		}
+		$scope.designer.results = [];
+		$scope.backupBatch();
+	}
+
+	$scope.backupBatch = function() {
+		if (!$scope.designer || !$scope.designer.instances) return;
+		var iid = '';
+		var pids = [];
+		for(i in $scope.designer.instances) {
+			if (iid != '') break;
+			var instance = $scope.designer.instances[i];
+			for(p in instance) {
+				if (((iid == '') || (iid == i)) && (!instance[p].requested)) {
+					iid = i;
+					instance[p].requested = true;
+					pids.push(instance[p].pid);
+					if (pids.length >= 10) break;
+				}
+			}
+		}
+		if (pids.length) {
+			dataService.backupPistons(iid, pids).then(function(data) {
+				if (data && (data.pistons instanceof Array)) {
+					$scope.designer.results = $scope.designer.results.concat(data.pistons);
+					$scope.designer.progress = $scope.designer.results.length;
+				}
+				$scope.backupBatch();
+			});
+		} else {
+			//we're done
+			if ($scope.designer.pistons.length == $scope.designer.results.length) {
+				//success
+				$scope.designer.page = 2;
+			} else {
+				$scope.designer.page = 3;
+			}
+		}
+	}
+
+
+	$scope.saveBackup = function() {
+		var blob = new Blob([dataService.encryptBackup($scope.designer.results, $scope.designer.password)], {type: 'text/plain'});
+	    var link = document.createElement('a');
+	    link.href = window.URL.createObjectURL(blob);
+	    link.download = 'webCoRE.' + (new Date()).toJSON() + '.backup';
+		link.click();
+		$scope.closeDialog();
+	}
 
 	$scope.movePiston = function() {
 		$scope.designer = {

@@ -20,6 +20,10 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 	$scope.params = $location.search();
 	$scope.insertIndexes = {};
 	$scope.warnings = {};
+	$scope.evalType = 'v';
+	$scope.evalText = '';
+	$scope.evals = [];
+	$scope.lastEval = 0;
 	if ($scope.params) $location.search({});
 	$scope.stack = {
 		undo: [],
@@ -114,6 +118,19 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		return sceneName;
     };
 
+    $scope.getLifxSelectorName = function(selectorId) {
+		if (!$scope.instance.settings) return selectorId;
+		var name = $scope.instance.settings.lifx_lights ? $scope.instance.settings.lifx_lights[selectorId] : null;
+		if (name) return name;
+		name = $scope.instance.settings.lifx_groups ? $scope.instance.settings.lifx_groups[selectorId] : null;
+		if (name) return name;
+		name = $scope.instance.settings.lifx_locations ? $scope.instance.settings.lifx_locations[selectorId] : null;
+		if (name) return name;
+		name = $scope.instance.settings.lifx_scenes ? $scope.instance.settings.lifx_scenes[selectorId] : null;
+		if (name) return name;
+		return selectorId;
+    };
+
 	$scope.getModeName = function(modeId) {
 		for(modeIndex in $scope.location.modes) {
 			if ($scope.location.modes[modeIndex].id == modeId) {
@@ -155,6 +172,8 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 				}
 			}
 			tmrActivity = $timeout($scope.updateActivity, 3000);
+		}, function (error) {
+			tmrActivity = $timeout($scope.updateActivity, 3000);
 		});
 	}
 
@@ -184,6 +203,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		if ($scope.piston) $scope.loading = true;
 		dataService.getPiston($scope.pistonId).then(function (response) {
 			if ($scope.$$destroyed) return;
+			$scope.endpoint = data.endpoint + 'execute/' + $scope.pistonId;
 			try {
 				var showOptions = $scope.piston ? !!$scope.showOptions : false;
 				if (!response || !response.data || !response.data.piston) {
@@ -216,6 +236,13 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 				$scope.lastExecuted = response.data.lastExecuted;
 				$scope.nextSchedule = response.data.nextSchedule;
 				$scope.schedules = response.data.schedules;
+				
+				$scope.lifx = {
+					lights: !!$scope.instance.settings && !!$scope.instance.settings.lifx_lights ? $scope.objectToArray($scope.instance.settings.lifx_lights) : [],
+					groups: !!$scope.instance.settings && !!$scope.instance.settings.lifx_groups ? $scope.objectToArray($scope.instance.settings.lifx_groups) : [],
+					locations: !!$scope.instance.settings && !!$scope.instance.settings.lifx_locations ? $scope.objectToArray($scope.instance.settings.lifx_locations) : [],
+					scenes: !!$scope.instance.settings && !!$scope.instance.settings.lifx_scenes ? $scope.objectToArray($scope.instance.settings.lifx_scenes) : []
+				};
 				
 				$scope.initChart();
 				if ($scope.instance && $scope.instance.devices) $scope.anonymizeDevices($scope.instance.devices);
@@ -271,7 +298,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 										}
 										$scope.initialized = true;
 										$scope.loading = false;
-										if (!!piston && !!piston.l) {
+										if (!!piston && (piston.l instanceof Object) && ($scope.objectToArray(piston.l).length)) {
 											$scope.rebuildPiston(piston.l);
 										}
 									});
@@ -447,7 +474,18 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		$scope.init();
 	}
 
-	$scope.save = function() {
+	$scope.enableAutomaticBackup = function() {
+		dataService.generateBackupBin().then(function(response) {
+        	var binId = response.data;			
+            dataService.setPistonBin($scope.pistonId, binId).then(function(response) {
+				$scope.meta.bin = binId;
+				$scope.save(true);
+				$scope.loading = false;
+			});
+		});
+	}
+
+	$scope.save = function(saveToBinOnly) {
 		$scope.loading = true;
 		var piston = $scope.compilePiston({
 			id: $scope.pistonId,
@@ -460,7 +498,9 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 			z: $scope.piston.z,
 			n: $scope.meta.name
 		});
-		dataService.setPiston(piston, $scope.meta.bin).then(function(response) {
+		var promise = dataService.setPiston(piston, $scope.meta.bin, saveToBinOnly);
+		if (promise) promise.then(function(response) {
+			if (saveToBinOnly) return;
 			$scope.loading = false;
 			if (response && response.data && response.data.build) {
 				$scope.meta.active = response.data.active;
@@ -558,9 +598,11 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 				return $scope.renderContactNameList(variable.v);
 			case 'device':
 				return $scope.renderDeviceNameList(variable.v);
-			default:
-				return variable.v;
 		}
+		if (variable.v instanceof Object) {
+			return angular.toJson(variable.v);
+		}
+		return variable.v;
 	}
 
 	$scope.deleteDialog = function() {
@@ -768,6 +810,8 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		if (!$scope.selection) return;
 		$scope.saveToClipboard($scope.selection, $scope.selectionType);
 		$scope.deleteObject($scope.selection, $scope.selectionParent);
+		$scope.selectionType = null;
+		$scope.selection = null;
 	}
 
 	$scope.duplicateSelection = function() {
@@ -781,6 +825,8 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 	$scope.deleteSelection = function() {
 		if (!$scope.selection) return;
 		$scope.deleteObject($scope.selection, $scope.selectionParent);
+		$scope.selectionType = null;
+		$scope.selection = null;
 	}
 
 	$scope.pasteItem = function(clipboardItem) {
@@ -1332,13 +1378,15 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 
 	/* conditions */
 
-	$scope.addCondition = function(parent, newElseIf, defaultType) {
-		return $scope.editCondition(null, parent, newElseIf, defaultType);
+	$scope.addCondition = function(parent, newElseIf, defaultType, groupingMethod) {
+		return $scope.editCondition(null, parent, newElseIf, defaultType, groupingMethod ? groupingMethod : (parent ? parent.o : null));
 	}
 
-	$scope.editCondition = function(condition, parent, newElseIf, defaultType) {
+	$scope.editCondition = function(condition, parent, newElseIf, defaultType, groupingMethod) {		
 		if ($scope.mode != 'edit') return;
 		var _new = !condition;
+		var list = parent instanceof Array ? parent : (parent instanceof Object ? parent.c : null);
+		var followedBy = (groupingMethod == 'followed by') && (list instanceof Array) && (list.length > 0) && (list[0] != condition);
 		if (!condition) {
 			condition = {};
 			condition.t = defaultType;
@@ -1351,6 +1399,8 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 			condition.ro2 = {t: 'c', d: [], a: null, g:'any', v: null, c: '', x: null, e: ''};
 			condition.to = {t: 'c', d: [], a: null, g:'any', v: null, c: '', x: null, e: ''};
 			condition.to2 = {t: 'c', d: [], a: null, g:'any', v: null, c: '', x: null, e: ''};
+//			condition.wt = {t: 'c', d: [], a: null, g:'any', v: null, c: 1, vt: 'm', x: null, e: ''};
+//			condition.wd = {t: 'c', d: [], a: null, g:'any', v: null, c: 'l', x: null, e: ''};
 			condition.z = '';
 			condition.sm = 'auto';
 			condition.ts = [];
@@ -1361,6 +1411,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 			clipboard: _new ? $scope.getClipboardItems('condition') : []
 		};
 		$scope.designer.$condition = condition;
+		$scope.designer.followedBy = followedBy;
 		$scope.designer.$obj = condition;
 		$scope.designer.type = condition.t;
 		$scope.designer.$new = !defaultType && !!condition.t ? false : true;
@@ -1372,12 +1423,17 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		$scope.designer.operator = condition.o;
 		$scope.designer.comparison = {
 			type: 'condition',
+			followedBy: followedBy,
 			left: {data: condition.lo ? $scope.copy(condition.lo) : {}, showSubDevices: true, showInteraction: true},
 			operator: condition.co,
 			right: {data: condition.ro ? $scope.copy(condition.ro) : {}},
 			right2: {data: condition.ro2 ? $scope.copy(condition.ro2) : {}},
 			time: {data: condition.to ? $scope.copy(condition.to) : {t:'c', c: 0}, dataType: 'duration'},
 			time2: {data: condition.to2 ? $scope.copy(condition.to2) : {t:'c', c: 0}, dataType: 'duration'}
+		}
+		if (followedBy) {
+			$scope.designer.comparison.within = {data: condition.wd ? $scope.copy(condition.wd) : {t:'c', c: 1, vt: 'm'}, style: 'success', dataType: 'duration', hideMilliseconds: true};
+			$scope.designer.comparison.withinOpt = (condition.wt ? condition.wt : 'l');
 		}
 		$scope.validateComparison($scope.designer.comparison, true);
 		$scope.designer.smode = condition.sm;
@@ -1423,11 +1479,19 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 				condition.ro2 = $scope.fixOperand($scope.designer.comparison.right2.data);
 				condition.to = $scope.designer.comparison.time.data;
 				condition.to2 = $scope.designer.comparison.time2.data;
+				if ($scope.designer.followedBy) {
+					condition.wd = $scope.designer.comparison.within.data;
+					condition.wt = $scope.designer.comparison.withinOpt;
+				}
 				break;
 			case 'group':
 				condition.c = condition.c ? condition.c : [];
 				condition.o = $scope.designer.operator;
 				condition.n = $scope.designer.not == '1';
+				if ($scope.designer.followedBy) {
+					condition.wd = $scope.designer.comparison.within.data;
+					condition.wt = $scope.designer.comparison.withinOpt;
+				}
 				break;
 		}
 		condition.sm = $scope.designer.smode;
@@ -1485,17 +1549,23 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 
 
 
-	$scope.editConditionGroup = function(group, parent) {
+	$scope.editConditionGroup = function(group, parent, groupingMethod) {
 		if ($scope.mode != 'edit') return;
-
+		var followedBy = (groupingMethod == 'followed by') && (parent instanceof Array) && (parent.length > 0) && (parent[0] != group);
 		$scope.designer = {
 			operator: group.o || 'and',
 			not: group.n ? '1' : '0',
-			description: group.z
+			description: (group.t == 'group' ? group.z : group.zc)
 		};
 		$scope.designer.group = group;
+		$scope.designer.followedBy = followedBy;
 		$scope.designer.$obj = group;
 		$scope.designer.parent = parent;
+		if (followedBy) {
+			$scope.designer.within = {data: group.wd ? $scope.copy(group.wd) : {t:'c', c: 1, vt: 'm'}, style: 'success', dataType: 'duration', hideMilliseconds: true};
+			$scope.designer.withinOpt = (group.wt ? group.wt : 'l');
+			$scope.validateOperand($scope.designer.within);
+		}
 		window.designer = $scope.designer;
 
 		$scope.designer.dialog = ngDialog.open({
@@ -1512,7 +1582,15 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		var group = $scope.designer.group;
 		group.n = $scope.designer.not == '1';
 		group.o = $scope.designer.operator;
-		group.z = $scope.designer.description;
+		if (group.t == 'group') {
+			group.z = $scope.designer.description;
+			if ($scope.designer.followedBy) {
+				group.wd = $scope.designer.within.data;
+				group.wt = $scope.designer.withinOpt;
+			}
+		} else {
+			group.zc = $scope.designer.description;
+		}
 		$scope.closeDialog();
 	}
 
@@ -1668,7 +1746,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		$scope.designer = {
 			operator: group.rop || 'and',
 			not: group.rn ? '1' : '0',
-			description: group.z
+			description: (group.t == 'group' ? group.z : group.zr)
 		};
 		$scope.designer.group = group;
 		$scope.designer.$obj = group;
@@ -1689,7 +1767,11 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		var group = $scope.designer.group;
 		group.rn = $scope.designer.not == '1';
 		group.rop = $scope.designer.operator;
-		group.z = $scope.designer.description;
+		if (group.t == 'group') {
+			group.z = $scope.designer.description;
+		} else {
+			group.zr = $scope.designer.description;
+		}
 		$scope.closeDialog();
 	}
 
@@ -2065,6 +2147,8 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 
 	$scope.clearLogs = function() {
 		$scope.logs = [];
+		dataService.clearPistonLogs($scope.pistonId).then(function(data) {
+		});
 	}
 
 
@@ -2621,6 +2705,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		if (devices && devices.length) {
 			var attributes = {}
 			var deviceCount = devices.length;
+			var hasThreeAxis = false;
 			for (deviceIndex in devices) {
 				device = $scope.getDeviceById(devices[deviceIndex]);
 				if (device) {
@@ -2652,6 +2737,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 					var attribute = $scope.getAttributeById(attributeId);
 					if (attribute) {
 						result.push(mergeObjects({id: attributeId}, attribute));
+						if (attributeId == 'threeAxis') hasThreeAxis = true;
 					} else {
 						//custom attribute? device should contain the last device we've been through
 						for (a in device.a) {
@@ -2669,6 +2755,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 					}
 				}
 			}
+			if (hasThreeAxis) result.push({id: 'orientation', n: 'orientation', t:'string'});
 			result.push({id: statusAttribute, n: '⌂ ' + statusAttribute, t:'string'});
 			result.sort($scope.sortByName);
 		}
@@ -2751,6 +2838,13 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
             disableAnimation: true,
             scope: $scope
         });
+	}
+
+	$scope.getLocalVariableType = function(name) {
+		for(i in $scope.piston.v) {
+			if ($scope.piston.v[i].n == name) return $scope.piston.v[i].t;
+		}
+		return '';
 	}
 
 	$scope.chooseVersion = function(keepLocal) {
@@ -2863,6 +2957,9 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 			if (dataType == 'lifxscene') {
 				dataType = 'lifxScene';
 			}
+			if (dataType == 'lifxselector') {
+				dataType = 'lifxSelector';
+			}
 			if (dataType == 'contacts') {
 				operand.multiple = true;
 				dataType = 'contact';
@@ -2901,7 +2998,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 					break;
 			}
 
-			var disableExpressions = (dataType == 'piston') || (dataType == 'routine') || (dataType == 'askAlexaMacro') || (dataType == 'attribute')
+			var disableExpressions = (!!operand.disableExpressions) || (dataType == 'piston') || (dataType == 'routine') || (dataType == 'askAlexaMacro') || (dataType == 'attribute')
 			operand.onlyAllowConstants = operand.onlyAllowConstants || disableExpressions
 
 			var strict = !!operand.strict;
@@ -2917,7 +3014,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 				operand.allowDevices = dataType == 'device';
 				operand.allowPhysical = (dataType != 'datetime') && (dataType != 'date') && (dataType != 'time') && (dataType != 'device') && (dataType != 'variable') && (!strict || (dataType != 'boolean')) && (dataType != 'duration');
 				operand.allowPreset = (!operand.event) && (dataType == 'datetime') || (dataType == 'time') || (dataType == 'color');
-				operand.allowVirtual = (!operand.event) && (dataType != 'datetime') && (dataType != 'date') && (dataType != 'time') && (dataType != 'device') && (dataType != 'variable') && (dataType != 'decimal') && (dataType != 'integer') && (dataType != 'number') && (dataType != 'boolean') && (dataType != 'enum') && (dataType != 'color') && (dataType != 'duration');
+				operand.allowVirtual = (dataType != 'datetime') && (dataType != 'date') && (dataType != 'time') && (dataType != 'device') && (dataType != 'variable') && (dataType != 'decimal') && (dataType != 'integer') && (dataType != 'number') && (dataType != 'boolean') && (dataType != 'enum') && (dataType != 'color') && (dataType != 'duration');
 				operand.allowVariable = (dataType != 'device' || ((dataType == 'device') && operand.multiple)) && (!strict || (dataType != 'boolean'));
 				operand.allowConstant = (!operand.event) && (dataType != 'device') && (dataType != 'variable');
 				operand.allowArgument = (!operand.event) && (dataType != 'device') && (dataType != 'variable');
@@ -2942,17 +3039,17 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 					operand.restrictType = 'device';
 					break;
 				case 'integer':
-					operand.restrictType = 'integer';
+					operand.restrictType = 'integer,integer[]';
 					break;
 				case 'decimal':
-					operand.restrictType = 'integer,decimal';
+					operand.restrictType = 'integer,integer[],decimal,decimal[]';
 					break;
 				case 'time':
-					operand.restrictType = 'datetime,time';
+					operand.restrictType = 'datetime,datetime[],time,time[]';
 					break;
 				case 'date':
 				case 'datetime':
-					operand.restrictType = 'datetime,date';
+					operand.restrictType = 'datetime,datetime[],date,date[]';
 					break;
 			}
 			operand.dataType = dataType;
@@ -2988,6 +3085,9 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 				break;
 			case 'lifxScene':
 				operand.options = $scope.objectToArray($scope.instance.settings.lifx_scenes).sort($scope.sortByName);
+				break;
+			case 'lifxSelector': //fake options - we're using a custom select for grouping purposes
+				operand.options = [];
 				break;
 			case 'integer':
 			case 'decimal':
@@ -3163,6 +3263,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 					operand.config.autocomplete[0] = {words: [], cssClass: 'hl err'};
 				}
 				operand.data.exp = expression;
+				$scope.delayEvaluation(operand);
 				operand.selectedDataType = 'dynamic';
 				break;
 		}
@@ -3225,8 +3326,8 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 			});
 		} else {
 			$scope.$$postDigest(function() {
-				$('select').selectpicker('refresh');
-				$timeout(function() {$('select').selectpicker('refresh');}, 0, false);
+				$('select[selectpicker]').selectpicker('refresh');
+				$timeout(function() {$('select[selectpicker]').selectpicker('refresh');}, 0, false);
 			});
 		}
 	}
@@ -3401,6 +3502,13 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 			$scope.validateOperand(comparison.time2, reinit, true);
 			comparison.valid = comparison.valid && comparison.time2.valid;
 		}
+
+		if (comparison.followedBy) {
+			comparison.within.requirePositiveNumber = false;
+			comparison.within.dataType = 'duration';
+			$scope.validateOperand(comparison.within, reinit, true);
+			comparison.valid = comparison.valid && comparison.within.valid;
+		}
 		//$scope.refreshSelects();
 
 	}
@@ -3443,7 +3551,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 						break;
 					case 'x': //variable
 						if (operand.x)
-							result = '<span var>{' + operand.x + '}</span>';
+							result = '<span var>{' + operand.x + ($scope.getLocalVariableType(operand.x).endsWith(']') ? '[' + operand.xi + ']' : '') + '}</span>';
 						break;
 					case 'c': //constant
 						var m = 'num';
@@ -3464,6 +3572,9 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 								break;
 							case 'lifxScene':
 								result = '<span lit>' + $scope.getLifxSceneName(operand.c) + '</span>';
+								break;
+							case 'lifxSelector':
+								result = '<span lit>' + $scope.getLifxSelectorName(operand.c) + '</span>';
 								break;
 							case 'phone':
 								result = '<span phn>' + operand.c + '</span>';
@@ -3542,6 +3653,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 			case 'p':
 				a = $scope.getAttributeById(l.a);
 				if (!!a && !!a.u) unit = a.u;
+				if (unit == '°?') unit = '°' + ($scope.location.temperatureScale ? $scope.location.temperatureScale : '');
 				break;
 		}
 		var indexes = '';
@@ -3561,7 +3673,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 			if (r && to && (r.t != 'c')) offset1 = $scope.renderTimeOperand(to);
 			if (r2 && to2 && (r2.t != 'c')) offset2 = $scope.renderTimeOperand(to2);
 		}
-		var result = $scope.renderOperand(l) + indexes + ' <span pun>' + (plural ? (comparison.dd ? comparison.dd : comparison.d) : comparison.d) + '</span>' + (comparison.p > 0 ? ' ' + offset1 + $scope.renderOperand(r, noQuotes, pedantic) : '') + (unit ? '<span pun>' + unit + '</span> ' : '') + (comparison.p > 1 ? ' <span pun>' + (comparison.d.indexOf('between') ? 'and' : 'through') + '</span> ' + offset2 + $scope.renderOperand(r2, noQuotes, pedantic) + (unit ? '<span pun>' + unit + '</span> ' : '') : '');
+		var result = $scope.renderOperand(l) + indexes + ' <span pun>' + (plural ? (comparison.dd ? comparison.dd : comparison.d) : comparison.d) + '</span>' + (comparison.p > 0 ? ' ' + offset1 + $scope.renderOperand(r, noQuotes, pedantic) + (unit ? '<span pun>' + unit + '</span> ' : '') : '') + (comparison.p > 1 ? ' <span pun>' + (comparison.d.indexOf('between') ? 'and' : 'through') + '</span> ' + offset2 + $scope.renderOperand(r2, noQuotes, pedantic) + (unit ? '<span pun>' + unit + '</span> ' : '') : '');
 
 		switch (comparison.t) {
 			case 1:
@@ -3627,7 +3739,28 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 				}
 			}
 		}
+		return $sce.trustAsHtml(result);
+	}
 
+	$scope.renderGroupingMethod = function(collection, item) {
+		var result = collection.o;
+		if ((collection.c instanceof Array) && (result == 'followed by')) {
+			var idx = collection.c.indexOf(item) + 1;
+			if (idx < collection.c.length) {
+				var it = collection.c[idx];
+				if (!it.wd) it.wd = {t:'c', c:'1', vt: 'm'};
+				if (!it.wt) it.wt = 'l';
+				result = (it.wt == 'n' ? 'not ' : '') + 'followed ' + (it.wt == 's' ? 'strictly ' : '') + 'within ' + $scope.renderOperand(it.wd) + ' <span lit>' + $scope.getDurationUnitName(it.wd.vt, !((it.wd.t == 'c') && (!isNaN(it.wd.c)) && (parseInt(it.wd.c) == 1))) + '</span> by';
+			}
+		}
+		return $sce.trustAsHtml(result);
+	}
+	$scope.renderGroupWithin = function(collection, group) {
+		var list = collection instanceof Array ? collection : collection.c;
+		var result = '';
+		if ((list instanceof Array) && (!!list.length) && (list[0] != group)) {
+			result = ' within ' + $scope.renderOperand(group.wd) + ' <span lit>' + $scope.getDurationUnitName(group.wd.vt, !((group.wd.t == 'c') && (!isNaN(group.wd.c)) && (parseInt(group.wd.c) == 1))) + '</span>' + (group.wt == 's' ? ' (strict)' : '');
+		}
 		return $sce.trustAsHtml(result);
 	}
 
@@ -3813,61 +3946,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 	};
 
 	$scope.renderString = function(value) {
-		var i = 0;
-		if (!value) return '';
-
-		var process = function(classList) {
-			var result = '';
-			while (i < value.length) {
-				var c = value[i];
-				switch (c) {
-					case '<':
-						result += '&lt;';
-						break;
-					case '>':
-						result += '&gt;';
-						break;
-					case '[':
-						var p = value.indexOf('|', i);
-						if (p > i) {
-							var cl = value.substring(i + 1, p);
-							i = p + 1;
-							result += process(cl);
-						} else {
-							i++;
-							result += process()
-						}
-						break;
-					case ']':
-						if (classList == undefined) {
-							return '[' + result + ']';
-						}
-						var cls = classList.trim().replace(/\s/g, ',').split(',');
-						var className = '';
-						var color = '';
-						for (x in cls) {
-							switch (cls[x]) {
-								case 'b': className += 's-b '; break;
-								case 'u': className += 's-u '; break;
-								case 'i': className += 's-i '; break;
-								case 's': className += 's-s '; break;
-								case 'pre': className += 's-pre '; break;
-								case 'flash': className += 's-flash '; break;
-								default: color = cls[x].replace(/[^#0-9a-z]/gi, '');
-							}
-						}
-						return '<span ' + (className ? 'class="' + className + '" ' : '') + (color ? 'style="color: ' + color + ' !important"' : '') + '>' + result + '</span>';
-					default:
-						result += c;
-				}
-				i++;
-			}
-			return result;
-		}
-		
-		return $sce.trustAsHtml(process(value).replace(/\:fa-([a-z0-9\-\s]*)\:/gi, function(match) {
-            return '<i class="fa ' + match.replace(/\:/g, '').toLowerCase() + '"></i>';
-        }));
+		return $sce.trustAsHtml(renderString(value));
 	};
 
 	$scope.renderTask = function(task) {
@@ -4428,17 +4507,9 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 
 
 	$scope.snapshot = function(anonymize) {
-		var cnt = 0;
-		var counter = function() {
-			cnt++;
-			return cnt;
-		}
-//		var data = (anonymize ? $scope.anonymizePiston($scope.piston) : $scope.piston);
-		var data = $scope.compilePiston($scope.piston, anonymize);
-		$scope.loading = true;
-		dataService.generateBackupBin(data, anonymize).then(function(response) {
+
+		function doSnapshot(bin) {
 			$animate.enabled(false);
-			var bin = response.data;
 			$scope.view.exportBin = bin;
 			var piston = document.getElementById('piston');
 			piston.setAttribute('printing', '');
@@ -4468,16 +4539,32 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 				delete($scope.view.exportBin);
 				$animate.enabled(true);
 			}, 1, false);
+		};
 
-		}, function() {
-			//error
-			piston.removeAttribute('printing');
-			piston.removeAttribute('anonymized');
-			delete($scope.view.exportBin);
-			//$animate.enabled(true);
-		});
-	}
 
+		var cnt = 0;
+		var counter = function() {
+			cnt++;
+			return cnt;
+		}
+//		var data = (anonymize ? $scope.anonymizePiston($scope.piston) : $scope.piston);
+		var data = $scope.compilePiston($scope.piston, anonymize);
+		$scope.loading = true;
+		if (anonymize) {
+			dataService.generateBackupBin(data, anonymize).then(function(response) {
+				var bin = response.data;
+				doSnapshot(bin);
+			}, function() {
+				//error
+				piston.removeAttribute('printing');
+				piston.removeAttribute('anonymized');
+				delete($scope.view.exportBin);
+				//$animate.enabled(true);
+			});
+		} else {
+			doSnapshot($scope.meta.bin);
+		}
+	};
 
 	$scope.textSnapshot = function() {
 		copyToClipboard('piston');
@@ -4496,9 +4583,11 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		var i = 0;
 		var initExp = !!parseAsString ? 0 : 1;
 		var exp = initExp;
-		var sq = false;
-		var dq = false;
-		var dv = false;
+		//var sq = false;
+		//var dq = false;
+		//var dv = false;
+		var osq = false;
+		var odq = false;
 		var func = 0;
 		var numExp = /^-?(0(\.\d*)?|([1-9]\d*\.?\d*)|(\.\d+))([Ee][+-]?\d+)?$/;
 		var parenthesis = 0;
@@ -4507,11 +4596,14 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		}
 		function main() {
 			var arr = [];
+			var sq = false;
+			var dq = false;
+			var dv = false;
 			var startIndex = i;
-			var compositeVariable = (str.substr(startIndex, 6) == '$args.') || (str.substr(startIndex, 6) == '$json.') || (str.substr(startIndex, 10) == '$response.') || (str.substr(startIndex, 9) == '$weather.')
+			var compositeVariable = (str.substr(startIndex, 6) == '$args.') || (str.substr(startIndex, 6) == '$json.') || (str.substr(startIndex, 10) == '$response.') || (str.substr(startIndex, 9) == '$weather.') || (str.substr(startIndex, 11) == '$incidents.') ||  (str.substr(startIndex, 6) == '$args[') || (str.substr(startIndex, 6) == '$json[') || (str.substr(startIndex, 10) == '$response[') || (str.substr(startIndex, 11) == '$incidents[');
 			function addOperand() {
 				if (i-1 > startIndex) {
-					var value = str.slice(startIndex, i-1);
+					var value = str.slice(startIndex, i-1).trim();
 					var parsedValue = parseFloat(value.trim());
 					if (!isNaN(parsedValue) && (numExp.test(value.trim()))) {
 						arr.push({t: (value.indexOf('.') >= 0 ? 'decimal' : 'integer'), v: parsedValue, l: location(startIndex, i - 2)});
@@ -4575,7 +4667,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 				}
 			}
 			function addFunction() {
-				var value = str.slice(startIndex, i-1).toLowerCase();
+				var value = str.slice(startIndex, i-1).toLowerCase().trim();
 				if ($scope.db.functions[value]) {
 					func++;
 					var params = main();
@@ -4601,6 +4693,19 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 			}
 			while (i < str.length) {
 				var c = str[i++];
+
+				if (!compositeVariable) {
+					var value = str.slice(startIndex, i-1).trim();				
+					if (value.indexOf(' ') < 0) {
+						for(var ci in $scope.piston.v) {
+							if (($scope.piston.v[ci].n == value) && $scope.piston.v[ci].t.endsWith(']')) {
+								compositeVariable = true;
+								break;
+							}
+						}
+					}
+				}
+
 				switch(c) {
 					case ' ':
 					case '\t':
@@ -4645,6 +4750,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 					case '"':
 						if (exp && !dv && !sq) {
 							dq = !dq;
+							odq = !odq;
 							(dq ? addOperand() : addConstant(true));
 							startIndex = i;
 						}
@@ -4652,6 +4758,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 					case '\'':
 						if (exp && !dq && !dv) {
 							sq = !sq;
+							osq = !osq;
 							(sq ? addOperand() : addConstant(true));
 							startIndex = i;
 						}
@@ -4715,9 +4822,9 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		var result = {t: 'expression', i: items, str: str};
 		if (exp != initExp) {
 			result.err = 'Invalid expression closure termination';
-		} else if (sq) {
+		} else if (osq) {
 			result.err = 'Invalid single quote termination';
-		} else if (dq) {
+		} else if (odq) {
 			result.err = 'Invalid double quote termination';
 		} else if (parenthesis) {
 			result.err = 'Invalid parenthesis closure termination';
@@ -4781,12 +4888,21 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 							break;
 					case 'variable':
 							if (item.x.startsWith('$args.') && (item.x.length > 6)) break;
+							if (item.x.startsWith('$args[') && (item.x.length > 6)) break;
 							if (item.x.startsWith('$json.') && (item.x.length > 6)) break;
+							if (item.x.startsWith('$json[') && (item.x.length > 6)) break;
 							if (item.x.startsWith('$response.') && (item.x.length > 10)) break;
+							if (item.x.startsWith('$response[') && (item.x.length > 10)) break;
 							if (item.x.startsWith('$weather.') && (item.x.length > 9)) break;
+							if (item.x.startsWith('$incidents.') && (item.x.length > 11)) break;
+							if (item.x.startsWith('$incidents[') && (item.x.length > 11)) break;
 							if ($scope.systemVars && $scope.systemVars[item.x]) break;
 							if ($scope.globalVars && $scope.globalVars[item.x]) break;
 							if (!$scope.getVariableByName(item.x)) {
+								if (item.x.indexOf('[') >= 0) {
+									var v = $scope.getVariableByName(item.x.split('[')[0]);
+									if (v && v.t.endsWith(']')) break;
+								}
 								ok = false;
 								errVar = getSubstring(item.l);
 								err = 'Variable ' + errVar + ' not found';
@@ -4844,11 +4960,85 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		};
 	};
 
-	$scope.evaluateExpression = function(expression, dataType) {
-		dataService.evaluateExpression($scope.pistonId, expression, dataType).then(function (response) {
-			console.log(response);
+	$scope.onEvalKeyDown = function(event) {
+		if (($scope.lastEval >= 0) || ($scope.evalText == '')) {
+			var delta = (event.originalEvent.keyCode == 38 ? -1 : (event.originalEvent.keyCode == 40 ? 1 : 0));
+			if (delta == 0) return;
+			var i = $scope.lastEval + delta;
+			if (i >= $scope.evals.length) i = 0;
+			if (i < 0) i = $scope.evals.length - 1;
+			if ((i >= 0) && (i < $scope.evals.length)) {
+				$scope.evalText = $scope.evals[i].text;
+			}
+			$scope.lastEval = i;
+		}		
+	}
+
+	$scope.onEvalKeyPress = function(event) {
+		if (event.originalEvent.keyCode != 13) return;
+		$scope.lastEval = -1;
+		var text = $scope.evalText;
+		switch (text) {
+			case '/clear':
+				$scope.evalText = '';
+				$scope.evals = [];
+				return;
+		}
+		var eval = {type: ($scope.evalType == 'e' ? 'expression' : 'value'), text: text, eval: ''};
+		if ($scope.evalType == 'e') {
+			eval.eval = $scope.evaluateExpression(text, null, eval, true);
+		} else {
+			eval.eval = $scope.evaluateValue(text, null, eval, true);
+		}
+		$scope.evals.push(eval);
+		$scope.evalText = '';
+		$scope.$$postDigest(function() {
+			var d = $("console > content");
+			d.scrollTop(d.prop("scrollHeight"));
 		});
+	}
+
+	$scope.delayEvaluation = function(operand) {
+		if (!operand) return;
+		operand.eval = '...';
+		var expression = operand.data.exp;
+		var dataType = operand.data.vt;
+		$timeout.cancel(operand.tmrDelayEvaluation);
+		operand.tmrDelayEvaluation = $timeout(function() { if ($scope.designer && $scope.designer.dialog) {operand.eval = '(evaluating)'; evaluateExpression(expression, dataType, operand);}}, 2500);
+	}
+
+	$scope.evaluateValue = function(value, dataType, output, showType) {
+		return $scope.evaluateExpression($scope.parseExpression(value, true), dataType, output, showType);
+	}
+
+	$scope.evaluateExpression = function(expression, dataType, output, showType) {
+		var useConsole = !(output instanceof Object);
+		if (!(expression instanceof Object)) {
+			expression = $scope.parseExpression(expression);
+		}
+		if (!(expression instanceof Object)) {
+			return 'Evaluation error: unknown error.';
+		}
+		if (expression.err) {
+			return 'Evaluation error: ' + expression.err;
+		}
+		dataService.evaluateExpression($scope.pistonId, expression, dataType).then(function (response) {
+			var result = '';
+			if (!response || (response.status != 'ST_SUCCESS')) {		
+				result = 'Evaluation error: Received a ' + (response ? response.status : '(unknown)') + ' result.';
+			} else {
+				result = (!!useConsole || !!showType ? '(' + response.value.t + ') ' : '') + response.value.v;
+			}
+			if (useConsole) {
+				console.log(result);
+			} else {
+				output.eval = $scope.renderString(result);
+			}
+		});
+		return '(evaluating)';
 	};
+	window.evaluateValue = $scope.evaluateValue;
+	window.evaluateExpression = $scope.evaluateExpression;
 
 	var userAgent = navigator.userAgent || navigator.vendor || window.opera;
 	if( userAgent.match( /Android/i ) ) {

@@ -18,6 +18,15 @@ div[header] h2 {
 	margin: 16px 0px;
 }
 
+h2 > span[small] {
+	font-size: 0.5em;
+	cursor: pointer;
+    color: #ccc;
+	vertical-align: bottom;
+    float: right;
+    line-height: 40px;
+}
+
 piston {
 	position: relative;
 	counter-reset: line;
@@ -117,6 +126,106 @@ piston[mode=edit] {
 	height: auto;
 }
 
+piston[console=true] {
+	bottom: 162px;
+}
+
+console {
+	position: absolute;
+	left: 0px;
+	right: 320px;
+	bottom: 2px;
+	height: 160px;
+	background: #f8f8f8;
+	border-top: solid 1px #ccc;
+}
+
+console > label {
+	display: block;
+	position: absolute;
+	left: 0px;
+	top: 0px;
+	right: 0px;
+	height: 28px;
+	line-height: 28px;
+	padding: 0px 4px;
+	overflow: hidden;
+	border-bottom: solid 1px #ccc;
+}
+
+console > content {
+	display: block;
+	position: absolute;
+	left: 0px;
+	top: 28px;
+	right: 0px;
+	height: 108px;
+	overflow: auto;
+}
+
+console > content evals {
+	padding-bottom: 4px;
+}
+
+console > footer {
+	display: block;
+	position: absolute;
+	top: 136px;
+	left: 0px;
+	right: 0px;
+	bottom: 0px;
+	height: 24px;
+	width: 100%;
+	border-top: solid 1px #ccc;
+}
+
+console > footer div {
+	position: relative;
+	width: 100%;
+}
+
+console > footer select {
+	position: absolute;
+	left: 0px;
+	top: 0px;
+	bottom: 0px;
+	opacity: 1;
+	margin: 0px;
+	padding: 0px;
+	height: 24px;
+	border: 0;
+	width: 128px;
+	z-index: 2;
+	outline: none;
+}
+
+console > footer input {
+	right: 200px;
+	opacity: 1;
+	margin: 0px;
+	padding: 0px;
+	border: 0;
+	display: block;
+	width: 100%;
+	padding: 0px 8px 0px 136px;
+	height: 24px;
+	z-index: 1;
+	outline: none;
+}
+
+
+console > content eval {
+	display: block;
+	padding: 0px 4px;
+	line-height: 18px;
+	font-size: 0.75em;
+	border-bottom: solid 1px #ccc;
+}
+
+console > content eval:nth-child(2n+1) {
+	background: #fefefe;
+}
+
 toolbar {
 	position: absolute;
 	display: block;
@@ -158,6 +267,54 @@ toolbar > panel > a {
 toolbar > panel > a:hover {
 	text-decoration: underline;
 }
+
+
+
+
+table[properties] {
+	width: 100%;
+	padding: 0px;
+	margin: 0px;
+	border-collapse: collapse;
+}
+
+table[properties] tr {
+	border-bottom: solid 1px #ccc;
+}
+
+table[properties] td {
+	border: solid 1px #ccc;
+}
+
+table[properties] tr td:first-child {
+	padding: 0px 4px;
+}
+
+table[properties] tr td:last-child {
+	text-align: right;
+	width: 128px;
+}
+
+
+table[properties] tr td:last-child > * {
+	background: transparent;
+	width: 128px;
+	border: 0;
+	outline: none;
+	padding: 0px;
+	opacity: 1;
+	background: #fff;
+}
+
+table[properties] tr td:last-child > input {
+	padding: 0px 4px;
+}
+
+
+
+
+
+
 
 piston[printing] {
     position: fixed !important;

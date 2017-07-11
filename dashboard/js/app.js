@@ -221,6 +221,35 @@ app.directive('devData', function ($parse) {
     };
 });
 
+
+app.directive('onSizeChanged', ['$window', function ($window) {
+    return {
+        restrict: 'A',
+        scope: {
+            onSizeChanged: '&'
+        },
+        link: function (scope, $element, attr) {
+            var element = $element[0];
+
+            cacheElementSize(scope, element);
+            $window.addEventListener('resize', onWindowResize);
+
+            function cacheElementSize(scope, element) {
+                scope.cachedElementWidth = element.offsetWidth;
+                scope.cachedElementHeight = element.offsetHeight;
+            }
+
+            function onWindowResize() {
+                var isSizeChanged = scope.cachedElementWidth != element.offsetWidth || scope.cachedElementHeight != element.offsetHeight;
+                if (isSizeChanged) {
+                    var expression = scope.onSizeChanged();
+                    expression();
+                }
+            };
+        }
+    }
+}]);
+
 app.filter('orderObjectBy', function() {
   return function(items, field, reverse) {
     var filtered = [];
@@ -272,6 +301,11 @@ var config = app.config(['$routeProvider', '$locationProvider', '$sceDelegatePro
         templateUrl: cdn + theme + 'html/modules/fuel.module.html',
         controller: 'fuel',
         css: cdn + theme + 'css/modules/fuel' + ext
+    }).
+    when('/visor', {
+        templateUrl: cdn + theme + 'html/modules/visor.module.html',
+        controller: 'visor',
+        css: cdn + theme + 'css/modules/visor' + ext
     }).
     when('/init/:instId1/:instId2', {
         redirectTo: function(params) {
@@ -368,6 +402,10 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
         }
     };
 
+	dataService.encryptBackup = function(obj, password) {
+		return encryptObject(obj, _ek + (password ? password : ''));
+	}
+
     var decryptObject = function(data, ek) {
         try {
             return angular.fromJson($window.sjcl.decrypt(ek ? ek : _ek, atou(data)));
@@ -419,7 +457,7 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 		instance.globalVars = inst.globalVars;
 		instance.coreVersion = inst.coreVersion;
 		instance.name = inst.name;
-		instance.settings = inst.settings;
+		instance.settings = inst.settings ? inst.settings : {};
 		if (initial && instance.devices) {
 			for (d in instance.devices) {
 				instance.devices[d].t = dataService.determineDeviceType(instance.devices[d]);
@@ -433,16 +471,16 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 		if ((instance.coreVersion) && (version() != instance.coreVersion) && !nagged) {
 			nagged = true;
 			if (version() > instance.coreVersion) {
-				status('A newer SmartApp version (' + version() + ') is available, please update and publish all the webCoRE SmartApps in the SmartThings IDE.');
+				status('A newer SmartApp version (' + version() + ') is available, please update and publish all the webCoRE SmartApps in the SmartThings IDE.', true);
 			} else {
-				status('A newer UI version (' + instance.coreVersion + ') is available, please hard reload this web page to get the newest version.');
+				status('A newer UI version (' + instance.coreVersion + ') is available, please hard reload this web page to get the newest version.', true);
 			}
 		}
 		return instance;
 	};
 
-	var status = function(status) {
-		if (cbkStatus) cbkStatus(status);
+	var status = function(status, permanent) {
+		if (cbkStatus) cbkStatus(status, permanent);
 	}
 
    	var encodeEmoji = function(value) {
@@ -723,6 +761,24 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 				if (data.instance) {
 					data.instance = setInstance(data.instance);
 				}
+				data.endpoint = si.uri;
+				return data;
+			}, function(error) {
+				return null;
+			});
+    }
+
+
+    dataService.backupPistons = function (instanceId, pistonIds) {
+		var inst = dataService.getInstance(instanceId);
+		if (!inst) { inst = dataService.getInstance() };
+		si = store && inst ? store[inst.id] : null;
+    	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/piston/backup?ids=' + pistonIds + '&token=' + (si && si.token ? si.token : ''), {jsonpCallbackParam: 'callback'})
+			.then(function(response) {
+				data = response.data;
+				if (data.now) {
+					adjustTimeOffset(data.now);
+				}
 				return data;
 			}, function(error) {
 				return null;
@@ -853,7 +909,7 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 		}
 	}
  
-    dataService.setPiston = function (piston, binId) {
+    dataService.setPiston = function (piston, binId, saveToBinOnly) {
 		var inst = dataService.getPistonInstance(piston.id);
 		if (!inst) { inst = dataService.getInstance() };
 		si = store ? store[inst.id] : null;
@@ -862,6 +918,7 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 		if (piston && binId) {
 			dataService.saveToBin(binId, piston);
 		}
+		if (saveToBinOnly) return;
 		if (data.length > maxChunkSize) {
 			//var chunks = data.match(/.{1,maxChunkSize}/g);
 			var chunks = [].concat.apply([],data.split('').map(function(x,i){ return i%maxChunkSize ? [] : data.slice(i,i+maxChunkSize) }, data));
@@ -874,12 +931,24 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 				});
 		} else {
 			status('Saving piston...');
-	    	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/piston/set?id=' + piston.id + '&data=' + data + '&bin=' + encodeURIComponent(binId) + '&token=' + (si && si.token ? si.token : ''), {jsonpCallbackParam: 'callback'})
+	    	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/piston/set?id=' + piston.id + '&data=' + encodeURIComponent(data) + '&bin=' + encodeURIComponent(binId) + '&token=' + (si && si.token ? si.token : ''), {jsonpCallbackParam: 'callback'})
 				.then(function(response) {
 					status();
 					return response;
 				});
 		}
+    }
+
+    dataService.setPistonBin = function (pid, bin) {
+		var inst = dataService.getPistonInstance(pid);
+		if (!inst) { inst = dataService.getInstance() };
+		si = store ? store[inst.id] : null;
+		status('Setting piston bin to ' + bin + '...');
+    	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/piston/set.bin?id=' + pid + '&bin=' + bin+ '&token=' + (si && si.token ? si.token : ''), {jsonpCallbackParam: 'callback'})
+			.then(function(response) {
+				status();
+				return response.data;
+			});
     }
 
 
@@ -889,6 +958,18 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 		si = store ? store[inst.id] : null;
 		status('Setting piston logging level to ' + level + '...');
     	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/piston/logging?id=' + pid + '&level=' + level + '&token=' + (si && si.token ? si.token : ''), {jsonpCallbackParam: 'callback'})
+			.then(function(response) {
+				status();
+				return response.data;
+			});
+    }
+
+    dataService.clearPistonLogs = function (pid) {
+		var inst = dataService.getPistonInstance(pid);
+		if (!inst) { inst = dataService.getInstance() };
+		si = store ? store[inst.id] : null;
+		status('Clearing piston logs...');
+    	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/piston/clear.logs?id=' + pid + '&token=' + (si && si.token ? si.token : ''), {jsonpCallbackParam: 'callback'})
 			.then(function(response) {
 				status();
 				return response.data;
@@ -947,7 +1028,7 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 		var inst = dataService.getInstance();
 		si = store ? store[inst.id] : null;
 		var data = value ? utoa(angular.toJson(value)) : '';
-    	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/variable/set?name=' + name + '&value=' + data + '&token=' + (si && si.token ? si.token : ''), {jsonpCallbackParam: 'callback'})
+    	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/variable/set?name=' + name + '&value=' + encodeURIComponent(data) + '&token=' + (si && si.token ? si.token : ''), {jsonpCallbackParam: 'callback'})
 			.then(function(response) {
 				return response.data;
 			});
@@ -957,7 +1038,7 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 		var inst = dataService.getInstance();
 		si = store ? store[inst.id] : null;
 		var data = settings ? utoa(angular.toJson(settings)) : '';
-    	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/settings/set?settings=' + data + '&token=' + (si && si.token ? si.token : ''), {jsonpCallbackParam: 'callback'})
+    	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/settings/set?settings=' + encodeURIComponent(data) + '&token=' + (si && si.token ? si.token : ''), {jsonpCallbackParam: 'callback'})
 			.then(function(response) {
 				return response.data;
 			});
@@ -968,7 +1049,7 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 		if (!inst) { inst = dataService.getInstance() };
 		si = store ? store[inst.id] : null;
 		var data = utoa(angular.toJson(expression));
-    	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/piston/evaluate?id=' + pid + '&expression=' + data + '&dataType=' + (dataType ? encodeURIComponent(dataType) : '') + '&token=' + (si && si.token ? si.token : ''), {jsonpCallbackParam: 'callback'})
+    	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/piston/evaluate?id=' + pid + '&expression=' + encodeURIComponent(data) + '&dataType=' + (dataType ? encodeURIComponent(dataType) : '') + '&token=' + (si && si.token ? si.token : ''), {jsonpCallbackParam: 'callback'})
 			.then(function(response) {
 				return response.data;
 			});
@@ -1236,18 +1317,25 @@ function currentTime() {
 	return (new Date()).getTime() + (window.timeOffset ? window.timeOffset: 0);
 }
 
-
+function fixTime(timestamp) {
+	if (timestamp < 86400000) {
+		var d = new Date();
+		var x = d.getTime();
+		timestamp += x - (x % 86400000) + d.getTimezoneOffset() * 60000;
+	}
+	return timestamp;
+}
 
 function utcToString(timestamp) {
-	return (new Date(timestamp)).toLocaleString();
+	return (new Date(fixTime(timestamp))).toLocaleString();
 }
 
 function utcToTimeString(timestamp) {
-	return (new Date(timestamp)).toLocaleTimeString();
+	return (new Date(fixTime(timestamp))).toLocaleTimeString();
 }
 
 function utcToDateString(timestamp) {
-	return (new Date(timestamp)).toLocaleDateString();
+	return (new Date(fixTime(timestamp))).toLocaleDateString();
 }
 
 function timeSince(time){
@@ -1338,6 +1426,90 @@ function adjustTimeOffset(time) {
 		window.timeOffset = offset;
 	}
 }
+
+
+
+function renderString(value) {
+        var i = 0;
+        if (!value) return '';
+
+        var process = function(classList) {
+            var result = '';
+            while (i < value.length) {
+                var c = value[i];
+                switch (c) {
+                    case '<':
+                        result += '&lt;';
+                        break;
+                    case '>':
+                        result += '&gt;';
+                        break;
+                    case '[':
+                        var p = value.indexOf('|', i);
+                        if (p > i) {
+                            var cl = value.substring(i + 1, p);
+                            i = p + 1;
+                            result += process(cl);
+                        } else {
+                            i++;
+                            result += process()
+                        }
+                        break;
+                    case ']':
+                        if (classList == undefined) {
+                            return '[' + result + ']';
+                        }
+                        var cls = classList.trim().replace(/\s/g, ',').split(',');
+                        var className = '';
+                        var color = '';
+						var backColor='';
+						var fontSize = '';
+                        for (x in cls) {
+							if (!cls[x]) continue;
+                            switch (cls[x]) {
+                                case 'b': 
+                                case 'u':
+                                case 'i':
+                                case 's':
+                                case 'pre':
+                                case 'mono':
+                                case 'blink':
+                                case 'flash':
+                                case 'left':
+                                case 'condensed':
+                                case 'right':
+									className += 's-' + cls[x] + ' ';
+									break;
+                                default:
+									if (/\d+(.\d+)?(x|em)/.test(cls[x])) {
+										fontSize = cls[x].replace('x', 'em');
+									} else if (cls[x].startsWith('b-')) {
+										backColor = cls[x].substr(2).replace(/[^#0-9a-z]/gi, '');
+									} else if (cls[x].startsWith('bk-') || cls[x].startsWith('bg-')) {
+										backColor = cls[x].substr(3).replace(/[^#0-9a-z]/gi, '');
+									} else if (cls[x].startsWith('back-')) {
+										backColor = cls[x].substr(5).replace(/[^#0-9a-z]/gi, '');
+									} else {
+										color = cls[x].replace(/[^#0-9a-z]/gi, '');
+									}
+                            }
+                        }
+                        return '<span ' + (className ? 'class="' + className + '" ' : '') + (!!color || !!backColor || !!fontSize ? 'style="' + (color ? 'color: ' + color + ' !important;' : '') + ' ' + (backColor ? 'background-color: ' + backColor + ' !important;' : '') + ' ' + (fontSize ? 'font-size: ' + fontSize + ' !important;' : '') + '"' : '') + '>' + result + '</span>';
+                    default:
+                        result += c;
+                }
+                i++;
+            }
+            return result;
+        }
+
+        return process(value).replace(/\:fa-([a-z0-9\-\s]*)\:/gi, function(match) {
+            return '<i class="fa ' + match.replace(/\:/g, '').toLowerCase() + '"></i>';
+        }).replace(/\\[rn]/gi, '<br/>');
+    };
+
+
+
 //document.addEventListener('touchstart', handleTouchStart, false);        
 //document.addEventListener('touchmove', handleTouchMove, false);
 
@@ -1465,4 +1637,4 @@ if (document.selection) {
      document.execCommand("Copy");
 }}
 
-version = function() { return 'v0.2.0c2.20170616'; };
+version = function() { return 'v0.2.0d3.20170711'; };

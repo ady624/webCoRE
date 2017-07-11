@@ -681,7 +681,7 @@ designer form a-ckolor {
 
 
 .ngdialog.ngdialog-disabled-animation,
-.ngdialog.ngdialog-disabled-animation *,
+.ngdialog.ngdialog-disabled-animation *:not([allow-animations]) > *:not(i),
 .ngdialog.ngdialog-disabled-animation .ngdialog-content,
 .ngdialog.ngdialog-disabled-animation .ngdialog-overlay {
     -webkit-animation: none !important;
@@ -777,8 +777,20 @@ span.s-b { font-weight: bold; }
 span.s-i { font-style: italic; }
 span.s-u { text-decoration: underline; }
 span.s-s { text-decoration: line-through; }
+span.s-mono { font-family: monospace; }
+span.s-condensed { font-size:10pt !important; line-height: 10pt !important; }
 span.s-pre { white-space: pre-wrap; }
+span.s-blink { animation: s-flash 1s steps(2) infinite; }
 span.s-flash { animation: s-flash 1s steps(2) infinite; }
+span.s-left { float: left; clear: none; }
+span.s-right { float: right; clear: none; }
+span.s-up {
+	-webkit-transform:rotate(-180deg);
+	-moz-transform:rotate(-180deg);
+	-ms-transform:rotate(-180deg);
+	-o-transform:rotate(-180deg);
+	transform:rotate(-180deg);
+}
 
 @-webkit-keyframes s-flash { to { opacity: 0; } } }
 @-moz-keyframes s-flash { to { opacity: 0; } } }
