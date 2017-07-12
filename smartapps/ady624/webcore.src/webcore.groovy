@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.2.0d3.20170711" }
+public static String version() { return "v0.2.0d4.20170712" }
 /*
+ *	07/12/2017 >>> v0.2.0d4.20170712 - BETA M2 - Added categories support and piston tile support
  *	07/11/2017 >>> v0.2.0d3.20170711 - BETA M2 - Lots of bug fixes and improvements
  *	07/10/2017 >>> v0.2.0d2.20170710 - BETA M2 - Added long integer support to variables and fixed a bug where time comparisons would apply a previously set offset to custom times
  *	07/08/2017 >>> v0.2.0d1.20170708 - BETA M2 - Added Piston recovery procedures to the main app
@@ -749,6 +750,20 @@ private initialize() {
         	"run$recoveryMethod"(recoveryHandler)
         } catch (all) { }
     }
+    
+    //move lifx
+    if (state.settings && state.settings.lifx_scenes) {
+    	state.lifx = [
+        	scenes: state.settings.lifx_scenes,
+            lights: state.settings.lifx_lights,
+            groups: state.settings.lifx_groups,
+            locations: state.settings.lifx_locations
+        ]
+        state.settings.remove('lifx_scenes')
+        state.settings.remove('lifx_lights')
+		state.settings.remove('lifx_groups')
+		state.settings.remove('lifx_locations')
+	}
 }
 
 private initializeWebCoREEndpoint() {
@@ -805,6 +820,7 @@ mappings {
 	path("/intf/dashboard/piston/pause") {action: [GET: "api_intf_dashboard_piston_pause"]}
 	path("/intf/dashboard/piston/resume") {action: [GET: "api_intf_dashboard_piston_resume"]}
 	path("/intf/dashboard/piston/set.bin") {action: [GET: "api_intf_dashboard_piston_set_bin"]}
+	path("/intf/dashboard/piston/set.category") {action: [GET: "api_intf_dashboard_piston_set_category"]}
 	path("/intf/dashboard/piston/logging") {action: [GET: "api_intf_dashboard_piston_logging"]}
 	path("/intf/dashboard/piston/clear.logs") {action: [GET: "api_intf_dashboard_piston_clear_logs"]}
 	path("/intf/dashboard/piston/delete") {action: [GET: "api_intf_dashboard_piston_delete"]}
@@ -845,7 +861,8 @@ private api_get_base_result(deviceVersion = 0, updateCache = false) {
             deviceVersion: currentDeviceVersion,
             coreVersion: version(),
             enabled: !settings.disabled,
-            settings: state.settings ?: [:],            
+            settings: state.settings ?: [:],
+            lifx: state.lifx ?: [:],
             virtualDevices: virtualDevices(updateCache),
             globalVars: listAvailableVariables(),
         ] + (sendDevices ? [contacts: listAvailableContacts(false, updateCache), devices: listAvailableDevices(false, updateCache)] : [:]),
@@ -1204,6 +1221,29 @@ private api_intf_dashboard_piston_set_bin() {
 	    def piston = getChildApps().find{ hashId(it.id) == params.id };
 	    if (piston) {
         	result = piston.setBin(params.bin)
+			result.status = "ST_SUCCESS"
+        } else {
+	    	result = api_get_error_result("ERR_INVALID_ID")
+        }
+	} else {
+    	result = api_get_error_result("ERR_INVALID_TOKEN")
+    }
+    render contentType: "application/javascript;charset=utf-8", data: "${params.callback}(${result.encodeAsJSON()})"
+}
+
+
+private api_intf_dashboard_piston_set_category() {
+	def result
+    debug "Dashboard: Request received to set piston logging level"
+	if (verifySecurityToken(params.token)) {
+	    def piston = getChildApps().find{ hashId(it.id) == params.id };
+	    if (piston) {
+        	result = piston.setCategory(params.category)
+            def st = state[params.id]
+            if (st) {
+            	st.c = params.category
+                state[params.id] = st
+            }
 			result.status = "ST_SUCCESS"
         } else {
 	    	result = api_get_error_result("ERR_INVALID_ID")
@@ -1793,6 +1833,7 @@ public Map getRunTimeData(semaphore = null, fetchWrappers = false) {
         globalVars: listAvailableVariables(),
         globalStore: state.store ?: [:],
         settings: state.settings ?: [:],
+        lifx: state.lifx ?: [:],
         powerSource: state.powerSource ?: 'mains',
 		region: state.endpoint.contains('graph-eu') ? 'eu' : 'us',		
         instanceId: hashId(app.id),
@@ -1838,6 +1879,7 @@ public void updateRunTimeData(data) {
     def id = data.id
     Map piston = [
     	a: data.active,
+        c: data.category,
         t: now(), //last run
         n: data.stats.nextSchedule,
         z: data.piston.z, //description
@@ -1852,6 +1894,7 @@ public void updateRunTimeData(data) {
 	if (data.semaphoreName && (atomicState[data.semaphoreName] <= data.semaphore)) {
     	//release the semaphore
         atomicState[data.semaphoreName] = 0
+        atomicState.remove(data.semaphoreName)
     }
 	//broadcast to dashboard    
 	if (state.dashboard == 'active') {
@@ -1978,14 +2021,15 @@ def lifxHandler(response, cbkData) {
     	def data = response.data instanceof List ? response.data : new groovy.json.JsonSlurper().parseText(response.data)
     	cbkData = cbkData instanceof Map ? cbkData : (LinkedHashMap) new groovy.json.JsonSlurper().parseText(cbkData)
         if (data instanceof List) {
+        	state.lifx = state.lifx ?: [:]
         	switch (cbkData.request) {
             	case 'scenes':
-                	state.settings.lifx_scenes = data.collectEntries{[(it.uuid): it.name]}
+                	state.lifx.scenes = data.collectEntries{[(it.uuid): it.name]}
                     break
             	case 'lights':
-                	state.settings.lifx_lights = data.collectEntries{[(it.id): it.label]}
-                	state.settings.lifx_groups = data.collectEntries{[(it.group.id): it.group.name]}
-                	state.settings.lifx_locations = data.collectEntries{[(it.location.id): it.location.name]}
+                	state.lifx.lights = data.collectEntries{[(it.id): it.label]}
+                	state.lifx.groups = data.collectEntries{[(it.group.id): it.group.name]}
+                	state.lifx.locations = data.collectEntries{[(it.location.id): it.location.name]}
                     break
             }
 	    }
@@ -2411,8 +2455,8 @@ private static Map virtualCommands() {
 		executeRoutine				: [ n: "Execute routine...",		a: true,	i: "clock-o",				d: "Execute routine \"{0}\"",											p: [[n:"Routine", t:"routine"]],	],
 		toggle						: [ n: "Toggle", r: ["on", "off"], 				i: "toggle-on"																				],
 		toggleRandom				: [ n: "Random toggle", r: ["on", "off"], 		i: "toggle-on",				d: "Random toggle{0}",													p: [[n:"Probability for on", t:"level", d:" with a {v}% probability for on"]],	],
-		setSwitch					: [ n: "Set switch...", r: ["on", "off"], 			i: "toggle-on",				d: "Set switch to {0}",													p: [[n:"Switch value", t:"switch"]],																],
-		setHSLColor					: [ n: "Set color... (hsl)", 					i: "barcode",			d: "Set color to H:{0}° / S:{1}% / L%:{2}{3}",				r: ["setColor"],				p: [[n:"Hue",t:"hue"], [n:"Saturation",t:"saturation"], [n:"Level",t:"level"], [n:"Only if switch is...", t:"enum",o:["on","off"], d:" if already {v}"]],  							],
+		setSwitch					: [ n: "Set switch...", r: ["on", "off"], 			i: "toggle-on",			d: "Set switch to {0}",													p: [[n:"Switch value", t:"switch"]],																],
+		setHSLColor					: [ n: "Set color... (hsl)", 					i: "barcode",				d: "Set color to H:{0}° / S:{1}% / L%:{2}{3}",				r: ["setColor"],				p: [[n:"Hue",t:"hue"], [n:"Saturation",t:"saturation"], [n:"Level",t:"level"], [n:"Only if switch is...", t:"enum",o:["on","off"], d:" if already {v}"]],  							],
 		toggleLevel					: [ n: "Toggle level...", 						i: "toggle-off",			d: "Toggle level between 0% and {0}%",	r: ["on", "off", "setLevel"],	p: [[n:"Level", t:"level"]],																																	],
 		sendNotification			: [ n: "Send notification...",		a: true,	i: "commenting-o",			d: "Send notification \"{0}\"",											p: [[n:"Message", t:"string"]],												],
 		sendPushNotification		: [ n: "Send PUSH notification...",	a: true,	i: "commenting-o",			d: "Send PUSH notification \"{0}\"{1}",									p: [[n:"Message", t:"string"],[n:"Store in Messages", t:"boolean", d:" and store in Messages", s:1]],	],
@@ -2422,6 +2466,9 @@ private static Map virtualCommands() {
 		httpRequest					: [ n: "Make a web request",		a: true, 	i: "anchor",				d: "Make a {1} request to {0} with type {2}{3}",				        p: [[n:"URL", t:"uri"],[n:"Method", t:"enum", o:["GET","POST","PUT","DELETE","HEAD"]],[n:"Content Type", t:"enum", o:["JSON","FORM"]],[n:"Send variables", t:"variables", d:" and data {v}"]],	],
         setVariable					: [ n: "Set variable...",			a: true,	i: "superscript",			d: "Set variable {0} = {1}",											p: [[n:"Variable",t:"variable"],[n:"Value", t:"dynamic"]],	],
         setState					: [ n: "Set piston state...",		a: true,	i: "superscript",			d: "Set piston state to \"{0}\"",										p: [[n:"State",t:"string"]],	],
+        setTileColor				: [ n: "Set piston tile colors...",	a: true,	i: "superscript",			d: "Set piston tile colors to {0} over {1}{2}",							p: [[n:"Text Color",t:"color"],[n:"Background Color",t:"color"],[n:"Flash mode",t:"boolean",d:" (flashing)"]],	],
+        setTileText					: [ n: "Set piston tile text...",	a: true,	i: "superscript",			d: "Set piston tile text to \"{0}\"",									p: [[n:"Text",t:"string"]],	],
+        setTileTitle				: [ n: "Set piston tile title...",	a: true,	i: "superscript",			d: "Set piston tile title to \"{0}\"",									p: [[n:"Title",t:"string"]],	],
 		setLocationMode				: [ n: "Set location mode...",		a: true,	i: "", 						d: "Set location mode to {0}", 											p: [[n:"Mode",t:"mode"]],																														],
 		setAlarmSystemStatus		: [ n: "Set Smart Home Monitor status...",	a: true, i: "",					d: "Set Smart Home Monitor status to {0}",								p: [[n:"Status", t:"alarmSystemStatus"]],																										],
 		sendEmail					: [ n: "Send email...",				a: true,	i: "envelope", 				d: "Send email with subject \"{1}\" to {0}", 							p: [[n:"Recipient",t:"email"],[n:"Subject",t:"string"],[n:"Message body",t:"string"]],																							],

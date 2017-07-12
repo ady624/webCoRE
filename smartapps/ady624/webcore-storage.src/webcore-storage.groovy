@@ -16,7 +16,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-public static String version() { return "v0.2.0d3.20170711" }
+public static String version() { return "v0.2.0d4.20170712" }
 /******************************************************************************/
 /*** webCoRE DEFINITION														***/
 /******************************************************************************/
@@ -56,7 +56,7 @@ def pageSettings() {
             }
             section("Installing webCoRE") {
                 paragraph "If you are trying to install webCoRE, please go back one step and choose webCoRE, not webCoRE Piston. You can also visit wiki.webcore.co for more information on how to install and use webCoRE"
-                if (parent) href "", title: "More information ${parent.getWikiUrl()}", style: "external", url: parent.getWikiUrl(), image: "https://cdn.rawgit.com/ady624/webCoRE/master/resources/icons/app-CoRE.png", required: false
+                if (parent) href "", title: "More information", description: parent.getWikiUrl(), style: "external", url: parent.getWikiUrl(), image: "https://cdn.rawgit.com/ady624/webCoRE/master/resources/icons/app-CoRE.png", required: false
             }
         } else {
             section("Available devices") {

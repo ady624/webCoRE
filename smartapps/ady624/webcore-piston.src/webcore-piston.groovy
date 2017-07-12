@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.2.0d3.20170711" }
+public static String version() { return "v0.2.0d4.20170712" }
 /*
+ *	07/12/2017 >>> v0.2.0d4.20170712 - BETA M2 - Added categories support and piston tile support
  *	07/11/2017 >>> v0.2.0d3.20170711 - BETA M2 - Lots of bug fixes and improvements
  *	07/10/2017 >>> v0.2.0d2.20170710 - BETA M2 - Added long integer support to variables and fixed a bug where time comparisons would apply a previously set offset to custom times
  *	07/08/2017 >>> v0.2.0d1.20170708 - BETA M2 - Added Piston recovery procedures to the main app
@@ -267,14 +268,14 @@ preferences {
 /******************************************************************************/
 def pageMain() {
 	//webCoRE Piston main page
-	return dynamicPage(name: "pageMain", title: "", uninstall: false) {
+	return dynamicPage(name: "pageMain", title: "", uninstall: !!state.build) {
     	if (!parent || !parent.isInstalled()) {        
         	section() {
 				paragraph "Sorry, you cannot install a piston directly from the Marketplace, please use the webCoRE SmartApp instead."
             }
         	section("Installing webCoRE") {
             	paragraph "If you are trying to install webCoRE, please go back one step and choose webCoRE, not webCoRE Piston. You can also visit wiki.webcore.co for more information on how to install and use webCoRE"
-				if (parent) href "", title: "More information ${parent.getWikiUrl()}", style: "external", url: parent.getWikiUrl(), image: "https://cdn.rawgit.com/ady624/webCoRE/master/resources/icons/app-CoRE.png", required: false
+				if (parent) href "", title: "More information", description: parent.getWikiUrl(), style: "external", url: parent.getWikiUrl(), image: "https://cdn.rawgit.com/ady624/webCoRE/master/resources/icons/app-CoRE.png", required: false
             }
         } else {
             def currentState = state.currentState
@@ -386,7 +387,8 @@ def get(boolean minimal = false) {
 	    	modified: state.modified,
 	    	build: state.build,
 	    	bin: state.bin,
-	    	active: state.active
+	    	active: state.active,
+            category: state.category ?: 0
 			],
         piston: state.piston
 	] + (minimal ? [:] : [
@@ -607,6 +609,11 @@ def setLoggingLevel(level) {
     return [logging: logging]
 }
 
+def setCategory(category) {
+	atomicState.category = category
+    return [category: category]
+}
+
 def test() {
 	handleEvents([date: new Date(), device: location, name: 'test', value: now()])
     return [:]
@@ -637,6 +644,7 @@ private getRunTimeData(rtData = null, semaphore = null, fetchWrappers = false) {
 	    rtData.trace = [t: timestamp, points: [:]]
 	    rtData.id = appId
 		rtData.active = state.active;
+        rtData.category = state.category;
 	    rtData.stats = [nextScheduled: 0]
 	    //we're reading the cache from atomicState because we might have waited at a semaphore
 	    rtData.cache = atomicState.cache ?: [:]
@@ -2191,6 +2199,63 @@ private long vcmd_setState(rtData, device, params) {
     return 0
 }
 
+private long vcmd_setTileColor(rtData, device, params) {
+    def color = (params[0] == 'Random') ? colorUtil.RANDOM : colorUtil.findByName(params[0])
+    if (color) {
+		color = [
+        	hex: color.rgb,
+        	hue: Math.round(color.h / 3.6),
+        	saturation: color.s,
+        	level: color.l
+    	]
+    } else {
+    	color = hexToColor(params[0])
+        if (color) {
+            color = [
+                hex: color.hex,
+                hue: color.hue,
+                saturation: color.saturation,
+                level: color.level
+            ]
+        }
+    }
+    rtData.state.c = color?.hex;
+    color = null
+    color = (params[1] == 'Random') ? colorUtil.RANDOM : colorUtil.findByName(params[1])
+    if (color) {
+		color = [
+        	hex: color.rgb,
+        	hue: Math.round(color.h / 3.6),
+        	saturation: color.s,
+        	level: color.l
+    	]
+    } else {
+    	color = hexToColor(params[1])
+        if (color) {
+            color = [
+                hex: color.hex,
+                hue: color.hue,
+                saturation: color.saturation,
+                level: color.level
+            ]
+        }
+    }
+    rtData.state.b = color?.hex;
+    rtData.state.f = !!params[2];
+    return 0
+}
+
+private long vcmd_setTileText(rtData, device, params) {
+	def value = params[0]
+   	rtData.state.t = value
+    return 0
+}
+
+private long vcmd_setTileTitle(rtData, device, params) {
+	def value = params[0]
+   	rtData.state.i = value
+    return 0
+}
 private long vcmd_setLocationMode(rtData, device, params) {
 	def modeIdOrName = params[0]
     def mode = location.getModes()?.find{ (hashId(it.id) == modeIdOrName) || (it.name == modeIdOrName)}
@@ -2767,11 +2832,11 @@ private long vcmd_lifxScene(rtData, device, params) {
     }    
 	def sceneId = params[0]
     double duration = params.size() > 1 ? cast(rtData, params[1], 'long') / 1000 : 0
-    if (!rtData.settings?.lifx_scenes) {
+    if (!rtData.lifx?.scenes) {
     	error "Sorry, there seems to be no available LIFX scenes, please ensure the LIFX integration is working.", rtData
         return 0
     }
-    sceneId = rtData.settings.lifx_scenes.find{ (it.key == sceneId) || (it.value == sceneId) }?.key
+    sceneId = rtData.lifx.scenes.find{ (it.key == sceneId) || (it.value == sceneId) }?.key
 	if (!sceneId) {
     	error "Sorry, could not find the specified LIFX scene.", rtData
         return 0
@@ -2804,19 +2869,19 @@ private long vcmd_lifxScene(rtData, device, params) {
 private getLifxSelector(rtData, selector) {
 	def selectorId = ''
     if (selector == 'all') return 'all'
-    def obj = rtData.settings.lifx_scenes?.find{ (it.key == selector) || (it.value == selector) }?.key
+    def obj = rtData.lifx.scenes?.find{ (it.key == selector) || (it.value == selector) }?.key
     if (obj) {
     	selectorId = "scene_id:$obj"
     } else {
-        obj = rtData.settings.lifx_lights?.find{ (it.key == selector) || (it.value == selector) }?.key
+        obj = rtData.lifx.lights?.find{ (it.key == selector) || (it.value == selector) }?.key
         if (obj) {
             selectorId = "id:$obj"
         } else {
-            obj = rtData.settings.lifx_groups?.find{ (it.key == selector) || (it.value == selector) }?.key
+            obj = rtData.lifx.groups?.find{ (it.key == selector) || (it.value == selector) }?.key
             if (obj) {
                 selectorId = "group_id:$obj"
             } else {
-                obj = rtData.settings.lifx_locations?.find{ (it.key == selector) || (it.value == selector) }?.key
+                obj = rtData.lifx.locations?.find{ (it.key == selector) || (it.value == selector) }?.key
                 if (obj) {
                     selectorId = "location_id:$obj"
                 }
