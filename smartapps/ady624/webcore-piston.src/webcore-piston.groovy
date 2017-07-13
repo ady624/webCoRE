@@ -3493,11 +3493,9 @@ private evaluateOperand(rtData, node, operand, index = null, trigger = false, ne
 				case 'routine':
                 	values = [[i: "${node?.$}:v", v:[t: 'string', v: (rtData.event.name == 'routineExecuted' ? hashId(rtData.event.value) : null)]]];
                     break;
-				case 'ifttt':
-                	values = [[i: "${node?.$}:v", v:[t: 'string', v: (rtData.event.name == 'ifttt' ? rtData.event.value : null)]]];
-                    break;
                 case 'tile':
-                	values = [[i: "${node?.$}:v", v:[t: 'string', v: (rtData.event.name == 'ifttt' ? rtData.event.value : null)]]];
+				case 'ifttt':
+                	values = [[i: "${node?.$}:v", v:[t: 'string', v: (rtData.event.name == operand.v ? rtData.event.value : null)]]];
                     break;
 				case 'askAlexa':
                 	values = [[i: "${node?.$}:v", v:[t: 'string', v: (rtData.event.name == 'askAlexaMacro' ? hashId(rtData.event.value) : null)]]];
