@@ -1894,7 +1894,7 @@ public void updateRunTimeData(data) {
 	if (data.semaphoreName && (atomicState[data.semaphoreName] <= data.semaphore)) {
     	//release the semaphore
         atomicState[data.semaphoreName] = 0
-        atomicState.remove(data.semaphoreName)
+        //atomicState.remove(data.semaphoreName)
     }
 	//broadcast to dashboard    
 	if (state.dashboard == 'active') {
