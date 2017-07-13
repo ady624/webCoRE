@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.2.0d6.20170713" }
+public static String version() { return "v0.2.0d7.20170713" }
 /*
+ *	07/13/2017 >>> v0.2.0d7.20170713 - BETA M2 - Unknown feature added to tiles
  *	07/13/2017 >>> v0.2.0d6.20170713 - BETA M2 - Updated tiles to allow for multiple tiles and footers - this update breaks all previous tiles, sorry
  *	07/12/2017 >>> v0.2.0d5.20170712 - BETA M2 - Bug fixes and fixed a bug that where piston tile state would not be preserved during a piston save
  *	07/12/2017 >>> v0.2.0d4.20170712 - BETA M2 - Added categories support and piston tile support
@@ -618,6 +619,11 @@ def setCategory(category) {
 
 def test() {
 	handleEvents([date: new Date(), device: location, name: 'test', value: now()])
+    return [:]
+}
+
+def clickTile(index) {
+	handleEvents([date: new Date(), device: location, name: 'tile', value: index])
     return [:]
 }
 
@@ -3488,7 +3494,10 @@ private evaluateOperand(rtData, node, operand, index = null, trigger = false, ne
                 	values = [[i: "${node?.$}:v", v:[t: 'string', v: (rtData.event.name == 'routineExecuted' ? hashId(rtData.event.value) : null)]]];
                     break;
 				case 'ifttt':
-                	values = [[i: "${node?.$}:v", v:[t: 'string', v: (rtData.event.name == 'ifttt' ?rtData.event.value : null)]]];
+                	values = [[i: "${node?.$}:v", v:[t: 'string', v: (rtData.event.name == 'ifttt' ? rtData.event.value : null)]]];
+                    break;
+                case 'tile':
+                	values = [[i: "${node?.$}:v", v:[t: 'string', v: (rtData.event.name == 'ifttt' ? rtData.event.value : null)]]];
                     break;
 				case 'askAlexa':
                 	values = [[i: "${node?.$}:v", v:[t: 'string', v: (rtData.event.name == 'askAlexaMacro' ? hashId(rtData.event.value) : null)]]];

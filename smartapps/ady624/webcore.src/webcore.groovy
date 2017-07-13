@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.2.0d6.20170713" }
+public static String version() { return "v0.2.0d7.20170713" }
 /*
+ *	07/13/2017 >>> v0.2.0d7.20170713 - BETA M2 - Unknown feature added to tiles
  *	07/13/2017 >>> v0.2.0d6.20170713 - BETA M2 - Updated tiles to allow for multiple tiles and footers - this update breaks all previous tiles, sorry
  *	07/12/2017 >>> v0.2.0d5.20170712 - BETA M2 - Bug fixes and fixed a bug that where piston tile state would not be preserved during a piston save
  *	07/12/2017 >>> v0.2.0d4.20170712 - BETA M2 - Added categories support and piston tile support
@@ -822,6 +823,7 @@ mappings {
 	path("/intf/dashboard/piston/pause") {action: [GET: "api_intf_dashboard_piston_pause"]}
 	path("/intf/dashboard/piston/resume") {action: [GET: "api_intf_dashboard_piston_resume"]}
 	path("/intf/dashboard/piston/set.bin") {action: [GET: "api_intf_dashboard_piston_set_bin"]}
+	path("/intf/dashboard/piston/tile") {action: [GET: "api_intf_dashboard_piston_tile"]}
 	path("/intf/dashboard/piston/set.category") {action: [GET: "api_intf_dashboard_piston_set_category"]}
 	path("/intf/dashboard/piston/logging") {action: [GET: "api_intf_dashboard_piston_logging"]}
 	path("/intf/dashboard/piston/clear.logs") {action: [GET: "api_intf_dashboard_piston_clear_logs"]}
@@ -1216,6 +1218,23 @@ private api_intf_dashboard_piston_test() {
     render contentType: "application/javascript;charset=utf-8", data: "${params.callback}(${result.encodeAsJSON()})"
 }
 
+private api_intf_dashboard_piston_tile() {
+	def result
+    debug "Dashboard: Clicked a piston tile"
+	if (verifySecurityToken(params.token)) {
+	    def piston = getChildApps().find{ hashId(it.id) == params.id };
+	    if (piston) {
+        	result = piston.clickTile(params.tile)
+			result.status = "ST_SUCCESS"
+        } else {
+	    	result = api_get_error_result("ERR_INVALID_ID")
+        }
+	} else {
+    	result = api_get_error_result("ERR_INVALID_TOKEN")
+    }
+    render contentType: "application/javascript;charset=utf-8", data: "${params.callback}(${result.encodeAsJSON()})"
+}
+
 private api_intf_dashboard_piston_set_bin() {
 	def result
     debug "Dashboard: Request received to set piston bin"
@@ -1232,6 +1251,7 @@ private api_intf_dashboard_piston_set_bin() {
     }
     render contentType: "application/javascript;charset=utf-8", data: "${params.callback}(${result.encodeAsJSON()})"
 }
+
 
 
 private api_intf_dashboard_piston_set_category() {
@@ -2476,7 +2496,7 @@ private static Map virtualCommands() {
         setTileText					: [ n: "Set piston tile text...",	a: true,	i: "superscript",			d: "Set piston tile #{0} text to \"{1}\"",								p: [[n:"Tile Index",t:"enum",o:['1','2','3','4','5','6','7','8']],[n:"Text",t:"string"]],	],
         setTileFooter				: [ n: "Set piston tile footer...",	a: true,	i: "superscript",			d: "Set piston tile #{0} footer to \"{1}\"",							p: [[n:"Tile Index",t:"enum",o:['1','2','3','4','5','6','7','8']],[n:"Footer",t:"string"]],	],
         setTile						: [ n: "Set piston tile...",		a: true,	i: "superscript",			d: "Set piston tile #{0} title  to \"{1}\", text to \"{2}\", footer to \"{3}\", and colors to {4} over {5}{6}",		p: [[n:"Tile Index",t:"enum",o:['1','2','3','4','5','6','7','8']],[n:"Title",t:"string"],[n:"Text",t:"string"],[n:"Footer",t:"string"],[n:"Text Color",t:"color"],[n:"Background Color",t:"color"],[n:"Flash mode",t:"boolean",d:" (flashing)"]],	],
-        clearTile					: [ n: "Clear piston tile...",		a: true,	i: "superscript",			d: "Clear piston tile #{5}",											p: [[n:"Tile Index",t:"enum",o:['1','2','3','4','5','6','7','8']]],	],
+        clearTile					: [ n: "Clear piston tile...",		a: true,	i: "superscript",			d: "Clear piston tile #{0}",											p: [[n:"Tile Index",t:"enum",o:['1','2','3','4','5','6','7','8']]],	],
 		setLocationMode				: [ n: "Set location mode...",		a: true,	i: "", 						d: "Set location mode to {0}", 											p: [[n:"Mode",t:"mode"]],																														],
 		setAlarmSystemStatus		: [ n: "Set Smart Home Monitor status...",	a: true, i: "",					d: "Set Smart Home Monitor status to {0}",								p: [[n:"Status", t:"alarmSystemStatus"]],																										],
 		sendEmail					: [ n: "Send email...",				a: true,	i: "envelope", 				d: "Send email with subject \"{1}\" to {0}", 							p: [[n:"Recipient",t:"email"],[n:"Subject",t:"string"],[n:"Message body",t:"string"]],																							],
@@ -2764,5 +2784,6 @@ private Map virtualDevices(updateCache = false) {
         echoSistant:		[ n: 'EchoSistant',					t: 'enum',		o: getEchoSistantOptions(),					m: true	],
         ifttt:				[ n: 'IFTTT',						t: 'string',												m: true	],
         powerSource:		[ n: 'Hub power source',			t: 'enum',		o: [battery: 'battery', mains: 'mains'],					x: true	],
+        tile:				[ n: 'Piston tile',					t: 'enum',		o: ['1':'1','2':'2','3':'3','4':'4','5':'5','6':'6','7':'7','8':'8'],		m: true	],
     ]
 }
