@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.2.0d4.20170712" }
+public static String version() { return "v0.2.0d5.20170712" }
 /*
+ *	07/12/2017 >>> v0.2.0d5.20170712 - BETA M2 - Bug fixes and fixed a bug that where piston tile state would not be preserved during a piston save
  *	07/12/2017 >>> v0.2.0d4.20170712 - BETA M2 - Added categories support and piston tile support
  *	07/11/2017 >>> v0.2.0d3.20170711 - BETA M2 - Lots of bug fixes and improvements
  *	07/10/2017 >>> v0.2.0d2.20170710 - BETA M2 - Added long integer support to variables and fixed a bug where time comparisons would apply a previously set offset to custom times
@@ -467,7 +468,7 @@ def set(data, chunks) {
     if ((state.build == 1) || (!!state.active)) {
     	rtData = resume()
     }
-    return [active: state.active, build: state.build, modified: state.modified, rtData: rtData]
+    return [active: state.active, build: state.build, modified: state.modified, state: state.state, rtData: rtData]
 }
 
 
@@ -659,8 +660,9 @@ private getRunTimeData(rtData = null, semaphore = null, fetchWrappers = false) {
         rtData.locationModeId = hashId(location.getCurrentMode().id)
 	    //flow control
 	    //we're reading the old state from atomicState because we might have waited at a semaphore
-	    def oldState = atomicState.state ?: ''
-	    rtData.state = [old: oldState, new: oldState];
+        def st = atomicState.state
+        rtData.state = (st instanceof Map) ? st : [old: '', new: '']
+	    rtData.state.old = rtData.state.new;
         rtData.store = atomicState.store ?: [:]
 	    rtData.statementLevel = 0;
 	    rtData.fastForwardTo = null
@@ -952,7 +954,7 @@ private finalizeEvent(rtData, initialMsg, success = true) {
     if (stats.timing.size() > 500) stats.timing = stats.timing[stats.timing.size() - 500..stats.timing.size() - 1]
     rtData.trace.d = now() - rtData.trace.t
 
-	state.state = rtData.state.new
+	state.state = rtData.state
     state.stats = stats
     state.trace = rtData.trace
     //flush the new cache value
