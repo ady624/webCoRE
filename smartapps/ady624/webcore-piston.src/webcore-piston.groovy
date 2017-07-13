@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.2.0d5.20170712" }
+public static String version() { return "v0.2.0d6.20170713" }
 /*
+ *	07/13/2017 >>> v0.2.0d6.20170713 - BETA M2 - Updated tiles to allow for multiple tiles and footers - this update breaks all previous tiles, sorry
  *	07/12/2017 >>> v0.2.0d5.20170712 - BETA M2 - Bug fixes and fixed a bug that where piston tile state would not be preserved during a piston save
  *	07/12/2017 >>> v0.2.0d4.20170712 - BETA M2 - Added categories support and piston tile support
  *	07/11/2017 >>> v0.2.0d3.20170711 - BETA M2 - Lots of bug fixes and improvements
@@ -953,7 +954,19 @@ private finalizeEvent(rtData, initialMsg, success = true) {
     stats.timing.push(rtData.stats.timing)
     if (stats.timing.size() > 500) stats.timing = stats.timing[stats.timing.size() - 500..stats.timing.size() - 1]
     rtData.trace.d = now() - rtData.trace.t
-
+    //temporary fix for migration from single to multiple tiles
+	if (rtData.state.i || rtData.state.t) {
+    	rtData.state.i1 = rtData.state.i
+    	rtData.state.t1 = rtData.state.t
+    	rtData.state.c1 = rtData.state.c
+    	rtData.state.b1 = rtData.state.b
+    	rtData.state.f1 = rtData.state.f
+    	rtData.state.remove('i')
+    	rtData.state.remove('t')
+    	rtData.state.remove('c')
+    	rtData.state.remove('b')
+    	rtData.state.remove('f')
+    }
 	state.state = rtData.state
     state.stats = stats
     state.trace = rtData.trace
@@ -2113,25 +2126,7 @@ private long cmd_setColor(rtData, device, params) {
 }
 
 private long cmd_setAdjustedColor(rtData, device, params) {
-    def color = (params[0] == 'Random') ? colorUtil.RANDOM : colorUtil.findByName(params[0])
-    if (color) {
-		color = [
-        	hex: color.rgb,
-        	hue: Math.round(color.h / 3.6),
-        	saturation: color.s,
-        	level: color.l
-    	]
-    } else {
-    	color = hexToColor(params[0])
-        if (color) {
-            color = [
-                hex: color.hex,
-                hue: color.hue,
-                saturation: color.saturation,
-                level: color.level
-            ]
-        }
-    }
+    def color = getColor(params[0])
     if (!color) {
     	error "ERROR: Invalid color $params", rtData
         return 0
@@ -2202,62 +2197,60 @@ private long vcmd_setState(rtData, device, params) {
 }
 
 private long vcmd_setTileColor(rtData, device, params) {
-    def color = (params[0] == 'Random') ? colorUtil.RANDOM : colorUtil.findByName(params[0])
-    if (color) {
-		color = [
-        	hex: color.rgb,
-        	hue: Math.round(color.h / 3.6),
-        	saturation: color.s,
-        	level: color.l
-    	]
-    } else {
-    	color = hexToColor(params[0])
-        if (color) {
-            color = [
-                hex: color.hex,
-                hue: color.hue,
-                saturation: color.saturation,
-                level: color.level
-            ]
-        }
-    }
-    rtData.state.c = color?.hex;
-    color = null
-    color = (params[1] == 'Random') ? colorUtil.RANDOM : colorUtil.findByName(params[1])
-    if (color) {
-		color = [
-        	hex: color.rgb,
-        	hue: Math.round(color.h / 3.6),
-        	saturation: color.s,
-        	level: color.l
-    	]
-    } else {
-    	color = hexToColor(params[1])
-        if (color) {
-            color = [
-                hex: color.hex,
-                hue: color.hue,
-                saturation: color.saturation,
-                level: color.level
-            ]
-        }
-    }
-    rtData.state.b = color?.hex;
-    rtData.state.f = !!params[2];
-    return 0
-}
-
-private long vcmd_setTileText(rtData, device, params) {
-	def value = params[0]
-   	rtData.state.t = value
+	int index = cast(rtData, params[0], 'integer')
+    if ((index < 1) || (index > 8)) return 0
+    rtData.state["c$index"] = getColor(params[1])?.hex
+    rtData.state["b$index"] = getColor(params[2])?.hex
+    rtData.state["f$index"] = !!params[3]
     return 0
 }
 
 private long vcmd_setTileTitle(rtData, device, params) {
-	def value = params[0]
-   	rtData.state.i = value
+	int index = cast(rtData, params[0], 'integer')
+    if ((index < 1) || (index > 8)) return 0
+   	rtData.state["i$index"] = params[1]
     return 0
 }
+
+private long vcmd_setTileText(rtData, device, params) {
+	int index = cast(rtData, params[0], 'integer')
+    if ((index < 1) || (index > 8)) return 0
+	rtData.state["t$index"] = params[1]
+    return 0
+}
+
+private long vcmd_setTileFooter(rtData, device, params) {
+	int index = cast(rtData, params[0], 'integer')
+    if ((index < 1) || (index > 8)) return 0
+   	rtData.state["o$index"] = params[1]
+    return 0
+}
+
+private long vcmd_setTile(rtData, device, params) {
+	int index = cast(rtData, params[0], 'integer')
+    if ((index < 1) || (index > 8)) return 0;
+   	rtData.state["i$index"] = params[1]
+   	rtData.state["t$index"] = params[2]
+   	rtData.state["o$index"] = params[3]
+    rtData.state["c$index"] = getColor(params[4])?.hex
+    rtData.state["b$index"] = getColor(params[5])?.hex
+    rtData.state["f$index"] = !!params[6]
+    return 0
+}
+
+private long vcmd_clearTile(rtData, device, params) {
+	int index = cast(rtData, params[0], 'integer')
+    if ((index < 1) || (index > 8)) return 0;
+   	rtData.state["i$index"] = ''
+   	rtData.state["t$index"] = ''
+    rtData.state["c$index"] = ''
+    rtData.state["o$index"] = ''
+    rtData.state["b$index"] = ''
+    rtData.state["f$index"] = ''
+    return 0
+}
+
+
 private long vcmd_setLocationMode(rtData, device, params) {
 	def modeIdOrName = params[0]
     def mode = location.getModes()?.find{ (hashId(it.id) == modeIdOrName) || (it.name == modeIdOrName)}
