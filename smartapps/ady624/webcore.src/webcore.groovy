@@ -2308,7 +2308,7 @@ private static Map attributes() {
 		orientation					: [ n: "orientation",			t: "enum",		o: ["rear side up", "down side up", "left side up", "front side up", "up side up", "right side up"],															],
 		pH							: [ n: "pH level",				t: "decimal",	r: [0, 14],																							],
 		phraseSpoken				: [ n: "phrase",				t: "string",																										],
-		power						: [ n: "power",					t: "decimal",	r: [0, null],		u: "W",																			],
+		power						: [ n: "power",					t: "decimal",		u: "W",																			],
 		powerSource					: [ n: "power source",			t: "enum",		o: ["battery", "dc", "mains", "unknown"],															],
 		presence					: [ n: "presence",				t: "enum",		o: ["not present", "present"],																		],
 		rssi						: [ n: "signal strength",		t: "integer",	r: [0, 100],		u: "%",																			],

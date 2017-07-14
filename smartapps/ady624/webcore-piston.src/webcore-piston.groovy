@@ -837,6 +837,7 @@ private Boolean executeEvent(rtData, event) {
 	try {
     	rtData = rtData ?: getRunTimeData()
         //event processing
+
 		rtData.event = event
         rtData.previousEvent = state.lastEvent
         def index = 0
@@ -875,7 +876,7 @@ private Boolean executeEvent(rtData, event) {
         rtData.terminated = false
         if (event.name == 'time') {
         	rtData.fastForwardTo = event.schedule.i
-        }
+        }        
 		setSystemVariableValue(rtData, '$state', rtData.state.new)
         setSystemVariableValue(rtData, '$previousEventDate', rtData.previousEvent?.date ?: now())
         setSystemVariableValue(rtData, '$previousEventDelay', rtData.previousEvent?.delay ?: 0)
@@ -938,6 +939,8 @@ private Boolean executeEvent(rtData, event) {
 }
 
 private finalizeEvent(rtData, initialMsg, success = true) {
+
+
 	def startTime = now()
     processSchedules(rtData, true)
 
@@ -2898,7 +2901,6 @@ private long vcmd_lifxState(rtData, device, params) {
     	error "Sorry, you need to enable the LIFX integration in your dashboard's Settings section before trying to activate a LIFX scene.", rtData
         return 0
     }    
-    error "PARAMS ARE $params", rtData
     def selector = getLifxSelector(rtData, params[0])
 	if (!selector) {
     	error "Sorry, could not find the specified LIFX selector.", rtData
@@ -4739,7 +4741,7 @@ private Map getVariable(rtData, name) {
         	Map indirectVar = getVariable(rtData, var.index)
             //indirect variable addressing
             if (indirectVar && (indirectVar.t != 'error')) {
-            	var.index = cast(rtData, indirectVar.v, 'string', indirectVar.t)
+            	var.index = cast(rtData, indirectVar.t == 'decimal' ? cast(rtData, indirectVar.v, 'integer', indirectVar.t) : indirectVar.v, 'string', indirectVar.t)
             }
         	result.v = result.v[var.index]
         } else {
@@ -6626,7 +6628,7 @@ private cast(rtData, value, dataType, srcDataType = null) {
 		case "integer":
 			switch (srcDataType) {
             	case 'string':
-                    value = value.replaceAll(/[^\d.-]/, '')
+                    value = value.replaceAll(/[^-\d.-E]/, '')
                     if (value.isInteger())
                         return (int) value.toInteger()
                     if (value.isFloat())
@@ -6646,7 +6648,7 @@ private cast(rtData, value, dataType, srcDataType = null) {
 		case "long":
 			switch (srcDataType) {
             	case 'string':
-                    value = value.replaceAll(/[^\d.-]/, '')
+                    value = value.replaceAll(/[^-\d.-E]/, '')
                     if (value.isLong())
                         return (long) value.toLong()
                     if (value.isInteger())
@@ -6668,7 +6670,7 @@ private cast(rtData, value, dataType, srcDataType = null) {
 		case "decimal":
 			switch (srcDataType) {
             	case 'string':
-                    value = value.replaceAll(/[^\d.-E]/, '')
+                    value = value.replaceAll(/[^-\d.-E]/, '')
                     if (value.isDouble())
                         return (double) value.toDouble()
                     if (value.isFloat())
