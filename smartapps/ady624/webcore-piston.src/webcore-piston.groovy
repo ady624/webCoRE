@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.2.0d8.20170713" }
+public static String version() { return "v0.2.0d9.20170714" }
 /*
+ *	07/14/2017 >>> v0.2.0d9.20170714 - BETA M2 - Adds support for waiting on piston executions as long as the caller and callee are in the same webCoRE instance
  *	07/13/2017 >>> v0.2.0d8.20170713 - BETA M2 - Fixes for orientation triggers, variable lists referenced with $index, a weird condition where negative numbers would be inverted to absolute values, extended tiles to 16
  *	07/13/2017 >>> v0.2.0d7.20170713 - BETA M2 - Unknown feature added to tiles
  *	07/13/2017 >>> v0.2.0d6.20170713 - BETA M2 - Updated tiles to allow for multiple tiles and footers - this update breaks all previous tiles, sorry
@@ -620,6 +621,11 @@ def setCategory(category) {
 
 def test() {
 	handleEvents([date: new Date(), device: location, name: 'test', value: now()])
+    return [:]
+}
+
+def execute(data, source) {
+	handleEvents([date: new Date(), device: location, name: 'execute', value: source ?: now(), jsonData: data])
     return [:]
 }
 
@@ -2735,12 +2741,18 @@ private long vcmd_executePiston(rtData, device, params) {
 	def selfId = hashId(app.id)
 	def pistonId = params[0]
     def arguments = (params[1] instanceof List ? params[1] : params[1].toString().tokenize(',')).unique();
+    def wait = (params.size() > 2) ? cast(rtData, params[2], 'boolean') : false
     def description = "webCoRE: Piston $app.label requested execution of piston $pistonId"
     Map data = [:]
     for (argument in arguments) {
-    	data[argument] = getVariable(rtData, argument).v
+    	if (argument) data[argument] = getVariable(rtData, argument).v
     }
-    sendLocationEvent(name: pistonId, value: selfId, isStateChange: true, displayed: false, linkText: description, descriptionText: description, data: data)
+    if (wait) {
+    	wait = !!parent.executePiston(pistonId, data, selfId)
+    }
+    if (!wait) {
+    	sendLocationEvent(name: pistonId, value: selfId, isStateChange: true, displayed: false, linkText: description, descriptionText: description, data: data)
+    }
     return 0
 }
 
