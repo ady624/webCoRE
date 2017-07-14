@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.2.0d7.20170713" }
+public static String version() { return "v0.2.0d8.20170713" }
 /*
+ *	07/13/2017 >>> v0.2.0d8.20170713 - BETA M2 - Fixes for orientation triggers, variable lists referenced with $index, a weird condition where negative numbers would be inverted to absolute values, extended tiles to 16
  *	07/13/2017 >>> v0.2.0d7.20170713 - BETA M2 - Unknown feature added to tiles
  *	07/13/2017 >>> v0.2.0d6.20170713 - BETA M2 - Updated tiles to allow for multiple tiles and footers - this update breaks all previous tiles, sorry
  *	07/12/2017 >>> v0.2.0d5.20170712 - BETA M2 - Bug fixes and fixed a bug that where piston tile state would not be preserved during a piston save
@@ -2207,7 +2208,7 @@ private long vcmd_setState(rtData, device, params) {
 
 private long vcmd_setTileColor(rtData, device, params) {
 	int index = cast(rtData, params[0], 'integer')
-    if ((index < 1) || (index > 8)) return 0
+    if ((index < 1) || (index > 16)) return 0
     rtData.state["c$index"] = getColor(params[1])?.hex
     rtData.state["b$index"] = getColor(params[2])?.hex
     rtData.state["f$index"] = !!params[3]
@@ -2216,28 +2217,28 @@ private long vcmd_setTileColor(rtData, device, params) {
 
 private long vcmd_setTileTitle(rtData, device, params) {
 	int index = cast(rtData, params[0], 'integer')
-    if ((index < 1) || (index > 8)) return 0
+    if ((index < 1) || (index > 16)) return 0
    	rtData.state["i$index"] = params[1]
     return 0
 }
 
 private long vcmd_setTileText(rtData, device, params) {
 	int index = cast(rtData, params[0], 'integer')
-    if ((index < 1) || (index > 8)) return 0
+    if ((index < 1) || (index > 16)) return 0
 	rtData.state["t$index"] = params[1]
     return 0
 }
 
 private long vcmd_setTileFooter(rtData, device, params) {
 	int index = cast(rtData, params[0], 'integer')
-    if ((index < 1) || (index > 8)) return 0
+    if ((index < 1) || (index > 16)) return 0
    	rtData.state["o$index"] = params[1]
     return 0
 }
 
 private long vcmd_setTile(rtData, device, params) {
 	int index = cast(rtData, params[0], 'integer')
-    if ((index < 1) || (index > 8)) return 0;
+    if ((index < 1) || (index > 16)) return 0;
    	rtData.state["i$index"] = params[1]
    	rtData.state["t$index"] = params[2]
    	rtData.state["o$index"] = params[3]
