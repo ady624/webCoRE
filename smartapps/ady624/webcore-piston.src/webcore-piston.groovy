@@ -4550,7 +4550,7 @@ private Map getDeviceAttribute(rtData, deviceId, attributeName, subDeviceIndex =
         if (attributeName == 'hue') {
         	value = cast(rtData, cast(rtData, value, 'decimal') * 3.6, attribute.t)
         }
-		return [t: attribute.t, v: value, d: deviceId, a: attributeName, i: subDeviceIndex, x: (!!attribute.m || !!trigger) && ((device?.id != (rtData.event.device?:location).id) || (attributeName != rtData.event.name))]
+		return [t: attribute.t, v: value, d: deviceId, a: attributeName, i: subDeviceIndex, x: (!!attribute.m || !!trigger) && ((device?.id != (rtData.event.device?:location).id) || ((attributeName == 'orientation' ? 'threeAxis' : attributeName) != rtData.event.name))]
     }
     return [t: "error", v: "Device '${deviceId}' not found"]
 }
@@ -6557,6 +6557,7 @@ def String hashId(id) {
 }
 
 private getThreeAxisOrientation(value, getIndex = false) {
+	log.trace " orientation value = $value"
 	if (value instanceof Map) {
 		if ((value.x != null) && (value.y != null) && (value.z != null)) {
 			def x = Math.abs(value.x)
