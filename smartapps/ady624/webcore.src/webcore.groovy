@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.2.0d9.20170714" }
+public static String version() { return "v0.2.0da.20170716" }
 /*
+ *	07/16/2017 >>> v0.2.0da.20170716 - BETA M2 - Fixed a bug where clearing tiles higher than 8 would not work
  *	07/14/2017 >>> v0.2.0d9.20170714 - BETA M2 - Adds support for waiting on piston executions as long as the caller and callee are in the same webCoRE instance
  *	07/13/2017 >>> v0.2.0d8.20170713 - BETA M2 - Fixes for orientation triggers, variable lists referenced with $index, a weird condition where negative numbers would be inverted to absolute values, extended tiles to 16
  *	07/13/2017 >>> v0.2.0d7.20170713 - BETA M2 - Unknown feature added to tiles
@@ -1227,6 +1228,7 @@ private api_intf_dashboard_piston_tile() {
 	    def piston = getChildApps().find{ hashId(it.id) == params.id };
 	    if (piston) {
         	result = piston.clickTile(params.tile)
+            log.error result
 			result.status = "ST_SUCCESS"
         } else {
 	    	result = api_get_error_result("ERR_INVALID_ID")
