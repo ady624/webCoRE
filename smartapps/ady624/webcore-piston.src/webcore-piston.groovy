@@ -1,4 +1,4 @@
-/*
+7/*
  *  webCoRE - Community's own Rule Engine - Web Edition
  *
  *  Copyright 2016 Adrian Caramaliu <ady624("at" sign goes here)gmail.com>
@@ -6010,15 +6010,12 @@ private func_abs(rtData, params) {
 /*** Usage: hslToHex(hue, saturation, level)								***/
 /******************************************************************************/
 private func_hsltohex(rtData, params) {
-	log.error "$params"
 	if (!params || !(params instanceof List) || (params.size() != 3)) {
     	return [t: "error", v: "Invalid parameters. Expecting hsl(hue, saturation, level)"];
     }
     float hue = evaluateExpression(rtData, params[0], 'decimal').v
     float saturation = evaluateExpression(rtData, params[1], 'decimal').v
     float level = evaluateExpression(rtData, params[2], 'decimal').v
-    log.error "$hue / $saturation / $level"
-    log.error "$hue / $saturation / $level >>> ${hslToHex(hue, saturation, level)})"
     return [t: 'string', v: hslToHex(hue, saturation, level)]
 }
 
@@ -6601,7 +6598,6 @@ def String hashId(id) {
 }
 
 private getThreeAxisOrientation(value, getIndex = false) {
-	log.trace " orientation value = $value"
 	if (value instanceof Map) {
 		if ((value.x != null) && (value.y != null) && (value.z != null)) {
 			def x = Math.abs(value.x)
@@ -6942,7 +6938,6 @@ private float _hue2rgb(p, q, t){
 }
 
 private String hslToHex(hue, saturation, level) {
-try {
 	float h = hue / 360.0
 	float s = saturation / 100.0
 	float l = level / 200.0
@@ -6964,7 +6959,6 @@ try {
         b = _hue2rgb(p, q, h - 1/3);
     }
     return sprintf('#%02X%02X%02X', Math.round(r * 255), Math.round(g * 255), Math.round(b * 255));
-    } catch(all) { log.error "$all", all }
 }
 
 /******************************************************************************/
