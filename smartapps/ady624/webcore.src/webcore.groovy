@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.2.0da.20170716" }
+public static String version() { return "v0.2.0db.20170717" }
 /*
+ *	07/17/2017 >>> v0.2.0db.20170717 - BETA M2 - Added two more functions abs(number) and hslToHex(hue(0-360°), saturation(0-100%), level(0-100%)), fixed a bug with LIFX when not passing a period
  *	07/16/2017 >>> v0.2.0da.20170716 - BETA M2 - Fixed a bug where clearing tiles higher than 8 would not work
  *	07/14/2017 >>> v0.2.0d9.20170714 - BETA M2 - Adds support for waiting on piston executions as long as the caller and callee are in the same webCoRE instance
  *	07/13/2017 >>> v0.2.0d8.20170713 - BETA M2 - Fixes for orientation triggers, variable lists referenced with $index, a weird condition where negative numbers would be inverted to absolute values, extended tiles to 16
@@ -2740,6 +2741,8 @@ private static Map functions() {
         ltrim			: [ t: "string"							],
         trimright		: [ t: "string",	d: "trimRight"		],
         rtrim			: [ t: "string"							],
+        hsltohex		: [ t: "string",	d: "hslToHex"		],
+        abs				: [ t: "dynamic"						],
 	]
 }
 

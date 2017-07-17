@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.2.0da.20170716" }
+public static String version() { return "v0.2.0db.20170717" }
 /*
+ *	07/17/2017 >>> v0.2.0db.20170717 - BETA M2 - Added two more functions abs(number) and hslToHex(hue(0-360°), saturation(0-100%), level(0-100%)), fixed a bug with LIFX when not passing a period
  *	07/16/2017 >>> v0.2.0da.20170716 - BETA M2 - Fixed a bug where clearing tiles higher than 8 would not work
  *	07/14/2017 >>> v0.2.0d9.20170714 - BETA M2 - Adds support for waiting on piston executions as long as the caller and callee are in the same webCoRE instance
  *	07/13/2017 >>> v0.2.0d8.20170713 - BETA M2 - Fixes for orientation triggers, variable lists referenced with $index, a weird condition where negative numbers would be inverted to absolute values, extended tiles to 16
@@ -2997,12 +2998,12 @@ private long vcmd_lifxBreathe(rtData, device, params) {
         return 0
     }
     def color = getColor(params[1])
-    def fromColor = params[2] == null ? null : getColor(params[2])
-    double period = params[3] == null ? null : cast(rtData, params[3], 'long') / 1000
+    def fromColor = (params[2] == null) ? null : getColor(params[2])
+    def period = (params[3] == null) ? null : cast(rtData, params[3], 'long') / 1000
     def cycles = params[4]
 	def peak = params[5]
-    def powerOn = params[6] == null ? null : cast(rtData, params[6], 'boolean')
-    def persist = params[7] == null ? null : cast(rtData, params[7], 'boolean')
+    def powerOn = (params[6] == null) ? null : cast(rtData, params[6], 'boolean')
+    def persist = (params[7] == null) ? null : cast(rtData, params[7], 'boolean')
     def requestParams = [
         uri:  "https://api.lifx.com",
         path: "/v1/lights/${selector}/effects/breathe",
@@ -3039,11 +3040,11 @@ private long vcmd_lifxPulse(rtData, device, params) {
         return 0
     }
     def color = getColor(params[1])
-    def fromColor = params[2] == null ? null : getColor(params[2])
-    double period = params[3] == null ? null : cast(rtData, params[3], 'long') / 1000
+    def fromColor = (params[2] == null) ? null : getColor(params[2])
+    def period = (params[3] == null) ? null : cast(rtData, params[3], 'long') / 1000
     def cycles = params[4]
-    def powerOn = params[5] == null ? null : cast(rtData, params[5], 'boolean')
-    def persist = params[6] == null ? null : cast(rtData, params[6], 'boolean')
+    def powerOn =(params[5] == null)? null : cast(rtData, params[5], 'boolean')
+    def persist = (params[6] == null) ? null : cast(rtData, params[6], 'boolean')
     def requestParams = [
         uri:  "https://api.lifx.com",
         path: "/v1/lights/${selector}/effects/pulse",
@@ -5991,6 +5992,35 @@ private func_max(rtData, params) {
     return [t: 'dynamic', v: '']
 }
 
+/******************************************************************************/
+/*** abs calculates the absolute value of a number							***/
+/*** Usage: abs(number)														***/
+/******************************************************************************/
+private func_abs(rtData, params) {
+	if (!params || !(params instanceof List) || (params.size() != 1)) {
+    	return [t: "error", v: "Invalid parameters. Expecting abs(value)"];
+    }
+    def value = evaluateExpression(rtData, params[0], 'decimal').v
+    def dataType = (value == Math.round(value) ? 'integer' : 'decimal')
+    return [t: dataType, v: cast(rtData, Math.abs(value), dataType, 'decimal')]
+}
+
+/******************************************************************************/
+/*** hslToHex converts a hue/saturation/level trio to it hex #rrggbb representation ***/
+/*** Usage: hslToHex(hue, saturation, level)								***/
+/******************************************************************************/
+private func_hsltohex(rtData, params) {
+	log.error "$params"
+	if (!params || !(params instanceof List) || (params.size() != 3)) {
+    	return [t: "error", v: "Invalid parameters. Expecting hsl(hue, saturation, level)"];
+    }
+    float hue = evaluateExpression(rtData, params[0], 'decimal').v
+    float saturation = evaluateExpression(rtData, params[1], 'decimal').v
+    float level = evaluateExpression(rtData, params[2], 'decimal').v
+    log.error "$hue / $saturation / $level"
+    log.error "$hue / $saturation / $level >>> ${hslToHex(hue, saturation, level)})"
+    return [t: 'string', v: hslToHex(hue, saturation, level)]
+}
 
 /******************************************************************************/
 /*** count calculates the number of true/non-zero/non-empty items in a series of numeric values		***/
@@ -6901,6 +6931,41 @@ private Map hexToColor(hex){
         hex: '#' + hex
     ];
 };
+
+private float _hue2rgb(p, q, t){
+    if(t < 0) t += 1
+    if(t > 1) t -= 1
+    if(t < 1/6) return p + (q - p) * 6 * t
+    if(t < 1/2) return q
+    if(t < 2/3) return p + (q - p) * (2/3 - t) * 6
+    return p
+}
+
+private String hslToHex(hue, saturation, level) {
+try {
+	float h = hue / 360.0
+	float s = saturation / 100.0
+	float l = level / 200.0
+    if (h < 0) h = 0
+    if (h > 1) h = 1
+    if (s < 0) s = 0
+    if (s > 1) s = 1
+    if (l < 0) l = 0
+    if (l > 0.5) l = 0.5
+	float r, g, b
+    if(s == 0){
+        r = g = b = l; // achromatic
+    } else {   
+        
+        float q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+        float p = 2 * l - q;
+        r = _hue2rgb(p, q, h + 1/3);
+        g = _hue2rgb(p, q, h);
+        b = _hue2rgb(p, q, h - 1/3);
+    }
+    return sprintf('#%02X%02X%02X', Math.round(r * 255), Math.round(g * 255), Math.round(b * 255));
+    } catch(all) { log.error "$all", all }
+}
 
 /******************************************************************************/
 /*** DEBUG FUNCTIONS														***/
