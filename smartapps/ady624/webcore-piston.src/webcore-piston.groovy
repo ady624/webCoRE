@@ -1,4 +1,4 @@
-7/*
+/*
  *  webCoRE - Community's own Rule Engine - Web Edition
  *
  *  Copyright 2016 Adrian Caramaliu <ady624("at" sign goes here)gmail.com>
@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.2.0dc.20170722" }
+public static String version() { return "v0.2.0dd.20170722" }
 /*
+ *	07/22/2017 >>> v0.2.0dd.20170722 - BETA M2 - Added support for the Authentication header in HTTP(S) requests, support for image in local network requests (does not work yet)
  *	07/22/2017 >>> v0.2.0dc.20170722 - BETA M2 - Progress towards bi-directional emails and support for storing media (paid feature)
  *	07/17/2017 >>> v0.2.0db.20170717 - BETA M2 - Added two more functions abs(number) and hslToHex(hue(0-360°), saturation(0-100%), level(0-100%)), fixed a bug with LIFX when not passing a period
  *	07/16/2017 >>> v0.2.0da.20170716 - BETA M2 - Fixed a bug where clearing tiles higher than 8 would not work
@@ -3091,20 +3092,35 @@ public localHttpRequestHandler(physicalgraph.device.HubResponse hubResponse) {
             }
         }
     }
-	def data = hubResponse.body
-    def json = [:]
-    try {
-    	if (data.startsWith('{') && data.endsWith('}')) {
-				json = (LinkedHashMap) new groovy.json.JsonSlurper().parseText(data)
-			} else if (data.startsWith('[') && data.endsWith(']')) {
-				json = (List) new groovy.json.JsonSlurper().parseText(data)
-	        } else {
-	        	json = [:]
-	        }
-	} catch (all) {
-    	json = [:]
+    
+    def binary = false
+    def mediaType = hubResponse.getHeaders()['content-type']?.toLowerCase()
+    switch (mediaType) {
+        case 'image/jpeg':
+        case 'image/png':
+        case 'image/gif':
+        binary = true
     }
-	handleEvents([date: new Date(), device: location, name: 'wc_async_reply', value: 'httpRequest', jsonData: json, responseCode: responseCode])
+	def data = hubResponse.body
+   	def json = [:]
+    def setRtData = [:]
+    if (binary) {
+		setRtData.mediaType = mediaType
+		setRtData.mediaData = data?.getBytes()
+    } else {
+        try {
+            if (data.startsWith('{') && data.endsWith('}')) {
+                    json = (LinkedHashMap) new groovy.json.JsonSlurper().parseText(data)
+                } else if (data.startsWith('[') && data.endsWith(']')) {
+                    json = (List) new groovy.json.JsonSlurper().parseText(data)
+                } else {
+                    json = [:]
+                }
+        } catch (all) {
+            json = [:]
+        }
+    }
+	handleEvents([date: new Date(), device: location, name: 'wc_async_reply', value: 'httpRequest', jsonData: json, responseCode: responseCode, setRtData: setRtData])
 }
 
 private long vcmd_httpRequest(rtData, device, params) {
@@ -3112,6 +3128,7 @@ private long vcmd_httpRequest(rtData, device, params) {
 	def method = params[1]
 	def contentType = params[2]
 	def variables = params[3]
+    def auth = params.size() > 4 ? params[4] : '';
     if (!uri) return false
 	def protocol = "https"
     def userPart = ""
@@ -3157,7 +3174,7 @@ private long vcmd_httpRequest(rtData, device, params) {
 				path: (uri.indexOf("/") > 0) ? uri.substring(uri.indexOf("/")) : "",
 				headers: [
 					HOST: userPart + ip,
-				],
+				] + (auth ? [Authorization: auth] : [:]),
 				query: method == "GET" ? data : null, //thank you @destructure00
 				body: method != "GET" ? data : null //thank you @destructure00    
 			]
@@ -3172,6 +3189,7 @@ private long vcmd_httpRequest(rtData, device, params) {
 			def requestParams = [
 				uri:  "${protocol}://${userPart}${uri}",
 				query: method == "GET" ? data : null,
+                headers: (auth ? [Authorization: auth] : [:]),
 				requestContentType: (method != "GET") && (contentType == "JSON") ? "application/json" : "application/x-www-form-urlencoded",
 				body: method != "GET" ? data : null
 			]

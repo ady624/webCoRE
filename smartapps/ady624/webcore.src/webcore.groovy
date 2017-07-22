@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.2.0dc.20170722" }
+public static String version() { return "v0.2.0dd.20170722" }
 /*
+ *	07/22/2017 >>> v0.2.0dd.20170722 - BETA M2 - Added support for the Authentication header in HTTP(S) requests, support for image in local network requests (does not work yet)
  *	07/22/2017 >>> v0.2.0dc.20170722 - BETA M2 - Progress towards bi-directional emails and support for storing media (paid feature)
  *	07/17/2017 >>> v0.2.0db.20170717 - BETA M2 - Added two more functions abs(number) and hslToHex(hue(0-360°), saturation(0-100%), level(0-100%)), fixed a bug with LIFX when not passing a period
  *	07/16/2017 >>> v0.2.0da.20170716 - BETA M2 - Fixed a bug where clearing tiles higher than 8 would not work
@@ -2518,7 +2519,7 @@ private static Map virtualCommands() {
 		sendSMSNotification			: [ n: "Send SMS notification...",	a: true,	i: "commenting-o",			d: "Send SMS notification \"{0}\" to {1}{2}",							p: [[n:"Message", t:"string"],[n:"Phone number",t:"phone"],[n:"Store in Messages", t:"boolean", d:" and store in Messages", s:1]],	],
 		sendNotificationToContacts	: [ n: "Send notification to contacts...",a: true,i: "commenting-o",		d: "Send notification \"{0}\" to {1}{2}",								p: [[n:"Message", t:"string"],[n:"Contacts",t:"contacts"],[n:"Store in Messages", t:"boolean", d:" and store in Messages", s:1]],	],
 		log							: [ n: "Log to console...",			a: true,	i: "bug",					d: "Log {0} \"{1}\"{2}",												p: [[n:"Log type", t:"enum", o:["info","trace","debug","warn","error"]],[n:"Message",t:"string"],[n:"Store in Messages", t:"boolean", d:" and store in Messages", s:1]],	],
-		httpRequest					: [ n: "Make a web request",		a: true, 	i: "anchor",				d: "Make a {1} request to {0} with type {2}{3}",				        p: [[n:"URL", t:"uri"],[n:"Method", t:"enum", o:["GET","POST","PUT","DELETE","HEAD"]],[n:"Content Type", t:"enum", o:["JSON","FORM"]],[n:"Send variables", t:"variables", d:" and data {v}"]],	],
+		httpRequest					: [ n: "Make a web request",		a: true, 	i: "anchor",				d: "Make a {1} request to {0} with type {2}{3}",				        p: [[n:"URL", t:"uri"],[n:"Method", t:"enum", o:["GET","POST","PUT","DELETE","HEAD"]],[n:"Content Type", t:"enum", o:["JSON","FORM"]],[n:"Send variables", t:"variables", d:" and data {v}"],[n:"Authorization header", t:"string", d:"{v}"]],	],
         setVariable					: [ n: "Set variable...",			a: true,	i: "superscript",			d: "Set variable {0} = {1}",											p: [[n:"Variable",t:"variable"],[n:"Value", t:"dynamic"]],	],
         setState					: [ n: "Set piston state...",		a: true,	i: "superscript",			d: "Set piston state to \"{0}\"",										p: [[n:"State",t:"string"]],	],
         setTileColor				: [ n: "Set piston tile colors...",	a: true,	i: "superscript",			d: "Set piston tile #{0} colors to {1} over {2}{3}",					p: [[n:"Tile Index",t:"enum",o:tileIndexes],[n:"Text Color",t:"color"],[n:"Background Color",t:"color"],[n:"Flash mode",t:"boolean",d:" (flashing)"]],	],
