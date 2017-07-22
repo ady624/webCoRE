@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.2.0db.20170717" }
+public static String version() { return "v0.2.0dc.20170722" }
 /*
+ *	07/22/2017 >>> v0.2.0dc.20170722 - BETA M2 - Progress towards bi-directional emails and support for storing media (paid feature)
  *	07/17/2017 >>> v0.2.0db.20170717 - BETA M2 - Added two more functions abs(number) and hslToHex(hue(0-360°), saturation(0-100%), level(0-100%)), fixed a bug with LIFX when not passing a period
  *	07/16/2017 >>> v0.2.0da.20170716 - BETA M2 - Fixed a bug where clearing tiles higher than 8 would not work
  *	07/14/2017 >>> v0.2.0d9.20170714 - BETA M2 - Adds support for waiting on piston executions as long as the caller and callee are in the same webCoRE instance
@@ -838,6 +839,7 @@ mappings {
 	path("/intf/dashboard/variable/set") {action: [GET: "api_intf_variable_set"]}
 	path("/intf/dashboard/settings/set") {action: [GET: "api_intf_settings_set"]}
 	path("/ifttt/:eventName") {action: [GET: "api_ifttt", POST: "api_ifttt"]}
+	path("/email/:pistonId") {action: [POST: "api_email"]}
 	path("/execute/:pistonIdOrName") {action: [GET: "api_execute", POST: "api_execute"]}
 	path("/tap") {action: [POST: "api_tap"]}
 	path("/tap/:tapId") {action: [GET: "api_tap"]}
@@ -1432,6 +1434,15 @@ def api_ifttt() {
 }
 
 
+def api_email() {
+	def data = request?.JSON ?: [:]
+	def from = data.from ?: ''
+	def pistonId = params?.pistonId
+    if (pistonId) {
+		sendLocationEvent([name: "email", value: pistonId, isStateChange: true, linkText: "Email event", descriptionText: "${handle()} has received an email from $from", data: data])
+    }
+	render contentType: "text/plain", data: "OK"
+}
 
 private api_execute() {
 	def result = [:]
@@ -1758,7 +1769,9 @@ private registerInstance() {
     def region = endpoint.contains('graph-eu') ? 'eu' : 'us';
     def name = handle() + ' Piston'
     def pistons = getChildApps().findAll{ it.name == name }.collect{ [ a: state[hashId(it.id, false)]?.a ] }
-    def pa = pistons.findAll{ it.a }.size()
+    List lpa = pistons.findAll{ it.a }.collect{ it.id }
+    def pa = lpa.size()
+    List lpd = pistons.findAll{ !it.a }.collect{ it.id }
     def pd = pistons.size() - pa
 	asynchttp_v1.put(instanceRegistrationHandler, [
         uri: "https://api-${region}-${instanceId[32]}.webcore.co:9247",
@@ -1772,7 +1785,9 @@ private registerInstance() {
             v: version(),
             r: region,
             pa: pa,
-            pd: pd
+            lpa: lpa.join(','),
+            pd: pd,
+            lpd: lpd.join(',')
     	]
     ])
 }
@@ -2532,6 +2547,7 @@ private static Map virtualCommands() {
 		iftttMaker					: [ n: "Send an IFTTT Maker event...",	a: true,							d: "Send the {0} IFTTT Maker event{1}{2}{3}",							p: [[n:"Event", t:"text"], [n:"Value 1", t:"string", d:", passing value1 = '{v}'"], [n:"Value 2", t:"string", d:", passing value2 = '{v}'"], [n:"Value 3", t:"string", d:", passing value3 = '{v}'"]],				],
 		lifxScene					: [ n: "LIFX - Activate scene...",	  	a: true, 							d: "Activate LIFX Scene '{0}'{1}", 										p: [[n: "Scene", t:"lifxScene"],[n: "Duration", t:"duration", d:" for {v}"]],					],
 		writeToFuelStream			: [ n: "Write to fuel stream...",  		a: true, 							d: "Write data point '{2}' to fuel stream {0}{1}{3}", 					p: [[n: "Canister", t:"text", d:"{v} \\ "], [n:"Fuel stream name", t:"text"], [n: "Data", t:"dynamic"], [n: "Data source", t:"text", d:" from source '{v}'"]],					],
+		storeMedia					: [ n: "Store media...",		 		a: true, 							d: "Store media", 														p: [],					],
         saveStateLocally			: [ n: "Capture attributes to local store...", 								d: "Capture attributes {0} to local state{1}{2}",						p: [[n: "Attributes", t:"attributes"],[n:'State container name',t:'string',d:' "{v}"'],[n:'Prevent overwriting existing state', t:'enum', o:['true','false'], d:' only if store is empty']], ],
         saveStateGlobally			: [ n: "Capture attributes to global store...", 							d: "Capture attributes {0} to global state{1}{2}",						p: [[n: "Attributes", t:"attributes"],[n:'State container name',t:'string',d:' "{v}"'],[n:'Prevent overwriting existing state', t:'enum', o:['true','false'],, d:' only if store is empty']], ],
         loadStateLocally			: [ n: "Restore attributes from local store...", 							d: "Restore attributes {0} from local state{1}{2}",						p: [[n: "Attributes", t:"attributes"],[n:'State container name',t:'string',d:' "{v}"'],[n:'Empty state after restore', t:'enum', o:['true','false'], d:' and empty the store']], ],
@@ -2612,6 +2628,7 @@ private static Map comparisons() {
         triggers: [
     		gets							: [ d: "gets",																		g:"m",		p: 1						],
 			happens_daily_at				: [ d: "happens daily at",															g:"t",		p: 1						],
+    		arrives							: [ d: "arrives",																	g:"e",		p: 2						],
     		executes						: [ d: "executes",																	g:"v",		p: 1						],
     		changes 						: [ d: "changes",							dd: "change",							g:"bdis",								],
     		changes_to 						: [ d: "changes to",						dd: "change to",						g:"bdis",	p: 1,						],
@@ -2710,6 +2727,7 @@ private static Map functions() {
         startswith		: [ t: "boolean",	d: "startsWith",	],
         endswith		: [ t: "boolean",	d: "endsWith",		],
         contains		: [ t: "boolean",						],
+        matches			: [ t: "boolean",						],
         eq				: [ t: "boolean",						],
         lt				: [ t: "boolean",						],
         le				: [ t: "boolean",						],
@@ -2796,6 +2814,7 @@ private Map virtualDevices(updateCache = false) {
     	time:				[ n: 'Time',						t: 'time',		],
         askAlexa:			[ n: 'Ask Alexa',					t: 'enum',		o: getAskAlexaOptions(),					m: true	],
         echoSistant:		[ n: 'EchoSistant',					t: 'enum',		o: getEchoSistantOptions(),					m: true	],
+        email:				[ n: 'Email',						t: 'email',													m: true	],
         powerSource:		[ n: 'Hub power source',			t: 'enum',		o: [battery: 'battery', mains: 'mains'],					x: true	],
         ifttt:				[ n: 'IFTTT',						t: 'string',												m: true	],
     	mode:				[ n: 'Location mode',				t: 'enum', 		o: getLocationModeOptions(updateCache),		x: true],

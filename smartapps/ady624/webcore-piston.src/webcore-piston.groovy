@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.2.0db.20170717" }
+public static String version() { return "v0.2.0dc.20170722" }
 /*
+ *	07/22/2017 >>> v0.2.0dc.20170722 - BETA M2 - Progress towards bi-directional emails and support for storing media (paid feature)
  *	07/17/2017 >>> v0.2.0db.20170717 - BETA M2 - Added two more functions abs(number) and hslToHex(hue(0-360°), saturation(0-100%), level(0-100%)), fixed a bug with LIFX when not passing a period
  *	07/16/2017 >>> v0.2.0da.20170716 - BETA M2 - Fixed a bug where clearing tiles higher than 8 would not work
  *	07/14/2017 >>> v0.2.0d9.20170714 - BETA M2 - Adds support for waiting on piston executions as long as the caller and callee are in the same webCoRE instance
@@ -773,7 +774,7 @@ def handleEvents(event) {
     if (rtData.logging > 1) trace "Execution stage started", rtData, 1
     def success = true
     def syncTime = false    
-    if ((event.name != 'time') && (event.name != 'hubResponse')) {
+    if ((event.name != 'time') && (event.name != 'wc_async_reply')) {
     	success = executeEvent(rtData, event)
         syncTime = true
     }
@@ -785,8 +786,8 @@ def handleEvents(event) {
         //anything less than 2 seconds in the future is considered due, we'll do some pause to sync with it
         //we're doing this because many times, the scheduler will run a job early, usually 0-1.5 seconds early...
         if (!schedules || !schedules.size()) break        
-        if (event.name == 'hubResponse') {
-        	event.schedule = schedules.sort{ it.t }.find{ it.d == 'httpRequest' }            
+        if (event.name == 'wc_async_reply') {
+        	event.schedule = schedules.sort{ it.t }.find{ it.d == event.value }
         } else {
         	event = [date: event.date, device: location, name: 'time', value: now(), schedule: schedules.sort{ it.t }.find{ it.t < now() + 2000 }]
        }
@@ -794,15 +795,23 @@ def handleEvents(event) {
         long threshold = now() > event.schedule.t ? now() : event.schedule.t
         //schedules.removeAll{ (it.t <= threshold) && (it.s == event.schedule.s) && (it.i == event.schedule.i) }
         schedules.remove(event.schedule)
-        if (event.name == 'hubResponse') {
+        if (event.name == 'wc_async_reply') {
         	if (event.schedule.stack) event.schedule.stack.response = event.jsonData
             event.name = 'time'
             event.value = now()
             int responseCode = cast(rtData, event.responseCode, 'integer')
+            def contentType = cast(rtData, event.contentType, 'string')
+            setSystemVariableValue(rtData, '$httpContentType', contentType)
             setSystemVariableValue(rtData, '$httpStatusCode', responseCode)
             setSystemVariableValue(rtData, '$httpStatusOk', (responseCode >= 200) && (responseCode <= 299))
+            if (event.setRtData) {
+            	for(item in event.setRtData) {
+                	rtData[item.key] = item.value
+                }
+            }
         } else {
         	if (event.schedule.d == 'httpRequest') {
+            	setSystemVariableValue(rtData, '$httpContentType', '')
             	setSystemVariableValue(rtData, '$httpStatusCode', 408)
             	setSystemVariableValue(rtData, '$httpStatusOk', false)
             }
@@ -990,6 +999,8 @@ private finalizeEvent(rtData, initialMsg, success = true) {
     state.trace = rtData.trace
     //flush the new cache value
     for(item in rtData.newCache) rtData.cache[item.key] = item.value
+    //remove the media as it may be large
+    rtData.media = null
 	parent.updateRunTimeData(rtData)
     //clear the global vars - we already set them
     rtData.gvCache = null
@@ -1915,7 +1926,7 @@ private Long checkTimeRestrictions(Map rtData, Map operand, long time, int level
     List omy = (level <= 7) && (operand.omy instanceof List) && operand.omy.size() ? operand.omy : null;
 
 	if (!om && !oh && !odw && !odm && !owm && !omy) return 0
-	def date = new Date(time)   
+	def date = new Date(time) 
     long result = -1
     //month restrictions
     if (omy && (omy.indexOf(date.month + 1) < 0)) {
@@ -3093,7 +3104,7 @@ public localHttpRequestHandler(physicalgraph.device.HubResponse hubResponse) {
 	} catch (all) {
     	json = [:]
     }
-	handleEvents([date: new Date(), device: location, name: 'hubResponse', value: hubResponse.requestId, jsonData: json, responseCode: responseCode])
+	handleEvents([date: new Date(), device: location, name: 'wc_async_reply', value: 'httpRequest', jsonData: json, responseCode: responseCode])
 }
 
 private long vcmd_httpRequest(rtData, device, params) {
@@ -3184,15 +3195,34 @@ private long vcmd_httpRequest(rtData, device, params) {
 			}
 			if (func) {
 				"$func"(requestParams) { response ->
+					setSystemVariableValue(rtData, "\$httpContentType", response.contentType)
 					setSystemVariableValue(rtData, "\$httpStatusCode", response.status)
 					setSystemVariableValue(rtData, "\$httpStatusOk", (response.status >= 200) && (response.status <= 299))
-					if ((response.status == 200) && response.data) {
+                    def binary = false
+                    def mediaType = response.contentType.toLowerCase()
+                    switch (mediaType) {
+                    	case 'image/jpeg':
+                    	case 'image/png':
+                    	case 'image/gif':
+                        	binary = true
+                    }
+					if ((response.status == 200) && response.data && !binary) {
 						try {
 							rtData.response = response.data instanceof Map ? response.data : (LinkedHashMap) new groovy.json.JsonSlurper().parseText(response.data)
 						} catch (all) {
                         	rtData.response = response.data
 						}
-					}
+					} else {
+                    	rtData.response = null
+                        if (response.data && (response.data instanceof java.io.ByteArrayInputStream)) {
+	                        rtData.mediaType = mediaType
+    	                    rtData.mediaData = response.data.getBytes()
+                        } else {
+	                        rtData.mediaType = null
+    	                    rtData.mediaData = null
+                        }
+                        rtData.mediaUrl = null;
+                    }
 				}
 			}
 		} catch (all) {
@@ -3225,6 +3255,43 @@ private long vcmd_writeToFuelStream(rtData, device, params) {
     ]
     asynchttp_v1.put(null, requestParams)
     return 0
+}
+
+private long vcmd_storeMedia(rtData, device, params) {
+    if (!rtData.mediaData || !rtData.mediaType || !(rtData.mediaData) || (rtData.mediaData.size() <= 0)) {
+    	error "No media is available to store, operation aborted.", rtData
+        return 0
+    }
+    String data = new String(rtData.mediaData, 'ISO_8859_1')
+	def requestParams = [
+        uri:  "https://api-${rtData.region}-${rtData.instanceId[32]}.webcore.co:9247",
+        path: "/media/store",
+        headers: [
+            'ST' : rtData.instanceId,
+            'media-type' : rtData.mediaType
+        ],
+        body: data,
+        requestContentType: rtData.mediaType
+    ]
+    asynchttp_v1.put(asyncHttpRequestHandler, requestParams, [command: 'storeMedia'])
+    return 20000
+}
+
+public asyncHttpRequestHandler(response, callbackData) {
+	def mediaId
+    def mediaUrl
+    if (response.status == 200) {
+	    def data = response.getJson()
+        if ((data.result == 'OK') && (data.url)) {
+            mediaId = data.id
+            mediaUrl = data.url
+        } else {
+            if (data.message) {
+                error "Error storing media item: $response.data.message"
+            }
+        }
+    }
+	handleEvents([date: new Date(), device: location, name: 'wc_async_reply', value: callbackData?.command, responseCode: response.status, setRtData: [mediaId: mediaId, mediaUrl: mediaUrl]])
 }
 
 
@@ -3514,6 +3581,9 @@ private evaluateOperand(rtData, node, operand, index = null, trigger = false, ne
 				case 'ifttt':
                 	values = [[i: "${node?.$}:v", v:[t: 'string', v: (rtData.event.name == operand.v ? rtData.event.value : null)]]];
                     break;
+				case 'email':
+                	values = [[i: "${node?.$}:v", v:[t: 'email', v: (rtData.event.name == operand.v ? rtData.event.value : null)]]];
+                    break;
 				case 'askAlexa':
                 	values = [[i: "${node?.$}:v", v:[t: 'string', v: (rtData.event.name == 'askAlexaMacro' ? hashId(rtData.event.value) : null)]]];
                     break;
@@ -3790,7 +3860,9 @@ private Boolean evaluateComparison(rtData, comparison, lo, ro = null, ro2 = null
                     	case 'time':
                         case 'date':
                         case 'datetime':
-                        	if (checkTimeRestrictions(rtData, lo.operand, now(), 5, 1)) res = false;
+							boolean pass = checkTimeRestrictions(rtData, lo.operand, now(), 5, 1) == 0
+                            if (rtData.logging > 2) debug "Time restriction check ${pass ? 'passed' : 'failed'}", rtData
+                        	if (!pass) res = false;                            
                     }
                 }
             }
@@ -3913,6 +3985,14 @@ private boolean valueChanged(rtData, comparisonValue, timeValue) {
     return false
 }
 
+private boolean match(string, pattern) {
+    if ((pattern.size() > 2) && pattern.startsWith('/') && pattern.endsWith('/')) {
+        pattern = ~pattern.substring(1, patern.size() - 1)
+        return !!(string =~ pattern)
+    }
+    return string.contains(pattern)
+}
+
 //comparison low level functions
 private boolean comp_is								(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return (evaluateExpression(rtData, lv.v, 'string').v == evaluateExpression(rtData, rv.v, 'string').v) || (lv.v.n && (cast(rtData, lv.v.n, 'string') == cast(rtData, rv.v.v, 'string'))) }
 private boolean comp_is_not							(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return !comp_is(rtData, lv, rv, rv2, tv, tv2) }
@@ -3962,6 +4042,7 @@ private boolean comp_is_not_between					(rtData, lv, rv = null, rv2 = null, tv =
 /*triggers*/
 private boolean comp_gets							(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return (cast(rtData, lv.v.v, 'string') == cast(rtData, rv.v.v, 'string')) && matchDeviceSubIndex(lv.v.i, rtData.currentEvent.index)}
 private boolean comp_executes						(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return comp_is(rtData, lv, rv, rv2, tv, tv2) }
+private boolean comp_arrives						(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return (rtData.event.name == 'email') && match(rtData.event?.jsonData?.from ?: '', evaluateExpression(rtData, rv.v, 'string').v) && match(rtData.event?.jsonData?.message ?: '', evaluateExpression(rtData, rv2.v, 'string').v) }
 private boolean comp_happens_daily_at				(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return rtData.wakingUp }
 
 private boolean comp_changes						(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return valueCacheChanged(rtData, lv) && matchDeviceInteraction(lv.p, rtData.currentEvent.physical); }
@@ -4234,6 +4315,10 @@ private void subscribeAll(rtData) {
     	                        	attribute = "routineExecuted.${routine.id}"
                                 }
                             }
+                            break
+                        case 'email':
+                            subscriptionId = "$deviceId${operand.v}${hashId(app.id)}"
+                            attribute = "email.${hashId(app.id)}"
                             break
                         case 'ifttt':
                         case 'askAlexa':
@@ -4829,7 +4914,13 @@ private Map setVariable(rtData, name, value) {
 
 def Map proxyEvaluateExpression(rtData, expression, dataType = null) {
 	resetRandomValues()
-	return evaluateExpression(getRunTimeData(rtData), expression, dataType)
+    rtData = getRunTimeData(rtData)
+	def result = evaluateExpression(rtData, expression, dataType)
+    if ((result.t == 'device') && (result.a)) {
+    	def attr  = rtData.attributes[result.a]
+    	result = evaluateExpression(rtData, result, attr && attr.t ? attr.t : 'string')
+    }
+    return result
 }
 private Map simplifyExpression(expression) {
 	while ((expression.t == 'expression') && expression.i && (expression.i.size() == 1)) expression = expression.i[0]
@@ -6195,6 +6286,24 @@ private func_contains(rtData, params) {
     return [t: "boolean", v: string.contains(substring)]
 }
 
+
+/******************************************************************************/
+/*** matches returns true if a string matches a pattern						***/
+/*** Usage: matches(string, pattern)										***/
+/******************************************************************************/
+private func_matches(rtData, params) {
+	if (!params || !(params instanceof List) || (params.size() != 2)) {
+    	return [t: "error", v: "Invalid parameters. Expecting matches(string, pattern)"];
+    }
+    def string = evaluateExpression(rtData, params[0], 'string').v
+    def pattern = evaluateExpression(rtData, params[1], 'string').v
+    if ((pattern.size() > 2) && pattern.startsWith('/') && pattern.endsWith('/')) {
+        pattern = ~pattern.substring(1, pattern.size() - 1)
+        return [t: "boolean", v: !!(string =~ pattern)]
+    }
+    return [t: "boolean", v: string.contains(pattern)]
+}
+
 /******************************************************************************/
 /*** eq returns true if two values are equal								***/
 /*** Usage: eq(value1, value2)												***/
@@ -7016,6 +7125,9 @@ private log(message, rtData = null, shift = null, err = null, cmd = null, force 
 
 	if (rtData && (rtData instanceof Map) && (rtData.logs instanceof List)) {
     	message = "$message".toString().replaceAll(/(\r\n|\r|\n|\\r\\n|\\r|\\n)+/, "\r");
+        if (message.size() > 1024) {
+        	message = message[0..1023] + '...[TRUNCATED]'
+        }
     	List msgs = !err ? message.tokenize("\r") : [message]
         for(msg in msgs) {
     		rtData.logs.push([o: now() - rtData.timestamp, p: prefix2, m: msg + (!!err ? " $err" : ""), c: cmd])
@@ -7225,8 +7337,13 @@ private static Map getSystemVariables() {
 		"\$randomLevel": [t: "integer", d: true],
 		"\$randomSaturation": [t: "integer", d: true],
 		"\$randomHue": [t: "integer", d: true],
+		"\$httpContentType": [t: "string", v: null],
 		"\$httpStatusCode": [t: "integer", v: null],
 		"\$httpStatusOk": [t: "boolean", v: null],
+		"\$mediaId": [t: "string", d: true],       
+		"\$mediaUrl": [t: "string", d: true],       
+		"\$mediaType": [t: "string", d: true],       
+		"\$mediaSize": [t: "integer", d: true],       
 		"\$iftttStatusCode": [t: "integer", v: null], 
 		"\$iftttStatusOk": [t: "boolean", v: null],
 		"\$locationMode": [t: "string", d: true],
@@ -7243,6 +7360,10 @@ private getSystemVariableValue(rtData, name) {
         case '$weather': return "${rtData.weather}".toString()
         case '$incidents': return "${rtData.incidents}".toString()
         case '$shmTripped': initIncidents(rtData); return !!((rtData.incidents instanceof List) && (rtData.incidents.size()))
+        case '$mediaId': return rtData.mediaId
+        case '$mediaUrl': return rtData.mediaUrl
+        case '$mediaType': return rtData.mediaType
+        case '$mediaSize': return (rtData.mediaData ? rtData.mediaData.size() : 0)
 		case "\$name": return app.label
 		case "\$version": return version()
 		case "\$now": return (long) now()
