@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.2.0de.20170724" }
+public static String version() { return "v0.2.0df.20170725" }
 /*
+ *	07/25/2017 >>> v0.2.0df.20170725 - BETA M2 - Minor bug fixes and improvements - decimal display is now using a dynamic decimal place count
  *	07/24/2017 >>> v0.2.0de.20170724 - BETA M2 - Minor fixes regarding lists and is_equal_to can now compare strings as well as numbers
  *	07/22/2017 >>> v0.2.0dd.20170722 - BETA M2 - Added support for the Authentication header in HTTP(S) requests, support for image in local network requests (does not work yet)
  *	07/22/2017 >>> v0.2.0dc.20170722 - BETA M2 - Progress towards bi-directional emails and support for storing media (paid feature)
@@ -4680,7 +4681,7 @@ private Map getDeviceAttribute(rtData, deviceId, attributeName, subDeviceIndex =
 private Map getJsonData(rtData, data, name) {
 	if (data != null) {
         try {
-            List parts = name.replace(/][/, '].[').tokenize('.');
+            List parts = name.replace('][', '].[').tokenize('.');
             def args = (data instanceof Map ? [:] + data : (data instanceof List ? [] + data : new groovy.json.JsonSlurper().parseText(data)))
             for(part in parts) {
                 if ((args instanceof String) || (args instanceof GString)) {
@@ -5891,13 +5892,22 @@ private func_replace(rtData, params) {
 
 /******************************************************************************/
 /*** indexOf finds the first occurrence of a substring in a string			***/
-/*** Usage: indexOf(stringOrList, substringOrItem)							***/
+/*** Usage: indexOf(stringOrDeviceOrList, substringOrItem)							***/
 /******************************************************************************/
 private func_indexof(rtData, params) {
-	if (!params || !(params instanceof List) || (params.size() != 2)) {
-    	return [t: "error", v: "Invalid parameters. Expecting indexOf(stringOrList, substringOrItem)"];
+	if (!params || !(params instanceof List) || (params.size() < 2) || ((params[0].t != 'device') && (params.size() != 2))) {
+    	return [t: "error", v: "Invalid parameters. Expecting indexOf(stringOrDeviceOrList, substringOrItem)"];
     }
-    if (params[0].v instanceof Map) {
+    if ((params[0].t == 'device')) {
+        def item = evaluateExpression(rtData, params[params.size() - 1], 'string').v
+        for (int idx = 0; idx < params.size() - 1; idx++) {
+        	def it = evaluateExpression(rtData, params[idx], 'string')
+        	if (it.v == item) {
+            	return [t: "integer", v: idx]
+            }
+        }
+        return [t: "integer", v: -1]
+    } else if (params[0].v instanceof Map) {
         def item = evaluateExpression(rtData, params[1], params[0].t).v
         def key = params[0].v.find{ it.value == item }?.key
         return [t: "string", v: key]
@@ -5913,12 +5923,27 @@ private func_indexof(rtData, params) {
 /*** Usage: lastIndexOf(string, substring)									***/
 /******************************************************************************/
 private func_lastindexof(rtData, params) {
-	if (!params || !(params instanceof List) || (params.size() != 2)) {
+	if (!params || !(params instanceof List) || (params.size() < 2) || ((params[0].t != 'device') && (params.size() != 2))) {
     	return [t: "error", v: "Invalid parameters. Expecting lastIndexOf(string, substring)"];
     }
-    def value = evaluateExpression(rtData, params[0], 'string').v
-    def substring = evaluateExpression(rtData, params[1], 'string').v
-    return [t: "integer", v: value.lastIndexOf(substring)]
+    if ((params[0].t == 'device')) {
+        def item = evaluateExpression(rtData, params[params.size() - 1], 'string').v
+        for (int idx = params.size() - 2; idx >= 0; idx--) {
+        	def it = evaluateExpression(rtData, params[idx], 'string')
+        	if (it.v == item) {
+            	return [t: "integer", v: idx]
+            }
+        }
+        return [t: "integer", v: -1]
+    } else if (params[0].v instanceof Map) {
+        def item = evaluateExpression(rtData, params[1], params[0].t).v
+        def key = params[0].v.find{ it.value == item }?.key
+        return [t: "string", v: key]
+    } else {    
+    	def value = evaluateExpression(rtData, params[0], 'string').v
+    	def substring = evaluateExpression(rtData, params[1], 'string').v
+    	return [t: "integer", v: value.lastIndexOf(substring)]
+    }
 }
 
 
@@ -6307,12 +6332,23 @@ private func_endswith(rtData, params) {
 /*** Usage: contains(string, substring)										***/
 /******************************************************************************/
 private func_contains(rtData, params) {
-	if (!params || !(params instanceof List) || (params.size() != 2)) {
+	if (!params || !(params instanceof List) || (params.size() < 2) || ((params[0].t != 'device') && (params.size() != 2))) {
     	return [t: "error", v: "Invalid parameters. Expecting contains(string, substring)"];
     }
-    def string = evaluateExpression(rtData, params[0], 'string').v
-    def substring = evaluateExpression(rtData, params[1], 'string').v
-    return [t: "boolean", v: string.contains(substring)]
+	if ((params[0].t == 'device')) {
+        def item = evaluateExpression(rtData, params[params.size() - 1], 'string').v
+        for (int idx = 0; idx < params.size() - 1; idx++) {
+        	def it = evaluateExpression(rtData, params[idx], 'string')
+        	if (it.v == item) {
+            	return [t: "boolean", v: true]
+            }
+        }
+        return [t: "boolean", v: false]
+    } else {    
+    	def string = evaluateExpression(rtData, params[0], 'string').v
+    	def substring = evaluateExpression(rtData, params[1], 'string').v
+    	return [t: "boolean", v: string.contains(substring)]
+	}
 }
 
 
@@ -6801,8 +6837,8 @@ private cast(rtData, value, dataType, srcDataType = null) {
         	switch (srcDataType) {
             	case 'boolean': return value ? "true" : "false";
             	case 'decimal':
-                	if (value instanceof Double) return sprintf('%f', value)
-                    return value.toString()
+                	//if (value instanceof Double) return sprintf('%f', value)
+                    return value.toString().replaceFirst(/\.?(0+)$/, '')
             	case 'integer':
             	case 'long': break; if (value > 9999999999) { return formatLocalTime(value) }; break;
                 case 'time': return formatLocalTime(value, 'h:mm:ss a z');
