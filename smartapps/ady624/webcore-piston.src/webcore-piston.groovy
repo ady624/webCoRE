@@ -3861,10 +3861,10 @@ private Boolean evaluateComparison(rtData, comparison, lo, ro = null, ro2 = null
                                 rres = (ro2.operand.g == 'any' ? false : true)
                                 //if multiple right2 values, go through each
                                 for (r2value in ro2.values) {
-				                    if (rvalue2 && (rvalue2.v.t == 'device')) rvalue2.v = evaluateExpression(rtData, rvalue2.v, 'dynamic')
+				                    if (r2value && (r2value.v.t == 'device')) r2value.v = evaluateExpression(rtData, r2value.v, 'dynamic')
                                 	def msg = timer ""
                                     def r2res = "$fn"(rtData, value, rvalue, r2value, tvalue, tvalue2)
-                                    msg.m = "Comparison (${value?.v?.t}) ${value?.v?.v} $comparison  (${rvalue?.v?.t}) ${rvalue?.v?.v} ..  (${rvalue2?.v?.t}) ${r2value?.v?.v} = $r2res"
+                                    msg.m = "Comparison (${value?.v?.t}) ${value?.v?.v} $comparison  (${rvalue?.v?.t}) ${rvalue?.v?.v} .. (${r2value?.v?.t}) ${r2value?.v?.v} = $r2res"
                                     if (rtData.logging > 2) debug msg, rtData
                                     rres = (ro2.operand.g == 'any' ? rres || r2res : rres && r2res)
                                     if (((ro2.operand.g == 'any') && rres) || ((ro2.operand.g != 'any') && !rres)) break
