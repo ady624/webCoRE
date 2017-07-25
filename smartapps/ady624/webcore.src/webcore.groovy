@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.2.0dd.20170722" }
+public static String version() { return "v0.2.0de.20170724" }
 /*
+ *	07/24/2017 >>> v0.2.0de.20170724 - BETA M2 - Minor fixes regarding lists and is_equal_to can now compare strings as well as numbers
  *	07/22/2017 >>> v0.2.0dd.20170722 - BETA M2 - Added support for the Authentication header in HTTP(S) requests, support for image in local network requests (does not work yet)
  *	07/22/2017 >>> v0.2.0dc.20170722 - BETA M2 - Progress towards bi-directional emails and support for storing media (paid feature)
  *	07/17/2017 >>> v0.2.0db.20170717 - BETA M2 - Added two more functions abs(number) and hslToHex(hue(0-360°), saturation(0-100%), level(0-100%)), fixed a bug with LIFX when not passing a period

@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.2.0dd.20170722" }
+public static String version() { return "v0.2.0de.20170724" }
 /*
+ *	07/24/2017 >>> v0.2.0de.20170724 - BETA M2 - Minor fixes regarding lists and is_equal_to can now compare strings as well as numbers
  *	07/22/2017 >>> v0.2.0dd.20170722 - BETA M2 - Added support for the Authentication header in HTTP(S) requests, support for image in local network requests (does not work yet)
  *	07/22/2017 >>> v0.2.0dc.20170722 - BETA M2 - Progress towards bi-directional emails and support for storing media (paid feature)
  *	07/17/2017 >>> v0.2.0db.20170717 - BETA M2 - Added two more functions abs(number) and hslToHex(hue(0-360°), saturation(0-100%), level(0-100%)), fixed a bug with LIFX when not passing a period
@@ -3838,28 +3839,31 @@ private Boolean evaluateComparison(rtData, comparison, lo, ro = null, ro2 = null
                 try {
                 	//physical support
                 	//value.p = lo.operand.p
+                    if (value && (value.v.t == 'device')) value.v = evaluateExpression(rtData, value.v, 'dynamic')
                     if (!ro) {
                     	def msg = timer ""
                         res = "$fn"(rtData, value, null, null, tvalue, tvalue2)
-                    	msg.m = "Comparison ${value?.v?.v} $comparison = $res"
+                    	msg.m = "Comparison  (${value?.v?.t}) ${value?.v?.v} $comparison = $res"
                         if (rtData.logging > 2) debug msg, rtData
                     } else {
                         def rres
                         res = (ro.operand.g == 'any' ? false : true)
                         //if multiple right values, go through each
                         for (rvalue in ro.values) {
+		                    if (rvalue && (rvalue.v.t == 'device')) rvalue.v = evaluateExpression(rtData, rvalue.v, 'dynamic')
                             if (!ro2) {
                                 def msg = timer ""
                                 rres = "$fn"(rtData, value, rvalue, null, tvalue, tvalue2)
-                                msg.m = "Comparison ${value?.v?.v} $comparison ${rvalue?.v?.v} = $rres"
+                                msg.m = "Comparison  (${value?.v?.t}) ${value?.v?.v} $comparison  (${rvalue?.v?.t}) ${rvalue?.v?.v} = $rres"
                                 if (rtData.logging > 2) debug msg, rtData                                
                             } else {
                                 rres = (ro2.operand.g == 'any' ? false : true)
                                 //if multiple right2 values, go through each
                                 for (r2value in ro2.values) {
+				                    if (rvalue2 && (rvalue2.v.t == 'device')) rvalue2.v = evaluateExpression(rtData, rvalue2.v, 'dynamic')
                                 	def msg = timer ""
                                     def r2res = "$fn"(rtData, value, rvalue, r2value, tvalue, tvalue2)
-                                    msg.m = "Comparison ${value?.v?.v} $comparison ${rvalue?.v?.v} .. ${r2value?.v?.v} = $r2res"
+                                    msg.m = "Comparison (${value?.v?.t}) ${value?.v?.v} $comparison  (${rvalue?.v?.t}) ${rvalue?.v?.v} ..  (${rvalue2?.v?.t}) ${r2value?.v?.v} = $r2res"
                                     if (rtData.logging > 2) debug msg, rtData
                                     rres = (ro2.operand.g == 'any' ? rres || r2res : rres && r2res)
                                     if (((ro2.operand.g == 'any') && rres) || ((ro2.operand.g != 'any') && !rres)) break
@@ -4014,9 +4018,9 @@ private boolean match(string, pattern) {
 //comparison low level functions
 private boolean comp_is								(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return (evaluateExpression(rtData, lv.v, 'string').v == evaluateExpression(rtData, rv.v, 'string').v) || (lv.v.n && (cast(rtData, lv.v.n, 'string') == cast(rtData, rv.v.v, 'string'))) }
 private boolean comp_is_not							(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return !comp_is(rtData, lv, rv, rv2, tv, tv2) }
-private boolean comp_is_equal_to					(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return evaluateExpression(rtData, lv.v, 'decimal').v == evaluateExpression(rtData, rv.v, 'decimal').v }
-private boolean comp_is_not_equal_to				(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return evaluateExpression(rtData, lv.v, 'decimal').v != evaluateExpression(rtData, rv.v, 'decimal').v }
-private boolean comp_is_different_than				(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return evaluateExpression(rtData, lv.v, 'decimal').v != evaluateExpression(rtData, rv.v, 'decimal').v }
+private boolean comp_is_equal_to					(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { def dt = ((lv?.v?.t == 'decimal') || (rv?.v?.t == 'decimal') ? 'decimal' : ((lv?.v?.t == 'integer') || (rv?.v?.t == 'integer') ? 'integer' : 'dynamic')); return evaluateExpression(rtData, lv.v, dt).v == evaluateExpression(rtData, rv.v, dt).v }
+private boolean comp_is_not_equal_to				(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { def dt = ((lv?.v?.t == 'decimal') || (rv?.v?.t == 'decimal') ? 'decimal' : ((lv?.v?.t == 'integer') || (rv?.v?.t == 'integer') ? 'integer' : 'dynamic')); return evaluateExpression(rtData, lv.v, dt).v != evaluateExpression(rtData, rv.v, dt).v }
+private boolean comp_is_different_than				(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return comp_is_not_equal_to(rtData, lv, rv, rv2, tv, tv2) }
 private boolean comp_is_less_than					(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return evaluateExpression(rtData, lv.v, 'decimal').v < evaluateExpression(rtData, rv.v, 'decimal').v }
 private boolean comp_is_less_than_or_equal_to		(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return evaluateExpression(rtData, lv.v, 'decimal').v <= evaluateExpression(rtData, rv.v, 'decimal').v }
 private boolean comp_is_greater_than				(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return evaluateExpression(rtData, lv.v, 'decimal').v > evaluateExpression(rtData, rv.v, 'decimal').v }
@@ -4862,20 +4866,21 @@ private Map getVariable(rtData, name) {
             	var.index = cast(rtData, indirectVar.t == 'decimal' ? cast(rtData, indirectVar.v, 'integer', indirectVar.t) : indirectVar.v, 'string', indirectVar.t)
             }
         	result.v = result.v[var.index]
-        } else {
-        	result.v = "$result.v"
+//        } else {
+        	//result.v = "$result.v"
         }
-    }
-    /*if (result && (result.t == 'device')) {
-	   	def deviceIds = []
-        def devices = []
-        for(deviceId in ((result.v instanceof List) ? result.v : [result.v])) {
-            deviceIds.push(deviceId)
+    } else {
+        /*if (result && (result.t == 'device')) {
+            def deviceIds = []
+            def devices = []
+            for(deviceId in ((result.v instanceof List) ? result.v : [result.v])) {
+                deviceIds.push(deviceId)
+            }
+            result = [t: result.t, v: deviceIds]
+        } else*/ if (result.v instanceof Map) {
+            //we're dealing with an operand, let's parse it
+            result = evaluateExpression(rtData, evaluateOperand(rtData, null, result.v), result.t)
         }
-	    result = [t: result.t, v: deviceIds]
-    } else*/ if (result.v instanceof Map) {
-    	//we're dealing with an operand, let's parse it
-        result = evaluateExpression(rtData, evaluateOperand(rtData, null, result.v), result.t)
     }
     return [t: result.t, v: result.v]
 }
@@ -5886,15 +5891,21 @@ private func_replace(rtData, params) {
 
 /******************************************************************************/
 /*** indexOf finds the first occurrence of a substring in a string			***/
-/*** Usage: indexOf(string, substring)										***/
+/*** Usage: indexOf(stringOrList, substringOrItem)							***/
 /******************************************************************************/
 private func_indexof(rtData, params) {
 	if (!params || !(params instanceof List) || (params.size() != 2)) {
-    	return [t: "error", v: "Invalid parameters. Expecting indexOf(string, substring)"];
+    	return [t: "error", v: "Invalid parameters. Expecting indexOf(stringOrList, substringOrItem)"];
     }
-    def value = evaluateExpression(rtData, params[0], 'string').v
-    def substring = evaluateExpression(rtData, params[1], 'string').v
-    return [t: "integer", v: value.indexOf(substring)]
+    if (params[0].v instanceof Map) {
+        def item = evaluateExpression(rtData, params[1], params[0].t).v
+        def key = params[0].v.find{ it.value == item }?.key
+        return [t: "string", v: key]
+    } else {
+    	def value = evaluateExpression(rtData, params[0], 'string').v
+    	def substring = evaluateExpression(rtData, params[1], 'string').v
+    	return [t: "integer", v: value.indexOf(substring)]
+    }
 }
 
 /******************************************************************************/
@@ -6562,9 +6573,16 @@ private func_arrayitem(rtData, params) {
     	return [t: "error", v: "Invalid parameters. Expecting arrayItem(index, item0[, item1[, .., itemN]])"];
     }
     int index = evaluateExpression(rtData, params[0], 'integer').v
+    if ((params.size() == 2) && (params[1].t == 'string')) {
+    	def list = evaluateExpression(rtData, params[1], 'string').v.tokenize(',')
+        if ((index < 0) || (index >= list.size())) {
+            return [t: "error", v: "Array item index is outside of bounds."]
+        }
+        return [t: 'string', v: list[index]]
+    }
     int sz = params.size() - 1
     if ((index < 0) || (index >= sz)) {
-    	return [t: "error", v: "Array item index is outside of bounds."];
+        return [t: "error", v: "Array item index is outside of bounds."]
     }
     return params[index + 1]
 }
