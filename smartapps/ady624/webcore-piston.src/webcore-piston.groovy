@@ -6335,7 +6335,7 @@ private func_contains(rtData, params) {
 	if (!params || !(params instanceof List) || (params.size() < 2) || ((params[0].t != 'device') && (params.size() != 2))) {
     	return [t: "error", v: "Invalid parameters. Expecting contains(string, substring)"];
     }
-	if ((params[0].t == 'device')) {
+	if ((params[0].t == 'device') && (params.size() > 2)) {
         def item = evaluateExpression(rtData, params[params.size() - 1], 'string').v
         for (int idx = 0; idx < params.size() - 1; idx++) {
         	def it = evaluateExpression(rtData, params[idx], 'string')
