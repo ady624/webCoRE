@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.2.0df.20170725" }
+public static String version() { return "v0.2.0e0.20170726" }
 /*
+ *	07/26/2017 >>> v0.2.0e0.20170726 - BETA M2 - Added support for rangeValue() which allows quick inline conversion of decimal ranges to values coresponding to them (i.e. translate level or temperature into a color)
  *	07/25/2017 >>> v0.2.0df.20170725 - BETA M2 - Minor bug fixes and improvements - decimal display is now using a dynamic decimal place count
  *	07/24/2017 >>> v0.2.0de.20170724 - BETA M2 - Minor fixes regarding lists and is_equal_to can now compare strings as well as numbers
  *	07/22/2017 >>> v0.2.0dd.20170722 - BETA M2 - Added support for the Authentication header in HTTP(S) requests, support for image in local network requests (does not work yet)
@@ -2764,6 +2765,7 @@ private static Map functions() {
         rtrim			: [ t: "string"							],
         hsltohex		: [ t: "string",	d: "hslToHex"		],
         abs				: [ t: "dynamic"						],
+        rangevalue		: [ t: "dynamic",	d: "rangeValue"		],
 	]
 }
 
