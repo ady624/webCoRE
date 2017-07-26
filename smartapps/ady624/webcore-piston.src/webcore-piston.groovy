@@ -5898,7 +5898,7 @@ private func_indexof(rtData, params) {
 	if (!params || !(params instanceof List) || (params.size() < 2) || ((params[0].t != 'device') && (params.size() != 2))) {
     	return [t: "error", v: "Invalid parameters. Expecting indexOf(stringOrDeviceOrList, substringOrItem)"];
     }
-    if ((params[0].t == 'device')) {
+    if ((params[0].t == 'device') && (params.size() > 2)) {
         def item = evaluateExpression(rtData, params[params.size() - 1], 'string').v
         for (int idx = 0; idx < params.size() - 1; idx++) {
         	def it = evaluateExpression(rtData, params[idx], 'string')
@@ -5926,7 +5926,7 @@ private func_lastindexof(rtData, params) {
 	if (!params || !(params instanceof List) || (params.size() < 2) || ((params[0].t != 'device') && (params.size() != 2))) {
     	return [t: "error", v: "Invalid parameters. Expecting lastIndexOf(string, substring)"];
     }
-    if ((params[0].t == 'device')) {
+    if ((params[0].t == 'device') && (params.size() > 2)) {
         def item = evaluateExpression(rtData, params[params.size() - 1], 'string').v
         for (int idx = params.size() - 2; idx >= 0; idx--) {
         	def it = evaluateExpression(rtData, params[idx], 'string')
