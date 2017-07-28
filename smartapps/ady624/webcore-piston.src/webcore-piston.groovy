@@ -5936,19 +5936,12 @@ private func_rainbowvalue(rtData, params) {
     if (input == maxInput) return [t: "string", v: maxColor.hex]
     def start = hexToRgbArray(minColor.hex)
     def end = hexToRgbArray(maxColor.hex)
-    def len = maxInput - minInput + 1
-    def idx = input - minInput
-    float alpha = 0.0
-    float step = 1.000000 / len
-    for (int i = 1; i < len; i++) {
-    	alpha = 1.0000000 * i / len
-	    List c = []
-        c[0] = (int) Math.round(start[0] * (1.000000 - alpha) + alpha * end[0]);
-        c[1] = (int) Math.round(start[1] * (1.000000 - alpha) + alpha * end[1]);
-        c[2] = (int) Math.round(start[2] * (1.000000 - alpha) + alpha * end[2]);
-        if (i == idx) return [t: "string", v: sprintf('#%02x%02x%02x', c[0], c[1], c[2])]
-    }
-    return [t: "string", v: minColor.hex]
+    float alpha = 1.0000000 * (input - minInput) / (maxInput - minInput + 1)
+    List c = [0,0,0]
+	c[0] = (int) Math.round(start[0] * (1.000000 - alpha) + alpha * end[0]);
+	c[1] = (int) Math.round(start[1] * (1.000000 - alpha) + alpha * end[1]);
+	c[2] = (int) Math.round(start[2] * (1.000000 - alpha) + alpha * end[2]);
+	return [t: "string", v: sprintf('#%02x%02x%02x', c[0], c[1], c[2])]
 }
 
 /******************************************************************************/
