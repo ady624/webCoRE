@@ -1472,7 +1472,8 @@ private api_execute() {
 	} else {
     	result.result = 'ERROR'
 	}
-    render contentType: "application/json;charset=utf-8", data: result
+    result.timestamp = (new Date()).time
+    render contentType: "application/json", data: "${result.encodeAsJSON()}"
 }
 
 
