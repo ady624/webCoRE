@@ -6234,8 +6234,15 @@ private func_count(rtData, params) {
     	return [t: "integer", v: 0];
     }
     def count = 0
-    for (param in params) {
-    	count += evaluateExpression(rtData, param, 'boolean').v ? 1 : 0
+    if ((params.size() == 1) && ((params[0].t == 'string') || (params[0].t == 'dynamic'))) {
+    	def list = evaluateExpression(rtData, params[0], 'string').v.split(',').toList()
+    	for (int i=0; i< list.size(); i++) {
+	    	count += cast(rtData, list[i], 'boolean') ? 1 : 0
+	    }
+    } else {
+    	for (param in params) {
+	    	count += evaluateExpression(rtData, param, 'boolean').v ? 1 : 0
+	    }
     }
     return [t: "integer", v: count]
 }
@@ -6670,7 +6677,7 @@ private func_arrayitem(rtData, params) {
     	return [t: "error", v: "Invalid parameters. Expecting arrayItem(index, item0[, item1[, .., itemN]])"];
     }
     int index = evaluateExpression(rtData, params[0], 'integer').v
-    if ((params.size() == 2) && (params[1].t == 'string')) {
+    if ((params.size() == 2) && ((params[1].t == 'string') || (params[1].t == 'dynamic'))) {
     	def list = evaluateExpression(rtData, params[1], 'string').v.split(',').toList()
         if ((index < 0) || (index >= list.size())) {
             return [t: "error", v: "Array item index is outside of bounds."]
