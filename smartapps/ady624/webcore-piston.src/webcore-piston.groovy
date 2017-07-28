@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.2.0e0.20170726" }
+public static String version() { return "v0.2.0e1.20170728" }
 /*
+ *	07/28/2017 >>> v0.2.0e1.20170728 - BETA M2 - Added the rainbowValue function to provide dynamic colors in a range
  *	07/26/2017 >>> v0.2.0e0.20170726 - BETA M2 - Added support for rangeValue() which allows quick inline conversion of decimal ranges to values coresponding to them (i.e. translate level or temperature into a color)
  *	07/25/2017 >>> v0.2.0df.20170725 - BETA M2 - Minor bug fixes and improvements - decimal display is now using a dynamic decimal place count
  *	07/24/2017 >>> v0.2.0de.20170724 - BETA M2 - Minor fixes regarding lists and is_equal_to can now compare strings as well as numbers
@@ -443,7 +444,7 @@ def clearLogs() {
 }
 
 
-def set(data, chunks) {
+def setup(data, chunks) {
 	if (!data) return false
     state.trace = [:]
     state.logs = []
@@ -5910,6 +5911,47 @@ private func_rangevalue(rtData, params) {
 }
 
 /******************************************************************************/
+/*** rainbowValue returns the matching value in a range						***/
+/*** Usage: rainbowValue(input, minInput, minColor, maxInput, maxColor)		***/
+/******************************************************************************/
+private func_rainbowvalue(rtData, params) {
+	if (!params || !(params instanceof List) || (params.size() != 5)) {
+    	return [t: "error", v: "Invalid parameters. Expecting rainbowValue(input, minColor, minValue, maxInput, maxColor)"];
+    }
+    def input = evaluateExpression(rtData, params[0], 'integer').v
+    def minInput = evaluateExpression(rtData, params[1], 'integer').v
+    def minColor = getColor(evaluateExpression(rtData, params[2], 'string').v)
+    def maxInput = evaluateExpression(rtData, params[3], 'integer').v
+    def maxColor = getColor(evaluateExpression(rtData, params[4], 'string').v)
+    if (minInput > maxInput) {
+    	def x = minInput
+        minInput = maxInput
+        maxInput = x
+        x = minColor
+        minColor = maxColor
+        maxColor = x
+    }
+    input = (input < minInput ? minInput : (input > maxInput ? maxInput : input))
+    if ((input == minInput) || (minInput == maxInput)) return [t: "string", v: minColor.hex]
+    if (input == maxInput) return [t: "string", v: maxColor.hex]
+    def start = hexToRgbArray(minColor.hex)
+    def end = hexToRgbArray(maxColor.hex)
+    def len = maxInput - minInput + 1
+    def idx = input - minInput
+    float alpha = 0.0
+    float step = 1.000000 / len
+    for (int i = 1; i < len; i++) {
+    	alpha = 1.0000000 * i / len
+	    List c = []
+        c[0] = (int) Math.round(start[0] * (1.000000 - alpha) + alpha * end[0]);
+        c[1] = (int) Math.round(start[1] * (1.000000 - alpha) + alpha * end[1]);
+        c[2] = (int) Math.round(start[2] * (1.000000 - alpha) + alpha * end[2]);
+        if (i == idx) return [t: "string", v: sprintf('#%02x%02x%02x', c[0], c[1], c[2])]
+    }
+    return [t: "string", v: minColor.hex]
+}
+
+/******************************************************************************/
 /*** indexOf finds the first occurrence of a substring in a string			***/
 /*** Usage: indexOf(stringOrDeviceOrList, substringOrItem)							***/
 /******************************************************************************/
@@ -7159,6 +7201,20 @@ private String hslToHex(hue, saturation, level) {
         b = _hue2rgb(p, q, h - 1/3);
     }
     return sprintf('#%02X%02X%02X', Math.round(r * 255), Math.round(g * 255), Math.round(b * 255));
+}
+
+private List hexToRgbArray(hex) {
+	hex = hex?.replace('#', '');
+    if (hex && (hex.size() == 6)) {
+    	try {
+			List data = [0, 0, 0];
+    		for(int i=0;i<3;i++) {
+        		data[i] = Integer.decode('0x' + hex.substring(i*2, i*2 + 2));
+    		}
+    		return data;
+    	} catch (e) {}
+	}
+    return [0, 0, 0];
 }
 
 /******************************************************************************/
