@@ -2700,6 +2700,7 @@ private static Map functions() {
       	max				: [ t: "decimal",						],
       	sum				: [ t: "decimal",						],
       	count			: [ t: "integer",						],
+      	size			: [ t: "integer",						],
       	left			: [ t: "string",						],
       	right			: [ t: "string",						],
       	mid				: [ t: "string",						],

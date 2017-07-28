@@ -6248,6 +6248,24 @@ private func_count(rtData, params) {
 }
 
 /******************************************************************************/
+/*** size returns the number of values provided								***/
+/*** Usage: size(values)													***/
+/******************************************************************************/
+private func_size(rtData, params) {
+	if (!params || !(params instanceof List) || (params.size() < 1)) {
+    	return [t: "integer", v: 0];
+    }
+    def count = 0
+    if ((params.size() == 1) && ((params[0].t == 'string') || (params[0].t == 'dynamic'))) {
+    	def list = evaluateExpression(rtData, params[0], 'string').v.split(',').toList()
+    	count = list.size()
+    } else {
+    	count = params.size()
+    }
+    return [t: "integer", v: count]
+}
+
+/******************************************************************************/
 /*** age returns the number of milliseconds an attribute had the current value*/
 /*** Usage: age([device:attribute])											***/
 /******************************************************************************/
