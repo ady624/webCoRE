@@ -5937,7 +5937,7 @@ private func_rainbowvalue(rtData, params) {
     def start = hexToHsl(minColor.hex)
     def end = hexToHsl(maxColor.hex)
     float alpha = 1.0000000 * (input - minInput) / (maxInput - minInput + 1)   
-	def h = start[0] - ((input - minInput) * (start[0] - end[0]) / maxInput)
+	def h = start[0] - ((input - minInput) * (start[0] - end[0]) / (maxInput - minInput))
     while (h < 0) h += 360
     while (h >= 360) h -= 360
     int s = Math.round(start[1] + (end[1] - start[1]) * alpha)
