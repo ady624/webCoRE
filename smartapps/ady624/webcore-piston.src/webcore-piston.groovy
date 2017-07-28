@@ -6671,7 +6671,7 @@ private func_arrayitem(rtData, params) {
     }
     int index = evaluateExpression(rtData, params[0], 'integer').v
     if ((params.size() == 2) && (params[1].t == 'string')) {
-    	def list = evaluateExpression(rtData, params[1], 'string').v.tokenize(',')
+    	def list = evaluateExpression(rtData, params[1], 'string').v.split(',').toList()
         if ((index < 0) || (index >= list.size())) {
             return [t: "error", v: "Array item index is outside of bounds."]
         }
