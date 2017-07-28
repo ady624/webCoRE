@@ -5934,14 +5934,15 @@ private func_rainbowvalue(rtData, params) {
     input = (input < minInput ? minInput : (input > maxInput ? maxInput : input))
     if ((input == minInput) || (minInput == maxInput)) return [t: "string", v: minColor.hex]
     if (input == maxInput) return [t: "string", v: maxColor.hex]
-    def start = hexToRgbArray(minColor.hex)
-    def end = hexToRgbArray(maxColor.hex)
-    float alpha = 1.0000000 * (input - minInput) / (maxInput - minInput + 1)
-    List c = [0,0,0]
-	c[0] = (int) Math.round(start[0] * (1.000000 - alpha) + alpha * end[0]);
-	c[1] = (int) Math.round(start[1] * (1.000000 - alpha) + alpha * end[1]);
-	c[2] = (int) Math.round(start[2] * (1.000000 - alpha) + alpha * end[2]);
-	return [t: "string", v: sprintf('#%02x%02x%02x', c[0], c[1], c[2])]
+    def start = hexToHsl(minColor.hex)
+    def end = hexToHsl(maxColor.hex)
+    float alpha = 1.0000000 * (input - minInput) / (maxInput - minInput + 1)   
+	def h = start[0] - ((input - minInput) * (start[0] - end[0]) / maxInput)
+    while (h < 0) h += 360
+    while (h >= 360) h -= 360
+    int s = Math.round(start[1] + (end[1] - start[1]) * alpha)
+    int l = Math.round(start[2] + (end[2] - start[2]) * alpha)
+	return [t: "string", v: hslToHex(h, s, 2 * l)]
 }
 
 /******************************************************************************/
@@ -7219,6 +7220,30 @@ private String hslToHex(hue, saturation, level) {
         b = _hue2rgb(p, q, h - 1/3);
     }
     return sprintf('#%02X%02X%02X', Math.round(r * 255), Math.round(g * 255), Math.round(b * 255));
+}
+
+private List hexToHsl(hex){
+	def rgb = hexToRgbArray(hex)
+    float r = rgb[0] / 255
+    float g = rgb[1] / 255
+    float b = rgb[2] / 255
+    float max = Math.max(Math.max(r, g), b)
+    float min = Math.min(Math.min(r, g), b)
+    float h, s, l = (max + min) / 2
+
+    if(max == min){
+        h = s = 0 // achromatic
+    }else{
+        float d = max - min
+        s = l > 0.5 ? d / (2 - max - min) : d / (max + min)
+        switch(max){
+            case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+            case g: h = (b - r) / d + 2; break;
+            case b: h = (r - g) / d + 4; break;
+        }
+        h /= 6
+    }
+    return [Math.round(h * 360), Math.round(s * 100), Math.round(l * 100)]
 }
 
 private List hexToRgbArray(hex) {
