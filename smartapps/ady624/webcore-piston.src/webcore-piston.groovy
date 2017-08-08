@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.2.0e1.20170728" }
+public static String version() { return "v0.2.0e2.20170808" }
 /*
+ *	08/08/2017 >>> v0.2.0e2.20170808 - BETA M2 - Fixed a bug with time restrictions for conditions/triggers (not timers) where day of week, hour, etc. would be compared against UTC making edge comparisons fail (Sun 11pm would look like a Mon 3am for EST, therefore not on a Sunday anymore)
  *	07/28/2017 >>> v0.2.0e1.20170728 - BETA M2 - Added the rainbowValue function to provide dynamic colors in a range
  *	07/26/2017 >>> v0.2.0e0.20170726 - BETA M2 - Added support for rangeValue() which allows quick inline conversion of decimal ranges to values coresponding to them (i.e. translate level or temperature into a color)
  *	07/25/2017 >>> v0.2.0df.20170725 - BETA M2 - Minor bug fixes and improvements - decimal display is now using a dynamic decimal place count
@@ -726,12 +727,12 @@ def deviceHandler(event) {
 	handleEvents(event)
 }
 
-def timeHandler(event) {
-	handleEvents([date: new Date(event.t), device: location, name: 'time', value: event.t, schedule: event])
+def timeHandler(event, recovery = false) {
+	handleEvents([date: new Date(event.t), device: location, name: 'time', value: event.t, schedule: event, recovery: recovery])
 }
 
 def timeRecoveryHandler(event) {
-	timeHandler(event)
+	timeHandler(event, true)
 	//def event = [date: new Date(), device: location, name: 'time', value: now(), schedule: [t: 0, s: 0, i: -9]]
     //executeEvent(rtData, event)
 	//processSchedules rtData, true
@@ -751,7 +752,7 @@ def handleEvents(event) {
     def eventDelay = startTime - event.date.getTime()
 	def msg = timer "Event processed successfully", null, -1
     def tempRtData = getTemporaryRunTimeData()
-	if (tempRtData.logging) info "Received event [${event.device?:location}].${event.name} = ${event.value} with a delay of ${eventDelay}ms", tempRtData, 0
+	if (tempRtData.logging) info "Received event [${event.device?:location}].${(event.name == 'time') ? event.name + (event.recovery ? '/recovery' : '') : event.name} = ${event.value} with a delay of ${eventDelay}ms", tempRtData, 0
     state.temp = [:]
     //todo start execution
     def ver = version()
@@ -923,7 +924,7 @@ private Boolean executeEvent(rtData, event) {
         def ended = false
         try {
 		    def allowed = !rtData.piston.r || !(rtData.piston.r.length) || evaluateConditions(rtData, rtData.piston, 'r', true)
-           	rtData.restricted = !rtData.piston.o?.aps &&!allowed
+           	rtData.restricted = !rtData.piston.o?.aps && !allowed
     		if (allowed || !!rtData.fastForwardTo) {
 				if (rtData.fastForwardTo == -3) {
                 	//device related time schedules
@@ -948,6 +949,13 @@ private Boolean executeEvent(rtData, event) {
 				}
             } else {
             	warn "Piston execution aborted due to restrictions in effect", rtData
+                //we need to run through all to update stuff
+                rtData.fastForwardTo = -9
+                executeStatements(rtData, rtData.piston.s)
+                ended = true
+				tracePoint(rtData, 'end', 0, 0)
+				processSchedules rtData
+                
             }
             if (!ended) tracePoint(rtData, 'break', 0, 0)
         } catch (all) {
@@ -1930,8 +1938,10 @@ private Long checkTimeRestrictions(Map rtData, Map operand, long time, int level
     List owm = (level <= 6) && !odm && (operand.owm instanceof List) && operand.owm.size() ? operand.owm : null;
     List omy = (level <= 7) && (operand.omy instanceof List) && operand.omy.size() ? operand.omy : null;
 
+
 	if (!om && !oh && !odw && !odm && !owm && !omy) return 0
-	def date = new Date(time) 
+	def date = new Date(time)
+          
     long result = -1
     //month restrictions
     if (omy && (omy.indexOf(date.month + 1) < 0)) {
@@ -3880,12 +3890,12 @@ private Boolean evaluateComparison(rtData, comparison, lo, ro = null, ro2 = null
                     error "Error calling comparison $fn:", rtData, null, all
                     res = false
                 }
-                if (lo.operand.t == 'v') {
+                if (res && (lo.operand.t == 'v')) {
                 	switch (lo.operand.v) {
                     	case 'time':
                         case 'date':
                         case 'datetime':
-							boolean pass = checkTimeRestrictions(rtData, lo.operand, now(), 5, 1) == 0
+							boolean pass = checkTimeRestrictions(rtData, lo.operand, utcToLocalTime(), 5, 1) == 0
                             if (rtData.logging > 2) debug "Time restriction check ${pass ? 'passed' : 'failed'}", rtData
                         	if (!pass) res = false;                            
                     }
@@ -5937,9 +5947,8 @@ private func_rainbowvalue(rtData, params) {
     def start = hexToHsl(minColor.hex)
     def end = hexToHsl(maxColor.hex)
     float alpha = 1.0000000 * (input - minInput) / (maxInput - minInput + 1)   
-	def h = start[0] - ((input - minInput) * (start[0] - end[0]) / (maxInput - minInput))
-    while (h < 0) h += 360
-    while (h >= 360) h -= 360
+	def h = Math.round(start[0] - ((input - minInput) * (start[0] - end[0]) / (maxInput - minInput)))
+    h = h < 0 ? h % 360 + 360 : h % 360
     int s = Math.round(start[1] + (end[1] - start[1]) * alpha)
     int l = Math.round(start[2] + (end[2] - start[2]) * alpha)
 	return [t: "string", v: hslToHex(h, s, 2 * l)]
