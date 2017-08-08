@@ -72,7 +72,7 @@
 					<device type="{{device.t}}" dev-data="device.data" ng-style="!!device.data.color ? {'text-shadow': '0px 0px 150px ' + device.data.color} : {}">
 						<level ng-if="device.data.level != null"></level>
 						<power ng-if="device.data.power != null"></power>
-						<battery ng-if="device.data.battery != null" level="{{getBatteryLevel(device.data.battery)}}" title="{{device.data.battery}}% left"></battery>
+						<battery ng-if="device.data.battery != null" level="{{getBatteryLevel(device.data.battery)}}" data-toggle="tooltip" title="{{device.data.battery}}% left"></battery>
 						<temperature ng-if="device.data.temperature != null">{{device.data.temperature}}°{{location.temperatureScale}}</temperature>
 					</device>
 					<label>{{device.n}}</label>
@@ -113,7 +113,7 @@
 <!--                        <script type="text/javascript" src="//cdn.chitika.net/getads.js" async></script>-->
 <!--					</ul>-->
 
-					<ul class="socialmedia">
+<!--					<ul class="socialmedia">
 						<li>
 							<a href="https://twitter.com/ady624/lists/webcore" target="webCoRE:twitter"><i class="fa fa-twitter" aria-hidden="true"></i></a>
 							<a href="https://www.facebook.com/groups/1023785497757470" target="webCoRE:fb"><i class="fa fa-facebook" aria-hidden="true"></i></a>
@@ -122,42 +122,66 @@
 						<li>					
 					        <div class="fb-like" data-href="https://dashboard.webcore.co" data-layout="button_count" data-action="recommend" data-size="small" data-show-faces="false" data-share="false" ng-init="initSocialMedia()"></div>
 						</li>
-					</ul>
+					</ul>-->
 				</div>
 				<div class="main">
-					<div lonely ng-if="!activePistons && !pausedPistons">
+					<div lonely ng-if="!loading && !instance.pistons.length">
 						<i class="fa fa-frown-o" aria-hidden="true"></i>
 						<div>It's kinda lonely in here...<br/>How about <a ng-click="newPiston();">creating a piston</a>?</div>
 					</div>
 					<!--<div class="alert alert-warning" ng-if="devices && (devices.length > 50)">It is recommended that the list of available devices does not exceed 50 items. You have selected a total of {{devices.length}} available devices for this instance. While not a problem, you may experience slower start-up times for your pistons. If you do, please consider breaking this instance into at least two instances and group the pistons in such a way that each instance requires less than 50 available devices. Multpile instances can safely share the same device.</div>-->
 					<div class="table-responsive no-animate topinfo" ng-if="instance">
 						<hub ng-repeat="hub in location.hubs" ng-if="hub.physical" power-source="{{hub.powerSource}}"><span>{{hub.name}}</span><span fw>{{hub.firmware}}</span></hub>
-						<location-mode>{{getLocationMode()}}</location-mode>
-						<shm-mode alert="{{location.incidents && (location.incidents.length > 0)}}" mode="{{location.shm}}">{{getSHMModeName()}}</shm-mode>
+						<location-mode data-toggle="tooltip" title="Location mode is {{getLocationMode()}}">{{getLocationMode()}}</location-mode>
+						<shm-mode data-toggle="tooltip" title="Smart Home Monitor is {{getSHMModeName()}}" ng-if="location.shm" alert="{{location.incidents && (location.incidents.length > 0)}}" mode="{{location.shm}}">{{getSHMModeName()}}</shm-mode>
 						<incident ng-repeat="incident in location.incidents" source-type="{{incident.sourceType}}" ng-bind-html="renderIncident(incident)"></incident>
 					</div>
 					<div class="no-animate alert alert-warning" ng-if="instance && permanentStatus" role="alert" ng-bind-html="permanentStatus"></div>
-					<div class="table-responsive no-animate" ng-if="instance && activePistons">
-						<label>Active pistons ({{activePistons}})</label>
-						<table class="table table-striped">
+					<div class="table-responsive no-animate" ng-repeat="category in categories" ng-if="instance && category.p && category.p.length && (category.t != 'h')">
+						<label ng-if="category.n">{{category.n}} ({{category.p.length}})</label>
+						<table class="table table-striped" ng-if="(category.t == 'd') || (category.t == 'dt')">
 							<tbody>
-								<tr ng-repeat="piston in instance.pistons" active="true" ng-if="piston.meta && piston.meta.a" title="{{piston.meta.t ? 'Executed ' + timeSince(piston.meta.t) : 'Never executed'}}">
+								<tr ng-repeat="piston in category.p" active="true" ng-if="piston.meta && piston.meta.a" data-toggle="tooltip" title="{{piston.meta.t ? 'Executed ' + timeSince(piston.meta.t) : 'Never executed'}}">
 									<td ng-click="openPiston(piston.id);"><span><i star class="fa fa-circle" ng-style="{opacity: piston.opacity}" aria-hidden="true"></i>{{piston.name}}<span state ng-bind-html="renderString(piston.meta.s.new)"></span><!--<span ng-if="piston.meta.s && piston.meta.s.new" state="{{piston.meta.s.new}}">{{piston.meta.s.new}}</span>--></span></td>
 									<td ng-click="openPiston(piston.id);" dur class="col-md-1 text-right">{{piston.meta.n ? timeCounter(piston.meta.n) : ''}}</td>
-									<td ng-if="!mobile" opt><i class="fa fa-ellipsis-v" aria-hidden="true"></i><actions class="animated"><action ng-click="pausePiston(piston.id);" title="Pause piston">Pause</action><action ng-click="testPiston(piston.id);" title="Test piston">Test</action><action ng-click="openPiston(piston.id);" title="View/Edit piston">View</action></actions></td>
+									<td ng-if="!mobile" opt><i class="fa fa-ellipsis-v" aria-hidden="true"></i><actions class="animated"><action ng-click="pausePiston(piston.id);" data-toggle="tooltip" title="Pause piston">Pause</action><action ng-click="testPiston(piston.id);" data-toggle="tooltip" title="Test piston">Test</action><action ng-click="openPiston(piston.id);" data-toggle="tooltip" title="View/Edit piston">View</action></actions></td>
+									
+								</tr>
+							</tbody>
+						</table>
+						<ptiles ng-if="(category.t == 't') || (category.t == 'm') || (category.t == 'l') || (category.t == 'dt') || (category.t == 'td')">
+							<ptilegroup ng-repeat="piston in category.p" ng-if="piston.meta && piston.meta.a">
+								<ptile ng-repeat="index in range(16) track by $index" class="{{category.t == 'l' ? 'large' : (category.t == 'm' ? 'medium' : '')}}" ng-if="piston.meta.s['i' + ($index + 1)] || piston.meta.s['t' + ($index + 1)]" ng-init="meta=getTileMeta(piston, $index);" ng-click="clickPistonTile($event, piston, ($index + 1));" data-toggle="tooltip" title="{{renderString(piston.meta.s.new)}}" ng-style="{color: piston.meta.s['c' + ($index + 1)], backgroundColor: piston.meta.s['b' + ($index + 1)]}" class="{{piston.meta.s['f' + ($index + 1)] ? 'blink' : ''}}" type="{{meta.type ? meta.type : ''}}" ng-attr-wide="{{!!meta && !!meta.options && (meta.options.wide == '1') ? '' : undefined}}">
+									<div ng-if-start="!meta.type" title data-fittext data-fittext-max="{{category.t == 'l' ? 24 : (category.t == 'm' ? 18 : 12)}}" ng-model="piston.meta.s" ng-bind-html="piston.meta.s['i' + ($index + 1)] ? renderString(piston.meta.s['i' + ($index + 1)]) : '--'"></div>
+									<div data-fittext data-fittext-max="{{category.t == 'l' ? 72 : (category.t == 'm' ? 54 : 36)}}" ng-model="piston.meta.s" ng-bind-html="piston.meta.s['t' + ($index + 1)] ? renderString(piston.meta.s['t' + ($index + 1)]) : '--'"></div>
+									<div ng-if-end title data-fittext data-fittext-max="{{category.t == 'l' ? 24 : (category.t == 'm' ? 18 : 12)}}" ng-model="piston.meta.s" ng-bind-html="piston.meta.s['o' + ($index + 1)] ? renderString(piston.meta.s['o' + ($index + 1)]) : (piston.meta.n ? timeCounter(piston.meta.n) : ' ')"></div>
+									<div ng-if="meta.type == 'gauge'" google-chart chart="getGaugeChart(piston, $index, meta)"></div>
+									<video ng-if="(meta.type == 'video') && !!meta.options && !!meta.options.src" class="{{meta.className}}" ng-attr-controls="{{meta.options.controls == '0' ? undefined : ''}}" ng-attr-autoplay="{{meta.options.autoplay == '1' ? '' : undefined}}" ng-attr-loop="{{meta.options.loop == '1' ? '' : undefined}}" ng-attr-muted="{{meta.options.muted == '1' ? '' : undefined}}">
+										<source src="{{meta.options.src}}"  />
+									</video>
+									<img ng-if="(meta.type == 'image') && !!meta.options && !!meta.options.src" class="{{meta.className}}" src="{{meta.options.src}}" ng-attr-refresh="{{!!meta.options.refresh ? meta.options.refresh : undefined}}" on-refresh="refreshImage"/>
+								</ptile>
+							</ptilegroup>
+						</ptiles>
+						<table class="table table-striped" ng-if="category.t == 'td'">
+							<tbody>
+								<tr ng-repeat="piston in category.p" active="true" ng-if="piston.meta && piston.meta.a" data-toggle="tooltip" title="{{piston.meta.t ? 'Executed ' + timeSince(piston.meta.t) : 'Never executed'}}">
+									<td ng-click="openPiston(piston.id);"><span><i star class="fa fa-circle" ng-style="{opacity: piston.opacity}" aria-hidden="true"></i>{{piston.name}}<span state ng-bind-html="renderString(piston.meta.s.new)"></span><!--<span ng-if="piston.meta.s && piston.meta.s.new" state="{{piston.meta.s.new}}">{{piston.meta.s.new}}</span>--></span></td>
+									<td ng-click="openPiston(piston.id);" dur class="col-md-1 text-right">{{piston.meta.n ? timeCounter(piston.meta.n) : ''}}</td>
+									<td ng-if="!mobile" opt><i class="fa fa-ellipsis-v" aria-hidden="true"></i><actions class="animated"><action ng-click="pausePiston(piston.id);" data-toggle="tooltip" title="Pause piston">Pause</action><action ng-click="testPiston(piston.id);" data-toggle="tooltip" title="Test piston">Test</action><action ng-click="openPiston(piston.id);" data-toggle="tooltip" title="View/Edit piston">View</action></actions></td>
 									
 								</tr>
 							</tbody>
 						</table>
 					</div>
-					<div class="table-responsive no-animate" ng-if="instance && pausedPistons">
-						<label>Paused pistons ({{pausedPistons}})</label>
+					<div class="table-responsive no-animate" ng-if="instance && pausedPistons.length && !instance.settings.hidePP">
+						<label>Paused pistons ({{pausedPistons.length}})</label>
 						<table class="table table-striped">
 							<tbody>
-								<tr ng-repeat="piston in instance.pistons"  active="false" ng-if="!piston.meta || !piston.meta.a" title="{{piston.meta.t ? 'Paused on ' + utcToString(piston.meta.t) : ''}}">
+								<tr ng-repeat="piston in pausedPistons"  active="false" ng-if="!piston.meta || !piston.meta.a" data-toggle="tooltip" title="{{piston.meta.t ? 'Paused on ' + utcToString(piston.meta.t) : ''}}">
 									<td ng-click="openPiston(piston.id);"><span>{{piston.name}}</span></td>
 									<td ng-click="openPiston(piston.id);" class="col-md-1 text-right">{{piston.meta.n ? timeCounter(piston.meta.n) : ''}}</td>
-									<td ng-if="!mobile" opt><i class="fa fa-ellipsis-v" aria-hidden="true"></i><actions class="animated"><action ng-click="resumePiston(piston.id);" title="Resume piston">Resume</action><action ng-click="testPiston(piston.id);" title="Test piston">Test</action><action ng-click="openPiston(piston.id);" title="View/Edit piston">View</action></actions></td>
+									<td ng-if="!mobile" opt><i class="fa fa-ellipsis-v" aria-hidden="true"></i><actions class="animated"><action ng-click="resumePiston(piston.id);" data-toggle="tooltip" title="Resume piston">Resume</action><action ng-click="testPiston(piston.id);" data-toggle="tooltip" title="Test piston">Test</action><action ng-click="openPiston(piston.id);" data-toggle="tooltip" title="View/Edit piston">View</action></actions></td>
 								</tr>
 							</tbody>
 						</table>
@@ -170,6 +194,31 @@
 	<viewer class="settings" ng-if="initialized && (view == 'settings')" class="no-animate">
 		<label class="header">Settings</label>
 		<form class="form-horizontal">
+			<panel name="General">
+				<panel name="Categories">
+					<div class="form-group row" ng-repeat="category in settings.categories">
+						<div class="col-sm-7">
+							<input type="text" ng-model="category.n" class="form-control col-sm-4" placeholder="Category name"/>
+						</div>
+						<div class="col-sm-2">
+							<select class="form-control col-sm-4" ng-model="category.t"><option value="d">Details</option><option value="t">Tiles</option><option value="m">Medium Tiles</option><option value="l">Large Tiles</option><option value="dt">Details/Tiles</option><option value="td">Tiles/Details</option><option value="h">Hidden</option></select>
+						</div>
+						<div class="col-sm-1">
+							<i class="fa fa-chevron-up catop" ng-if="$index > 0" ng-click="moveCategoryUp($index)"></i>
+						</div>
+						<div class="col-sm-1">
+							<i class="fa fa-chevron-down catop" ng-if="$index < settings.categories.length - 1" ng-click="moveCategoryDown($index)"></i>
+						</div>
+						<div class="col-sm-1">
+							<i class="fa fa-close catop" ng-click="deleteCategory($index)"></i>
+						</div>
+					</div>
+					<div class="form-group row">
+						<label class="form-check-label"><input type="checkbox" class="form-check-input" ng-model="settings.hidePP"/> Hide paused pistons</label>
+						<button ng-click="addCategory()" class="btn btn-info pull-right pad-right">Add category</button>
+					</div>
+				</panel>
+			</panel>
 			<panel name="Integrations">
 				<panel name="IFTTT">
 					<p><a target="_blank" href="https://www.ifttt.com">IFTTT</a> is a free web-based service that people use to create chains of simple conditional statements, called applets. An applet is triggered by changes that occur within other web services such as Gmail, Facebook, Instagram, or Pinterest. IFTTT is an initialism for If This Then That<sup><a target="_blank" href="https://en.wikipedia.org/wiki/IFTTT">[wikipedia]</a></sup>.</p>
@@ -261,7 +310,7 @@
             <span>Please select one of the methods below</span>
         </header>
         <items>
-            <item ng-repeat="item in designer.items" type="{{item.type}}" class="fa fa-{{item.icon}} {{item.cssClass}}" title="{{item.name}}" ng-click="setDesignerType(item.type)"></item>
+            <item ng-repeat="item in designer.items" type="{{item.type}}" class="fa fa-{{item.icon}} {{item.cssClass}}" caption="{{item.name}}" ng-click="setDesignerType(item.type)"></item>
         </items>
 	</designer>
 	<designer ng-if="designer.page==1">

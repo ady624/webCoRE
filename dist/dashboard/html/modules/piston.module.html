@@ -110,10 +110,17 @@
 						<p>This piston is currently <span class="danger">PAUSED</span>. No actions will be performed by this piston until you resume it.</p>
 						<button class="btn btn-default" ng-click="resume();">Resume »</button>
 					</div>
+					<hr/>
+					<p>
+						<p>Piston category</p>
+						<div>
+							<select selectpicker ng-model="$parent.$parent.category" class="form-control" ng-change="setCategory()"><option ng-repeat="category in categories" value="{{category.i}}">{{category.n ? category.n : '(no name)'}}</option></select>
+						</div>
+					</p>
 				</div>
 				<div class="col-md-4">
 					<h2>Quick facts</h2>
-					<p>Piston state: <span ng-bind-html="renderString(state)"></span></p>
+					<p>Piston state: <span ng-bind-html="renderString(state.new)"></span></p>
 					<p>Last executed: {{lastExecuted ? utcToString(lastExecuted) : 'never'}}</p>
 					<p>Next scheduled: {{nextSchedule ? utcToString(nextSchedule) : 'never'}}</p>
 					<p>Subscriptions: {{subscriptions.events ? subscriptions.events : 'no'}} event{{subscriptions.events != 1 ? 's' : ''}}, {{subscriptions.controls ? subscriptions.controls : 'no'}} control{{subscriptions.controls != 1 ? 's' : ''}}</p>
@@ -197,9 +204,26 @@
 					</div>
 				</div>
 			</div>
-			<div class="row" ng-if="!mobile && stats && stats.timing && stats.timing.length">
-				<h2>Statistics</h2>
+			<div class="row">				
 				<div class="col-md-12">
+					<h2>Evaluation console</h2>
+					<console ng-if="initialized" mode="{{mode}}">
+						<label>Evaluation console</label>
+						<content>
+							<eval ng-repeat="eval in evals"><span>({{eval.type}}) {{eval.text}} »»» </span><span ng-bind-html="eval.eval"></span></eval>
+						</content>
+						<footer>
+							<div>
+								<select ng-model="$parent.$parent.$parent.evalType"><option value="v">Value</option><option value="e">Expression</option></select>
+								<input type="text" ng-model="$parent.$parent.$parent.evalText" placeholder="Enter {{evalType == 'e' ? 'an expression' : 'a value'}} to evaluate and hit Enter" ng-keypress="onEvalKeyPress($event)" ng-keydown="onEvalKeyDown($event)"/>
+							</div>
+						</footer>
+					</console>
+				</div>
+			</div>
+			<div class="row" ng-if="!mobile && stats && stats.timing && stats.timing.length">
+				<div class="col-md-12">
+					<h2>Statistics</h2>
 					<canvas id="line" height="100" class="chart chart-line" chart-data="chart.data" chart-labels="chart.labels" chart-series="chart.series" chart-options="chart.options" chart-dataset-override="chart.datasetOverride" disabled-chart-click_ed="chart.onClick"></canvas>
 				</div>
 			</div>
@@ -209,7 +233,7 @@
 		</footer>
 	</div>
 	<piston id="editor" console="{{view.console}}" ng-if="initialized && (mode=='edit')" mode="{{mode}}" ng-repeat="piston in [piston]" data-nag-model="piston" ng-include="'piston'" movable="{{(mode=='edit') && view.movable}}" context-menu="contextMenu()" context-menu-class="contextmenu"></piston>
-	<console ng-if="view.console && initialized && (mode=='edit')">
+	<console ng-if="(mode == 'edit') && view.console && initialized" mode="{{mode}}">
 		<label>Evaluation console</label>
 		<content>
 			<eval ng-repeat="eval in evals"><span>({{eval.type}}) {{eval.text}} »»» </span><span ng-bind-html="eval.eval"></span></eval>
@@ -1561,9 +1585,20 @@
 			<option style="display:none" value="" disabled>Select a comparison...</option>
 		</select>
 	</div>
+	<div ng-if="comparison.dataType == 'email'">
+		<div class="form-group">
+			<label class="col-lg-12 no-padding">From<span class="error" ng-if="!designer.comparison.right.valid">{{designer.comparison.right.error}}<span ng-if="designer.comparison.right.expressionVar"> (<a ng-click="autoAddVariable(designer.comparison.right.expressionVar); validatecomparison.right(designer.comparison.right);">create it</a>)</span>&nbsp;<i class="fa fa-warning"></i></span></label>
+			<operand ng-repeat="operand in [designer.comparison.right]" ng-model="designer.comparison.left" ng-include="'operand'"></operand>
+		</div>
+		<div class="form-group">
+			<label class="col-lg-12 no-padding">Message<span class="error" ng-if="!designer.comparison.right2.valid">{{designer.comparison.right2.error}}<span ng-if="designer.comparison.right2.expressionVar"> (<a ng-click="autoAddVariable(designer.comparison.right2.expressionVar); validatecomparison.right2(designer.comparison.right2);">create it</a>)</span>&nbsp;<i class="fa fa-warning"></i></span></label>
+			<operand ng-repeat="operand in [designer.comparison.right2]" ng-model="designer.comparison.right2" ng-include="'operand'"></operand>
+		</div>
+	</div>
+	<div ng-if="comparison.dataType != 'email'">	
 	<div class="form-group" ng-if="!comparison.event && (comparison.parameterCount > 0)">
 		<label class="col-lg-12 no-padding">{{comparison.parameterCount == 1 ? 'Compare to' : 'Between...'}}<span class="error" ng-if="!designer.comparison.right.valid">{{designer.comparison.right.error}}<span ng-if="designer.comparison.right.expressionVar"> (<a ng-click="autoAddVariable(designer.comparison.right.expressionVar); validatecomparison.right(designer.comparison.right);">create it</a>)</span>&nbsp;<i class="fa fa-warning"></i></span></label>
-		<operand ng-repeat="operand in [designer.comparison.right]" ng-model="designer.comparison.left" ng-include="'operand'"></operand>
+		<operand ng-repeat="operand in [designer.comparison.right]" ng-model="designer.comparison.right" ng-include="'operand'"></operand>
 	</div>
 	<div class="form-group" ng-if="!comparison.event && (comparison.parameterCount > 0) && (designer.comparison.left.selectedDataType=='time') && (designer.comparison.right.data.t != 'c')">
 		<label class="col-lg-12 no-padding">With offset...<span class="error" ng-if="!designer.comparison.right.valid">{{designer.comparison.time.error}}<span ng-if="designer.comparison.time.expressionVar"> (<a ng-click="autoAddVariable(designer.comparison.time.expressionVar); validatecomparison.right(designer.comparison.time);">create it</a>)</span>&nbsp;<i class="fa fa-warning"></i></span></label>
@@ -1571,7 +1606,7 @@
 	</div>
 	<div class="form-group" ng-if="!comparison.event && (comparison.parameterCount > 1)">
 		<label class="col-lg-12 no-padding">...and...<span class="error" ng-if="!designer.comparison.right2.valid">{{designer.comparison.right2.error}}<span ng-if="designer.comparison.right2.expressionVar"> (<a ng-click="autoAddVariable(designer.comparison.right2.expressionVar); validatecomparison.right2(designer.comparison.right2);">create it</a>)</span>&nbsp;<i class="fa fa-warning"></i></span></label>
-		<operand ng-repeat="operand in [designer.comparison.right2]" ng-model="designer.comparison.left" ng-include="'operand'"></operand>
+		<operand ng-repeat="operand in [designer.comparison.right2]" ng-model="designer.comparison.right2" ng-include="'operand'"></operand>
 	</div>
 	<div class="form-group" ng-if="!comparison.event && (comparison.parameterCount > 1) && (designer.comparison.left.selectedDataType=='time') && (designer.comparison.right2.data.t != 'c')">
 		<label class="col-lg-12 no-padding">With offset...<span class="error" ng-if="!designer.comparison.right.valid">{{designer.comparison.time2.error}}<span ng-if="designer.comparison.time2.expressionVar"> (<a ng-click="autoAddVariable(designer.comparison.time2.expressionVar); validatecomparison.right(designer.comparison.time2);">create it</a>)</span>&nbsp;<i class="fa fa-warning"></i></span></label>
@@ -1649,6 +1684,7 @@
 			<option value="s">Strict (any unexpected event resets the group)</option>
 			<option value="n">Negated (lack of the expected event resets the group)</option>
 		</select>
+	</div>
 	</div>
 </script>
 
@@ -1787,6 +1823,7 @@
 					<select data-actions-box="true" selectpicker class="selectpicker show-tick" data-width="75%" data-style="btn-default" ng-model="operand.data.s" data-mobile="{{mobile}}" ng-change="validateOperand(operand)" required>
 						<option style="display:none" value="" disabled>Nothing selected</option>
 						<option value="Random" data-content="<span class='color' style='background: #fff'>?</span>Random">Random</option>
+						<option value="Black" data-content="<span class='color' style='background: #000'></span>Black">Black</option>
 						<option ng-repeat="color in db.colors.standard" ng-value="color.name" data-content="<span class='color' style='background: {{color.rgb}}'></span>{{color.name}}">{{color.name}}</option>
 					</select>
 				</div>
@@ -1862,7 +1899,8 @@
 			<label class="form-control btn-info">Which {{operand.subDeviceName ? operand.subDeviceName : operand.data.a}}(s)</label>
 			<select data-actions-box="true" selectpicker class="selectpicker show-tick" data-style="btn-default" data-width="75%" ng-model="operand.data.i" data-mobile="{{mobile}}" ng-change="validateOperand(operand)" multiple title="Any">
 				<option style="display:none" disabled>Any</option>
-				<option ng-repeat="a in range(operand.count) track by $index" value="{{$index + 1}}">#{{$index + 1}}</option>"
+				<option ng-if="operand.data.a == 'lock'" value="0">#0</option>
+				<option ng-repeat="a in range(operand.count) track by $index" value="{{$index + 1}}">#{{$index + 1}}</option>
 			</select>
 		</div>
 	</div>
@@ -1959,6 +1997,7 @@
 			</select>
 		</div>
 	</div>
+	<div class="alert alert-warn" ng-if="parameter.warn">{{parameter.warn}}</div>
 </script>
 
 
@@ -1994,6 +2033,7 @@
 					</select>
 				</div>
 				<label ng-repeat-start="operand in designer.parameters" class="col-lg-12 no-padding">{{operand.name}}{{operand.optional ? ' (optional)' : ''}}<span class="error" ng-if="!operand.valid">{{operand.error}}<span ng-if="operand.expressionVar"> (<a ng-click="autoAddVariable(operand.expressionVar); validateOperand(operand);">create it</a>)</span>&nbsp;<i class="fa fa-warning"></i></span></label>
+				<div class="alert alert-warning" ng-if="operand.warn">{{operand.warn}}</div>
 				<parameter ng-repeat-end ng-include="'operand'" ng-model="operand"></parameter>
 				<label ng-if-start="!!designer.command"class="col-lg-12 no-padding">Only during these modes</label>
 				<div ng-if-end class="form-group">

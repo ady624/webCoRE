@@ -24,6 +24,8 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 	$scope.evalText = '';
 	$scope.evals = [];
 	$scope.lastEval = 0;
+	$scope.category = '0';
+	$scope.categories = [];
 	if ($scope.params) $location.search({});
 	$scope.stack = {
 		undo: [],
@@ -112,21 +114,21 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
     };
 
     $scope.getLifxSceneName = function(sceneId) {
-		if (!$scope.instance.settings.lifx_scenes) return sceneId;
-		var sceneName = $scope.instance.settings.lifx_scenes[sceneId];
+		if (!$scope.instance.lifx.scenes) return sceneId;
+		var sceneName = $scope.instance.lifx.scenes[sceneId];
 		if (!sceneName) return sceneId;
 		return sceneName;
     };
 
     $scope.getLifxSelectorName = function(selectorId) {
 		if (!$scope.instance.settings) return selectorId;
-		var name = $scope.instance.settings.lifx_lights ? $scope.instance.settings.lifx_lights[selectorId] : null;
+		var name = $scope.instance.lifx.lights ? $scope.instance.lifx.lights[selectorId] : null;
 		if (name) return name;
-		name = $scope.instance.settings.lifx_groups ? $scope.instance.settings.lifx_groups[selectorId] : null;
+		name = $scope.instance.lifx.groups ? $scope.instance.lifx.groups[selectorId] : null;
 		if (name) return name;
-		name = $scope.instance.settings.lifx_locations ? $scope.instance.settings.lifx_locations[selectorId] : null;
+		name = $scope.instance.lifx.locations ? $scope.instance.lifx.locations[selectorId] : null;
 		if (name) return name;
-		name = $scope.instance.settings.lifx_scenes ? $scope.instance.settings.lifx_scenes[selectorId] : null;
+		name = $scope.instance.lifx.scenes ? $scope.instance.lifx.scenes[selectorId] : null;
 		if (name) return name;
 		return selectorId;
     };
@@ -236,12 +238,14 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 				$scope.lastExecuted = response.data.lastExecuted;
 				$scope.nextSchedule = response.data.nextSchedule;
 				$scope.schedules = response.data.schedules;
+				$scope.categories = $scope.getCategories();
+				$scope.category = $scope.meta.category ? $scope.meta.category : '0';
 				
 				$scope.lifx = {
-					lights: !!$scope.instance.settings && !!$scope.instance.settings.lifx_lights ? $scope.objectToArray($scope.instance.settings.lifx_lights) : [],
-					groups: !!$scope.instance.settings && !!$scope.instance.settings.lifx_groups ? $scope.objectToArray($scope.instance.settings.lifx_groups) : [],
-					locations: !!$scope.instance.settings && !!$scope.instance.settings.lifx_locations ? $scope.objectToArray($scope.instance.settings.lifx_locations) : [],
-					scenes: !!$scope.instance.settings && !!$scope.instance.settings.lifx_scenes ? $scope.objectToArray($scope.instance.settings.lifx_scenes) : []
+					lights: !!$scope.instance.settings && !!$scope.instance.lifx.lights ? $scope.objectToArray($scope.instance.lifx.lights) : [],
+					groups: !!$scope.instance.settings && !!$scope.instance.lifx.groups ? $scope.objectToArray($scope.instance.lifx.groups) : [],
+					locations: !!$scope.instance.settings && !!$scope.instance.lifx.locations ? $scope.objectToArray($scope.instance.lifx.locations) : [],
+					scenes: !!$scope.instance.settings && !!$scope.instance.lifx.scenes ? $scope.objectToArray($scope.instance.lifx.scenes) : []
 				};
 				
 				$scope.initChart();
@@ -463,6 +467,12 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		}
 	}
 
+    $scope.getCategories = function() {
+        var categories = (!!$scope.instance && !!$scope.instance.settings && ($scope.instance.settings.categories instanceof Array)) ? $scope.copy($scope.instance.settings.categories) : [];
+        if (!categories.length) categories = [{n: 'Uncategorized', t: 'd', i: 0}];
+        return categories;
+    }
+
 	$scope.edit = function() {
 		$scope.mode = 'edit';
 		$scope.init();
@@ -529,6 +539,13 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 	$scope.setLoggingLevel = function(obj) {
 		$scope.loading = true;
 		dataService.setPistonLogging($scope.pistonId, $scope.logging).then(function(data) {
+			$scope.loading = false;
+		});
+	}
+
+	$scope.setCategory = function() {
+		$scope.loading = true;
+		dataService.setPistonCategory($scope.pistonId, $scope.category).then(function(data) {
 			$scope.loading = false;
 		});
 	}
@@ -2148,6 +2165,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 	$scope.clearLogs = function() {
 		$scope.logs = [];
 		dataService.clearPistonLogs($scope.pistonId).then(function(data) {
+			$scope.lastLogEntry = 0;
 		});
 	}
 
@@ -2167,7 +2185,8 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 					multiple: false,
 					optional: ((parameter.t != 'bool') && (parameter.t != 'boolean')) && !!parameter.d,
 					options: parameter.o,			
-					strict: !!parameter.s
+					strict: !!parameter.s,
+					warn: parameter.w
 				}
 				var attribute = $scope.getAttributeById(parameter.t);
 				if (attribute) {
@@ -2972,14 +2991,6 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 	
 			//if (dataType != 'enum') operand.options = null;
 	
-			if (operand.data.t == null) {
-				var t = ''
-				if (!operand.optional) {
-					t = dataType == 'variable' ? 'x' : 'c';
-					if (($scope.designer.$condition) || ($scope.designer.$restriction)) t = 'p';
-				}
-				operand.data.t = t;
-			}
 
 			switch (operand.data.vt) {
 				case 'time':
@@ -3020,7 +3031,17 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 				operand.allowArgument = (!operand.event) && (dataType != 'device') && (dataType != 'variable');
 				operand.allowExpression = (!operand.event) && (dataType != 'variable') && (!strict || (dataType != 'boolean'));
 			}
-			if (((operand.data.t == 'p') && (!operand.allowPhysical)) || ((operand.data.t == 'v') && (!operand.allowVirtual))) operand.data.t = 'c';
+
+			if (operand.data.t == null) {
+				var t = ''
+				if (!operand.optional) {
+					t = dataType == 'variable' ? 'x' : (!!operand.allowPreset ? 's' : 'c');
+					if (($scope.designer.$condition) || ($scope.designer.$restriction)) t = 'p';
+				}
+				operand.data.t = t;
+			}
+
+			if (((operand.data.t == 'p') && (!operand.allowPhysical)) || ((operand.data.t == 'v') && (!operand.allowVirtual))) operand.data.t = (!!operand.allowPreset) ? 's' : 'c';
 
 			if (!operand.config) {
 				operand.config = $scope.copy($scope.getExpressionConfig());
@@ -3084,7 +3105,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 				operand.options = $scope.contacts;
 				break;
 			case 'lifxScene':
-				operand.options = $scope.objectToArray($scope.instance.settings.lifx_scenes).sort($scope.sortByName);
+				operand.options = $scope.objectToArray($scope.instance.lifx.scenes).sort($scope.sortByName);
 				break;
 			case 'lifxSelector': //fake options - we're using a custom select for grouping purposes
 				operand.options = [];
@@ -3422,7 +3443,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 				default:
 					dt = comparison.dataType.substr(0, 1);
 			}
-            dt = (comparison.momentary ? (comparison.left.data.t == 'v' ? 'v' : 'm') : ((dt == 'n' ? 'd' : dt)));
+            dt = (comparison.momentary && (dt != 'e') ? (comparison.left.data.t == 'v' ? 'v' : 'm') : ((dt == 'n' ? 'd' : dt)));
 			if (!disableConditions) {
 				for(conditionId in $scope.db.comparisons.conditions) {
 					var condition = $scope.db.comparisons.conditions[conditionId];
@@ -3443,6 +3464,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 				optionList = optionList.concat(options.sort($scope.sortByDisplay));
 			}
 			comparison.options = optionList;
+			if (comparison.options.length == 1) comparison.operator = comparison.options[0].id;
 		}
 
 
@@ -3455,10 +3477,10 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 
 		comparison.timed = comp ? comp.t : 0;
 
-		if (comparison.parameterCount > 0) {
+		if ((comparison.parameterCount > 0) || (comparison.dataType == 'email')) {
 			comparison.right.multiple = comparison.multiple;
 			comparison.right.disableAggregation = comparison.multiple;
-			comparison.right.dataType = comparison.left.selectedDataType;
+			comparison.right.dataType = (comparison.dataType == 'email' ? 'string' : comparison.left.selectedDataType);
 			if (angular.toJson(comparison.right.options) != angular.toJson(comparison.left.selectedOptions)) {
 				//avoid angular circus
 				if ((comparison.right.data.t == 'c') && comparison.right.options && comparison.right.options.length && (!comparison.left.selectedOptions || !comparison.left.selectedOptions.left)) {
@@ -3471,10 +3493,10 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 			comparison.valid = comparison.valid && comparison.right.valid;
 		}
 
-		if (comparison.parameterCount > 1) {
+		if ((comparison.parameterCount > 1) || (comparison.dataType == 'email')) {
 			comparison.right2.multiple = comparison.multiple;
 			comparison.right2.disableAggregation = comparison.multiple;
-			comparison.right2.dataType = comparison.left.selectedDataType;
+			comparison.right2.dataType = (comparison.dataType == 'email' ? 'string' : comparison.left.selectedDataType);
 			if (angular.toJson(comparison.right2.options) != angular.toJson(comparison.left.selectedOptions)) {
 				//avoid angular circus
 				comparison.right2.options = comparison.left.selectedOptions;
@@ -3946,7 +3968,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 	};
 
 	$scope.renderString = function(value) {
-		return $sce.trustAsHtml(renderString(value));
+		return renderString($sce, value);
 	};
 
 	$scope.renderTask = function(task) {
@@ -4600,7 +4622,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 			var dq = false;
 			var dv = false;
 			var startIndex = i;
-			var compositeVariable = (str.substr(startIndex, 6) == '$args.') || (str.substr(startIndex, 6) == '$json.') || (str.substr(startIndex, 10) == '$response.') || (str.substr(startIndex, 9) == '$weather.') || (str.substr(startIndex, 11) == '$incidents.') ||  (str.substr(startIndex, 6) == '$args[') || (str.substr(startIndex, 6) == '$json[') || (str.substr(startIndex, 10) == '$response[') || (str.substr(startIndex, 11) == '$incidents[');
+			function isCompositeVariable() {return (str.substr(startIndex, 6) == '$args.') || (str.substr(startIndex, 6) == '$json.') || (str.substr(startIndex, 10) == '$response.') || (str.substr(startIndex, 9) == '$weather.') || (str.substr(startIndex, 11) == '$incidents.') ||  (str.substr(startIndex, 6) == '$args[') || (str.substr(startIndex, 6) == '$json[') || (str.substr(startIndex, 10) == '$response[') || (str.substr(startIndex, 11) == '$incidents[');};
 			function addOperand() {
 				if (i-1 > startIndex) {
 					var value = str.slice(startIndex, i-1).trim();
@@ -4612,6 +4634,8 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 					if (typeof value == 'string') {
 						if (['true', 'false'].indexOf(value) >= 0) {
 							arr.push({t: 'boolean', v: value, l: location(startIndex, i - 2)});
+						} else if (['null'].indexOf(value) >= 0) {
+							arr.push({t: 'dynamic', v: null, l: location(startIndex, i - 2)});
 						} else {
 							arr.push({t: 'variable', x: value, l: location(startIndex, i - 2)});
 						}
@@ -4691,6 +4715,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 					startIndex = i;
 				}
 			}
+			var compositeVariable = isCompositeVariable();
 			while (i < str.length) {
 				var c = str[i++];
 
@@ -4714,6 +4739,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 						if (exp && !dv && !dq && !sq) {
 							addOperand();
 							startIndex = i;
+							compositeVariable = isCompositeVariable();
 						}
 						continue;
 					case '+':
@@ -4742,6 +4768,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 							}
 							arr.push({t: 'operator', o: c, l: location(i - 1, i - 1)});
 							startIndex = i;
+							compositeVariable = isCompositeVariable();
 						} else if (c == '\\') {
 							i++;
 							c = c2;
@@ -4753,14 +4780,18 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 							odq = !odq;
 							(dq ? addOperand() : addConstant(true));
 							startIndex = i;
+							compositeVariable = isCompositeVariable();
 						}
 						continue;
 					case '\'':
+					case '‘':
+					case '’':
 						if (exp && !dq && !dv) {
 							sq = !sq;
 							osq = !osq;
 							(sq ? addOperand() : addConstant(true));
 							startIndex = i;
+							compositeVariable = isCompositeVariable();
 						}
 						continue;
 					case '(':
@@ -4768,6 +4799,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 							parenthesis++;
 							addFunction();
 							startIndex = i;
+							compositeVariable = isCompositeVariable();
 						}
 						continue;
 					case ')':
@@ -4783,6 +4815,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 							dv = true;;
 							addOperand();
 							startIndex = i;
+							compositeVariable = isCompositeVariable();
 						}
 						continue;
 					case ']':
@@ -4790,26 +4823,29 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 							addDevice();
 							dv = false;
 							startIndex = i;
+							compositeVariable = isCompositeVariable();
 						}
 						continue;
 					case '{':
-							if (exp == initExp) {
-								exp++;
-								addConstant();
-								startIndex = i;
-								arr.push({t: 'expression', i: main(), l: location(startIndex - 1, i - 1)});
-								startIndex = i;
-							} else {
-								exp++;
-								startIndex = i;
-								arr.push({t: 'expression', i: main(), l: location(startIndex - 1, i - 1)});
-								startIndex = i;
-							}
+						if (exp == initExp) {
+							exp++;
+							addConstant();
+							startIndex = i;
+							arr.push({t: 'expression', i: main(), l: location(startIndex - 1, i - 1)});
+							startIndex = i;
+							compositeVariable = isCompositeVariable();
+						} else {
+							exp++;
+							startIndex = i;
+							arr.push({t: 'expression', i: main(), l: location(startIndex - 1, i - 1)});
+							startIndex = i;
+							compositeVariable = isCompositeVariable();
+						}
 						continue;
 					case '}':
-							addOperand();
-							exp--;
-							return arr;
+						addOperand();
+						exp--;
+						return arr;
 						continue;
 				}
 			}

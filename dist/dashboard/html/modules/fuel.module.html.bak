@@ -25,8 +25,7 @@
 		</ul>
 		<graph>
 			<label ng-if="fuelStreams.length == 0">Sorry, you have no fuel streams yet. Please create one by using the "Write to fuel stream" task.</label>
-			<!--<canvas id="line" class="chart chart-line" chart-data="chart.data" chart-labels="chart.labels" chart-series="chart.series" chart-options="chart.options"chart-dataset-override="chart.datasetOverride"></canvas>-->
-			<div google-chart class="chart" chart="chart" ng-if="!!chart.data" agc-on-select="hideSeries(selectedItem)"></div>
+			<canvas id="line" class="chart chart-line" chart-data="chart.data" chart-labels="chart.labels" chart-series="chart.series" chart-options="chart.options"chart-dataset-override="chart.datasetOverride"></canvas>
 		</graph>
 		<data>
 			<div class="row">

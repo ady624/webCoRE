@@ -50,7 +50,8 @@ data {
 	overflow-y: auto;
 }
 
-graph > canvas {
+graph > canvas,
+graph > div.chart {
 	position: absolute;
 	left: 0px;
 	top: 0px;

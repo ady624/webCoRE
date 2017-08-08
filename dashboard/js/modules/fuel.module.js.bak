@@ -33,7 +33,6 @@ config.controller('fuel', ['$scope', '$rootScope', 'dataService', '$timeout', '$
 				}
 				$scope.canisters = canisters.unique().sort();
 			});
-		$scope.initChart();
 	};
 
 	$scope.selectCanister = function(canister) {
@@ -46,18 +45,26 @@ config.controller('fuel', ['$scope', '$rootScope', 'dataService', '$timeout', '$
 		}
 		$scope.prepareFuelStream(fuelStream);
 		return;
+		$scope.selectedFuelStream = fuelStream;
+		var name = ($scope.selectedCanister ? $scope.selectedCanister + ' \\ ' : '') + $scope.selectedFuelStream.n;
+		dataService.listFuelStreamData($scope.selectedFuelStream.i).then(function(data) {
+			if (data && data.points && (data.points instanceof Array)) {
+				for (i in data.points) {
+		            $scope.chart.labels.push(new Date(data.points[i].t));
+		            $scope.chart.data[0].push(data.points[i].d);
+				}
+			}
+		});
 	}
 
 
 	$scope.prepareFuelStream = function(fuelStream) {
 		if (fuelStream.selected && !fuelStream.data) {
-			$scope.loading = true;
-			dataService.listFuelStreamData(fuelStream.i).then(function(data) {				
+			dataService.listFuelStreamData(fuelStream.i).then(function(data) {
 				if (data && data.points && (data.points instanceof Array)) {
 					fuelStream.data = data.points;
 					$scope.populateChart();
 				}
-				$scope.loading = false;
 			});
 		} else {
 			$scope.populateChart();
@@ -68,59 +75,20 @@ config.controller('fuel', ['$scope', '$rootScope', 'dataService', '$timeout', '$
 		var count = 0;
 		var names = [];
 		var series = [];
-		var data = null;
-		var dpcount = 0;
-		var stacked = !!$scope.chart.options.isStacked;
-
-		function isNumeric(n) {
-		  return !isNaN(parseFloat(n)) && isFinite(n);
-		};
-
-		var selectedCount = 0;
 		for (i in $scope.fuelStreams) {
-			if (!!$scope.fuelStreams[i].selected && !!$scope.fuelStreams[i].data && $scope.fuelStreams[i].data.length) {
-				selectedCount++;
-			}
-		}
-
-		for (i in $scope.fuelStreams) {
-			if (!!$scope.fuelStreams[i].selected && !!$scope.fuelStreams[i].data && $scope.fuelStreams[i].data.length) {
+			if (!!$scope.fuelStreams[i].selected && !!$scope.fuelStreams[i].data) {
 				var fuelStream = $scope.fuelStreams[i];
-
-				data = data ? data : {'cols':[{'id':'time','label':'Time','type':'datetime'}], 'rows':[]};
-
-				/*
 				names.push((fuelStream.c ? fuelStream.c + ' \\ ' : '') + fuelStream.n);
 				var s = [];
 				for (j in fuelStream.data) {
 					s.push({x: new Date(fuelStream.data[j].t), y: fuelStream.data[j].d});
 				}
 				series.push(s);
-				*/
-
-//google charts
-				var t = isNumeric(fuelStream.data[0].d) ? 'number' : 'string';
-				data.cols.push({'id': i, 'label': (fuelStream.c ? fuelStream.c + ' \\ ' : '') + fuelStream.n, 'type': t});
-				var ch = [];
-				for(k = 0; k < count; k++) ch.push({'v': stacked ? 0 : null});
-				//var cf = [];
-				//for(k = count + 1; k < selectedCount; k++) cf.push({'v': stacked ? 0 : null});
-				for (j in fuelStream.data) {
-					var r = [{'v': new Date(fuelStream.data[j].t)}].concat(ch);
-					var v = fuelStream.data[j].d;
-					r = (r.push({'v': v, 't': t}) ? r : null);//.concat(cf);
-					data.rows.push({'c': r});
-					dpcount++;
-				}		
 				count++;
 			}
 		}
-		//$scope.initChart(names, series);
-		if (data) data.rows.sort(function(a,b) { return a.c[0].v - b.c[0].v });
-		$scope.chart.data = !!data && !!dpcount ? data : null;
-		while ($scope.chart.view.columns.length < count + 1) $scope.chart.view.columns.push($scope.chart.view.columns.length);
-		while ($scope.chart.view.columns.length > count + 1) $scope.chart.view.columns.pop();
-
+		$scope.initChart(names, series);
+		
 	}
 
 	$scope.toggleFuelStream = function(fuelStream) {
@@ -154,7 +122,7 @@ config.controller('fuel', ['$scope', '$rootScope', 'dataService', '$timeout', '$
 
 
     $scope.initChart = function(names, series) {
-/*        $scope.chart = {
+        $scope.chart = {
             series: names,
 			type: 'line',
             data: series,
@@ -206,72 +174,9 @@ config.controller('fuel', ['$scope', '$rootScope', 'dataService', '$timeout', '$
             }
 
         };
-*/
-
-		$scope.chart = {
-			'type': 'AreaChart',
-			'displayed': false,
-			'data': null,
-			'options': {
-			    'isStacked': false,
-			    'fill': 20,
-				'displayExactValues': true,
-				'interpolateNulls': true,
-				'explorer': { 'axis': 'horizontal' },
-				'is3D': true,
-				'width': '100%',
-				'height': '100%',
-				'pointSize': 6,
-				'dataOpacity': 0.5,
-				'pointShape': 'square',
-				'series': {
-					0: { pointShape: 'circle' },
-					1: { pointShape: 'square' },
-					2: { pointShape: 'diamond' },
-					3: { pointShape: 'polygon' },
-					4: { pointShape: 'triangle' },
-					5: { pointShape: 'star' }
-				},
-				'chartArea': {
-					'left': 96,
-					'top': 16,
-					'right': 16,
-					'width': '100%',
-					'height': '80%'
-				},
-               	'legend': {
-					'position': 'bottom'
-				}
-			},
-			'hAxis': {
-				'title': 'Date/Time'
-			},
-			'formatters': {},
-			'view': {'columns':[]}
-		};
-
     };
 
 
-
-	$scope.hideSeries = function(selectedItem) {
-		var col = selectedItem.column;
-		if (selectedItem.row === null) {
-			if ($scope.chart.view.columns[col] == col) {
-				$scope.chart.view.columns[col] = {
-					label: $scope.chart.data.cols[col].label,
-					type: $scope.chart.data.cols[col].type,
-					calc: function() {
-						return null;
-					}
-				};
-				//$scope.chart.options.colors[col - 1] = '#CCCCCC';
-			} else {
-				$scope.chart.view.columns[col] = col;
-				//$scope.chart.options.colors[col - 1] = '';//$scope.chart.options.defaultColors[col - 1];
-			}
-		}
-	}
 
 
     //init
@@ -284,8 +189,7 @@ config.controller('fuel', ['$scope', '$rootScope', 'dataService', '$timeout', '$
 	$scope.tablet = (!$scope.mobile) && (window.mobileOrTabletCheck());
 	$scope.formatTime = formatTime;
     $scope.utcToString = utcToString;
-	//$scope.$$postDigest(function() {$window.FB.XFBML.parse()});
-	window.scope = $scope;
+	$scope.$$postDigest(function() {$window.FB.XFBML.parse()});
 	var tmrInit = setInterval(function() {
 		if (dataService.ready()) {
 			clearInterval(tmrInit);

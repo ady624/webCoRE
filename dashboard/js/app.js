@@ -1,4 +1,4 @@
-var app = angular.module('CoRE', ['ng', 'ngRoute', 'ngSanitize', 'ngResource', 'ngDialog', 'ngAnimate', 'angular-svg-round-progressbar', 'angular-bootstrap-select', 'swipe', 'dndLists', 'ui.toggle', 'chart.js', 'smartArea', 'ui.bootstrap.contextMenu']);
+var app = angular.module('webCoRE', ['ng', 'ngRoute', 'ngSanitize', 'ngResource', 'ngDialog', 'ngAnimate', 'angular-svg-round-progressbar', 'angular-bootstrap-select', 'swipe', 'dndLists', 'ui.toggle', 'chart.js', 'smartArea', 'ui.bootstrap.contextMenu', 'ngFitText', 'googlechart']);
 //var cdn = 'https://core.homecloudhub.com/dashboard/';
 var cdn = '';
 var theme = '';
@@ -49,6 +49,34 @@ app.directive('ngWheel', ['$parse', function($parse) {
 		};
 	}]);
 
+
+app.directive('refresh',['$interval', function($interval){
+		var refreshTime_=0;
+		var onRefresh_=null;
+		var iv_=null;
+		return {
+			restrict:'A',
+			link:function(scope,elem,attrs){
+				elem.on('$destroy', function(){
+    	            if (iv_!=null) $interval.cancel(iv_);
+				});
+				if(angular.isDefined(attrs.refresh) && !isNaN(parseInt(attrs.refresh)))
+					refreshTime_=attrs.refresh;
+				if(angular.isDefined(attrs.onRefresh) && angular.isFunction(scope[attrs.onRefresh])){
+					onRefresh_=scope[attrs.onRefresh];
+					iv_=$interval(function() { onRefresh_(elem[0]) },refreshTime_ * 1000);
+					attrs.$observe('refresh',function(new_iv){
+						if(!angular.equals(new_iv,refreshTime_)){
+							if(iv_!=null) $interval.cancel(iv_);
+							refreshTime_=new_iv;
+							if(refreshTime_>0)
+								iv_=$interval(function() { onRefresh_(elem[0]) },refreshTime_ * 1000);
+						}
+					});
+				}
+			}
+		};
+	}]);
 
 app.directive('textcomplete', ['Textcomplete', function(Textcomplete) {
     return {
@@ -250,6 +278,28 @@ app.directive('onSizeChanged', ['$window', function ($window) {
     }
 }]);
 
+
+app.directive('title', function(){
+    return {
+        restrict: 'A',
+        link: function(scope, element, attrs){
+			if (!mobileCheck()) {
+	            $(element).hover(function(){
+    	            // on mouseenter
+					$(element).tooltip({container: 'body', html:true, placement:'bottom'});
+            	    $(element).tooltip('show');
+	            }, function(){
+    	            // on mouseleave
+        	        $(element).tooltip('hide');
+            	});
+				$(element).on('$destroy', function(){
+    	            $(element).tooltip('hide');
+				});
+			}
+        }
+    };
+});
+
 app.filter('orderObjectBy', function() {
   return function(items, field, reverse) {
     var filtered = [];
@@ -302,10 +352,10 @@ var config = app.config(['$routeProvider', '$locationProvider', '$sceDelegatePro
         controller: 'fuel',
         css: cdn + theme + 'css/modules/fuel' + ext
     }).
-    when('/visor', {
-        templateUrl: cdn + theme + 'html/modules/visor.module.html',
-        controller: 'visor',
-        css: cdn + theme + 'css/modules/visor' + ext
+    when('/visors', {
+        templateUrl: cdn + theme + 'html/modules/visors.module.html',
+        controller: 'visors',
+        css: cdn + theme + 'css/modules/visors' + ext
     }).
     when('/init/:instId1/:instId2', {
         redirectTo: function(params) {
@@ -412,6 +462,7 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
         } catch (e) {
             return null;
         }
+
     };
 
     var writeObject = function(key, obj, ek) {
@@ -453,11 +504,26 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 			initial = true;
 		}
 		instance.devices = instance.devices ? instance.devices : (instances[instance.id] && instances[instance.id].devices ? instances[instance.id].devices : []);
+		if (!!instance.pistons) {
+			for (i = 0; i < inst.pistons.length; i++) {
+				var newPiston = inst.pistons[i];
+				for (j = 0; j < instance.pistons.length; j++) {
+					if (instance.pistons[j].id == newPiston.id) {
+						var oldPiston = instance.pistons[j];
+						oldPiston.name = newPiston.name;
+						oldPiston.meta = newPiston.meta;
+						inst.pistons[i] = oldPiston;
+						break;
+					}
+				}
+			}
+		}
 		instance.pistons = inst.pistons;
 		instance.globalVars = inst.globalVars;
 		instance.coreVersion = inst.coreVersion;
 		instance.name = inst.name;
 		instance.settings = inst.settings ? inst.settings : {};
+		instance.lifx = inst.lifx ? inst.lifx : {};
 		if (initial && instance.devices) {
 			for (d in instance.devices) {
 				instance.devices[d].t = dataService.determineDeviceType(instance.devices[d]);
@@ -951,6 +1017,28 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 			});
     }
 
+    dataService.clickPistonTile = function (pid, tile) {
+		var inst = dataService.getPistonInstance(pid);
+		if (!inst) { inst = dataService.getInstance() };
+		si = store ? store[inst.id] : null;
+    	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/piston/tile?id=' + pid + '&tile=' + tile + '&token=' + (si && si.token ? si.token : ''), {jsonpCallbackParam: 'callback'})
+			.then(function(response) {
+				status();
+				return response.data;
+			});
+    }
+
+    dataService.setPistonCategory = function (pid, category) {
+		var inst = dataService.getPistonInstance(pid);
+		if (!inst) { inst = dataService.getInstance() };
+		si = store ? store[inst.id] : null;
+		status('Setting piston category...');
+    	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/piston/set.category?id=' + pid + '&category=' + category + '&token=' + (si && si.token ? si.token : ''), {jsonpCallbackParam: 'callback'})
+			.then(function(response) {
+				status();
+				return response.data;
+			});
+    }
 
     dataService.setPistonLogging = function (pid, level) {
 		var inst = dataService.getPistonInstance(pid);
@@ -963,6 +1051,7 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 				return response.data;
 			});
     }
+
 
     dataService.clearPistonLogs = function (pid) {
 		var inst = dataService.getPistonInstance(pid);
@@ -1027,6 +1116,18 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
     dataService.setVariable = function (name, value) {
 		var inst = dataService.getInstance();
 		si = store ? store[inst.id] : null;
+		if (value && value.t) {
+			switch (value.t) {
+				case 'time':
+					var d = new Date(value.v);
+					value.v = d.getTime() - d.getTimezoneOffset() * 60000;
+					break;
+				case 'date':
+				case 'datetime':
+					value.v = (new Date(value.v)).getTime();
+					break;
+			}
+		}
 		var data = value ? utoa(angular.toJson(value)) : '';
     	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/variable/set?name=' + name + '&value=' + encodeURIComponent(data) + '&token=' + (si && si.token ? si.token : ''), {jsonpCallbackParam: 'callback'})
 			.then(function(response) {
@@ -1073,9 +1174,9 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 			var region = (si && si.uri && si.uri.startsWith('https://graph-eu')) ? 'eu' : 'us';
 			var req = {
 				method: 'POST',
-				url: 'https://api-' + region + '-' + iid[32] + '.webcore.co/fuelStreams/list',
+				url: 'https://api-' + region + '-' + iid[32] + '.webcore.co:9287/fuelStreams/list',
 				headers: {
-				'Auth-Token': iid
+				'Auth-Token': '|'+ iid
 				},
 				data: { i: iid }
 			}
@@ -1094,9 +1195,9 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 			var region = (si && si.uri && si.uri.startsWith('https://graph-eu')) ? 'eu' : 'us';
 			var req = {
 				method: 'POST',
-				url: 'https://api-' + region + '-' + iid[32] + '.webcore.co/fuelStreams/get',
+				url: 'https://api-' + region + '-' + iid[32] + '.webcore.co:9287/fuelStreams/get',
 				headers: {
-				'Auth-Token': iid
+				'Auth-Token': '|'+iid
 				},
 				data: { i: iid, f: fuelStreamId }
 			}
@@ -1182,6 +1283,7 @@ app.run(['$rootScope', '$window', '$location', function($rootScope, $window, $lo
 
 	$rootScope.$on('$viewContentLoaded', function(event) {
 		var path = $location.path();
+		if (!path.startsWith('/')) path = '/' + path;
 		if (path.startsWith('/init/')) {
 			path = '/init';
 		}
@@ -1189,6 +1291,7 @@ app.run(['$rootScope', '$window', '$location', function($rootScope, $window, $lo
 			path = '/piston';
 		}
 	    $window.ga('send', 'pageview', { page: path });
+		/*
 		var units = null;
 		if (!mobileCheck()) {
 			switch (path) {
@@ -1206,6 +1309,7 @@ app.run(['$rootScope', '$window', '$location', function($rootScope, $window, $lo
 		} else {
 			delete(window.CHITIKA);
 		}
+		*/
 	});
 
     $rootScope.bytesToSize = function(bytes) {
@@ -1429,9 +1533,10 @@ function adjustTimeOffset(time) {
 
 
 
-function renderString(value) {
+function renderString($sce, value) {
         var i = 0;
         if (!value) return '';
+		var meta = {type: null, options: {}};
 
         var process = function(classList) {
             var result = '';
@@ -1476,9 +1581,22 @@ function renderString(value) {
                                 case 'blink':
                                 case 'flash':
                                 case 'left':
+                                case 'center':
                                 case 'condensed':
                                 case 'right':
+								case 'full':
 									className += 's-' + cls[x] + ' ';
+									break;
+                                case 'chart-gauge':
+									meta.type = cls[x].replace('chart-', '');
+									break;
+                                case 'img':
+                                case 'image':
+									meta.type = 'image';
+									break;
+                                case 'vid':
+                                case 'video':
+									meta.type = 'video';
 									break;
                                 default:
 									if (/\d+(.\d+)?(x|em)/.test(cls[x])) {
@@ -1489,11 +1607,18 @@ function renderString(value) {
 										backColor = cls[x].substr(3).replace(/[^#0-9a-z]/gi, '');
 									} else if (cls[x].startsWith('back-')) {
 										backColor = cls[x].substr(5).replace(/[^#0-9a-z]/gi, '');
+									} else if (cls[x].indexOf('=') > 0) {
+										//options
+										var p = cls[x].indexOf('=');
+										meta.options[cls[x].substr(0, p)] = cls[x].substr(p + 1);
 									} else {
 										color = cls[x].replace(/[^#0-9a-z]/gi, '');
 									}
                             }
                         }
+						meta.className = className;
+						meta.color = color;
+						meta.backColor = backColor;
                         return '<span ' + (className ? 'class="' + className + '" ' : '') + (!!color || !!backColor || !!fontSize ? 'style="' + (color ? 'color: ' + color + ' !important;' : '') + ' ' + (backColor ? 'background-color: ' + backColor + ' !important;' : '') + ' ' + (fontSize ? 'font-size: ' + fontSize + ' !important;' : '') + '"' : '') + '>' + result + '</span>';
                     default:
                         result += c;
@@ -1503,9 +1628,27 @@ function renderString(value) {
             return result;
         }
 
-        return process(value).replace(/\:fa-([a-z0-9\-\s]*)\:/gi, function(match) {
+		meta.html = process(value).replace(/\:fa-([a-z0-9\-\s]*)\:/gi, function(match) {
             return '<i class="fa ' + match.replace(/\:/g, '').toLowerCase() + '"></i>';
-        }).replace(/\\[rn]/gi, '<br/>');
+        }).replace(/\:wu-([a-k]|v[1-4])-([a-z0-9_\-]+)\:/gi, function(match) {
+			var iconSet = match[4];
+			if (iconSet == 'v') {
+				iconSet += match[5];
+				var icon = match.substr(7, match.length - 8);
+	            return '<img class="wu" src="https://icons.wxug.com/i/c/' + iconSet + '/' + icon + '.svg" />';
+			} else {
+				var icon = match.substr(6, match.length - 7);
+	            return '<img class="wu" src="https://icons.wxug.com/i/c/' + iconSet + '/' + icon + '.gif" />';
+			}
+        }).replace(/(?![^<]*[>])#[a-z0-9]{6}/gi, function(match) {
+			return '<span class="swatch" style="background-color:' + match + '">&nbsp;&nbsp;&nbsp;&nbsp;</span>' + match;
+		}).replace(/\\[rn]/gi, '<br/>');
+		var tmp = document.createElement("DIV");
+		tmp.innerHTML = meta.html;
+		meta.text = tmp.textContent || tmp.innerText || "";
+        var result = $sce.trustAsHtml(meta.html);
+		result.meta = meta;
+		return result;
     };
 
 
@@ -1637,4 +1780,4 @@ if (document.selection) {
      document.execCommand("Copy");
 }}
 
-version = function() { return 'v0.2.0d3.20170711'; };
+version = function() { return 'v0.2.0e2.20170808'; };

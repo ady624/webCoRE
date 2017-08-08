@@ -84,6 +84,9 @@ ng-view > logo {
     -o-transition: all 0.25s ease-in-out !important;
 }
 
+.pad-right {
+	margin-right: 16px;
+}
 
 ng-view,
 viewer {
@@ -136,7 +139,7 @@ div#loading-bar {
 	position: fixed;
 }
 
-select {
+select:not(.form-control) {
 	height: 16px;
 	width: 100%;
 	opacity: 0;
@@ -537,7 +540,7 @@ error button {
 }
 
 
-label > input {
+label:not(.form-check-label) > input {
 	display: none;
 }
 
@@ -612,7 +615,7 @@ designer items > item {
 designer items > item::after {
     margin-top: 16px;
     display: block;
-    content: attr(title);
+    content: attr(caption);
     font-size: 12px;
 }
 designer items > item[selected] {
@@ -769,8 +772,16 @@ ul.socialmedia a .fa-twitter {
     height: 20px;
 }
 
+img.wu {
+	width: 50px;
+	height: 50px;
+}
 
 
+span.swatch {
+	border-radius: 4px;
+	margin-right: 4px;
+}
 
 
 span.s-b { font-weight: bold; }
@@ -780,8 +791,8 @@ span.s-s { text-decoration: line-through; }
 span.s-mono { font-family: monospace; }
 span.s-condensed { font-size:10pt !important; line-height: 10pt !important; }
 span.s-pre { white-space: pre-wrap; }
-span.s-blink { animation: s-flash 1s steps(2) infinite; }
-span.s-flash { animation: s-flash 1s steps(2) infinite; }
+span.s-blink { animation: s-flash 1s ease infinite; }
+span.s-flash { animation: s-flash 1s ease infinite; }
 span.s-left { float: left; clear: none; }
 span.s-right { float: right; clear: none; }
 span.s-up {
@@ -792,12 +803,16 @@ span.s-up {
 	transform:rotate(-180deg);
 }
 
-@-webkit-keyframes s-flash { to { opacity: 0; } } }
-@-moz-keyframes s-flash { to { opacity: 0; } } }
-@-ms-keyframes s-flash { to { opacity: 0; } } }
-@-o-keyframes s-flash { to { opacity: 0; } } }
-@keyframes s-flash { to { opacity: 0; } } }
 
+@-webkit-keyframes s-flash { 0%, 30%, 70%, 100% { opacity: 1; } 50% { opacity: 0; } }
+@-moz-keyframes s-flash { 0%, 30%, 70%, 100% { opacity: 1; } 50% { opacity: 0; } }
+@-ms-keyframes s-flash { 0%, 30%, 70%, 100% { opacity: 1; } 50% { opacity: 0; } }
+@-o-keyframes s-flash { 0%, 30%, 70%, 100% { opacity: 1; } 50% { opacity: 0; } }
+@keyframes s-flash { 0%, 30%, 70%, 100% { opacity: 1; } 50% { opacity: 0; } }
+
+.tooltip .tooltip-inner { color: #444; background-color:#eee; border: solid 1px #444; }
+.tooltip.top .tooltip-arrow { border-top-color: #444 ; }
+.tooltip.bottom .tooltip-arrow { border-bottom-color: #444 ; }
 
 @media only screen and (max-width: 767px) {
 	body > logo {

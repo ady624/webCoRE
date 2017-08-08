@@ -10,10 +10,10 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 	$scope.locations = null;
 	$scope.instances = null;
 	$scope.requestId = 0;
-	$scope.activePistons = 0;
-	$scope.pausedPistons = 0;
 	$scope.dropDownMenu = false;
 	$scope.endpoint = '';
+	$scope.categories = [];
+	$scope.pausedPistons = [];
 	$scope.view = 'piston';
 
 	$scope.init = function(instance, uri, pin) {
@@ -45,14 +45,32 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 	    	            if (!$scope.virtualDevices) $scope.virtualDevices = $scope.listAvailableVirtualDevices();
 						window.scope = $scope;
 						$scope.loading = false;
-						$scope.activePistons = 0;
-						$scope.pausedPistons = 0;
+						var categories = $scope.getCategories();
+						while($scope.categories.length > categories.length) $scope.categories.pop();
+						while($scope.categories.length < categories.length) $scope.categories.push({});
+						for (var i = 0; i < categories.length; i++) {
+							$scope.categories[i].i = categories[i].i;
+							$scope.categories[i].n = categories[i].n;
+							$scope.categories[i].t = categories[i].t;
+							$scope.categories[i].p = [];
+						}
+						$scope.pausedPistons = [];
 						for(pistonIndex in $scope.instance.pistons) {
 							var piston = $scope.instance.pistons[pistonIndex];
 							if (piston.meta && piston.meta.a) {
-								$scope.activePistons++;
+								if (piston.meta.s && (!!piston.meta.s.i || !!piston.meta.s.t)) {
+									//temporary fix for piston tiles before moving to multiple tiles
+									piston.meta.s.i1 = piston.meta.s.i;
+									piston.meta.s.t1 = piston.meta.s.t;
+									piston.meta.s.b1 = piston.meta.s.b;
+									piston.meta.s.c1 = piston.meta.s.c;
+									piston.meta.s.f1 = piston.meta.s.f;
+								}
+								var cat = $scope.getCategory(piston.meta.c);
+								cat.p = (cat.p instanceof Array) ? cat.p : [];
+								cat.p.push(piston);
 							} else {
-								$scope.pausedPistons++;
+								$scope.pausedPistons.push(piston);
 							}
 						}
 						$scope.clock();
@@ -61,6 +79,8 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 				} else {
 					$scope.dialogDeleteInstance(instance);
 				}
+			}, function(data) {
+				$scope.render();
 			});
 	};
 
@@ -76,6 +96,56 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 		if (!tmrActivity) tmrActivity = $timeout($scope.init, 10000);
     }
 
+	$scope.getTileMeta = function(piston, $index) {
+		var meta = $scope.renderString(piston.meta.s['t' + ($index + 1)]).meta;
+		if (!!meta && !!meta.type) return meta;
+		meta = $scope.renderString(piston.meta.s['f' + ($index + 1)]).meta;
+		if (!!meta && !!meta.type) return meta;
+		meta = $scope.renderString(piston.meta.s['i' + ($index + 1)]).meta;
+		return meta;
+	}
+
+	$scope.refreshImage = function(img) {
+		var src = img.osrc;
+		if (!src) {
+			src = img.src;
+			img.osrc = src;
+		}
+		if (!src && (src.startsWith('{')) && (src.startsWith('%7B'))) return;
+		var tmr = '_img_refresh_token_'
+		var p = src.indexOf(tmr);
+		if (p > 0) {
+			src = src.substr(0, p) + tmr + '=' + (new Date()).getTime();
+		} else {
+			src += (src.indexOf('?') > 0 ? '&' : '?') + tmr + '=' + (new Date()).getTime();
+		}
+		var i = new Image();
+		i.onload = function() {
+			img.src = src;
+		}
+		i.src = src;
+		img.src = src;
+	}
+
+	$scope.getGaugeChart = function(piston, $index, meta) {
+		return {
+			type:'Gauge',
+			options: meta.options,
+			data: {
+				cols: [{
+					id:'gauge',
+					label:meta.text,
+					type:'number'
+				}],
+				rows: [{
+					c: [{
+						v: $scope.renderString(piston.meta.s['t' + ($index + 1)]).meta.text,
+						f: piston.meta.s['o' + ($index + 1)] ? $scope.renderString(piston.meta.s['o' + ($index + 1)]).meta.text : null
+					}]
+				}]
+			}
+		}
+	};
 
 	$scope.clock = function() {
 		if ($scope.instance) {
@@ -99,12 +169,71 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
         }
     }
 
+    $scope.clickPistonTile = function($event, piston, tile) {
+		if ($event.originalEvent.ctrlKey || $event.originalEvent.shiftKey) {
+			$scope.openPiston(piston.id);
+		} else {
+	        dataService.clickPistonTile(piston.id, tile).then(function(data) {
+				if (data && (data.status == 'ST_SUCCESS') && !!(data['new']) && !!piston && !!(piston.meta)) {
+					piston.meta.s = data;
+				}
+			});
+		}
+    }
+
+    $scope.copy = function(object) {
+        return angular.fromJson(angular.toJson(object));
+    };
+
+
+	$scope.getCategories = function() {
+		var categories = (!!$scope.instance && !!$scope.instance.settings && ($scope.instance.settings.categories instanceof Array)) ? $scope.copy($scope.instance.settings.categories) : [];
+		if (!categories.length) categories = [{n: 'Uncategorized', t: 'd', i: 0}];
+		return categories;
+	}
+
+	$scope.getCategory = function(id) {
+		id = parseInt(id);
+		if (isNaN(id)) id = 0;
+		for (var i in $scope.categories) {
+			if ($scope.categories[i].i == id) return $scope.categories[i];
+		}
+		for (var i in $scope.categories) {
+			if ($scope.categories[i].i == 0) return $scope.categories[i];
+		}
+		$scope.categories.push({n: 'Uncategorized', t: 'd', i: 0});
+		return $scope.categories[$scope.categories.length - 1];
+	}
+
 	$scope.showSettings = function() {
 		ga('send', 'event', 'settings', 'show');
 		$scope.closeNavBar();
-		$scope.settings = $scope.instance.settings;
+		$scope.settings = $scope.copy($scope.instance.settings);
+		$scope.settings.categories = $scope.getCategories();
 		$scope.view = 'settings';
 	};
+
+	$scope.addCategory = function() {
+		var i = 0;
+		for (x in $scope.settings.categories) {
+			if ($scope.settings.categories[x].i >= i) i = $scope.settings.categories[x].i + 1;
+		}
+		$scope.settings.categories.push({n: 'New Category ' + i, t: 'd', i: i});
+	}
+
+	$scope.moveCategoryUp = function(index) {
+		if ((index < 1) || (index >= $scope.settings.categories)) return;
+		var x = $scope.settings.categories[index];
+		$scope.settings.categories[index] = $scope.settings.categories[index - 1];
+		$scope.settings.categories[index - 1] = x;
+	}
+
+	$scope.moveCategoryDown = function(index) {
+		if ((index < 0) || (index >= $scope.settings.categories - 1)) return;
+		var x = $scope.settings.categories[index];
+		$scope.settings.categories[index] = $scope.settings.categories[index + 1];
+		$scope.settings.categories[index + 1] = x;
+	}
 
 	$scope.hideSettings = function() {
 		ga('send', 'event', 'settings', 'hide');
@@ -113,6 +242,7 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 
 	$scope.saveSettings = function() {
 		ga('send', 'event', 'settings', 'save');
+		$scope.instance.settings = $scope.settings;
 		dataService.setSettings($scope.settings).then(function(data) {
 			$scope.instance.settings = $scope.settings;
 			$scope.hideSettings();
@@ -171,6 +301,11 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 		$scope.dropDownMenu = (event.currentTarget.scrollTop == 0) && (direction == 'down');
 		return true;
 	}
+
+    $scope.range = function(n) {
+        return new Array(n);
+    };
+
 
 	$scope.listLocations = function() {
 		return dataService.listLocations();
@@ -260,7 +395,7 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 	}
 
     $scope.renderString = function(value) {
-        return $sce.trustAsHtml(renderString(value));
+        return renderString($sce, value);
     };
 
 	$scope.onWSUpdate = function(evt) {
@@ -338,7 +473,8 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
            	className: 'ngdialog-theme-default ngdialog-large',
             closeByDocument: false,
    	        disableAnimation: true,
-       	    scope: $scope
+       	    scope: $scope,
+			onOpenCallback: function() {$scope.$$postDigest(function() {$('select').selectpicker('selectAll');})}
         });
 	};
 
@@ -804,7 +940,7 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 	$scope.tablet = (!$scope.mobile) && (window.mobileOrTabletCheck());
 	$scope.formatTime = formatTime;
     $scope.utcToString = utcToString;
-	$scope.$$postDigest(function() {$window.FB.XFBML.parse()});
+	//$scope.$$postDigest(function() {$window.FB.XFBML.parse()});
 	var tmrInit = setInterval(function() {
 		if (dataService.ready()) {
 			clearInterval(tmrInit);
