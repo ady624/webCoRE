@@ -16,7 +16,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-public static String version() { return "v0.2.0e2.20170808" }
+public static String version() { return "v0.2.0e3.20170810" }
 /******************************************************************************/
 /*** webCoRE DEFINITION														***/
 /******************************************************************************/

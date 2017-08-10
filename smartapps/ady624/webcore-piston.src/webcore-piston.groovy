@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.2.0e2.20170808" }
+public static String version() { return "v0.2.0e3.20170810" }
 /*
+ *	08/10/2017 >>> v0.2.0e3.20170810 - BETA M2 - Improved support for threeAxis and added support for axisX, axisY, and axisZ as decimal values
  *	08/08/2017 >>> v0.2.0e2.20170808 - BETA M2 - Fixed a bug with time restrictions for conditions/triggers (not timers) where day of week, hour, etc. would be compared against UTC making edge comparisons fail (Sun 11pm would look like a Mon 3am for EST, therefore not on a Sunday anymore)
  *	07/28/2017 >>> v0.2.0e1.20170728 - BETA M2 - Added the rainbowValue function to provide dynamic colors in a range
  *	07/26/2017 >>> v0.2.0e0.20170726 - BETA M2 - Added support for rangeValue() which allows quick inline conversion of decimal ranges to values coresponding to them (i.e. translate level or temperature into a color)
@@ -1707,7 +1708,6 @@ private scheduleTimer(rtData, timer, long lastRun = 0) {
 	//if already scheduled once during this run, don't do it again
     if (rtData.schedules.find{ it.s == timer.$ }) return
 	//complicated stuff follows...
-    debug " schedulling timer with lastRun = $lastRun"
     def t = now()
     def interval = "${evaluateOperand(rtData, null, timer.lo).v}"
     if (!interval.isInteger()) return
@@ -3389,12 +3389,12 @@ private long vcmd_loadStateLocally(rtData, device, params, global = false) {
             }
         }
         if (exactCommand) {
-        	debug "Restoring attribute '$attr' to value '$value' using command $exactCommand()", rtData
+        	if (rtData.logging > 2) debug "Restoring attribute '$attr' to value '$value' using command $exactCommand()", rtData
 			executePhysicalCommand(rtData, device, exactCommand)
         	continue
         }
         if (fuzzyCommand) {
-        	debug "Restoring attribute '$attr' to value '$value' using command $fuzzyCommand($value)", rtData
+        	if (rtData.logging > 2) debug "Restoring attribute '$attr' to value '$value' using command $fuzzyCommand($value)", rtData
 			executePhysicalCommand(rtData, device, fuzzyCommand, value)
         	continue
         }
@@ -4527,7 +4527,7 @@ private void subscribeAll(rtData) {
 			}
             if (!rtData.piston.o.des && !!subscription.value.t && !!subscription.value.c && (altSub != "never") && ((subscription.value.t == "trigger") || (altSub == "always") || !hasTriggers)) {
                 def device = subscription.value.d.startsWith(':') ? getDevice(rtData, subscription.value.d) : null
-				def a = subscription.value.a == 'orientation' ? 'threeAxis' : subscription.value.a
+				def a = (subscription.value.a == 'orientation') || (subscription.value.a == 'axisX') || (subscription.value.a == 'axisY') || (subscription.value.a == 'axisZ') ? 'threeAxis' : subscription.value.a
                 if (device) {
 					for (condition in subscription.value.c) if (condition) { condition.s = (condition.sm != 'never') && ((condition.ct == 't') || (condition.sm == 'always') || (!hasTriggers)) }
                 	switch (subscription.value.a) {
@@ -4646,9 +4646,17 @@ private getDeviceAttributeValue(rtData, device, attributeName) {
 	if (rtData.event && (rtData.event.name == attributeName) && (rtData.event.device.id == device.id)) {
     	return rtData.event.value;
     } else {
-    	if (attributeName == '$status') return device.getStatus()
-    	if (attributeName == 'orientation') {
-        	return getThreeAxisOrientation(rtData.event && (rtData.event.name == 'threeAxis') && (rtData.event.device.id == device.id) ? rtData.event.xyzValue : device.currentValue('threeAxis'))
+    	switch (attributeName) {
+        	case '$status':
+            	return device.getStatus()
+        	case 'orientation':
+        		return getThreeAxisOrientation(rtData.event && (rtData.event.name == 'threeAxis') && (rtData.event.device.id == device.id) ? rtData.event.xyzValue : device.currentValue('threeAxis'))
+        	case 'axisX':
+        		return rtData.event && (rtData.event.name == 'threeAxis') && (rtData.event.device.id == device.id) ? rtData.event.xyzValue.x : device.currentValue('threeAxis').x
+			case 'axisY':
+        		return rtData.event && (rtData.event.name == 'threeAxis') && (rtData.event.device.id == device.id) ? rtData.event.xyzValue.y : device.currentValue('threeAxis').y
+            case 'axisZ':
+        		return rtData.event && (rtData.event.name == 'threeAxis') && (rtData.event.device.id == device.id) ? rtData.event.xyzValue.z : device.currentValue('threeAxis').z
         }
         def result
         try {
@@ -4685,7 +4693,7 @@ private Map getDeviceAttribute(rtData, deviceId, attributeName, subDeviceIndex =
         if (attributeName == 'hue') {
         	value = cast(rtData, cast(rtData, value, 'decimal') * 3.6, attribute.t)
         }
-		return [t: attribute.t, v: value, d: deviceId, a: attributeName, i: subDeviceIndex, x: (!!attribute.m || !!trigger) && ((device?.id != (rtData.event.device?:location).id) || ((attributeName == 'orientation' ? 'threeAxis' : attributeName) != rtData.event.name))]
+		return [t: attribute.t, v: value, d: deviceId, a: attributeName, i: subDeviceIndex, x: (!!attribute.m || !!trigger) && ((device?.id != (rtData.event.device?:location).id) || (((attributeName == 'orientation') || (attributeName == 'axisX') || (attributeName == 'axisY') || (attributeName == 'axisZ') ? 'threeAxis' : attributeName) != rtData.event.name))]
     }
     return [t: "error", v: "Device '${deviceId}' not found"]
 }
@@ -6884,6 +6892,8 @@ private getThreeAxisOrientation(value, getIndex = false) {
 }
 
 private cast(rtData, value, dataType, srcDataType = null) {
+    //error "CASTING ($srcDataType) $value as $dataType", rtData
+    //if (srcDataType == 'vector3') error "got x = $value.x", rtData
 	if (dataType == 'dynamic') return value
 	def trueStrings = ["1", "true", "on", "open", "locked", "active", "wet", "detected", "present", "occupied", "muted", "sleeping"]
 	def falseStrings = ["0", "false", "off", "closed", "unlocked", "inactive", "dry", "clear", "not detected", "not present", "not occupied", "unmuted", "not sleeping"]
@@ -6903,7 +6913,8 @@ private cast(rtData, value, dataType, srcDataType = null) {
 		if (value instanceof Long) { srcDataType = 'long' } else
 		if (value instanceof Double) { srcDataType = 'decimal' } else
 		if (value instanceof Float) { srcDataType = 'decimal' } else
-		if (value instanceof BigDecimal) { srcDataType = 'decimal' } else {
+		if (value instanceof BigDecimal) { srcDataType = 'decimal' } else 
+        if ((value instanceof Map) && (value.x != null) && (value.y != null) && (value.z != null)) { srcDataType = 'vector3' } else {
             value = "$value".toString()
             srcDataType = 'string'
         }
@@ -7027,7 +7038,7 @@ private cast(rtData, value, dataType, srcDataType = null) {
         	if ((srcDataType == 'time') && (value < 86400000)) value += getMidnightTime()
 			return ((srcDataType == 'string') ? localToUtcTime(value) : cast(rtData, value, "long"))
 		case "vector3":
-			return value instanceof String ? 0 : cast(rtData, value, "long")
+			return (value instanceof Map) && (value.x != null) && (value.y != null) && (value.z != null) ? value : [x:0, y:0, z:0]
 		case "orientation":
 			return getThreeAxisOrientation(value)
         case 'ms': return (long) cast(rtData, value, 'long')

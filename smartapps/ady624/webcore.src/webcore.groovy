@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.2.0e2.20170808" }
+public static String version() { return "v0.2.0e3.20170810" }
 /*
+ *	08/10/2017 >>> v0.2.0e3.20170810 - BETA M2 - Improved support for threeAxis and added support for axisX, axisY, and axisZ as decimal values
  *	08/08/2017 >>> v0.2.0e2.20170808 - BETA M2 - Fixed a bug with time restrictions for conditions/triggers (not timers) where day of week, hour, etc. would be compared against UTC making edge comparisons fail (Sun 11pm would look like a Mon 3am for EST, therefore not on a Sunday anymore)
  *	07/28/2017 >>> v0.2.0e1.20170728 - BETA M2 - Added the rainbowValue function to provide dynamic colors in a range
  *	07/26/2017 >>> v0.2.0e0.20170726 - BETA M2 - Added support for rangeValue() which allows quick inline conversion of decimal ranges to values coresponding to them (i.e. translate level or temperature into a color)
@@ -2342,6 +2343,9 @@ private static Map attributes() {
 		motion						: [ n: "motion",				t: "enum",		o: ["active", "inactive"],																			],
 		mute						: [ n: "mute",					t: "enum",		o: ["muted", "unmuted"],																			],
 		orientation					: [ n: "orientation",			t: "enum",		o: ["rear side up", "down side up", "left side up", "front side up", "up side up", "right side up"],															],
+		axisX						: [ n: "axis X",				t: "decimal",	],
+		axisY						: [ n: "axis Y",				t: "decimal",	],
+		axisZ						: [ n: "axis Z",				t: "decimal",	],
 		pH							: [ n: "pH level",				t: "decimal",	r: [0, 14],																							],
 		phraseSpoken				: [ n: "phrase",				t: "string",																										],
 		power						: [ n: "power",					t: "decimal",		u: "W",																			],
