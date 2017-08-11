@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.2.0e3.20170810" }
+public static String version() { return "v0.2.0e4.20170811" }
 /*
+ *	08/11/2017 >>> v0.2.0e4.20170811 - BETA M2 - Support for quick set of local variables
  *	08/10/2017 >>> v0.2.0e3.20170810 - BETA M2 - Improved support for threeAxis and added support for axisX, axisY, and axisZ as decimal values
  *	08/08/2017 >>> v0.2.0e2.20170808 - BETA M2 - Fixed a bug with time restrictions for conditions/triggers (not timers) where day of week, hour, etc. would be compared against UTC making edge comparisons fail (Sun 11pm would look like a Mon 3am for EST, therefore not on a Sunday anymore)
  *	07/28/2017 >>> v0.2.0e1.20170728 - BETA M2 - Added the rainbowValue function to provide dynamic colors in a range
@@ -4949,6 +4950,14 @@ private Map setVariable(rtData, name, value) {
    	result = [t: 'error', v: 'Invalid variable']
 }
 
+def setLocalVariable(name, value) {
+	name = sanitizeVariableName(name)
+    if (!name || name.startsWith('@')) return
+	def vars = atomicState.vars ?: [:]
+    vars[name] = value
+    atomicState.vars = vars
+    return vars
+}
 
 /******************************************************************************/
 /*** 																		***/

@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.2.0e3.20170810" }
+public static String version() { return "v0.2.0e4.20170811" }
 /*
+ *	08/11/2017 >>> v0.2.0e4.20170811 - BETA M2 - Support for quick set of local variables
  *	08/10/2017 >>> v0.2.0e3.20170810 - BETA M2 - Improved support for threeAxis and added support for axisX, axisY, and axisZ as decimal values
  *	08/08/2017 >>> v0.2.0e2.20170808 - BETA M2 - Fixed a bug with time restrictions for conditions/triggers (not timers) where day of week, hour, etc. would be compared against UTC making edge comparisons fail (Sun 11pm would look like a Mon 3am for EST, therefore not on a Sunday anymore)
  *	07/28/2017 >>> v0.2.0e1.20170728 - BETA M2 - Added the rainbowValue function to provide dynamic colors in a range
@@ -1238,7 +1239,6 @@ private api_intf_dashboard_piston_tile() {
 	    def piston = getChildApps().find{ hashId(it.id) == params.id };
 	    if (piston) {
         	result = piston.clickTile(params.tile)
-            log.error result
 			result.status = "ST_SUCCESS"
         } else {
 	    	result = api_get_error_result("ERR_INVALID_ID")
@@ -1347,25 +1347,36 @@ private api_intf_variable_set() {
 	def result
     debug "Dashboard: Request received to set a variable"
 	if (verifySecurityToken(params.token)) {
+    	def pid = params.id;
     	def name = params.name;
         def value = params.value ? (LinkedHashMap) new groovy.json.JsonSlurper().parseText(new String(params.value.decodeBase64(), "UTF-8")) : null        
-        Map globalVars = atomicState.vars ?: [:]
-        if (name && !value) {
-        	//deleting a variable
-            globalVars.remove(name);
-        } else if (value && value.n) {
-        	if (!name || (name != value.n)) {
-	        	//add a new variable
-                if (name) globalVars.remove(name);
-    	        globalVars[value.n] = [t: value.t, v: value.v]
-            } else {
-                //update a variable
-                globalVars[name] = [t: value.t, v: value.v]
+        Map globalVars
+        Map localVars
+        if (name.startsWith('@')) {
+        	globalVars = atomicState.vars ?: [:]
+        	if (name && !value) {
+	        	//deleting a variable
+	            globalVars.remove(name);
+	        } else if (value && value.n) {
+    	    	if (!name || (name != value.n)) {
+		        	//add a new variable
+	                if (name) globalVars.remove(name);
+	    	        globalVars[value.n] = [t: value.t, v: value.v]
+	            } else {
+	                //update a variable
+    	            globalVars[name] = [t: value.t, v: value.v]
+	            }
+				sendVariableEvent([name: value.n, value: value.v, type: value.t])
+			}        
+        	atomicState.vars = globalVars
+			result = [status: "ST_SUCCESS"] + [globalVars: globalVars]
+        } else {
+        	def piston = getChildApps().find{ hashId(it.id) == pid };
+	    	if (piston) {
+            	localVars = piston.setLocalVariable(name, value.v)
             }
-			sendVariableEvent([name: value.n, value: value.v, type: value.t])
-		}
-        atomicState.vars = globalVars
-		result = [status: "ST_SUCCESS"] + [globalVars: globalVars]
+			result = [status: "ST_SUCCESS"] + [id: pid, localVars: localVars]
+        }
 	} else {
     	result = api_get_error_result("ERR_INVALID_TOKEN")
     }
