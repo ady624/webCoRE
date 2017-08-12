@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.2.0e4.20170811" }
+public static String version() { return "v0.2.0e5.20170812" }
 /*
+ *	08/12/2017 >>> v0.2.0e5.20170812 - BETA M2 - Allowing global variables create device subscriptions (due to demand)
  *	08/11/2017 >>> v0.2.0e4.20170811 - BETA M2 - Support for quick set of local variables
  *	08/10/2017 >>> v0.2.0e3.20170810 - BETA M2 - Improved support for threeAxis and added support for axisX, axisY, and axisZ as decimal values
  *	08/08/2017 >>> v0.2.0e2.20170808 - BETA M2 - Fixed a bug with time restrictions for conditions/triggers (not timers) where day of week, hour, etc. would be compared against UTC making edge comparisons fail (Sun 11pm would look like a Mon 3am for EST, therefore not on a Sunday anymore)
@@ -4594,6 +4595,8 @@ private void subscribeAll(rtData) {
 
 
 private List expandDeviceList(rtData, List devices, localVarsOnly = false) {
+	//temporary allowing global vars
+    localVarsOnly = false
 	List result = []
 	for(deviceId in devices) {
     	if (deviceId && (deviceId.size() == 34) && deviceId.startsWith(':') && deviceId.endsWith(':')) {
