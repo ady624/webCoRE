@@ -1352,7 +1352,7 @@ private api_intf_variable_set() {
         def value = params.value ? (LinkedHashMap) new groovy.json.JsonSlurper().parseText(new String(params.value.decodeBase64(), "UTF-8")) : null        
         Map globalVars
         Map localVars
-        if (name.startsWith('@')) {
+        if (!pid) {
         	globalVars = atomicState.vars ?: [:]
         	if (name && !value) {
 	        	//deleting a variable
