@@ -713,7 +713,10 @@ private checkVersion(rtData) {
     if (ver != rtData.coreVersion) {
     	//parent and child apps have different versions
         warn "WARNING: Results may be unreliable because the ${ver > rtData.coreVersion ? "child app's version ($ver) is newer than the parent app's version (${rtData.coreVersion})" : "parent app's version (${rtData.coreVersion}) is newer than the child app's version ($ver)" }. Please consider updating both apps to the same version.", rtData
-    }    
+    }
+    if (!location.timeZone) {
+    	error "Your SmartThings location is not setup correctly - timezone information is missing. Please visit the SmartThings mobile app, go to More, tap the cog settings button, tap the map, select your location by placing the pin and radius on the map, then tap Save, and then tap Done. You may encounter error or incorrect timing until this is fixed."
+    }
 }
 
 /******************************************************************************/
@@ -7095,7 +7098,7 @@ private utcToLocalDate(dateOrTimeOrString = null) {
 		dateOrTimeOrString = now()
 	}
 	if (dateOrTimeOrString instanceof Long) {
-		return new Date(dateOrTimeOrString + location.timeZone.getOffset(dateOrTimeOrString))
+		return new Date(dateOrTimeOrString + (location.timeZone ? location.timeZone.getOffset(dateOrTimeOrString) : 0))
 	}
 	return null
 }
@@ -7115,7 +7118,7 @@ private utcToLocalTime(dateOrTimeOrString = null) {
 		dateOrTimeOrString = now()
 	}
 	if (dateOrTimeOrString instanceof Long) {
-		return dateOrTimeOrString + location.timeZone.getOffset(dateOrTimeOrString)
+		return dateOrTimeOrString + (location.timeZone ? location.timeZone.getOffset(dateOrTimeOrString) : 0)
 	}
 	return null
 }
@@ -7127,7 +7130,7 @@ private localToUtcDate(dateOrTime) {
 		dateOrTime = dateOrTime.getTime()
 	}
 	if (dateOrTime instanceof Long) {
-		return new Date(dateOrTime - location.timeZone.getOffset(dateOrTime))
+		return new Date(dateOrTime - (location.timeZone ? location.timeZone.getOffset(dateOrTime) : 0))
 	}
 	return null
 }
@@ -7139,7 +7142,7 @@ private localToUtcTime(dateOrTimeOrString) {
 	}
 	if ("$dateOrTimeOrString".isNumber()) {
     	if (dateOrTimeOrString < 86400000) dateOrTimeOrString += getMidnightTime()
-		return dateOrTimeOrString - location.timeZone.getOffset(dateOrTimeOrString)
+		return dateOrTimeOrString - (location.timeZone ? location.timeZone.getOffset(dateOrTimeOrString) : 0)
 	}
 	if (dateOrTimeOrString instanceof String) {
 		//get unix time
