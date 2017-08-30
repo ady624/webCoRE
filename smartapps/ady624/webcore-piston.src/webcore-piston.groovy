@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.2.0e5.20170812" }
+public static String version() { return "v0.2.0e6.20170830" }
 /*
+ *	08/30/2017 >>> v0.2.0e6.20170830 - BETA M2 - Minor fixes regarding some isNumber() errors and errors with static variables using non-defined variables
  *	08/12/2017 >>> v0.2.0e5.20170812 - BETA M2 - Allowing global variables create device subscriptions (due to demand)
  *	08/11/2017 >>> v0.2.0e4.20170811 - BETA M2 - Support for quick set of local variables
  *	08/10/2017 >>> v0.2.0e3.20170810 - BETA M2 - Improved support for threeAxis and added support for axisX, axisY, and axisZ as decimal values
@@ -3747,11 +3748,11 @@ private Boolean evaluateCondition(rtData, condition, collection, async) {
                 if (lo) for (value in lo.values) updateCache(rtData, value)
                 if (ro) for (value in ro.values) updateCache(rtData, value)
                 if (ro2) for (value in ro2.values) updateCache(rtData, value)
-                if (!rtData.fastForwardTo) tracePoint(rtData, "c:${condition.$}", now() - t, result)
+                if (rtData.fastForwardTo == null) tracePoint(rtData, "c:${condition.$}", now() - t, result)
                 if (lo.operand.dm && options.devices) setVariable(rtData, lo.operand.dm, options.devices?.matched ?: [])
                 if (lo.operand.dn && options.devices) setVariable(rtData, lo.operand.dn, options.devices?.unmatched ?: [])
                 //do the stay logic here
-                if (trigger && comparison.t) {
+                if (trigger && comparison.t && (rtData.fastForwardTo == null)) {
                 	//timed trigger
                     if (to) {
                         def tvalue = to && to.operand && to.values ? to.values + [f: to.operand.f] : null
@@ -7039,7 +7040,7 @@ private cast(rtData, value, dataType, srcDataType = null) {
             }
 			return !!value
 		case "time":
-        	if (value.isNumber() && (value < 86400000)) return value
+        	if ("$value".isNumber() && (value < 86400000)) return value
         	def n = localTime()
 			return utcToLocalTime((srcDataType == 'string') ? localToUtcTime(value) : cast(rtData, value, "long")) % 86400000
 		case "date":
@@ -7136,7 +7137,7 @@ private localToUtcTime(dateOrTimeOrString) {
 		//get unix time
 		dateOrTimeOrString = dateOrTimeOrString.getTime()
 	}
-	if (dateOrTimeOrString.isNumber()) {
+	if ("$dateOrTimeOrString".isNumber()) {
     	if (dateOrTimeOrString < 86400000) dateOrTimeOrString += getMidnightTime()
 		return dateOrTimeOrString - location.timeZone.getOffset(dateOrTimeOrString)
 	}
@@ -7171,7 +7172,7 @@ private localToUtcTime(dateOrTimeOrString) {
 }
 
 private formatLocalTime(time, format = "EEE, MMM d yyyy @ h:mm:ss a z") {
-	if (time.isNumber()) {
+	if ("$time".isNumber()) {
     	if (time < 86400000) time += getMidnightTime()
 		time = new Date(time)
 	}
@@ -7457,26 +7458,17 @@ private getNextNoonTime(rtData) {
     return localToUtcTime(rightNow - rightNow.mod(86400000) + 43200000 + (rightNow.mod(86400000) >= 43200000 ? 86400000 : 0))
 }
 
-
-
-
-
-
-
-
-
-
 private Map getLocalVariables(rtData, vars) {
-	Map result = [:]
+    rtData.localVars = [:]
     def values = atomicState.vars
 	for (var in vars) {
     	def variable = [t: var.t, v: var.v ?: (var.t.endsWith(']') ? (values[var.n] instanceof Map ? values[var.n] : {}) : cast(rtData, values[var.n], var.t)), f: !!var.v] //f means fixed value - we won't save this to the state
         if (rtData && var.v && (var.a == 's') && !var.t.endsWith(']')) {
         	variable.v = evaluateExpression(rtData, evaluateOperand(rtData, null, var.v), var.t).v
         }
-        result[var.n] = variable
+        rtData.localVars[var.n] = variable
     }
-    return result    
+    return rtData.localVars    
 }
 
 def Map getSystemVariablesAndValues(rtData) {

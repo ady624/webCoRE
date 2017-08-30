@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.2.0e5.20170812" }
+public static String version() { return "v0.2.0e6.20170830" }
 /*
+ *	08/30/2017 >>> v0.2.0e6.20170830 - BETA M2 - Minor fixes regarding some isNumber() errors and errors with static variables using non-defined variables, also updated installation to check for location/timezone setup
  *	08/12/2017 >>> v0.2.0e5.20170812 - BETA M2 - Allowing global variables create device subscriptions (due to demand)
  *	08/11/2017 >>> v0.2.0e4.20170811 - BETA M2 - Support for quick set of local variables
  *	08/10/2017 >>> v0.2.0e3.20170810 - BETA M2 - Improved support for threeAxis and added support for axisX, axisY, and axisZ as decimal values
@@ -316,8 +317,15 @@ def pageMain() {
 		            	paragraph "If you have previously installed ${handle()} and are trying to open it, please go back to the Automations tab and access ${handle()} from the SmartApps section.\r\n\r\nIf you are trying to install another instance of ${handle()} then please continue with the steps.", required: true
 		            }
                 }
-                section() {
-                	paragraph "It looks like you are ready to go, please tap Next"
+               	if (location.getTimeZone()) {
+ 	               section() {
+	                	paragraph "It looks like you are ready to go, please tap Next"
+                   }
+                } else {
+ 	               section() {
+	                	paragraph "Your location is not correctly setup."
+                   }
+					pageSectionTimeZoneInstructions()                    	
                 }
             } else {
                 section() {
@@ -403,27 +411,51 @@ private pageSectionInstructions() {
     }
 }
 
+private pageSectionTimeZoneInstructions() {
+    section () {
+        paragraph "Please follow these steps to setup your location timezone:", required: true
+        paragraph "1. Using your SmartThings mobile app, abort this installation and go to More section of the app (three horizontal bars)", required: true
+        paragraph "2. Click on the gear icon on the top right", required: true
+        paragraph "3. Click on the map to edit your location", required: true
+        paragraph "4. Find your location on the map and place the pin there, adjusting the desired radius", required: true
+        paragraph "5. Tap the Save button, then tap Done", required: true
+        paragraph "6. Try installing ${handle()} again", required: true
+    }
+}
+
 private pageInitializeDashboard() {
 	//webCoRE Dashboard initialization
 	def success = initializeWebCoREEndpoint()
-	dynamicPage(name: "pageInitializeDashboard", title: "", nextPage: success ? "pageSelectDevices" : null) {
+    def hasTZ = !!location.getTimeZone()
+	dynamicPage(name: "pageInitializeDashboard", title: "", nextPage: success && hasTZ ? "pageSelectDevices" : null) {
 		if (!state.installed) {
 			if (success) {
-            	section() {
-					paragraph "Great, the dashboard is ready to go."
-                }
-                section() {
-	            	paragraph "Now, please choose a name for this ${handle()} instance"
-					//label name: "name", title: "Name", defaultValue: "webCoRE", required: false
-					label name: "name", title: "Name", state: (name ? "complete" : null), defaultValue: app.name, required: false
+               	if (hasTZ) {            
+                    section() {
+                        paragraph "Great, the dashboard is ready to go."
+                    }
+                    section() {
+                        paragraph "Now, please choose a name for this ${handle()} instance"
+                        //label name: "name", title: "Name", defaultValue: "webCoRE", required: false
+                        label name: "name", title: "Name", state: (name ? "complete" : null), defaultValue: app.name, required: false
 
-                }
-                
-                pageSectionDisclaimer()
-                
-                section() {
-                	paragraph "${state.installed ? "Tap Done to continue." : "Next, choose a security password for your dashboard. You will need to enter this password when accessing your dashboard for the first time, and possibly from time to time, depending on your settings."}", required: false
-				}
+                    }
+
+                    pageSectionDisclaimer()
+
+                    section() {
+                        paragraph "${state.installed ? "Tap Done to continue." : "Next, choose a security password for your dashboard. You will need to enter this password when accessing your dashboard for the first time, and possibly from time to time, depending on your settings."}", required: false
+                    }
+                } else {
+ 	               section() {
+	                	paragraph "Your location is not correctly setup."
+                   }
+					pageSectionTimeZoneInstructions()
+                    section () {
+                        paragraph "Once you have finished the steps above, go back and try again", required: true
+                    }
+                    return
+                }                    
 			} else {
             	section() {
 					paragraph "Sorry, it looks like OAuth is not properly enabled."
@@ -812,8 +844,7 @@ private subscribeAll() {
 	subscribe(location, "echoSistant", echoSistantHandler)    
     subscribe(location, "HubUpdated", hubUpdatedHandler, [filterEvents: false])
     subscribe(location, "summary", summaryHandler, [filterEvents: false])
-    def hub = getHub()
-    setPowerSource(hub.isBatteryInUse() ? 'battery' : 'mains')
+    setPowerSource(getHub()?.isBatteryInUse() ? 'battery' : 'mains')
 }
 
 /******************************************************************************/
@@ -847,6 +878,7 @@ mappings {
 	path("/intf/dashboard/piston/activity") {action: [GET: "api_intf_dashboard_piston_activity"]}
 	path("/intf/dashboard/variable/set") {action: [GET: "api_intf_variable_set"]}
 	path("/intf/dashboard/settings/set") {action: [GET: "api_intf_settings_set"]}
+	path("/intf/location/update") {action: [GET: "api_intf_location_update"]}
 	path("/ifttt/:eventName") {action: [GET: "api_ifttt", POST: "api_ifttt"]}
 	path("/email/:pistonId") {action: [POST: "api_email"]}
 	path("/execute/:pistonIdOrName") {action: [GET: "api_execute", POST: "api_execute"]}
@@ -1342,6 +1374,10 @@ private api_intf_dashboard_piston_delete() {
     	result = api_get_error_result("ERR_INVALID_TOKEN")
     }
     render contentType: "application/javascript;charset=utf-8", data: "${params.callback}(${result.encodeAsJSON()})"
+}
+
+private api_intf_location_update() {
+    debug "Received location update: $params"	
 }
 
 private api_intf_variable_set() {
@@ -2404,7 +2440,7 @@ private static Map commands() {
 		configure					: [ n: "Configure",						i: 'gear',																																																										],
 		cool						: [ n: "Set to Cool",					i: 'asterisk',									a: "thermostatMode",				v: "cool",																																			],
 		deviceNotification			: [ n: "Send device notification...",	d: "Send device notification \"{0}\"",																		p: [[n:"Message",t:"string"]],  																							],
-		emergencyHeat				: [ n: "Set to Emergency Heat",															a: "thermostatMode",				v: "emergencyHeat",																																	],
+		emergencyHeat				: [ n: "Set to Emergency Heat",															a: "thermostatMode",				v: "emergency heat",																																	],
 		fanAuto						: [ n: "Set fan to Auto",																a: "thermostatFanMode",				v: "auto",																																			],
 		fanCirculate				: [ n: "Set fan to Circulate",															a: "thermostatFanMode",				v: "circulate",																																		],
 		fanOn						: [ n: "Set fan to On",																	a: "thermostatFanMode",				v: "on",																																			],
