@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.2.0e6.20170830" }
+public static String version() { return "v0.2.0e7.20170906" }
 /*
+ *	09/06/2017 >>> v0.2.0e7.20170906 - BETA M2 - Added support for the $nfl composite variable, fixed some bugs with boolean comparisons of null
  *	08/30/2017 >>> v0.2.0e6.20170830 - BETA M2 - Minor fixes regarding some isNumber() errors and errors with static variables using non-defined variables, also updated installation to check for location/timezone setup
  *	08/12/2017 >>> v0.2.0e5.20170812 - BETA M2 - Allowing global variables create device subscriptions (due to demand)
  *	08/11/2017 >>> v0.2.0e4.20170811 - BETA M2 - Support for quick set of local variables

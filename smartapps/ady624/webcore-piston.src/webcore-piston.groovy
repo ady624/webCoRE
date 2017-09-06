@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.2.0e6.20170830" }
+public static String version() { return "v0.2.0e7.20170906" }
 /*
+ *	09/06/2017 >>> v0.2.0e7.20170906 - BETA M2 - Added support for the $nfl composite variable, fixed some bugs with boolean comparisons of null
  *	08/30/2017 >>> v0.2.0e6.20170830 - BETA M2 - Minor fixes regarding some isNumber() errors and errors with static variables using non-defined variables
  *	08/12/2017 >>> v0.2.0e5.20170812 - BETA M2 - Allowing global variables create device subscriptions (due to demand)
  *	08/11/2017 >>> v0.2.0e4.20170811 - BETA M2 - Support for quick set of local variables
@@ -2752,7 +2753,7 @@ private Map parseVariableName(name) {
     	name: name,
         index: null
     ]
-	if (name && name.endsWith(']')) {
+	if (name && !name.startsWith('$') && name.endsWith(']')) {
     	def parts = name.replace(']', '').tokenize('[')
         if (parts.size() == 2) {
         	result = [
@@ -4706,12 +4707,14 @@ private Map getDeviceAttribute(rtData, deviceId, attributeName, subDeviceIndex =
     return [t: "error", v: "Device '${deviceId}' not found"]
 }
 
-private Map getJsonData(rtData, data, name) {
+private Map getJsonData(rtData, data, name, feature) {
 	if (data != null) {
         try {
             List parts = name.replace('][', '].[').tokenize('.');
             def args = (data instanceof Map ? [:] + data : (data instanceof List ? [] + data : new groovy.json.JsonSlurper().parseText(data)))
+            def partIndex = -1
             for(part in parts) {
+            	partIndex = partIndex + 1
                 if ((args instanceof String) || (args instanceof GString)) {
                     if (args.startsWith('{') && args.endsWith('}')) {
                         args = (LinkedHashMap) new groovy.json.JsonSlurper().parseText(args)
@@ -4770,6 +4773,82 @@ private Map getJsonData(rtData, data, name) {
                     }
                 }
                 if (!(args instanceof Map) && !(args instanceof List)) return [t: 'dynamic', v: '']
+                //nfl overrides
+                if ((feature == 'NFL') && (partIndex == 1) && !!args && !!args.games) {
+                	def offset = null
+                    def start = null
+                    def end = null
+                    def date = localDate()
+                    def dow = date.day
+                	switch ("$part".toLowerCase()) {
+                    	case 'yesterday':
+                        	offset = -1
+                        	break
+                    	case 'today':
+                        	offset = 0
+                        	break
+                        case 'tomorrow':
+                        	offset = 1
+                        	break
+                        case 'mon':
+                        case 'monday':
+                        	offset = dow <= 2 ? 1 - dow : 8 - dow
+                        	break
+                        case 'tue':
+                        case 'tuesday':
+                        	offset = dow <= 2 ? 2 - dow : 9 - dow
+                        	break
+                        case 'wed':
+                        case 'wednesday':
+                        	offset = dow <= 2 ? - 4 - dow : 3 - dow
+                        	break
+                        case 'thu':
+                        case 'thursday':
+                        	offset = dow <= 2 ? - 3 - dow : 4 - dow
+                        	break
+                        case 'fri':
+                        case 'friday':
+                        	offset = dow <= 2 ? - 2 - dow : 5 - dow
+                        	break
+                        case 'sat':
+                        case 'saturday':
+                        	offset = dow <= 2 ? - 1 - dow : 6 - dow
+                        	break
+                        case 'sun':
+                        case 'sunday':
+                        	offset = dow <= 2 ? 0 - dow : 7 - dow
+                        	break          
+                        case 'lastweek':
+                        	start = (dow <= 2 ? - 4 - dow : 3 - dow) - 7
+                            end = (dow <= 2 ? 2 - dow : 9 - dow) - 7
+                        	break          
+                        case 'thisweek':
+                        	start = dow <= 2 ? - 4 - dow : 3 - dow
+                            end = dow <= 2 ? 2 - dow : 9 - dow
+                        	break          
+                        case 'nextweek':
+                        	start = (dow <= 2 ? - 4 - dow : 3 - dow) + 7
+                            end = (dow <= 2 ? 2 - dow : 9 - dow) + 7
+                        	break          
+                    }
+                    if (offset != null) {
+                    	date.setTime(date.getTime() + offset * 86400000)
+                        def game = args.games.find{ (it.year == date.year + 1900) && (it.month == date.month + 1) && (it.day == date.date) }
+                        args = game                        
+                        continue
+                    }
+                    if (start != null) {
+                    	def startDate = localDate()
+                    	startDate.setTime(date.getTime() + start * 86400000)
+                    	def endDate = localDate()
+                    	endDate.setTime(date.getTime() + end * 86400000)
+                        start = (startDate.year + 1900) * 372 + (startDate.month * 31) + (startDate.date - 1)
+                        end = (endDate.year + 1900) * 372 + (endDate.month * 31) + (endDate.date - 1)
+                        def game = args.games.find{ (it.year * 372 + (it.month - 1) * 31 + (it.day - 1) >= start) && (it.year * 372 + (it.month - 1) * 31 + (it.day - 1) <= end) }
+                        args = game
+                        continue
+                    }
+                }
                 def idx = 0
                 if (part.endsWith(']')) {
                     //array index
@@ -4821,8 +4900,36 @@ private Map getWeather(rtData, name) {
         	rtData.weather[dataFeature] = app.getWeatherFeature(dataFeature)
         }
     }
-	return getJsonData(rtData, rtData.weather, name)
-    
+	return getJsonData(rtData, rtData.weather, name)    
+}
+
+private Map getNFLDataFeature(dataFeature) {
+	def requestParams = [
+        uri:  "https://api.webcore.co/nfl/$dataFeature",
+        query: method == "GET" ? data : null
+    ]
+	httpGet(requestParams) { response ->
+        if ((response.status == 200) && response.data && !binary) {
+            try {
+                return response.data instanceof Map ? response.data : (LinkedHashMap) new groovy.json.JsonSlurper().parseText(response.data)
+            } catch (all) {
+                return null
+            }
+        }
+        return null
+    }
+}
+
+private Map getNFL(rtData, name) {
+	List parts = name.tokenize('.');
+    rtData.nfl = rtData.nfl ?: [:]
+    if (parts.size() > 0) {
+    	def dataFeature = parts[0]
+        if (rtData.nfl[dataFeature] == null) {
+        	rtData.nfl[dataFeature] = getNFLDataFeature(dataFeature)
+        }
+    }
+	return getJsonData(rtData, rtData.nfl, name, 'NFL')
 }
 
 private Map getIncidents(rtData, name) {
@@ -4860,6 +4967,8 @@ private Map getVariable(rtData, name) {
             	result = getResponse(rtData, name.substring(10))
             } else if (name.startsWith('$response[') && (name.size() > 10)) {
             	result = getResponse(rtData, name.substring(9))
+            } else if (name.startsWith('$nfl.') && (name.size() > 5)) {
+            	result = getNFL(rtData, name.substring(5))
             } else if (name.startsWith('$weather.') && (name.size() > 9)) {
             	result = getWeather(rtData, name.substring(9))
         	} else if (name.startsWith('$incidents.') && (name.size() > 11)) {
@@ -5407,6 +5516,8 @@ private Map evaluateExpression(rtData, expression, dataType = null) {
                     }
                     v1 = evaluateExpression(rtData, items[idx], t1).v
 	                v2 = evaluateExpression(rtData, items[idx + 1], t2).v
+                    v1 = v1 == "null" ? null : v1
+                    v2 = v2 == "null" ? null : v2
                     switch (o) {
                     	case '?':
                     	case ':':
@@ -6912,7 +7023,7 @@ private cast(rtData, value, dataType, srcDataType = null) {
     //if (srcDataType == 'vector3') error "got x = $value.x", rtData
 	if (dataType == 'dynamic') return value
 	def trueStrings = ["1", "true", "on", "open", "locked", "active", "wet", "detected", "present", "occupied", "muted", "sleeping"]
-	def falseStrings = ["0", "false", "off", "closed", "unlocked", "inactive", "dry", "clear", "not detected", "not present", "not occupied", "unmuted", "not sleeping"]
+	def falseStrings = ["0", "false", "off", "closed", "unlocked", "inactive", "dry", "clear", "not detected", "not present", "not occupied", "unmuted", "not sleeping", "null"]
 	//get rid of GStrings
     if (value == null) {
     	value = '';
@@ -7489,6 +7600,7 @@ private static Map getSystemVariables() {
         '$json': [t: "dynamic", d: true],
         '$response': [t: "dynamic", d: true],
         '$weather': [t: "dynamic", d: true],
+        '$nfl': [t: "dynamic", d: true],
         '$incidents': [t: "dynamic", d: true],
         '$shmTripped': [t: "boolean", d: true],
 		"\$currentEventAttribute": [t: "string", v: null],
@@ -7575,6 +7687,7 @@ private getSystemVariableValue(rtData, name) {
     	case '$json': return "${rtData.json}".toString()
     	case '$response': return "${rtData.response}".toString()
         case '$weather': return "${rtData.weather}".toString()
+        case '$nfl': return "${rtData.nfl}".toString()
         case '$incidents': return "${rtData.incidents}".toString()
         case '$shmTripped': initIncidents(rtData); return !!((rtData.incidents instanceof List) && (rtData.incidents.size()))
         case '$mediaId': return rtData.mediaId
