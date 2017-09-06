@@ -4929,7 +4929,7 @@ private Map getNFL(rtData, name) {
 	List parts = name.tokenize('.');
     rtData.nfl = rtData.nfl ?: [:]
     if (parts.size() > 0) {
-    	def dataFeature = parts[0]
+    	def dataFeature = parts[0].tokenize('[')[0]
         if (rtData.nfl[dataFeature] == null) {
         	rtData.nfl[dataFeature] = getNFLDataFeature(dataFeature)
         }
