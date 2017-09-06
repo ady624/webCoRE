@@ -2340,16 +2340,21 @@ private long vcmd_sendEmail(rtData, device, params) {
 		body: data
 	]
     def success = false
+    def msg = 'Unknown error'
 	httpPost(requestParams) { response ->
     	if (response.status == 200) {
 			def jsonData = response.data instanceof Map ? response.data : (LinkedHashMap) new groovy.json.JsonSlurper().parseText(response.data)
-            if (jsonData && (jsonData.result == 'OK')) {
-            	success = true
+            if (jsonData) {
+            	if (jsonData.result == 'OK') {
+            		success = true
+                } else {
+                	msg = jsonData.result.replace('ERROR ', '')
+                }
             }
         }
 	}
     if (!success) {
-	    error "Error sending email to ${data.t}", rtData
+	    error "Error sending email to ${data.t}: $msg", rtData
     }
     return 0
 }
