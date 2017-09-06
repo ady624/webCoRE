@@ -4712,7 +4712,7 @@ private Map getDeviceAttribute(rtData, deviceId, attributeName, subDeviceIndex =
     return [t: "error", v: "Device '${deviceId}' not found"]
 }
 
-private Map getJsonData(rtData, data, name, feature) {
+private Map getJsonData(rtData, data, name, feature = null) {
 	if (data != null) {
         try {
             List parts = name.replace('][', '].[').tokenize('.');
