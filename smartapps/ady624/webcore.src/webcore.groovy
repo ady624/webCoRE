@@ -20,6 +20,7 @@
 */
 public static String version() { return "v0.2.0e7.20170906" }
 /*
+ *	09/18/2017 >>> v0.2.0e8.20170918 - BETA M2 - Alpha testing for presence
  *	09/06/2017 >>> v0.2.0e7.20170906 - BETA M2 - Added support for the $nfl composite variable, fixed some bugs with boolean comparisons of null
  *	08/30/2017 >>> v0.2.0e6.20170830 - BETA M2 - Minor fixes regarding some isNumber() errors and errors with static variables using non-defined variables, also updated installation to check for location/timezone setup
  *	08/12/2017 >>> v0.2.0e5.20170812 - BETA M2 - Allowing global variables create device subscriptions (due to demand)
@@ -830,7 +831,7 @@ private initializeWebCoREEndpoint() {
         }
         return state.endpoint
 	} catch (all) {
-    	log.error "An error has occurred during endpoint initialization: ", all
+    	error "An error has occurred during endpoint initialization: ", all
     }
     return false
 }
@@ -877,9 +878,12 @@ mappings {
 	path("/intf/dashboard/piston/evaluate") {action: [GET: "api_intf_dashboard_piston_evaluate"]}
 	path("/intf/dashboard/piston/test") {action: [GET: "api_intf_dashboard_piston_test"]}
 	path("/intf/dashboard/piston/activity") {action: [GET: "api_intf_dashboard_piston_activity"]}
+	path("/intf/dashboard/presence/create") {action: [GET: "api_intf_dashboard_presence_create"]}
 	path("/intf/dashboard/variable/set") {action: [GET: "api_intf_variable_set"]}
 	path("/intf/dashboard/settings/set") {action: [GET: "api_intf_settings_set"]}
-	path("/intf/location/update") {action: [GET: "api_intf_location_update"]}
+	path("/intf/location/entered") {action: [GET: "api_intf_location_entered"]}
+	path("/intf/location/exited") {action: [GET: "api_intf_location_exited"]}
+	path("/intf/location/updated") {action: [GET: "api_intf_location_updated"]}
 	path("/ifttt/:eventName") {action: [GET: "api_ifttt", POST: "api_ifttt"]}
 	path("/email/:pistonId") {action: [POST: "api_email"]}
 	path("/execute/:pistonIdOrName") {action: [GET: "api_execute", POST: "api_execute"]}
@@ -1266,6 +1270,24 @@ private api_intf_dashboard_piston_test() {
     render contentType: "application/javascript;charset=utf-8", data: "${params.callback}(${result.encodeAsJSON()})"
 }
 
+private api_intf_dashboard_presence_create() {
+	def result
+    debug "Dashboard: Request received to test a piston"
+	if (verifySecurityToken(params.token)) {
+	    def sensor = addChildDevice("ady624", handle() + " Presence Sensor", hashId("${now()}"), null, [label: params.name])
+        if (sensor) {
+        	result = [
+            	status: "ST_SUCCESS",
+                deviceId: hashId(sensor.id)
+            ]
+        } else {
+	    	result = api_get_error_result("ERR_COULD_NOT_CREATE_DEVICE")
+        }
+	} else {
+    	result = api_get_error_result("ERR_INVALID_TOKEN")
+    }
+    render contentType: "application/javascript;charset=utf-8", data: "${params.callback}(${result.encodeAsJSON()})"
+}
 private api_intf_dashboard_piston_tile() {
 	def result
     debug "Dashboard: Clicked a piston tile"
@@ -1377,8 +1399,23 @@ private api_intf_dashboard_piston_delete() {
     render contentType: "application/javascript;charset=utf-8", data: "${params.callback}(${result.encodeAsJSON()})"
 }
 
-private api_intf_location_update() {
-    debug "Received location update: $params"	
+private api_intf_location_entered() {
+	def deviceId = params.device
+    def device = getChildDevices().find{ hashId(it.id) == deviceId }
+   	if (params.place) device.processEvent([name: 'entered', place: params.place, places: state.settings.places])
+}
+
+private api_intf_location_exited() {
+	def deviceId = params.device
+    def device = getChildDevices().find{ hashId(it.id) == deviceId }
+   	if (params.place) device.processEvent([name: 'exited', place: params.place, places: state.settings.places])
+}
+
+private api_intf_location_updated() {
+	def deviceId = params.device
+    def device = getChildDevices().find{ hashId(it.id) == deviceId }
+    Map location = params.location ? (LinkedHashMap) new groovy.json.JsonSlurper().parseText(params.location) : [error: "Invalid data"]
+    if (device) device.processEvent([name: 'updated', location: location, places: state.settings.places])
 }
 
 private api_intf_variable_set() {
@@ -1645,12 +1682,24 @@ private String getDashboardRegistrationUrl() {
 
 public Map listAvailableDevices(raw = false, updateCache = false) {
 	def storageApp = getStorageApp()
-    if (storageApp) return storageApp.listAvailableDevices(raw)
-	if (raw) {
-    	return settings.findAll{ it.key.startsWith("dev:") }.collect{ it.value }.flatten().collectEntries{ dev -> [(hashId(dev.id, updateCache)): dev]}
-    } else {
-    	return settings.findAll{ it.key.startsWith("dev:") }.collect{ it.value }.flatten().collectEntries{ dev -> [(hashId(dev.id, updateCache)): dev]}.collectEntries{ id, dev -> [ (id): [ n: dev.getDisplayName(), cn: dev.getCapabilities()*.name, a: dev.getSupportedAttributes().unique{ it.name }.collect{def x = [n: it.name, t: it.getDataType(), o: it.getValues()]; try {x.v = dev.currentValue(x.n);} catch(all) {}; x}, c: dev.getSupportedCommands().unique{ it.getName() }.collect{[n: it.getName(), p: it.getArguments()]} ]]}
+    Map result = [:]
+    if (storageApp) {
+    	result = storageApp.listAvailableDevices(raw)
+	} else {
+		if (raw) {
+    		result = settings.findAll{ it.key.startsWith("dev:") }.collect{ it.value }.flatten().collectEntries{ dev -> [(hashId(dev.id, updateCache)): dev]}
+    	} else {
+    		result = settings.findAll{ it.key.startsWith("dev:") }.collect{ it.value }.flatten().collectEntries{ dev -> [(hashId(dev.id, updateCache)): dev]}.collectEntries{ id, dev -> [ (id): [ n: dev.getDisplayName(), cn: dev.getCapabilities()*.name, a: dev.getSupportedAttributes().unique{ it.name }.collect{def x = [n: it.name, t: it.getDataType(), o: it.getValues()]; try {x.v = dev.currentValue(x.n);} catch(all) {}; x}, c: dev.getSupportedCommands().unique{ it.getName() }.collect{[n: it.getName(), p: it.getArguments()]} ]]}
+		}
 	}
+    List presenceDevices = getChildDevices()
+    if (presenceDevices && presenceDevices.size()) {
+		if (raw) {
+    		result << presenceDevices.collectEntries{ dev -> [(hashId(dev.id, updateCache)): dev]}
+    	} else {
+    		result << presenceDevices.collectEntries{ dev -> [(hashId(dev.id, updateCache)): dev]}.collectEntries{ id, dev -> [ (id): [ n: dev.getDisplayName(), cn: dev.getCapabilities()*.name, a: dev.getSupportedAttributes().unique{ it.name }.collect{def x = [n: it.name, t: it.getDataType(), o: it.getValues()]; try {x.v = dev.currentValue(x.n);} catch(all) {}; x}, c: dev.getSupportedCommands().unique{ it.getName() }.collect{[n: it.getName(), p: it.getArguments()]} ]]}
+		}
+    }
 }
 
 private Map listAvailableContacts(raw = false, updateCache = false) {
