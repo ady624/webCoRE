@@ -1,23 +1,28 @@
 /*
- *  Copyright 2016 SmartThings
+ *  webCoRE - Community's own Rule Engine - Web Edition
  *
- *  Licensed under the Apache License, Version 2.0 (the "License"); you may not
- *  use this file except in compliance with the License. You may obtain a copy 
- *  of the License at:
+ *  Copyright 2016 Adrian Caramaliu <ady624("at" sign goes here)gmail.com>
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ *  This program is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
  *
- *  Unless required by applicable law or agreed to in writing, software 
- *  distributed under the License is distributed on an "AS IS" BASIS, WITHOUT 
- *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the 
- *  License for the specific language governing permissions and limitations 
- *  under the License.
- */
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+*/
+public static String version() { return "v0.2.0e8.20170918" }
  
 metadata {
 	definition (name: "webCoRE Presence Sensor", namespace: "ady624", author: "Adrian Caramaliu") {
 		capability "Presence Sensor"
 		capability "Sensor"
+        capability "Health Check"
         attribute "places", "String"
         attribute "currentPlace", "String"
         attribute "closestPlace", "String"
@@ -36,6 +41,7 @@ metadata {
         attribute "horizontalAccuracy", "Number"        
         attribute "verticalAccuracy", "Number"        
         attribute "status", "String"
+        attribute "display", "String"
 	}
 
 	simulator {
@@ -44,6 +50,11 @@ metadata {
 	}
 
 	tiles(scale: 2) {
+		standardTile("display", "device.display") {
+			state("PRESENT", labelIcon:"st.presence.tile.mobile-present", label: '${currentValue}', color:"#00a0dc")
+			state("AWAY", labelIcon:"st.presence.tile.mobile-not-present", label: '${currentValue}', color:"#e86d13")
+			state("default", labelIcon:"st.presence.tile.mobile-not-present", label: '${currentValue}', color:"#cccccc")
+		}
 		standardTile("presence", "device.presence", width: 4, height: 4, canChangeBackground: true) {
 			state("present", labelIcon:"st.presence.tile.mobile-present", backgroundColor:"#00A0DC")
 			state("not present", labelIcon:"st.presence.tile.mobile-not-present", backgroundColor:"#ffffff")
@@ -245,6 +256,10 @@ private void updateData(presence, currentPlace, closestPlace, arrivingAtPlace, l
     def status = ( !!arrivingAtPlace ? "Arriving at $arrivingAtPlace" : ( !!leavingPlace ? "Leaving $leavingPlace" : ( !!currentPlace ? "Currently at $currentPlace" : "Closest to $closestPlace" + (closestDistance == null ? '' : " (${scale == "Metric" ? sprintf("%.2f", closestDistance) + " km" : sprintf("%.2f", closestDistance / 1.609344) + " miles"} away)"))))
 	if (status != device.currentValue('status')) {
     	sendEvent( name: "status", value: status, isStateChange: true, displayed: true )
+    }
+    def display = ( presence == 'present' ? 'PRESENT' : (currentPlace != '' ? currentPlace : 'AWAY'))
+	if (display != device.currentValue('display')) {
+    	sendEvent( name: "display", value: display, isStateChange: true, displayed: true )
     }
 }
 private static float getDistance(float lat1, float lng1, float lat2, float lng2) {
