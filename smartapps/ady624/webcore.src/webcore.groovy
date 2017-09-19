@@ -1700,6 +1700,7 @@ public Map listAvailableDevices(raw = false, updateCache = false) {
     		result << presenceDevices.collectEntries{ dev -> [(hashId(dev.id, updateCache)): dev]}.collectEntries{ id, dev -> [ (id): [ n: dev.getDisplayName(), cn: dev.getCapabilities()*.name, a: dev.getSupportedAttributes().unique{ it.name }.collect{def x = [n: it.name, t: it.getDataType(), o: it.getValues()]; try {x.v = dev.currentValue(x.n);} catch(all) {}; x}, c: dev.getSupportedCommands().unique{ it.getName() }.collect{[n: it.getName(), p: it.getArguments()]} ]]}
 		}
     }
+    return result
 }
 
 private Map listAvailableContacts(raw = false, updateCache = false) {
