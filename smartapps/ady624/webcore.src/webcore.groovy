@@ -18,7 +18,7 @@
  *
  *  Version history
 */
-public static String version() { return "v0.2.0e7.20170906" }
+public static String version() { return "v0.2.0e8.20170918" }
 /*
  *	09/18/2017 >>> v0.2.0e8.20170918 - BETA M2 - Alpha testing for presence
  *	09/06/2017 >>> v0.2.0e7.20170906 - BETA M2 - Added support for the $nfl composite variable, fixed some bugs with boolean comparisons of null
