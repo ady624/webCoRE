@@ -72,7 +72,7 @@ metadata {
 			state("default", label: '${currentValue} km away', backgroundColor:"#ffffff")
 		}
 		valueTile("altitude", "device.altitude", width: 2, height: 2) {
-			state("default", label: 'Altitude: ${currentValue}yd', backgroundColor:"#ffffff")
+			state("default", label: 'Altitude: ${currentValue}ft', backgroundColor:"#ffffff")
 		}
 		valueTile("status", "device.status", width: 6, height: 2) {
 			state("default", label: '${currentValue}', backgroundColor:"#ffffff")
@@ -109,7 +109,7 @@ def processEvent(Map event) {
     if ((event.name == 'updated') && !!event.location && !event.location.error) {
     	sendEvent( name: "latitude", value: event.location.latitude, isStateChange: true, displayed: false )
     	sendEvent( name: "longitude", value: event.location.longitude, isStateChange: true, displayed: false )
-    	sendEvent( name: "altitude", value: event.location.altitude / 0.9144, isStateChange: true, displayed: false )
+    	sendEvent( name: "altitude", value: event.location.altitude / 0.3048, isStateChange: true, displayed: false )
         sendEvent( name: "altitudeMetric", value: event.location.altitude, isStateChange: true, displayed: false )
     	sendEvent( name: "floor", value: event.location.floor, isStateChange: true, displayed: false )
     	sendEvent( name: "horizontalAccuracy", value: event.location.horizontalAccuracy, isStateChange: true, displayed: false )
