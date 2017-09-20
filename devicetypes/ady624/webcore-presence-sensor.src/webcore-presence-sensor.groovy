@@ -190,7 +190,7 @@ private void processLocation(float lat, float lng, List places) {
 	if ((homeDistance >= 0) && homeDistance != device.currentValue('distanceMetric')) {
     	sendEvent( name: "distanceMetric", value: homeDistance, isStateChange: true, displayed: false )
     	sendEvent( name: "distance", value: homeDistance / 1.609344, isStateChange: true, displayed: false )
-    	sendEvent( name: "distanceDisplay", value: scale == 'Metric' ? sprintf('%.1f', homeDistance) + 'km away' : sprintf('%.1f', homeDistance / 1.609344) + 'mi away', isStateChange: true, displayed: false )
+    	sendEvent( name: "distanceDisplay", value: scale == 'Metric' ? sprintf('%.1f', homeDistance) + ' km away' : sprintf('%.1f', homeDistance / 1.609344) + ' mi away', isStateChange: true, displayed: false )
 	}        	
 
 	closestDistance = closestDistance / 1000.0
