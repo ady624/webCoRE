@@ -2562,8 +2562,8 @@ private long vcmd_fadeColorTemperature(rtData, device, params) {
     if (state && (getDeviceAttributeValue(rtData, device, 'switch') != "$state")) {
         return 0
     }
-    startLevel = (startLevel < 0) ? 0 : ((startLevel > 100) ? 100 : startLevel)
-    endLevel = (endLevel < 0) ? 0 : ((endLevel > 100) ? 100 : endLevel)
+    startLevel = (startLevel < 1000) ? 1000 : ((startLevel > 30000) ? 30000 : startLevel)
+    endLevel = (endLevel < 1000) ? 1000 : ((endLevel > 30000) ? 30000 : endLevel)
     return vcmd_internal_fade(rtData, device, 'setColorTemperature', startLevel, endLevel, duration)
 }
 
