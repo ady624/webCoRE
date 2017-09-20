@@ -40,8 +40,6 @@ metadata {
         attribute "longitude", "Number"
         attribute "horizontalAccuracy", "Number"        
         attribute "verticalAccuracy", "Number"        
-        attribute "status", "String"
-        attribute "display", "String"
 	}
 
 	simulator {
@@ -50,35 +48,31 @@ metadata {
 	}
 
 	tiles(scale: 2) {
-		standardTile("display", "device.display") {
-			state("PRESENT", labelIcon:"st.presence.tile.mobile-present", label: '${currentValue}', color:"#00a0dc")
-			state("AWAY", labelIcon:"st.presence.tile.mobile-not-present", label: '${currentValue}', color:"#e86d13")
-			state("default", labelIcon:"st.presence.tile.mobile-not-present", label: '${currentValue}', color:"#cccccc")
-		}
 		standardTile("presence", "device.presence", width: 4, height: 4, canChangeBackground: true) {
 			state("present", labelIcon:"st.presence.tile.mobile-present", backgroundColor:"#00A0DC")
 			state("not present", labelIcon:"st.presence.tile.mobile-not-present", backgroundColor:"#ffffff")
 		}
-		valueTile("currentPlace", "device.currentPlace", width: 3, height: 2) {
-			state("", label: 'Currently at ${currentValue}', backgroundColor:"#ffffff")
+		valueTile("currentPlace", "device.currentPlace", width: 2, height: 2) {
+			state("", label: 'AWAY', backgroundColor:"#e86d13")
+			state("default", label: '${currentValue}', backgroundColor:"#00a0dc")
 		}
 		valueTile("closestPlace", "device.closestPlace", width: 3, height: 2) {
-			state("default", label: 'Closest to ${currentValue}', backgroundColor:"#ffffff")
+			state("default", label: 'Closest to ${currentValue}')
 		}
-        valueTile("distance", "device.distance", width: 2, height: 2) {
-			state("default", label: '${currentValue} miles away', backgroundColor:"#ffffff")
+        valueTile("distance", "device.distanceDisplay", width: 2, height: 2) {
+			state("default", label: '${currentValue}')
 		}
-		valueTile("distanceMetric", "device.distanceMetric", width: 1, height: 1) {
-			state("default", label: '${currentValue} km away', backgroundColor:"#ffffff")
+		valueTile("altitude", "device.altitudeDisplay", width: 3, height: 1) {
+			state("default", label: '${currentValue}', icon:"https://dashboard.webcore.co/img/altitude.png")
 		}
-		valueTile("altitude", "device.altitude", width: 2, height: 2) {
-			state("default", label: '${currentValue}ft', icon:"https://dashboard.webcore.co/img/altitude.png", backgroundColor:"#ffffff")
+		valueTile("floor", "device.floorDisplay", width: 3, height: 1) {
+			state("default", label: '${currentValue}')
 		}
 		valueTile("status", "device.status", width: 6, height: 5) {
-			state("default", label: '${currentValue}', backgroundColor:"#ffffff")
+			state("default", label: '${currentValue}')
 		}
 		main("presence")
-		details(["presence", "distance", "altitude", "status"])
+		details(["presence", "currentPlace", "distance", "altitude", "floor", "status"])
 	}
     
     preferences {
@@ -104,16 +98,37 @@ private List getPlaces(List places) {
     return places
 }
 
+
+def doSendEvent(name, value) {
+	if (value != device.currentValue(name)) sendEvent( name: name, value: value, isStateChange: true, displayed: false )    
+}
+
+def getOrdinalSuffix(value) {
+	if (!("$value".isNumeric())) return ''    
+    value = "$value".toNumber()
+	def value100 = value % 100;
+	def value10 = value % 10;
+    if (((value100 > 3) && (value100 < 21)) || (value10 == 0) || (value10 > 3)) return 'th'
+    switch (value10) {
+        case 1: return 'st'
+        case 2: return 'nd'
+        case 3: return 'rd'
+    }
+    return 'th'
+}
+
 def processEvent(Map event) {
 	def places = getPlaces(event?.places)
     if ((event.name == 'updated') && !!event.location && !event.location.error) {
-    	sendEvent( name: "latitude", value: event.location.latitude, isStateChange: true, displayed: false )
-    	sendEvent( name: "longitude", value: event.location.longitude, isStateChange: true, displayed: false )
-    	sendEvent( name: "altitude", value: event.location.altitude / 0.3048, isStateChange: true, displayed: false )
-        sendEvent( name: "altitudeMetric", value: event.location.altitude, isStateChange: true, displayed: false )
-    	sendEvent( name: "floor", value: event.location.floor, isStateChange: true, displayed: false )
-    	sendEvent( name: "horizontalAccuracy", value: event.location.horizontalAccuracy, isStateChange: true, displayed: false )
-    	sendEvent( name: "verticalAccuracy", value: event.location.verticalAccuracy, isStateChange: true, displayed: false )
+    	doSendEvent("latitude", event.location.latitude)
+    	doSendEvent("longitude", event.location.longitude)
+    	doSendEvent("altitude", event.location.altitude / 0.3048)
+        doSendEvent("altitudeMetric", event.location.altitude)
+        doSendEvent("altitudeDisplay", scale == 'Metric' ? sprintf('%.1f', event.location.altitude) + ' m' : sprintf('%.1f', event.location.altitude / 0.3048) + ' ft')
+    	doSendEvent("floor", event.location.floor)
+        doSendEvent("floorDisplay", event.location.floor ? "${event.location.floor}${getOrdinalSuffix(event.location.floor)} floor" : 'Unknown floor')
+    	doSendEvent("horizontalAccuracy", event.location.horizontalAccuracy)
+    	doSendEvent("verticalAccuracy", event.location.verticalAccuracy)
         processLocation(event.location.latitude, event.location.longitude, places)
     } else {
     	if (event?.place && (event?.place.size() == 71)) {
@@ -175,6 +190,7 @@ private void processLocation(float lat, float lng, List places) {
 	if ((homeDistance >= 0) && homeDistance != device.currentValue('distanceMetric')) {
     	sendEvent( name: "distanceMetric", value: homeDistance, isStateChange: true, displayed: false )
     	sendEvent( name: "distance", value: homeDistance / 1.609344, isStateChange: true, displayed: false )
+    	sendEvent( name: "distanceDisplay", value: scale == 'Metric' ? sprintf('%.1f', homeDistance) + 'km away' : sprintf('%.1f', homeDistance / 1.609344) + 'mi away', isStateChange: true, displayed: false )
 	}        	
 
 	closestDistance = closestDistance / 1000.0
@@ -239,10 +255,11 @@ private void processPlace(Map place, String action, String circle, List places) 
 
 private void updateData(places, presence, currentPlace, closestPlace, arrivingAtPlace, leavingPlace, closestDistance = null) {
 	if (presence != device.currentValue('presence')) {
-    	sendEvent( name: "presence", value: presence, isStateChange: true, displayed: true )
+    	sendEvent( name: "presence", value: presence, isStateChange: true, displayed: true, descriptionText = presence == 'present' ? 'Arrived at home/default place' : 'Left home/default place' )
     }
-    if (currentPlace != device.currentValue('currentPlace')) {
-    	sendEvent( name: "currentPlace", value: currentPlace, isStateChange: true, displayed: true )
+    def prevPlace = device.currentValue('currentPlace')
+    if (currentPlace != prevPlace) {    
+    	sendEvent( name: "currentPlace", value: currentPlace, isStateChange: true, displayed: true, descriptionText: currentPlace == '' ? "Left $prevPlace" : "Arrived at $currentPlace" )
     }
 	if (closestPlace != device.currentValue('closestPlace')) {
     	sendEvent( name: "closestPlace", value: closestPlace, isStateChange: true, displayed: false )
@@ -270,11 +287,8 @@ private void updateData(places, presence, currentPlace, closestPlace, arrivingAt
     if (status != device.currentValue('status')) {
     	sendEvent( name: "status", value: status, isStateChange: true, displayed: false )
     }
-    def display = ( presence == 'present' ? 'PRESENT' : (currentPlace != '' ? currentPlace : 'AWAY'))
-	if (display != device.currentValue('display')) {
-    	sendEvent( name: "display", value: display, isStateChange: true, displayed: true )
-    }
 }
+
 private static float getDistance(float lat1, float lng1, float lat2, float lng2) {
     double earthRadius = 6371000; //meters
     double dLat = Math.toRadians(lat2-lat1);
@@ -288,56 +302,5 @@ private static float getDistance(float lat1, float lng1, float lat2, float lng2)
 }
 
 def parse(String description) {
-	def name = parseName(description)
-	def value = parseValue(description)
-	def linkText = getLinkText(device)
-	def descriptionText = parseDescriptionText(linkText, value, description)
-	def handlerName = getState(value)
-	def isStateChange = isStateChange(device, name, value)
-
-	def results = [
-    	translatable: true,
-		name: name,
-		value: value,
-		unit: null,
-		linkText: linkText,
-		descriptionText: descriptionText,
-		handlerName: handlerName,
-		isStateChange: isStateChange,
-		displayed: displayed(description, isStateChange)
-	]
-	log.debug "Parse returned $results.descriptionText"
-	return results
-
-}
-
-private String parseName(String description) {
-	if (description?.startsWith("presence: ")) {
-		return "presence"
-	}
-	null
-}
-
-private String parseValue(String description) {
-	switch(description) {
-		case "presence: 1": return "present"
-		case "presence: 0": return "not present"
-		default: return description
-	}
-}
-
-private parseDescriptionText(String linkText, String value, String description) {
-	switch(value) {
-		case "present": return "{{ linkText }} has arrived"
-		case "not present": return "{{ linkText }} has left"
-		default: return value
-	}
-}
-
-private getState(String value) {
-	switch(value) {
-		case "present": return "arrived"
-		case "not present": return "left"
-		default: return value
-	}
+	//not used
 }
