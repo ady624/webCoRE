@@ -72,9 +72,9 @@ metadata {
 			state("default", label: '${currentValue} km away', backgroundColor:"#ffffff")
 		}
 		valueTile("altitude", "device.altitude", width: 2, height: 2) {
-			state("default", label: 'Altitude: ${currentValue}ft', backgroundColor:"#ffffff")
+			state("default", label: '${currentValue}ft', icon:"https://dashboard.webcore.co/img/altitude.png", backgroundColor:"#ffffff")
 		}
-		valueTile("status", "device.status", width: 6, height: 2) {
+		valueTile("status", "device.status", width: 6, height: 5) {
 			state("default", label: '${currentValue}', backgroundColor:"#ffffff")
 		}
 		main("presence")
@@ -182,8 +182,8 @@ private void processLocation(float lat, float lng, List places) {
     	sendEvent( name: "closestPlaceDistanceMetric", value: closestDistance, isStateChange: true, displayed: false )
     	sendEvent( name: "closestPlaceDistance", value: closestDistance / 1.609344, isStateChange: true, displayed: false )
 	}        	   
-	updateData(presence, currentPlace, closestPlace, arrivingAtPlace, leavingPlace, closestDistance)    
     state.places = places
+	updateData(places, presence, currentPlace, closestPlace, arrivingAtPlace, leavingPlace, closestDistance)    
 }
 
 private void processPlace(Map place, String action, String circle, List places) {
@@ -233,11 +233,11 @@ private void processPlace(Map place, String action, String circle, List places) 
 	        }
             break
     }
-	updateData(presence, currentPlace, closestPlace, arrivingAtPlace, leavingPlace)
     state.places = places   
+	updateData(places, presence, currentPlace, closestPlace, arrivingAtPlace, leavingPlace)
 }
 
-private void updateData(presence, currentPlace, closestPlace, arrivingAtPlace, leavingPlace, closestDistance = null) {
+private void updateData(places, presence, currentPlace, closestPlace, arrivingAtPlace, leavingPlace, closestDistance = null) {
 	if (presence != device.currentValue('presence')) {
     	sendEvent( name: "presence", value: presence, isStateChange: true, displayed: true )
     }
@@ -253,9 +253,22 @@ private void updateData(presence, currentPlace, closestPlace, arrivingAtPlace, l
 	if (leavingPlace != device.currentValue('leavingPlace')) {
     	sendEvent( name: "leavingPlace", value: leavingPlace, isStateChange: true, displayed: false )
     }
-    def status = ( !!arrivingAtPlace ? "Arriving at $arrivingAtPlace" : ( !!leavingPlace ? "Leaving $leavingPlace" : ( !!currentPlace ? "Currently at $currentPlace" : "Closest to $closestPlace" + (closestDistance == null ? '' : " (${scale == "Metric" ? sprintf("%.2f", closestDistance) + " km" : sprintf("%.2f", closestDistance / 1.609344) + " miles"} away)"))))
-	if (status != device.currentValue('status')) {
-    	sendEvent( name: "status", value: status, isStateChange: true, displayed: true )
+    
+    def status = ''
+    def count = 0
+    for (place in places.sort{ it.meta?.d }) {
+    	def line = ( place.n == arrivingAtPlace ? "Arriving at $arrivingAtPlace" : ( leavingPlace == place.n ? "Leaving $leavingPlace" : ( currentPlace == place.n ? "Currently at $currentPlace" : (place.meta?.d == null ? '' : "~${scale == "Metric" ? sprintf("%.2f", place.meta.d / 1000) + " km" : sprintf("%.2f", place.meta.d / 1609.344) + " miles"} from ${place.n}"))))    
+        if (line) {
+        	status += (status ? '\r\n' : '') + line
+            count += 1
+        }
+    }
+    while (count < 10) {
+    	status += '\r\n'
+        count += 1
+	}
+    if (status != device.currentValue('status')) {
+    	sendEvent( name: "status", value: status, isStateChange: true, displayed: false )
     }
     def display = ( presence == 'present' ? 'PRESENT' : (currentPlace != '' ? currentPlace : 'AWAY'))
 	if (display != device.currentValue('display')) {
