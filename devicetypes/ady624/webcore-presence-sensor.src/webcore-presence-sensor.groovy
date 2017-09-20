@@ -120,6 +120,8 @@ def getOrdinalSuffix(value) {
 def processEvent(Map event) {
 	def places = getPlaces(event?.places)
     if ((event.name == 'updated') && !!event.location && !event.location.error) {
+    	//filter out accuracy
+    	if (event.location.horizontalAccuracy > 100) return
     	doSendEvent("latitude", event.location.latitude)
     	doSendEvent("longitude", event.location.longitude)
     	doSendEvent("altitude", event.location.altitude / 0.3048)
