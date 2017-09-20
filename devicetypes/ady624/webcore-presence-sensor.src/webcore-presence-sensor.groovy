@@ -151,6 +151,7 @@ private void processLocation(float lat, float lng, List places) {
     String leavingPlace = ""
     float homeDistance = -1
     float closestDistance = -1
+    int circles = 0
     for (place in places) {
     	float distance = getDistance(lat, lng, place.p[0], place.p[1])
         if ((closestDistance < 0) || (distance < closestDistance)) {
@@ -162,6 +163,7 @@ private void processLocation(float lat, float lng, List places) {
             currentPlace = place.n
             place.meta.p = true
             if (place.h) presence = 'present'
+            circles += 1
         } else if (distance <= place.o) {
         	//we're close to this place            
             if (place.n == currentPlace) {
@@ -173,6 +175,7 @@ private void processLocation(float lat, float lng, List places) {
                 arrivingAtPlace = place.n
                 leavingPlace = ''
             }
+            circles += 1
         } else {
         	//we're not at this place
             place.meta.p = false
@@ -183,8 +186,8 @@ private void processLocation(float lat, float lng, List places) {
         	homeDistance = distance / 1000.0
         }
     }
-    if (!places.findAll{ it.meta.p }.size()) {
-    	//we found no current place, so we clear it
+    if (!circles) {
+    	//we found no current circle, so we clear the current place
     	currentPlace = ""
     }   
 	if ((homeDistance >= 0) && homeDistance != device.currentValue('distanceMetric')) {
