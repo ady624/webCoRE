@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.2.0e8.20170918" }
+public static String version() { return "v0.2.0e9.20170921" }
 /*
+ *	09/21/2017 >>> v0.2.0e9.20170921 - BETA M2 - Added support for the webCoRE Presence Sensor
  *	09/18/2017 >>> v0.2.0e8.20170918 - BETA M2 - Alpha testing for presence
  *	09/06/2017 >>> v0.2.0e7.20170906 - BETA M2 - Added support for the $nfl composite variable, fixed some bugs with boolean comparisons of null
  *	08/30/2017 >>> v0.2.0e6.20170830 - BETA M2 - Minor fixes regarding some isNumber() errors and errors with static variables using non-defined variables, also updated installation to check for location/timezone setup
@@ -2478,6 +2479,25 @@ private static Map attributes() {
 		voltage						: [ n: "voltage",				t: "decimal",	r: [null, null],	u: "V",																			],
 		water						: [ n: "water",					t: "enum",		o: ["dry", "wet"],																					],
 		windowShade					: [ n: "window shade",			t: "enum",		o: ["closed", "closing", "open", "opening", "partially open", "unknown"],							],
+        //webCoRE Presence Sensor
+		altitude					: [ n: "altitude",				t: "decimal",	r: [null, null],	u: "ft",																		],
+		altitudeMetric				: [ n: "altitude (metric)",		t: "decimal",	r: [null, null],	u: "m",																			],
+		floor						: [ n: "floor",					t: "integer",	r: [null, null],																					],
+		distance					: [ n: "distance",				t: "decimal",	r: [null, null],	u: "mi",																		],
+		distanceMetric				: [ n: "distance (metric)",		t: "decimal",	r: [null, null],	u: "km",																		],
+		currentPlace				: [ n: "current place",			t: "string",																										],
+		closestPlace				: [ n: "closest place",			t: "string",																										],
+		arrivingAtPlace				: [ n: "arriving at place",		t: "string",																										],
+		leavingPlace				: [ n: "leaving place",			t: "string",																										],
+		places						: [ n: "places",				t: "string",																										],
+		horizontalAccuracy			: [ n: "horizontal accuracy",	t: "decimal",	r: [null, null],	u: "ft",																		],
+		verticalAccuracy			: [ n: "vertical accuracy",		t: "decimal",	r: [null, null],	u: "ft",																		],
+		horizontalAccuracyMetric	: [ n: "horizontal accuracy (metric)",	t: "decimal",	r: [null, null],	u: "m",																	],
+		verticalAccuracyMetric		: [ n: "vertical accuracy (metric)",	t: "decimal",	r: [null, null],	u: "m",																	],
+		latitude					: [ n: "latitude",				t: "decimal",	r: [null, null],	u: "°",																			],
+		longitude					: [ n: "longitude",				t: "decimal",	r: [null, null],	u: "°",																			],        
+		closestPlaceDistance		: [ n: "distance to closest place",	t: "decimal",	r: [null, null],	u: "mi",																		],
+		closestPlaceDistanceMetric	: [ n: "distance to closest place (metric)",t: "decimal",	r: [null, null],	u: "km",																		],
 	]
 }
 
