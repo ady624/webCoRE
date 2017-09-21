@@ -53,8 +53,9 @@ metadata {
 			state("not present", labelIcon:"st.presence.tile.mobile-not-present", backgroundColor:"#ffffff")
 		}
 		valueTile("currentPlace", "device.currentPlace", width: 2, height: 2) {
-			state("", label: 'AWAY', backgroundColor:"#e86d13")
-			state("default", label: '${currentValue}', backgroundColor:"#00a0dc")
+//			state("", label: 'AWAY', backgroundColor:"#e86d13")
+//			state("default", label: '${currentValue}', backgroundColor:"#00a0dc")
+			state("default", label: '${currentValue}')
 		}
 		valueTile("closestPlace", "device.closestPlace", width: 3, height: 2) {
 			state("default", label: 'Closest to ${currentValue}')
@@ -118,6 +119,7 @@ def getOrdinalSuffix(value) {
 }
 
 def processEvent(Map event) {
+	//log.error "LOCATION=$event.location PLACE=$event.place"
 	def places = getPlaces(event?.places)
     if ((event.name == 'updated') && !!event.location && !event.location.error) {
     	//filter out accuracy
@@ -260,7 +262,7 @@ private void processPlace(Map place, String action, String circle, List places) 
 
 private void updateData(places, presence, currentPlace, closestPlace, arrivingAtPlace, leavingPlace, closestDistance = null) {
 	if (presence != device.currentValue('presence')) {
-    	sendEvent( name: "presence", value: presence, isStateChange: true, displayed: true, descriptionText = presence == 'present' ? 'Arrived at home/default place' : 'Left home/default place' )
+    	sendEvent( name: "presence", value: presence, isStateChange: true, displayed: true, descriptionText: presence == 'present' ? 'Arrived at home/default place' : 'Left home/default place' )
     }
     def prevPlace = device.currentValue('currentPlace')
     if (currentPlace != prevPlace) {    
