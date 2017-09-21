@@ -16,7 +16,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-public static String version() { return "v0.2.0e8.20170918" }
+public static String version() { return "v0.2.0e9.20170921" }
  
 metadata {
 	definition (name: "webCoRE Presence Sensor", namespace: "ady624", author: "Adrian Caramaliu") {
@@ -39,7 +39,9 @@ metadata {
         attribute "latitude", "Number"
         attribute "longitude", "Number"
         attribute "horizontalAccuracy", "Number"        
+        attribute "horizontalAccuracyMetric", "Number"        
         attribute "verticalAccuracy", "Number"        
+        attribute "verticalAccuracyMetric", "Number"        
 	}
 
 	simulator {
@@ -52,13 +54,8 @@ metadata {
 			state("present", labelIcon:"st.presence.tile.mobile-present", backgroundColor:"#00A0DC")
 			state("not present", labelIcon:"st.presence.tile.mobile-not-present", backgroundColor:"#ffffff")
 		}
-		valueTile("currentPlace", "device.currentPlace", width: 2, height: 2) {
-//			state("", label: 'AWAY', backgroundColor:"#e86d13")
-//			state("default", label: '${currentValue}', backgroundColor:"#00a0dc")
+		valueTile("currentPlace", "device.currentPlaceDisplay", width: 2, height: 2) {
 			state("default", label: '${currentValue}')
-		}
-		valueTile("closestPlace", "device.closestPlace", width: 3, height: 2) {
-			state("default", label: 'Closest to ${currentValue}')
 		}
         valueTile("distance", "device.distanceDisplay", width: 2, height: 2) {
 			state("default", label: '${currentValue}')
@@ -78,6 +75,7 @@ metadata {
     
     preferences {
         input "scale", "enum", title: "Distance scale", description: "Select between imperial (miles) and metric (km)", options: ["Imperial", "Metric"], defaultValue: "Imperial", displayDuringSetup: true
+        input "advanced", "enum", title: "Show advanced details", description: "", options: ["Yes", "No"], defaultValue: "Yes", displayDuringSetup: true
     }    
 }
 
@@ -128,11 +126,13 @@ def processEvent(Map event) {
     	doSendEvent("longitude", event.location.longitude)
     	doSendEvent("altitude", event.location.altitude / 0.3048)
         doSendEvent("altitudeMetric", event.location.altitude)
-        doSendEvent("altitudeDisplay", scale == 'Metric' ? sprintf('%.1f', event.location.altitude) + ' m' : sprintf('%.1f', event.location.altitude / 0.3048) + ' ft')
+        doSendEvent("altitudeDisplay", advanced == "No" ? '' : (scale == 'Metric' ? sprintf('%.1f', event.location.altitude) + ' m' : sprintf('%.1f', event.location.altitude / 0.3048) + ' ft'))
     	doSendEvent("floor", event.location.floor)
-        doSendEvent("floorDisplay", event.location.floor ? "${event.location.floor}${getOrdinalSuffix(event.location.floor)} floor" : 'Unknown floor')
-    	doSendEvent("horizontalAccuracy", event.location.horizontalAccuracy)
-    	doSendEvent("verticalAccuracy", event.location.verticalAccuracy)
+        doSendEvent("floorDisplay", advanced == "No" ? '' : (event.location.floor ? "${event.location.floor}${getOrdinalSuffix(event.location.floor)} floor" : 'Unknown floor'))
+    	doSendEvent("horizontalAccuracy", event.location.horizontalAccuracy / 0.3048)
+    	doSendEvent("horizontalAccuracyMetric", event.location.horizontalAccuracy)
+    	doSendEvent("verticalAccuracy", event.location.verticalAccuracy / 0.3048)
+    	doSendEvent("verticalAccuracyMetric", event.location.verticalAccuracy)
         processLocation(event.location.latitude, event.location.longitude, places)
     } else {
     	if (event?.place && (event?.place.size() == 71)) {
@@ -197,7 +197,7 @@ private void processLocation(float lat, float lng, List places) {
 	if ((homeDistance >= 0) && homeDistance != device.currentValue('distanceMetric')) {
     	sendEvent( name: "distanceMetric", value: homeDistance, isStateChange: true, displayed: false )
     	sendEvent( name: "distance", value: homeDistance / 1.609344, isStateChange: true, displayed: false )
-    	sendEvent( name: "distanceDisplay", value: scale == 'Metric' ? sprintf('%.1f', homeDistance) + ' km away' : sprintf('%.1f', homeDistance / 1.609344) + ' mi away', isStateChange: true, displayed: false )
+    	sendEvent( name: "distanceDisplay", value: advanced == "No" ? '' : (scale == 'Metric' ? sprintf('%.1f', homeDistance) + ' km away' : sprintf('%.1f', homeDistance / 1.609344) + ' mi away'), isStateChange: true, displayed: false )
 	}        	
 
 	closestDistance = closestDistance / 1000.0
@@ -262,11 +262,15 @@ private void processPlace(Map place, String action, String circle, List places) 
 
 private void updateData(places, presence, currentPlace, closestPlace, arrivingAtPlace, leavingPlace, closestDistance = null) {
 	if (presence != device.currentValue('presence')) {
-    	sendEvent( name: "presence", value: presence, isStateChange: true, displayed: true, descriptionText: presence == 'present' ? 'Arrived at home/default place' : 'Left home/default place' )
+    	sendEvent( name: "presence", value: presence, isStateChange: true, displayed: true, descriptionText: presence == 'present' ? 'Arrived' : 'Left' )
     }
     def prevPlace = device.currentValue('currentPlace')
     if (currentPlace != prevPlace) {    
-    	sendEvent( name: "currentPlace", value: currentPlace, isStateChange: true, displayed: true, descriptionText: currentPlace == '' ? "Left $prevPlace" : "Arrived at $currentPlace" )
+    	sendEvent( name: "currentPlace", value: currentPlace, isStateChange: true, displayed: advanced != 'No', descriptionText: currentPlace == '' ? "Left $prevPlace" : "Arrived at $currentPlace" )
+    }
+    def currentPlaceDisplay = advanced == "No" ? '' : currentPlace
+    if (currentPlaceDisplay != device.currentValue('currentPlaceDisplay')) {    
+    	sendEvent( name: "currentPlaceDisplay", value: currentPlaceDisplay, isStateChange: true, displayed: false )
     }
 	if (closestPlace != device.currentValue('closestPlace')) {
     	sendEvent( name: "closestPlace", value: closestPlace, isStateChange: true, displayed: false )
@@ -279,18 +283,20 @@ private void updateData(places, presence, currentPlace, closestPlace, arrivingAt
     }
     
     def status = ''
-    def count = 0
-    for (place in places.sort{ it.meta?.d }) {
-    	def line = ( place.n == arrivingAtPlace ? "Arriving at $arrivingAtPlace" : ( leavingPlace == place.n ? "Leaving $leavingPlace" : ( currentPlace == place.n ? "Currently at $currentPlace" : (place.meta?.d == null ? '' : "~${scale == "Metric" ? sprintf("%.2f", place.meta.d / 1000) + " km" : sprintf("%.2f", place.meta.d / 1609.344) + " miles"} from ${place.n}"))))    
-        if (line) {
-        	status += (status ? '\r\n' : '') + line
+    if (advanced != "No") {
+        def count = 0
+        for (place in places.sort{ it.meta?.d }) {
+            def line = ( place.n == arrivingAtPlace ? "Arriving at $arrivingAtPlace" : ( leavingPlace == place.n ? "Leaving $leavingPlace" : ( currentPlace == place.n ? "Currently at $currentPlace" : (place.meta?.d == null ? '' : "~${scale == "Metric" ? sprintf("%.2f", place.meta.d / 1000) + " km" : sprintf("%.2f", place.meta.d / 1609.344) + " miles"} from ${place.n}"))))    
+            if (line) {
+                status += (status ? '\r\n' : '') + line
+                count += 1
+            }
+        }
+        while (count < 10) {
+            status += '\r\n'
             count += 1
         }
     }
-    while (count < 10) {
-    	status += '\r\n'
-        count += 1
-	}
     if (status != device.currentValue('status')) {
     	sendEvent( name: "status", value: status, isStateChange: true, displayed: false )
     }
