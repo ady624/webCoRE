@@ -76,7 +76,13 @@ metadata {
     preferences {
         input "scale", "enum", title: "Distance scale", description: "Select between imperial (miles) and metric (km)", options: ["Imperial", "Metric"], defaultValue: "Imperial", displayDuringSetup: true
         input "advanced", "enum", title: "Show advanced details", description: "", options: ["Yes", "No"], defaultValue: "Yes", displayDuringSetup: true
+        input "presenceMode", "enum", title: "Presence mode", description: "", options: ["Automatic", "Force present", "Force not present"], defaultValue: "Automatic", displayDuringSetup: true
     }    
+}
+
+
+private updated() {
+	updateData(state.places, device.currentValue('presence'), device.currentValue('currentPlace'), device.currentValue('closestPlace'), device.currentValue('arrivingAtPlace'), device.currentValue('leavingPlace'))
 }
 
 private List getPlaces(List places) {
@@ -206,7 +212,7 @@ private void processLocation(float lat, float lng, List places) {
     	sendEvent( name: "closestPlaceDistance", value: closestDistance / 1.609344, isStateChange: true, displayed: false )
 	}        	   
     state.places = places
-	updateData(places, presence, currentPlace, closestPlace, arrivingAtPlace, leavingPlace, closestDistance)    
+	updateData(places, presence, currentPlace, closestPlace, arrivingAtPlace, leavingPlace)    
 }
 
 private void processPlace(Map place, String action, String circle, List places) {
@@ -260,10 +266,7 @@ private void processPlace(Map place, String action, String circle, List places) 
 	updateData(places, presence, currentPlace, closestPlace, arrivingAtPlace, leavingPlace)
 }
 
-private void updateData(places, presence, currentPlace, closestPlace, arrivingAtPlace, leavingPlace, closestDistance = null) {
-	if (presence != device.currentValue('presence')) {
-    	sendEvent( name: "presence", value: presence, isStateChange: true, displayed: true, descriptionText: presence == 'present' ? 'Arrived' : 'Left' )
-    }
+private void updateData(places, presence, currentPlace, closestPlace, arrivingAtPlace, leavingPlace) {
     def prevPlace = device.currentValue('currentPlace')
     if (currentPlace != prevPlace) {    
     	sendEvent( name: "currentPlace", value: currentPlace, isStateChange: true, displayed: advanced != 'No', descriptionText: currentPlace == '' ? "Left $prevPlace" : "Arrived at $currentPlace" )
@@ -300,6 +303,17 @@ private void updateData(places, presence, currentPlace, closestPlace, arrivingAt
     if (status != device.currentValue('status')) {
     	sendEvent( name: "status", value: status, isStateChange: true, displayed: false )
     }
+    switch (presenceMode) {
+    	case 'Force present':
+        	presence = 'present'
+            break
+    	case 'Force not present':
+        	presence = 'not present'
+            break
+    }
+	if (presence != device.currentValue('presence')) {
+    	sendEvent( name: "presence", value: presence, isStateChange: true, displayed: true, descriptionText: presence == 'present' ? 'Arrived' : 'Left' )
+    }    
 }
 
 private static float getDistance(float lat1, float lng1, float lat2, float lng2) {
