@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.2.0e9.20170921" }
+public static String version() { return "v0.2.0ea.20170924" }
 /*
+ *	09/24/2017 >>> v0.2.0ea.20170924 - BETA M2 - Fixed a problem where $nfl.schedule.thisWeek would only return one game, it now returns all games for the week. Same for lastWeek and nextWeek.
  *	09/21/2017 >>> v0.2.0e9.20170921 - BETA M2 - Added support for the webCoRE Presence Sensor
  *	09/18/2017 >>> v0.2.0e8.20170918 - BETA M2 - Alpha testing for presence
  *	09/06/2017 >>> v0.2.0e7.20170906 - BETA M2 - Added support for the $nfl composite variable, fixed some bugs with boolean comparisons of null
@@ -4781,13 +4782,14 @@ private Map getJsonData(rtData, data, name, feature = null) {
                 }
                 if (!(args instanceof Map) && !(args instanceof List)) return [t: 'dynamic', v: '']
                 //nfl overrides
+                def overrideArgs = false
                 if ((feature == 'NFL') && (partIndex == 1) && !!args && !!args.games) {
                 	def offset = null
                     def start = null
                     def end = null
                     def date = localDate()
                     def dow = date.day
-                	switch ("$part".toLowerCase()) {
+                	switch ("$part".tokenize('[')[0].toLowerCase()) {
                     	case 'yesterday':
                         	offset = -1
                         	break
@@ -4851,9 +4853,15 @@ private Map getJsonData(rtData, data, name, feature = null) {
                     	endDate.setTime(date.getTime() + end * 86400000)
                         start = (startDate.year + 1900) * 372 + (startDate.month * 31) + (startDate.date - 1)
                         end = (endDate.year + 1900) * 372 + (endDate.month * 31) + (endDate.date - 1)
-                        def game = args.games.find{ (it.year * 372 + (it.month - 1) * 31 + (it.day - 1) >= start) && (it.year * 372 + (it.month - 1) * 31 + (it.day - 1) <= end) }
-                        args = game
-                        continue
+                        if (parts[0].size() > 3) {
+	                        def games = args.games.findAll{ (it.year * 372 + (it.month - 1) * 31 + (it.day - 1) >= start) && (it.year * 372 + (it.month - 1) * 31 + (it.day - 1) <= end) }
+    	                    args = games
+                            overrideArgs = true
+                        } else {
+	                        def game = args.games.find{ (it.year * 372 + (it.month - 1) * 31 + (it.day - 1) >= start) && (it.year * 372 + (it.month - 1) * 31 + (it.day - 1) <= end) }
+    	                    args = game
+	                        continue
+                        }
                     }
                 }
                 def idx = 0
@@ -4870,12 +4878,12 @@ private Map getJsonData(rtData, data, name, feature = null) {
                             idx = var && (var.t != 'error') ? var.v : idx
                         }
                     }
-                    if (part) args = args[part]
+                    if (!overrideArgs && !!part) args = args[part]
                     if (args instanceof List) idx = cast(rtData, idx, 'integer')
                     args = args[idx]
                     continue
                 }
-                args = args[part]
+                if (!overrideArgs) args = args[part]
             }
             return [t: 'dynamic', v: "$args".toString()]
         } catch (all) {
