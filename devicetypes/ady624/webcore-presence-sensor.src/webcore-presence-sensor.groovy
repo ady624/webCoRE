@@ -16,11 +16,17 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-public static String version() { return "v0.2.0e9.20170921" }
- 
+public static String version() { return "v0.2.0eb.20170925" }
+/*
+ *	09/25/2017 >>> v0.2.0eb.20170925 - BETA M2 - Added Sleep Sensor capability to the webCoRE Presence Sensor, thanks to @Cozdabuch and @bangali
+ *	09/24/2017 >>> v0.2.0ea.20170924 - BETA M2 - Fixed a problem where $nfl.schedule.thisWeek would only return one game, it now returns all games for the week. Same for lastWeek and nextWeek.
+ *	09/21/2017 >>> v0.2.0e9.20170921 - BETA M2 - Added support for the webCoRE Presence Sensor
+ *	09/18/2017 >>> v0.2.0e8.20170918 - BETA M2 - Alpha testing for presence
+*/ 
 metadata {
 	definition (name: "webCoRE Presence Sensor", namespace: "ady624", author: "Adrian Caramaliu") {
 		capability "Presence Sensor"
+        capability "Sleep Sensor"
 		capability "Sensor"
         capability "Health Check"
         attribute "places", "String"
@@ -42,6 +48,9 @@ metadata {
         attribute "horizontalAccuracyMetric", "Number"        
         attribute "verticalAccuracy", "Number"        
         attribute "verticalAccuracyMetric", "Number"        
+        command "asleep"
+        command "awake"
+        command "toggleSleeping"
 	}
 
 	simulator {
@@ -49,10 +58,26 @@ metadata {
 		status "not present": "presence: 0"
 	}
 
-	tiles(scale: 2) {
-		standardTile("presence", "device.presence", width: 4, height: 4, canChangeBackground: true) {
+	tiles(scale: 2) {    
+		multiAttributeTile(name: "display", width: 2, height: 2, canChangeBackground: true) {
+			tileAttribute ("device.display", key: "PRIMARY_CONTROL") {
+            	attributeState "present, not sleeping", label: 'Home', icon:"st.nest.nest-away", backgroundColor:"#c0ceb9"
+				attributeState "present, sleeping", label: 'Home (asleep)', icon:"st.Bedroom.bedroom2", backgroundColor:"#6879a3"
+				attributeState "not present", label: 'Away', icon:"st.Office.office5", backgroundColor:"#777777"
+            }
+       		tileAttribute ("device.status", key: "SECONDARY_CONTROL") {
+				attributeState "default", 
+					label:'${currentValue}'
+			}
+        
+        }
+		standardTile("presence", "device.presence", width: 4, height: 2, canChangeBackground: true) {
 			state("present", labelIcon:"st.presence.tile.mobile-present", backgroundColor:"#00A0DC")
 			state("not present", labelIcon:"st.presence.tile.mobile-not-present", backgroundColor:"#ffffff")
+		}
+		standardTile("sleeping", "device.sleeping", width: 2, height: 2, canChangeBackground: true) {
+			state("sleeping", label:"Asleep", icon: "st.Bedroom.bedroom2", action: "awake", backgroundColor:"#00A0DC")
+			state("not sleeping", label:"Awake", icon: "st.Health & Wellness.health12", action: "asleep", backgroundColor:"#ffffff")
 		}
 		valueTile("currentPlace", "device.currentPlaceDisplay", width: 2, height: 2) {
 			state("default", label: '${currentValue}')
@@ -60,17 +85,17 @@ metadata {
         valueTile("distance", "device.distanceDisplay", width: 2, height: 2) {
 			state("default", label: '${currentValue}')
 		}
-		valueTile("altitude", "device.altitudeDisplay", width: 3, height: 1) {
+		valueTile("altitude", "device.altitudeDisplay", width: 2, height: 1) {
 			state("default", label: '${currentValue}', icon:"https://dashboard.webcore.co/img/altitude.png")
 		}
-		valueTile("floor", "device.floorDisplay", width: 3, height: 1) {
+		valueTile("floor", "device.floorDisplay", width: 2, height: 1) {
 			state("default", label: '${currentValue}')
 		}
 		valueTile("status", "device.status", width: 6, height: 5) {
 			state("default", label: '${currentValue}')
 		}
 		main("presence")
-		details(["presence", "currentPlace", "distance", "altitude", "floor", "status"])
+		details(["display", "presence", "sleeping", "currentPlace", "distance", "altitude", "floor", "status"])
 	}
     
     preferences {
@@ -82,7 +107,7 @@ metadata {
 
 
 private updated() {
-	updateData(state.places, device.currentValue('presence'), device.currentValue('currentPlace'), device.currentValue('closestPlace'), device.currentValue('arrivingAtPlace'), device.currentValue('leavingPlace'))
+	updateData(state.places, device.currentValue('presence'), device.currentValue('sleeping'), device.currentValue('currentPlace'), device.currentValue('closestPlace'), device.currentValue('arrivingAtPlace'), device.currentValue('leavingPlace'))
 }
 
 private List getPlaces(List places) {
@@ -212,7 +237,7 @@ private void processLocation(float lat, float lng, List places) {
     	sendEvent( name: "closestPlaceDistance", value: closestDistance / 1.609344, isStateChange: true, displayed: false )
 	}        	   
     state.places = places
-	updateData(places, presence, currentPlace, closestPlace, arrivingAtPlace, leavingPlace)    
+	updateData(places, presence, device.currentValue('sleeping'), currentPlace, closestPlace, arrivingAtPlace, leavingPlace)    
 }
 
 private void processPlace(Map place, String action, String circle, List places) {
@@ -263,10 +288,10 @@ private void processPlace(Map place, String action, String circle, List places) 
             break
     }
     state.places = places   
-	updateData(places, presence, currentPlace, closestPlace, arrivingAtPlace, leavingPlace)
+	updateData(places, presence, device.currentValue('sleeping'), currentPlace, closestPlace, arrivingAtPlace, leavingPlace)
 }
 
-private void updateData(places, presence, currentPlace, closestPlace, arrivingAtPlace, leavingPlace) {
+private void updateData(places, presence, sleeping, currentPlace, closestPlace, arrivingAtPlace, leavingPlace) {
     def prevPlace = device.currentValue('currentPlace')
     if (currentPlace != prevPlace) {    
     	sendEvent( name: "currentPlace", value: currentPlace, isStateChange: true, displayed: advanced != 'No', descriptionText: currentPlace == '' ? "Left $prevPlace" : "Arrived at $currentPlace" )
@@ -313,7 +338,15 @@ private void updateData(places, presence, currentPlace, closestPlace, arrivingAt
     }
 	if (presence != device.currentValue('presence')) {
     	sendEvent( name: "presence", value: presence, isStateChange: true, displayed: true, descriptionText: presence == 'present' ? 'Arrived' : 'Left' )
-    }    
+    }
+    sleeping = sleeping ? (presence == 'not present' ? 'not sleeping' : sleeping) : 'not sleeping'
+	if (sleeping != device.currentValue('sleeping')) {
+    	sendEvent( name: "sleeping", value: sleeping, isStateChange: true, displayed: true, descriptionText: sleeping == 'sleeping' ? 'Sleeping' : 'Awake' )
+    }
+    def display = presence + (presence == 'present' ? ', ' + sleeping : '')
+	if (display != device.currentValue('display')) {
+    	sendEvent( name: "display", value: display, isStateChange: true, displayed: false )
+    }
 }
 
 private static float getDistance(float lat1, float lng1, float lat2, float lng2) {
@@ -330,4 +363,17 @@ private static float getDistance(float lat1, float lng1, float lat2, float lng2)
 
 def parse(String description) {
 	//not used
+}
+
+private toggleSleeping(sleeping = null) {
+	sleeping = sleeping ?: (device.currentValue('sleeping') == 'not sleeping' ? 'sleeping' : 'not sleeping')
+   	updateData(state.places, device.currentValue('presence'), sleeping, device.currentValue('currentPlace'), device.currentValue('closestPlace'), device.currentValue('arrivingAtPlace'), device.currentValue('leavingPlace'))
+}
+
+def asleep() {
+	toggleSleeping('sleeping')
+}
+
+def awake() {
+	toggleSleeping('not sleeping')
 }
