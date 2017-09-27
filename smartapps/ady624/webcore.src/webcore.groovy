@@ -18,8 +18,10 @@
  *
  *  Version history
 */
-public static String version() { return "v0.2.0ea.20170924" }
+public static String version() { return "v0.2.0ec.20170927" }
 /*
+ *	09/27/2017 >>> v0.2.0ec.20170927 - BETA M2 - Fixed a problem where the 'was' comparison would fail when the event had no device
+ *	09/25/2017 >>> v0.2.0eb.20170925 - BETA M2 - Added Sleep Sensor capability to the webCoRE Presence Sensor, thanks to @Cozdabuch and @bangali
  *	09/24/2017 >>> v0.2.0ea.20170924 - BETA M2 - Fixed a problem where $nfl.schedule.thisWeek would only return one game, it now returns all games for the week. Same for lastWeek and nextWeek.
  *	09/21/2017 >>> v0.2.0e9.20170921 - BETA M2 - Added support for the webCoRE Presence Sensor
  *	09/18/2017 >>> v0.2.0e8.20170918 - BETA M2 - Alpha testing for presence

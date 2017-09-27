@@ -18,8 +18,10 @@
  *
  *  Version history
 */
-public static String version() { return "v0.2.0ea.20170924" }
+public static String version() { return "v0.2.0ec.20170927" }
 /*
+ *	09/27/2017 >>> v0.2.0ec.20170927 - BETA M2 - Fixed a problem where the 'was' comparison would fail when the event had no device
+ *	09/25/2017 >>> v0.2.0eb.20170925 - BETA M2 - Added Sleep Sensor capability to the webCoRE Presence Sensor, thanks to @Cozdabuch and @bangali
  *	09/24/2017 >>> v0.2.0ea.20170924 - BETA M2 - Fixed a problem where $nfl.schedule.thisWeek would only return one game, it now returns all games for the week. Same for lastWeek and nextWeek.
  *	09/21/2017 >>> v0.2.0e9.20170921 - BETA M2 - Added support for the webCoRE Presence Sensor
  *	09/18/2017 >>> v0.2.0e8.20170918 - BETA M2 - Alpha testing for presence
@@ -4006,7 +4008,7 @@ private boolean valueWas(rtData, comparisonValue, rightValue, rightValue2, timeV
     def attribute = comparisonValue.v.a
     long threshold = evaluateExpression(rtData, [t: 'duration', v: timeValue.v, vt: timeValue.vt], 'long').v
     
-	def states = listPreviousStates(device, attribute, threshold, (rtData.event.device.id == device.id) && (rtData.event.name == attribute))
+	def states = listPreviousStates(device, attribute, threshold, (rtData.event.device?.id == device.id) && (rtData.event.name == attribute))
     def result = true
     long duration = 0
     for (state in states) {
@@ -4660,20 +4662,20 @@ private getDevice(rtData, idOrName) {
 }
 
 private getDeviceAttributeValue(rtData, device, attributeName) {
-	if (rtData.event && (rtData.event.name == attributeName) && (rtData.event.device.id == device.id)) {
+	if (rtData.event && (rtData.event.name == attributeName) && (rtData.event.device?.id == device.id)) {
     	return rtData.event.value;
     } else {
     	switch (attributeName) {
         	case '$status':
             	return device.getStatus()
         	case 'orientation':
-        		return getThreeAxisOrientation(rtData.event && (rtData.event.name == 'threeAxis') && (rtData.event.device.id == device.id) ? rtData.event.xyzValue : device.currentValue('threeAxis'))
+        		return getThreeAxisOrientation(rtData.event && (rtData.event.name == 'threeAxis') && (rtData.event.device?.id == device.id) ? rtData.event.xyzValue : device.currentValue('threeAxis'))
         	case 'axisX':
-        		return rtData.event && (rtData.event.name == 'threeAxis') && (rtData.event.device.id == device.id) ? rtData.event.xyzValue.x : device.currentValue('threeAxis').x
+        		return rtData.event && (rtData.event.name == 'threeAxis') && (rtData.event.device?.id == device.id) ? rtData.event.xyzValue.x : device.currentValue('threeAxis').x
 			case 'axisY':
-        		return rtData.event && (rtData.event.name == 'threeAxis') && (rtData.event.device.id == device.id) ? rtData.event.xyzValue.y : device.currentValue('threeAxis').y
+        		return rtData.event && (rtData.event.name == 'threeAxis') && (rtData.event.device?.id == device.id) ? rtData.event.xyzValue.y : device.currentValue('threeAxis').y
             case 'axisZ':
-        		return rtData.event && (rtData.event.name == 'threeAxis') && (rtData.event.device.id == device.id) ? rtData.event.xyzValue.z : device.currentValue('threeAxis').z
+        		return rtData.event && (rtData.event.name == 'threeAxis') && (rtData.event.device?.id == device.id) ? rtData.event.xyzValue.z : device.currentValue('threeAxis').z
         }
         def result
         try {
