@@ -20,6 +20,8 @@
 */
 public static String version() { return "v0.2.0ec.20170927" }
 /*
+ *	09/30/2017 >>> v0.2.0f0.20170930 - BETA M2 - Added last update info for both geofences and location updates
+ *	09/30/2017 >>> v0.2.0ef.20170930 - BETA M2 - Minor fixes for Android
  *	09/29/2017 >>> v0.2.0ed.20170929 - BETA M2 - Added support for Android presence
  *	09/27/2017 >>> v0.2.0ec.20170927 - BETA M2 - Fixed a problem where the 'was' comparison would fail when the event had no device
  *	09/25/2017 >>> v0.2.0eb.20170925 - BETA M2 - Added Sleep Sensor capability to the webCoRE Presence Sensor, thanks to @Cozdabuch and @bangali
