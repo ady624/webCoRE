@@ -16,8 +16,10 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-public static String version() { return "v0.2.0eb.20170925" }
+public static String version() { return "v0.2.0ed.20170929" }
 /*
+ *	09/29/2017 >>> v0.2.0ed.20170929 - BETA M2 - Added support for Android presence
+ *	09/27/2017 >>> v0.2.0ec.20170927 - BETA M2 - Fixed a problem where the 'was' comparison would fail when the event had no device
  *	09/25/2017 >>> v0.2.0eb.20170925 - BETA M2 - Added Sleep Sensor capability to the webCoRE Presence Sensor, thanks to @Cozdabuch and @bangali
  *	09/24/2017 >>> v0.2.0ea.20170924 - BETA M2 - Fixed a problem where $nfl.schedule.thisWeek would only return one game, it now returns all games for the week. Same for lastWeek and nextWeek.
  *	09/21/2017 >>> v0.2.0e9.20170921 - BETA M2 - Added support for the webCoRE Presence Sensor
@@ -122,7 +124,7 @@ private List getPlaces(List places) {
     }
     if (!homePlace && places.size()) places[0].h = true
     if (list != device.currentValue("places")) {
-    	sendEvent( name: "places", value: list, isStateChange: true, displayed: false )
+    	sendEvent( name: "places", value: list, displayed: false )
     }
     state.places = places
     return places
@@ -130,12 +132,12 @@ private List getPlaces(List places) {
 
 
 def doSendEvent(name, value) {
-	if (value != device.currentValue(name)) sendEvent( name: name, value: value, isStateChange: true, displayed: false )    
+	if (value != device.currentValue(name)) sendEvent( name: name, value: value, displayed: false )    
 }
 
 def getOrdinalSuffix(value) {
-	if (!("$value".isNumeric())) return ''    
-    value = "$value".toNumber()
+	if (!("$value".isNumber())) return ''    
+    value = "$value".toInteger()
 	def value100 = value % 100;
 	def value10 = value % 10;
     if (((value100 > 3) && (value100 < 21)) || (value10 == 0) || (value10 > 3)) return 'th'
@@ -301,7 +303,7 @@ private void updateData(places, presence, sleeping, currentPlace, closestPlace, 
     	sendEvent( name: "currentPlaceDisplay", value: currentPlaceDisplay, isStateChange: true, displayed: false )
     }
 	if (closestPlace != device.currentValue('closestPlace')) {
-    	sendEvent( name: "closestPlace", value: closestPlace, isStateChange: true, displayed: false )
+    	sendEvent( name: "closestPlace", value: closestPlace, displayed: false )
     }
 	if (arrivingAtPlace != device.currentValue('arrivingAtPlace')) {
     	sendEvent( name: "arrivingAtPlace", value: arrivingAtPlace, isStateChange: true, displayed: false )
