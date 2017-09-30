@@ -20,6 +20,7 @@
 */
 public static String version() { return "v0.2.0ec.20170927" }
 /*
+ *	09/29/2017 >>> v0.2.0ed.20170929 - BETA M2 - Added support for Android presence
  *	09/27/2017 >>> v0.2.0ec.20170927 - BETA M2 - Fixed a problem where the 'was' comparison would fail when the event had no device
  *	09/25/2017 >>> v0.2.0eb.20170925 - BETA M2 - Added Sleep Sensor capability to the webCoRE Presence Sensor, thanks to @Cozdabuch and @bangali
  *	09/24/2017 >>> v0.2.0ea.20170924 - BETA M2 - Fixed a problem where $nfl.schedule.thisWeek would only return one game, it now returns all games for the week. Same for lastWeek and nextWeek.
@@ -778,13 +779,13 @@ def pageRemove() {
 /******************************************************************************/
 
 
-private installed() {
+def installed() {
 	state.installed = true
 	initialize()
 	return true
 }
 
-private updated() {
+def updated() {
 	warn "Updating webCoRE ${version()}"
 	unsubscribe()
     unschedule()
@@ -827,7 +828,7 @@ private initializeWebCoREEndpoint() {
             try {
                 def accessToken = createAccessToken()
                 if (accessToken) {
-                    state.endpoint = apiServerUrl("/api/token/${accessToken}/smartapps/installations/${app.id}/")
+                    state.endpoint = hubUID ? apiServerUrl("$hubUID/apps/${app.id}/?access_token=${state.accessToken}") : apiServerUrl("/api/token/${accessToken}/smartapps/installations/${app.id}/")
                 }
             } catch(e) {
                 state.endpoint = null
@@ -912,7 +913,7 @@ private api_get_base_result(deviceVersion = 0, updateCache = false) {
 	return [
         name: location.name + ' \\ ' + (app.label ?: app.name),
         instance: [
-	    	account: [id: hashId(app.getAccountId(), updateCache)],
+	    	account: [id: hashId(hubUID ?: app.getAccountId(), updateCache)],
         	pistons: getChildApps().findAll{ it.name == name }.sort{ it.label }.collect{ [ id: hashId(it.id, updateCache), 'name': it.label, 'meta': state[hashId(it.id, updateCache)] ] },
             id: hashId(app.id, updateCache),
             locationId: hashId(location.id, updateCache),
@@ -928,12 +929,12 @@ private api_get_base_result(deviceVersion = 0, updateCache = false) {
         ] + (sendDevices ? [contacts: listAvailableContacts(false, updateCache), devices: listAvailableDevices(false, updateCache)] : [:]),
         location: [
             contactBookEnabled: location.getContactBookEnabled(),
-            hubs: location.getHubs().collect{ [id: hashId(it.id, updateCache), name: it.name, firmware: it.getFirmwareVersionString(), physical: it.getType().toString().contains('PHYSICAL'), powerSource: it.isBatteryInUse() ? 'battery' : 'mains' ]},
-            incidents: location.activeIncidents.collect{[date: it.date.time, title: it.getTitle(), message: it.getMessage(), args: it.getMessageArgs(), sourceType: it.getSourceType()]}.findAll{ it.date >= incidentThreshold },
+            hubs: location.getHubs().collect{ [id: hashId(it.id, updateCache), name: it.name, firmware: hubUID ? 'unknown' : it.getFirmwareVersionString(), physical: it.getType().toString().contains('PHYSICAL'), powerSource: it.isBatteryInUse() ? 'battery' : 'mains' ]},
+            incidents: hubUID ? [] : location.activeIncidents.collect{[date: it.date.time, title: it.getTitle(), message: it.getMessage(), args: it.getMessageArgs(), sourceType: it.getSourceType()]}.findAll{ it.date >= incidentThreshold },
             id: hashId(location.id, updateCache),
             mode: hashId(location.getCurrentMode().id, updateCache),
             modes: location.getModes().collect{ [id: hashId(it.id, updateCache), name: it.name ]},
-            shm: location.currentState("alarmSystemStatus")?.value,
+            shm: hubUID ? 'off' : location.currentState("alarmSystemStatus")?.value,
             name: location.name,
             temperatureScale: location.getTemperatureScale(),
             timeZone: tz ? [
@@ -973,7 +974,7 @@ private api_intf_dashboard_load() {
     }
     //for accuracy, use the time as close as possible to the render
     result.now = now()            
-	render contentType: "application/javascript;charset=utf-8", data: "${params.callback}(${result.encodeAsJSON()})"
+	render contentType: "application/javascript;charset=utf-8", data: "${params.callback}(${groovy.json.JsonOutput.toJson(result)})"
 }
 
 private api_intf_dashboard_refresh() {
@@ -987,7 +988,7 @@ private api_intf_dashboard_refresh() {
     }
     //for accuracy, use the time as close as possible to the render
     result.now = now()            
-	render contentType: "application/javascript;charset=utf-8", data: "${params.callback}(${result.encodeAsJSON()})"
+	render contentType: "application/javascript;charset=utf-8", data: "${params.callback}(${groovy.json.JsonOutput.toJson(result)})"
 }
 
 private api_intf_dashboard_piston_new() {
@@ -998,7 +999,7 @@ private api_intf_dashboard_piston_new() {
 	} else {
     	result = api_get_error_result("ERR_INVALID_TOKEN")
     }
-    render contentType: "application/javascript;charset=utf-8", data: "${params.callback}(${result.encodeAsJSON()})"
+    render contentType: "application/javascript;charset=utf-8", data: "${params.callback}(${groovy.json.JsonOutput.toJson(result)})"
 }
 
 private api_intf_dashboard_piston_create() {
@@ -1009,11 +1010,12 @@ private api_intf_dashboard_piston_create() {
         if (params.author || params.bin) {
         	piston.config([bin: params.bin, author: params.author, initialVersion: version()])
         }
+      	if (hubUID) piston.installed()
         result = [status: "ST_SUCCESS", id: hashId(piston.id)]
 	} else {
     	result = api_get_error_result("ERR_INVALID_TOKEN")
     }
-    render contentType: "application/javascript;charset=utf-8", data: "${params.callback}(${result.encodeAsJSON()})"
+    render contentType: "application/javascript;charset=utf-8", data: "${params.callback}(${groovy.json.JsonOutput.toJson(result)})"
 }
 
 private api_intf_dashboard_piston_get() {
@@ -1042,7 +1044,7 @@ private api_intf_dashboard_piston_get() {
                     comparisons: comparisons(),
                     functions: functions(),
                     colors: [                
-                        standard: colorUtil.ALL
+                        standard: colorUtil?.ALL
                     ],
                 ]
             }
@@ -1054,7 +1056,7 @@ private api_intf_dashboard_piston_get() {
     }
     //for accuracy, use the time as close as possible to the render
     result.now = now()            
-    render contentType: "application/javascript;charset=utf-8", data: "${params.callback}(${result.encodeAsJSON()})"
+    render contentType: "application/javascript;charset=utf-8", data: "${params.callback}(${groovy.json.JsonOutput.toJson(result)})"
 }
 
 
@@ -1078,7 +1080,7 @@ private api_intf_dashboard_piston_backup() {
     }
     //for accuracy, use the time as close as possible to the render
     result.now = now()            
-    render contentType: "application/javascript;charset=utf-8", data: "${params.callback}(${result.encodeAsJSON()})"
+    render contentType: "application/javascript;charset=utf-8", data: "${params.callback}(${groovy.json.JsonOutput.toJson(result)})"
 }
 
 private decodeEmoji(value) {
@@ -1127,7 +1129,7 @@ private api_intf_dashboard_piston_set() {
 	} else {
     	result = api_get_error_result("ERR_INVALID_TOKEN")
     }
-    render contentType: "application/javascript;charset=utf-8", data: "${params.callback}(${result.encodeAsJSON()})"
+    render contentType: "application/javascript;charset=utf-8", data: "${params.callback}(${groovy.json.JsonOutput.toJson(result)})"
 }
 
 private api_intf_dashboard_piston_set_start() {
@@ -1146,7 +1148,7 @@ private api_intf_dashboard_piston_set_start() {
 	} else {
     	result = api_get_error_result("ERR_INVALID_TOKEN")
     }
-    render contentType: "application/javascript;charset=utf-8", data: "${params.callback}(${result.encodeAsJSON()})"
+    render contentType: "application/javascript;charset=utf-8", data: "${params.callback}(${groovy.json.JsonOutput.toJson(result)})"
 }
 
 private api_intf_dashboard_piston_set_chunk() {
@@ -1167,7 +1169,7 @@ private api_intf_dashboard_piston_set_chunk() {
 	} else {
     	result = api_get_error_result("ERR_INVALID_TOKEN")
     }
-    render contentType: "application/javascript;charset=utf-8", data: "${params.callback}(${result.encodeAsJSON()})"
+    render contentType: "application/javascript;charset=utf-8", data: "${params.callback}(${groovy.json.JsonOutput.toJson(result)})"
 }
 
 private api_intf_dashboard_piston_set_end() {
@@ -1213,7 +1215,7 @@ private api_intf_dashboard_piston_set_end() {
 	} else {
     	result = api_get_error_result("ERR_INVALID_TOKEN")
     }
-    render contentType: "application/javascript;charset=utf-8", data: "${params.callback}(${result.encodeAsJSON()})"
+    render contentType: "application/javascript;charset=utf-8", data: "${params.callback}(${groovy.json.JsonOutput.toJson(result)})"
 }
 
 private api_intf_dashboard_piston_pause() {
@@ -1233,7 +1235,7 @@ private api_intf_dashboard_piston_pause() {
 	} else {
     	result = api_get_error_result("ERR_INVALID_TOKEN")
     }
-    render contentType: "application/javascript;charset=utf-8", data: "${params.callback}(${result.encodeAsJSON()})"
+    render contentType: "application/javascript;charset=utf-8", data: "${params.callback}(${groovy.json.JsonOutput.toJson(result)})"
 }
 
 private api_intf_dashboard_piston_resume() {
@@ -1254,7 +1256,7 @@ private api_intf_dashboard_piston_resume() {
 	} else {
     	result = api_get_error_result("ERR_INVALID_TOKEN")
     }
-    render contentType: "application/javascript;charset=utf-8", data: "${params.callback}(${result.encodeAsJSON()})"
+    render contentType: "application/javascript;charset=utf-8", data: "${params.callback}(${groovy.json.JsonOutput.toJson(result)})"
 }
 
 private api_intf_dashboard_piston_test() {
@@ -1271,14 +1273,15 @@ private api_intf_dashboard_piston_test() {
 	} else {
     	result = api_get_error_result("ERR_INVALID_TOKEN")
     }
-    render contentType: "application/javascript;charset=utf-8", data: "${params.callback}(${result.encodeAsJSON()})"
+    render contentType: "application/javascript;charset=utf-8", data: "${params.callback}(${groovy.json.JsonOutput.toJson(result)})"
 }
 
 private api_intf_dashboard_presence_create() {
 	def result
-    debug "Dashboard: Request received to test a piston"
 	if (verifySecurityToken(params.token)) {
-	    def sensor = addChildDevice("ady624", handle() + " Presence Sensor", hashId("${now()}"), null, [label: params.name])
+        def dni = params.dni
+    	def sensor = (dni ? getChildDevices().find{ it.getDeviceNetworkId() == dni } : null) ?: addChildDevice("ady624", handle() + " Presence Sensor", dni ?: hashId("${now()}"), null, [label: params.name])
+        sensor.updateLabel(params.name);
         if (sensor) {
         	result = [
             	status: "ST_SUCCESS",
@@ -1290,8 +1293,9 @@ private api_intf_dashboard_presence_create() {
 	} else {
     	result = api_get_error_result("ERR_INVALID_TOKEN")
     }
-    render contentType: "application/javascript;charset=utf-8", data: "${params.callback}(${result.encodeAsJSON()})"
+    render contentType: "application/javascript;charset=utf-8", data: "${params.callback}(${groovy.json.JsonOutput.toJson(result)})"
 }
+
 private api_intf_dashboard_piston_tile() {
 	def result
     debug "Dashboard: Clicked a piston tile"
@@ -1306,7 +1310,7 @@ private api_intf_dashboard_piston_tile() {
 	} else {
     	result = api_get_error_result("ERR_INVALID_TOKEN")
     }
-    render contentType: "application/javascript;charset=utf-8", data: "${params.callback}(${result.encodeAsJSON()})"
+    render contentType: "application/javascript;charset=utf-8", data: "${params.callback}(${groovy.json.JsonOutput.toJson(result)})"
 }
 
 private api_intf_dashboard_piston_set_bin() {
@@ -1323,7 +1327,7 @@ private api_intf_dashboard_piston_set_bin() {
 	} else {
     	result = api_get_error_result("ERR_INVALID_TOKEN")
     }
-    render contentType: "application/javascript;charset=utf-8", data: "${params.callback}(${result.encodeAsJSON()})"
+    render contentType: "application/javascript;charset=utf-8", data: "${params.callback}(${groovy.json.JsonOutput.toJson(result)})"
 }
 
 
@@ -1347,7 +1351,7 @@ private api_intf_dashboard_piston_set_category() {
 	} else {
     	result = api_get_error_result("ERR_INVALID_TOKEN")
     }
-    render contentType: "application/javascript;charset=utf-8", data: "${params.callback}(${result.encodeAsJSON()})"
+    render contentType: "application/javascript;charset=utf-8", data: "${params.callback}(${groovy.json.JsonOutput.toJson(result)})"
 }
 
 private api_intf_dashboard_piston_logging() {
@@ -1364,7 +1368,7 @@ private api_intf_dashboard_piston_logging() {
 	} else {
     	result = api_get_error_result("ERR_INVALID_TOKEN")
     }
-    render contentType: "application/javascript;charset=utf-8", data: "${params.callback}(${result.encodeAsJSON()})"
+    render contentType: "application/javascript;charset=utf-8", data: "${params.callback}(${groovy.json.JsonOutput.toJson(result)})"
 }
 
 private api_intf_dashboard_piston_clear_logs() {
@@ -1381,7 +1385,7 @@ private api_intf_dashboard_piston_clear_logs() {
 	} else {
     	result = api_get_error_result("ERR_INVALID_TOKEN")
     }
-    render contentType: "application/javascript;charset=utf-8", data: "${params.callback}(${result.encodeAsJSON()})"
+    render contentType: "application/javascript;charset=utf-8", data: "${params.callback}(${groovy.json.JsonOutput.toJson(result)})"
 }
 private api_intf_dashboard_piston_delete() {
 	def result
@@ -1400,24 +1404,29 @@ private api_intf_dashboard_piston_delete() {
 	} else {
     	result = api_get_error_result("ERR_INVALID_TOKEN")
     }
-    render contentType: "application/javascript;charset=utf-8", data: "${params.callback}(${result.encodeAsJSON()})"
+    render contentType: "application/javascript;charset=utf-8", data: "${params.callback}(${groovy.json.JsonOutput.toJson(result)})"
 }
 
-private api_intf_location_entered() {
+private api_intf_location_entered() {	
 	def deviceId = params.device
-    def device = getChildDevices().find{ hashId(it.id) == deviceId }
-   	if (params.place) device.processEvent([name: 'entered', place: params.place, places: state.settings.places])
+    def dni = params.dni
+    def device = getChildDevices().find{ (it.getDeviceNetworkId() == dni) || (hashId(it.id) == deviceId) }
+   	if (device && params.place) device.processEvent([name: 'entered', place: params.place, places: state.settings.places])
 }
 
 private api_intf_location_exited() {
 	def deviceId = params.device
-    def device = getChildDevices().find{ hashId(it.id) == deviceId }
-   	if (params.place) device.processEvent([name: 'exited', place: params.place, places: state.settings.places])
+    def dni = params.dni
+    def device = getChildDevices().find{ (it.getDeviceNetworkId() == dni) || (hashId(it.id) == deviceId) }
+   	if (device && params.place) device.processEvent([name: 'exited', place: params.place, places: state.settings.places])
 }
 
 private api_intf_location_updated() {
+	log.error params
 	def deviceId = params.device
-    def device = getChildDevices().find{ hashId(it.id) == deviceId }
+    def dni = params.dni
+    def device = getChildDevices().find{ (it.getDeviceNetworkId() == dni) || (hashId(it.id) == deviceId) }
+    log.error "GOT DEVICE $device"
     Map location = params.location ? (LinkedHashMap) new groovy.json.JsonSlurper().parseText(params.location) : [error: "Invalid data"]
     if (device) device.processEvent([name: 'updated', location: location, places: state.settings.places])
 }
@@ -1459,7 +1468,7 @@ private api_intf_variable_set() {
 	} else {
     	result = api_get_error_result("ERR_INVALID_TOKEN")
     }
-    render contentType: "application/javascript;charset=utf-8", data: "${params.callback}(${result.encodeAsJSON()})"
+    render contentType: "application/javascript;charset=utf-8", data: "${params.callback}(${groovy.json.JsonOutput.toJson(result)})"
 }
 
 private api_intf_settings_set() {
@@ -1473,7 +1482,7 @@ private api_intf_settings_set() {
 	} else {
     	result = api_get_error_result("ERR_INVALID_TOKEN")
     }
-    render contentType: "application/javascript;charset=utf-8", data: "${params.callback}(${result.encodeAsJSON()})"
+    render contentType: "application/javascript;charset=utf-8", data: "${params.callback}(${groovy.json.JsonOutput.toJson(result)})"
 }
 
 private api_intf_dashboard_piston_evaluate() {
@@ -1492,7 +1501,7 @@ private api_intf_dashboard_piston_evaluate() {
 	} else {
     	result = api_get_error_result("ERR_INVALID_TOKEN")
     }
-    render contentType: "application/javascript;charset=utf-8", data: "${params.callback}(${result.encodeAsJSON()})"
+    render contentType: "application/javascript;charset=utf-8", data: "${params.callback}(${groovy.json.JsonOutput.toJson(result)})"
 }
 
 private api_intf_dashboard_piston_activity() {
@@ -1507,7 +1516,7 @@ private api_intf_dashboard_piston_activity() {
 	} else {
     	result = api_get_error_result("ERR_INVALID_TOKEN")
     }
-    render contentType: "application/javascript;charset=utf-8", data: "${params.callback}(${result.encodeAsJSON()})"
+    render contentType: "application/javascript;charset=utf-8", data: "${params.callback}(${groovy.json.JsonOutput.toJson(result)})"
 }
 
 def api_ifttt() {
@@ -1525,7 +1534,7 @@ def api_ifttt() {
     data.remoteAddr = remoteAddr
 	def eventName = params?.eventName
 	if (eventName) {
-		sendLocationEvent([name: "ifttt", value: eventName, isStateChange: true, linkText: "IFTTT event", descriptionText: "${handle()} has received an IFTTT event: $eventName", data: data])
+		if (!hubUID) sendLocationEvent([name: "ifttt", value: eventName, isStateChange: true, linkText: "IFTTT event", descriptionText: "${handle()} has received an IFTTT event: $eventName", data: data])
 	}
 	render contentType: "text/html", data: "<!DOCTYPE html><html lang=\"en\">Received event $eventName.<body></body></html>"
 }
@@ -1536,7 +1545,7 @@ def api_email() {
 	def from = data.from ?: ''
 	def pistonId = params?.pistonId
     if (pistonId) {
-		sendLocationEvent([name: "email", value: pistonId, isStateChange: true, linkText: "Email event", descriptionText: "${handle()} has received an email from $from", data: data])
+		if (!hubUID) sendLocationEvent([name: "email", value: pistonId, isStateChange: true, linkText: "Email event", descriptionText: "${handle()} has received an email from $from", data: data])
     }
 	render contentType: "text/plain", data: "OK"
 }
@@ -1559,13 +1568,13 @@ private api_execute() {
 	def pistonIdOrName = params?.pistonIdOrName
     def piston = getChildApps().find{ (it.label == pistonIdOrName) || (hashId(it.id) == pistonIdOrName) };
     if (piston) {
-    	sendLocationEvent(name: hashId(piston.id), value: remoteAddr, isStateChange: true, displayed: false, linkText: "Execute event", descriptionText: "External piston execute request from IP $remoteAddr", data: data)
+    	if (!hubUID) sendLocationEvent(name: hashId(piston.id), value: remoteAddr, isStateChange: true, displayed: false, linkText: "Execute event", descriptionText: "External piston execute request from IP $remoteAddr", data: data)
         result.result = 'OK'
 	} else {
     	result.result = 'ERROR'
 	}
     result.timestamp = (new Date()).time
-    render contentType: "application/json", data: "${result.encodeAsJSON()}"
+    render contentType: "application/json", data: "${groovy.json.JsonOutput.toJson(result)}"
 }
 
 
@@ -1584,7 +1593,7 @@ def recoveryHandler() {
     if (failedPistons.size()) {
     	for (piston in failedPistons) {
 		    warn "Piston $piston.name was sent a recovery signal because it was ${now() - piston.meta.n}ms late"
-	    	sendLocationEvent(name: piston.id, value: 'recovery', isStateChange: true, displayed: false, linkText: "Recovery event", descriptionText: "Recovery event for piston $piston.name")
+	    	if (!hubUID) sendLocationEvent(name: piston.id, value: 'recovery', isStateChange: true, displayed: false, linkText: "Recovery event", descriptionText: "Recovery event for piston $piston.name")
 	    }
     }
 	if (state.version != version()) {
@@ -1676,7 +1685,7 @@ private getDashboardApp(install = false) {
 private String getDashboardInitUrl(register = false) {
 	def url = register ? getDashboardRegistrationUrl() : getDashboardUrl()
     if (!url) return null
-    return url + (register ? "register/" : "init/") + (apiServerUrl("").replace("https://", '').replace(".api.smartthings.com", "").replace(":443", "").replace("/", "") + (state.accessToken + app.id).replace("-", "")).bytes.encodeBase64()
+    return url + (register ? "register/" : "init/") + (apiServerUrl("").replace("https://", '').replace(".api.smartthings.com", "").replace(":443", "").replace("/", "") + ((hubUID ?: state.accessToken) + app.id).replace("-", "") + (hubUID ? '/?access_token=' + state.accessToken : '')).bytes.encodeBase64() 
 }
 
 private String getDashboardRegistrationUrl() {
@@ -1729,7 +1738,7 @@ private setPowerSource(powerSource, atomic = true) {
     } else {
     	state.powerSource = powerSource
     }
-	sendLocationEvent([name: 'powerSource', value: powerSource, isStateChange: true, linkText: "webCoRE power source event", descriptionText: "${handle()} has detected a new power source: $powerSource"])
+	if (!hubUID) sendLocationEvent([name: 'powerSource', value: powerSource, isStateChange: true, linkText: "webCoRE power source event", descriptionText: "${handle()} has detected a new power source: $powerSource"])
 }
 
 private Map listAvailableVariables() {
@@ -1803,7 +1812,7 @@ private String generatePistonName() {
 }
 
 private ping() {
-	sendLocationEvent( [name: handle(), value: 'ping', isStateChange: true, displayed: false, linkText: "${handle()} ping reply", descriptionText: "${handle()} has received a ping reply and is replying with a pong", data: [id: hashId(app.id), name: app.label]] )
+	if (!hubUID) sendLocationEvent( [name: handle(), value: 'ping', isStateChange: true, displayed: false, linkText: "${handle()} ping reply", descriptionText: "${handle()} has received a ping reply and is replying with a pong", data: [id: hashId(app.id), name: app.label]] )
 }
 
 private getLogging() {
@@ -1865,15 +1874,15 @@ private testLifx() {
         ],
         requestContentType: "application/json"
     ]
-    asynchttp_v1.get(lifxHandler, requestParams, [request: 'scenes'])
+    if (asynchttp_v1) asynchttp_v1.get(lifxHandler, requestParams, [request: 'scenes'])
     pause(250)
     requestParams.path = "/v1/lights/all"
-    asynchttp_v1.get(lifxHandler, requestParams, [request: 'lights'])
+    if (asynchttp_v1) asynchttp_v1.get(lifxHandler, requestParams, [request: 'lights'])
 	return true
 }
 
 private registerInstance() {
-	def accountId = hashId(app.getAccountId())
+	def accountId = hashId(hubUID ?: app.getAccountId())
     def locationId = hashId(location.id)
     def instanceId = hashId(app.id)
     def endpoint = state.endpoint
@@ -1884,7 +1893,7 @@ private registerInstance() {
     def pa = lpa.size()
     List lpd = pistons.findAll{ !it.a }.collect{ it.id }
     def pd = pistons.size() - pa
-	asynchttp_v1.put(instanceRegistrationHandler, [
+	if (asynchttp_v1) asynchttp_v1.put(instanceRegistrationHandler, [
         uri: "https://api-${region}-${instanceId[32]}.webcore.co:9247",
         path: '/instance/register',
         headers: ['ST' : instanceId],
@@ -2086,11 +2095,11 @@ public executePiston(pistonId, data, source) {
 }
 
 private sendVariableEvent(variable) {
-	sendLocationEvent([name: handle(), value: variable.name, isStateChange: true, displayed: false, linkText: "${handle()} global variable ${variable.name} changed", descriptionText: "${handle()} global variable ${variable.name} changed", data: [id: hashId(app.id), name: app.label, event: 'variable', variable: variable]])
+	if (!hubUID) sendLocationEvent([name: handle(), value: variable.name, isStateChange: true, displayed: false, linkText: "${handle()} global variable ${variable.name} changed", descriptionText: "${handle()} global variable ${variable.name} changed", data: [id: hashId(app.id), name: app.label, event: 'variable', variable: variable]])
 }
 
 private broadcastPistonList() {
-    sendLocationEvent([name: handle(), value: 'pistonList', isStateChange: true, displayed: false, data: [id: hashId(app.id), name: app.label, pistons: getChildApps().findAll{ it.name == "${handle()} Piston" }.collect{[id: hashId(it.id), name: it.label]}]])
+    if (!hubUID) sendLocationEvent([name: handle(), value: 'pistonList', isStateChange: true, displayed: false, data: [id: hashId(app.id), name: app.label, pistons: getChildApps().findAll{ it.name == "${handle()} Piston" }.collect{[id: hashId(it.id), name: it.label]}]])
 }
 
 def webCoREHandler(event) {
@@ -2303,7 +2312,7 @@ private debug(message, shift = null, err = null, cmd = null) {
 	} else if (cmd == "warn") {
 		log.warn "$prefix$message", err
 	} else if (cmd == "error") {
-		log.error "$prefix$message", err
+      if (hubUID) { log.error "$prefix$message" } else { log.error "$prefix$message", err }
 	} else {
 		log.debug "$prefix$message", err
 	}

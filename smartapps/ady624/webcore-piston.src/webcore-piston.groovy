@@ -20,6 +20,7 @@
 */
 public static String version() { return "v0.2.0ec.20170927" }
 /*
+ *	09/29/2017 >>> v0.2.0ed.20170929 - BETA M2 - Added support for Android presence
  *	09/27/2017 >>> v0.2.0ec.20170927 - BETA M2 - Fixed a problem where the 'was' comparison would fail when the event had no device
  *	09/25/2017 >>> v0.2.0eb.20170925 - BETA M2 - Added Sleep Sensor capability to the webCoRE Presence Sensor, thanks to @Cozdabuch and @bangali
  *	09/24/2017 >>> v0.2.0ea.20170924 - BETA M2 - Fixed a problem where $nfl.schedule.thisWeek would only return one game, it now returns all games for the week. Same for lastWeek and nextWeek.
@@ -264,7 +265,7 @@ public static String version() { return "v0.2.0ec.20170927" }
 private static String handle() { return "webCoRE" }
 include 'asynchttp_v1'
 definition(
-    name: "webCoRE Piston",
+    name: "${handle()} Piston",
     namespace: "ady624",
     author: "Adrian Caramaliu",
     description: "Do not install this directly, use webCoRE instead",
@@ -2144,7 +2145,7 @@ private long cmd_setColorTemperature(rtData, device, params) {
 }
 
 private getColor(colorValue) {
-    def color = (colorValue == 'Random') ? colorUtil.RANDOM : colorUtil.findByName(colorValue)
+    def color = (colorValue == 'Random') ? colorUtil?.RANDOM : colorUtil?.findByName(colorValue)
     if (color) {
 		color = [
         	hex: color.rgb,
@@ -3302,7 +3303,7 @@ private long vcmd_writeToFuelStream(rtData, device, params) {
     	],
         requestContentType: "application/json"
     ]
-    asynchttp_v1.put(null, requestParams)
+    if (asynchttp_v1) asynchttp_v1.put(null, requestParams)
     return 0
 }
 
@@ -3322,7 +3323,7 @@ private long vcmd_storeMedia(rtData, device, params) {
         body: data,
         requestContentType: rtData.mediaType
     ]
-    asynchttp_v1.put(asyncHttpRequestHandler, requestParams, [command: 'storeMedia'])
+    if (asynchttp_v1) asynchttp_v1.put(asyncHttpRequestHandler, requestParams, [command: 'storeMedia'])
     return 20000
 }
 
@@ -3965,7 +3966,7 @@ private Boolean matchDeviceInteraction(option, isPhysical) {
 
 private List listPreviousStates(device, attribute, threshold, excludeLast) {
 	def result = []
-	if (!(device instanceof physicalgraph.app.DeviceWrapper)) return result
+	//if (!(device instanceof DeviceWrapper)) return result
 	def events = device.events([all: true, max: 100]).findAll{it.name == attribute}
 	//if we got any events, let's go through them
 	//if we need to exclude last event, we start at the second event, as the first one is the event that triggered this function. The attribute's value has to be different from the current one to qualify for quiet
@@ -4695,8 +4696,8 @@ private Map getDeviceAttribute(rtData, deviceId, attributeName, subDeviceIndex =
             	def mode = location.getCurrentMode();
             	return [t: 'string', v: hashId(mode.getId()), n: mode.getName()]
         	case 'alarmSystemStatus': 
-				def v = location.currentState("alarmSystemStatus")?.value
-                def n = rtData.virtualDevices['alarmSystemStatus']?.o[v]
+				def v = hubUID ? 'off' : location.currentState("alarmSystemStatus")?.value
+                def n = hubUID ? 'Disarmed' : rtData.virtualDevices['alarmSystemStatus']?.o[v]
 				return [t: 'string', v: v, n: n]
         }
         return [t: 'string', v: location.getName().toString()]
@@ -4958,7 +4959,7 @@ private Map getIncidents(rtData, name) {
 private initIncidents(rtData) {
 	if (rtData.incidents instanceof List) return;
 	def incidentThreshold = now() - 604800000
-	rtData.incidents = location.activeIncidents.collect{[date: it.date.time, title: it.getTitle(), message: it.getMessage(), args: it.getMessageArgs(), sourceType: it.getSourceType()]}.findAll{ it.date >= incidentThreshold }
+	rtData.incidents = hubUID ? [] : location.activeIncidents.collect{[date: it.date.time, title: it.getTitle(), message: it.getMessage(), args: it.getMessageArgs(), sourceType: it.getSourceType()]}.findAll{ it.date >= incidentThreshold }
 }
 
 private Map getVariable(rtData, name) {
@@ -7487,7 +7488,11 @@ private log(message, rtData = null, shift = null, err = null, cmd = null, force 
     		rtData.logs.push([o: now() - rtData.timestamp, p: prefix2, m: msg + (!!err ? " $err" : ""), c: cmd])
         }
     }
-	log."$cmd" "$prefix $message", err
+  	if (hubUID) {
+    	log."$cmd" "$prefix $message"
+    } else {
+		log."$cmd" "$prefix $message", err
+    }
 }
 private info(message, rtData = null, shift = null, err = null) { log message, rtData, shift, err, 'info' }
 private trace(message, rtData = null, shift = null, err = null) { log message, rtData, shift, err, 'trace' }
@@ -7739,13 +7744,13 @@ private getSystemVariableValue(rtData, name) {
 		case "\$time": def t = localDate(); def h = t.hours; def m = t.minutes; return (h == 0 ? 12 : (h > 12 ? h - 12 : h)) + ":" + (m < 10 ? "0$m" : "$m") + " " + (h <12 ? "A.M." : "P.M.") 
 		case "\$time24": def t = localDate(); def h = t.hours; def m = t.minutes; return h + ":" + (m < 10 ? "0$m" : "$m") 
 		case "\$random": def result = getRandomValue("\$random") ?: (double)Math.random(); setRandomValue("\$random", result); return result 
-		case "\$randomColor": def result = getRandomValue("\$randomColor") ?: colorUtil.RANDOM.rgb; setRandomValue("\$randomColor", result); return result 
-		case "\$randomColorName": def result = getRandomValue("\$randomColorName") ?: colorUtil.RANDOM.name; setRandomValue("\$randomColorName", result); return result 
+		case "\$randomColor": def result = getRandomValue("\$randomColor") ?: colorUtil?.RANDOM?.rgb; setRandomValue("\$randomColor", result); return result 
+		case "\$randomColorName": def result = getRandomValue("\$randomColorName") ?: colorUtil?.RANDOM?.name; setRandomValue("\$randomColorName", result); return result 
 		case "\$randomLevel": def result = getRandomValue("\$randomLevel") ?: (int)Math.round(100 * Math.random()); setRandomValue("\$randomLevel", result); return result 
 		case "\$randomSaturation": def result = getRandomValue("\$randomSaturation") ?: (int)Math.round(50 + 50 * Math.random()); setRandomValue("\$randomSaturation", result); return result 
 		case "\$randomHue": def result = getRandomValue("\$randomHue") ?: (int)Math.round(360 * Math.random()); setRandomValue("\$randomHue", result); return result 
   		case "\$locationMode": return location.getMode()
-		case "\$shmStatus": switch (location.currentState("alarmSystemStatus")?.value) { case 'off': return 'Disarmed'; case 'stay': return 'Armed/Stay'; case 'away': return 'Armed/Away'; }; return null;
+		case "\$shmStatus": switch (hubUID ? 'off' : location.currentState("alarmSystemStatus")?.value) { case 'off': return 'Disarmed'; case 'stay': return 'Armed/Stay'; case 'away': return 'Armed/Away'; }; return null;
     }
 }
 
