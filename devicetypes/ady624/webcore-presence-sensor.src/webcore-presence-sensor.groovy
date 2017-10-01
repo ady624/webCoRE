@@ -16,8 +16,9 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-public static String version() { return "v0.2.0f0.20170930" }
+public static String version() { return "v0.2.0f1.20171001" }
 /*
+ *	10/01/2017 >>> v0.2.0f1.20171001 - BETA M2 - Added debugging options
  *	09/30/2017 >>> v0.2.0f0.20170930 - BETA M2 - Added last update info for both geofences and location updates
  *	09/30/2017 >>> v0.2.0ef.20170930 - BETA M2 - Minor fixes for Android
  *	09/29/2017 >>> v0.2.0ed.20170929 - BETA M2 - Added support for Android presence
@@ -113,6 +114,7 @@ metadata {
         input "scale", "enum", title: "Distance scale", description: "Select between imperial (miles) and metric (km)", options: ["Imperial", "Metric"], defaultValue: "Imperial", displayDuringSetup: true
         input "advanced", "enum", title: "Show advanced details", description: "", options: ["Yes", "No"], defaultValue: "Yes", displayDuringSetup: true
         input "presenceMode", "enum", title: "Presence mode", description: "", options: ["Automatic", "Force present", "Force not present"], defaultValue: "Automatic", displayDuringSetup: true
+        input "debugging", "bool", title: "Enable debugging", description: "", defaultValue: false, displayDuringSetup: true
     }    
 }
 
@@ -163,7 +165,6 @@ def processEvent(Map event) {
 	def places = getPlaces(event?.places)
     if ((event.name == 'updated') && !!event.location && !event.location.error) {
     	//filter out accuracy
-    	if (event.location.horizontalAccuracy > 100) return
     	doSendEvent("latitude", event.location.latitude)
     	doSendEvent("longitude", event.location.longitude)
     	doSendEvent("altitude", event.location.altitude / 0.3048)
@@ -175,7 +176,7 @@ def processEvent(Map event) {
     	doSendEvent("horizontalAccuracyMetric", event.location.horizontalAccuracy)
     	doSendEvent("verticalAccuracy", event.location.verticalAccuracy / 0.3048)
     	doSendEvent("verticalAccuracyMetric", event.location.verticalAccuracy)
-        processLocation(event.location.latitude, event.location.longitude, places)
+        processLocation(event.location.latitude, event.location.longitude, places, event.location.horizontalAccuracy)
     } else {
     	if (event?.place && (event?.place.size() == 71)) {
         	List parts = event.place.tokenize('|')
@@ -189,8 +190,8 @@ def processEvent(Map event) {
     }
 }
 
-private void processLocation(float lat, float lng, List places) {
-	doSendEvent("lastLocationUpdate", "Last Location Update: ${new Date()}")
+private void processLocation(float lat, float lng, List places, horizontalAccuracy) {
+	doSendEvent("lastLocationUpdate", "Last location update on\r\n${formatLocalTime("MM/dd/yyyy @ h:mm:ss a")}")
     String presence = device.currentValue('presence')
 	String closestPlace = device.currentValue('closestPlace')
     String currentPlace = device.currentValue('currentPlace')
@@ -199,61 +200,75 @@ private void processLocation(float lat, float lng, List places) {
     float homeDistance = -1
     float closestDistance = -1
     int circles = 0
-    for (place in places) {
-    	float distance = getDistance(lat, lng, place.p[0], place.p[1])
-        if ((closestDistance < 0) || (distance < closestDistance)) {
-        	closestDistance = distance
-            closestPlace = place.n
-        }
-        if (distance <= place.i) {
-        	//we're at this place
-            currentPlace = place.n
-            place.meta.p = true
-            if (place.h) presence = 'present'
-            circles += 1
-        } else if (distance <= place.o) {
-        	//we're close to this place            
-            if (place.n == currentPlace) {
-            	//departing
-                arrivingAtPlace = ''
-                leavingPlace = place.n
-            } else {
-            	//arriving
-                arrivingAtPlace = place.n
-                leavingPlace = ''
+    String info = ''
+    if (horizontalAccuracy >= 100) {
+    	info = " Low accuracy of ${horizontalAccuracy}m prevented updates to presence."
+    } else {
+        for (place in places) {
+            float distance = getDistance(lat, lng, place.p[0], place.p[1])
+            if ((closestDistance < 0) || (distance < closestDistance)) {
+                closestDistance = distance
+                closestPlace = place.n
             }
-            circles += 1
-        } else {
-        	//we're not at this place
-            place.meta.p = false
-            if (place.h) presence = 'not present'
+            if (distance <= place.i) {
+                info += " Location is inside inner ${place.n}."
+                //we're at this place
+                currentPlace = place.n
+                place.meta.p = true
+                if (place.h) presence = 'present'
+                circles += 1
+            } else if (distance <= place.o) {
+                //we're close to this place            
+                info += " Location is in the buffer zone of ${place.n}."
+                if (place.n == currentPlace) {
+                    //departing
+                    arrivingAtPlace = ''
+                    leavingPlace = place.n
+                } else {
+                    //arriving
+                    arrivingAtPlace = place.n
+                    leavingPlace = ''
+                }
+                circles += 1
+            } else {
+                //we're not at this place
+                info += " Location is outside of ${place.n}."
+                place.meta.p = false
+                if (place.h) presence = 'not present'
+            }
+            place.meta.d = distance
+            if (place.h) {
+                homeDistance = distance / 1000.0
+            }
         }
-        place.meta.d = distance
-        if (place.h) {
-        	homeDistance = distance / 1000.0
-        }
-    }
-    if (!circles) {
-    	//we found no current circle, so we clear the current place
-    	currentPlace = ""
-    }   
-	if ((homeDistance >= 0) && homeDistance != device.currentValue('distanceMetric')) {
-    	sendEvent( name: "distanceMetric", value: homeDistance, isStateChange: true, displayed: false )
-    	sendEvent( name: "distance", value: homeDistance / 1.609344, isStateChange: true, displayed: false )
-    	sendEvent( name: "distanceDisplay", value: advanced == "No" ? '' : (scale == 'Metric' ? sprintf('%.1f', homeDistance) + ' km away' : sprintf('%.1f', homeDistance / 1.609344) + ' mi away'), isStateChange: true, displayed: false )
-	}        	
+        if (!circles) {
+            //we found no current circle, so we clear the current place
+            info += " Location is outside of all circles."
+            currentPlace = ""
+        }   
+        if ((homeDistance >= 0) && homeDistance != device.currentValue('distanceMetric')) {
+            sendEvent( name: "distanceMetric", value: homeDistance, isStateChange: true, displayed: false )
+            sendEvent( name: "distance", value: homeDistance / 1.609344, isStateChange: true, displayed: false )
+            sendEvent( name: "distanceDisplay", value: advanced == "No" ? '' : (scale == 'Metric' ? sprintf('%.1f', homeDistance) + ' km away' : sprintf('%.1f', homeDistance / 1.609344) + ' mi away'), isStateChange: true, displayed: false )
+        }        	
 
-	closestDistance = closestDistance / 1000.0
-	if ((closestDistance >= 0) && closestDistance != device.currentValue('closestPlaceDistanceMetric')) {
-    	sendEvent( name: "closestPlaceDistanceMetric", value: closestDistance, isStateChange: true, displayed: false )
-    	sendEvent( name: "closestPlaceDistance", value: closestDistance / 1.609344, isStateChange: true, displayed: false )
-	}        	   
-    state.places = places
-	updateData(places, presence, device.currentValue('sleeping'), currentPlace, closestPlace, arrivingAtPlace, leavingPlace)    
+        closestDistance = closestDistance / 1000.0
+        if ((closestDistance >= 0) && closestDistance != device.currentValue('closestPlaceDistanceMetric')) {
+            sendEvent( name: "closestPlaceDistanceMetric", value: closestDistance, isStateChange: true, displayed: false )
+            sendEvent( name: "closestPlaceDistance", value: closestDistance / 1.609344, isStateChange: true, displayed: false )
+        }        	   
+        state.places = places
+        updateData(places, presence, device.currentValue('sleeping'), currentPlace, closestPlace, arrivingAtPlace, leavingPlace)    
+    }
+    if (debugging) {
+    	info = "Received location update with horizontal accuracy of ${horizontalAccuracy} meters.$info"
+        log.debug info
+		sendEvent( name: "debug", value: info, descriptionText: info, isStateChange: true, displayed: true )
+    }
 }
 
 private void processPlace(Map place, String action, String circle, List places) {
-	doSendEvent("lastGeofenceUpdate", "Last Geofence Update: ${new Date()}")
+	doSendEvent("lastGeofenceUpdate", "Last geofence update on\r\n${formatLocalTime("MM/dd/yyyy @ h:mm:ss a")}")
 	for (p in places) {
     	p.meta = p.meta ?: [:]
     	if (p != place) {
@@ -265,11 +280,13 @@ private void processPlace(Map place, String action, String circle, List places) 
     String currentPlace = device.currentValue('currentPlace')
     String arrivingAtPlace = ""
     String leavingPlace = ""
+    String info = ''
     switch (action) {
         case "entered":
        		switch (circle) {
 	            case "i":
 	            	//arrived
+                    info += " Inner geofence of ${place.n} was just entered."
                     presence = place.h ? 'present' : 'not present'
                     currentPlace = place.n
                     arrivingAtPlace = ''
@@ -278,6 +295,7 @@ private void processPlace(Map place, String action, String circle, List places) 
 	            	break
 	            case "o":
 	            	//arriving
+                    info += " Outter geofence of ${place.n} was just entered."
                     arrivingAtPlace = currentPlace == '' ? place.n : ''
                     leavingPlace = ''
 	            	break
@@ -287,11 +305,13 @@ private void processPlace(Map place, String action, String circle, List places) 
 	        switch (circle) {
 	            case "i":
 	            	//leaving
+                    info += " Inner geofence of ${place.n} was just exited."                    
                     arrivingAtPlace = ''                    
                     leavingPlace = currentPlace == place.n ? place.n : ''
 	            	break
 	            case "o":
 	            	//left
+                    info += " Outer geofence of ${place.n} was just exited."                    
                     presence = 'not present'
                     currentPlace = ''
                     arrivingAtPlace = ''
@@ -300,8 +320,13 @@ private void processPlace(Map place, String action, String circle, List places) 
 	        }
             break
     }
-    state.places = places   
+    state.places = places    
 	updateData(places, presence, device.currentValue('sleeping'), currentPlace, closestPlace, arrivingAtPlace, leavingPlace)
+    if (debugging) {
+    	info = "Received geofence update for ${circle == 'i' ? 'inner' : 'outer'} circle of ${place.n}.$info"
+    	log.debug info
+		sendEvent( name: "debug", value: info, descriptionText: info, isStateChange: true, displayed: true )
+    }    
 }
 
 private void updateData(places, presence, sleeping, currentPlace, closestPlace, arrivingAtPlace, leavingPlace) {
@@ -389,4 +414,10 @@ def asleep() {
 
 def awake() {
 	toggleSleeping('not sleeping')
+}
+
+private formatLocalTime(format = "EEE, MMM d yyyy @ h:mm:ss a z", time = now()) {
+	def formatter = new java.text.SimpleDateFormat(format)
+	formatter.setTimeZone(location.timeZone)
+	return formatter.format(time)
 }
