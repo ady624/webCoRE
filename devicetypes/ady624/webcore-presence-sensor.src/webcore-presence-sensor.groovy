@@ -16,9 +16,10 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-public static String version() { return "v0.2.0f6.20171004" }
+public static String version() { return "v0.2.0f7.20171004" }
 /*
- *	10/04/2017 >>> v0.2.0f6.20171003 - BETA M2 - Bug fixes for geofencing
+ *	10/04/2017 >>> v0.2.0f7.20171004 - BETA M2 - Added speed and bearing support
+ *	10/04/2017 >>> v0.2.0f6.20171004 - BETA M2 - Bug fixes for geofencing
  *	10/04/2017 >>> v0.2.0f5.20171003 - BETA M2 - Bug fixes for geofencing
  *	10/04/2017 >>> v0.2.0f4.20171003 - BETA M2 - Bug fixes for geofencing
  *	10/03/2017 >>> v0.2.0f3.20171003 - BETA M2 - Bug fixes for geofencing
@@ -40,6 +41,7 @@ metadata {
 		capability "Sensor"
         capability "Health Check"
         attribute "places", "String"
+        attribute "previousPlace", "String"
         attribute "currentPlace", "String"
         attribute "closestPlace", "String"
         attribute "arrivingAtPlace", "String"
@@ -56,8 +58,11 @@ metadata {
         attribute "longitude", "Number"
         attribute "horizontalAccuracy", "Number"        
         attribute "horizontalAccuracyMetric", "Number"        
-        attribute "verticalAccuracy", "Number"        
-        attribute "verticalAccuracyMetric", "Number"        
+        attribute "verticalAccuracy", "Number"
+        attribute "verticalAccuracyMetric", "Number"
+        attribute "spped", "Number"
+        attribute "speedMetric", "Number"
+        attribute "bearing", "Number"
         command "asleep"
         command "awake"
         command "toggleSleeping"
@@ -92,7 +97,10 @@ metadata {
 		valueTile("currentPlace", "device.currentPlaceDisplay", width: 2, height: 2) {
 			state("default", label: '${currentValue}')
 		}
-        valueTile("distance", "device.distanceDisplay", width: 2, height: 2) {
+        valueTile("distance", "device.distanceDisplay", width: 2, height: 1) {
+			state("default", label: '${currentValue}')
+		}
+        valueTile("speed", "device.speedDisplay", width: 2, height: 1) {
 			state("default", label: '${currentValue}')
 		}
 		valueTile("altitude", "device.altitudeDisplay", width: 2, height: 1) {
@@ -112,7 +120,7 @@ metadata {
 		}
 
 		main("presence")
-		details(["display", "presence", "sleeping", "currentPlace", "distance", "altitude", "floor", "status", "lastGeofenceUpdate", "lastLocationUpdate"])
+		details(["display", "presence", "sleeping", "currentPlace", "distance", "altitude", "speed", "floor", "status", "lastGeofenceUpdate", "lastLocationUpdate"])
 	}
     
     preferences {
@@ -200,6 +208,12 @@ def processEvent(Map event) {
     	doSendEvent("horizontalAccuracyMetric", event.location.horizontalAccuracy)
     	doSendEvent("verticalAccuracy", event.location.verticalAccuracy / 0.3048)
     	doSendEvent("verticalAccuracyMetric", event.location.verticalAccuracy)
+    	doSendEvent("speed", (event.location.speed ?: 0) / 0.3048)
+        float speed = event.location.speed ?: 0
+        float bearing = event.location.bearing ?: (event.location.course ?: 0)
+        doSendEvent("speedMetric", speed)
+        doSendEvent("bearing", bearing)
+        doSendEvent("speedDisplay", advanced == "No" ? '' : (speed < 0 ? 'Unknown speed' : (speed == 0 ? 'Stationary' : (sprintf('%.1f', (scale == 'Metric' ? speed * 3.6 : speed * 3.6 / 1.609344)) + (scale == 'Metric' ? ' km/h' : ' mph') + (bearing >= 0 ? ' to ' + getBearingName(bearing) : '')))))
         processLocation(event.location.latitude, event.location.longitude, places, event.location.horizontalAccuracy)
     } else {
         state.lastTimestamp = timestamp > state.lastTimestamp ? timestamp : state.lastTimestamp
@@ -227,7 +241,7 @@ private void processLocation(float lat, float lng, List places, horizontalAccura
     float closestDistance = -1
     int circles = 0
     String info = ''
-    if (horizontalAccuracy > 50) {
+    if (horizontalAccuracy > 100) {
     	info = " Low accuracy of ${horizontalAccuracy}m prevented updates to presence."
     } else {
         for (place in places) {
@@ -276,7 +290,7 @@ private void processLocation(float lat, float lng, List places, horizontalAccura
         if ((homeDistance >= 0) && homeDistance != device.currentValue('distanceMetric')) {
             sendEvent( name: "distanceMetric", value: homeDistance, isStateChange: true, displayed: false )
             sendEvent( name: "distance", value: homeDistance / 1.609344, isStateChange: true, displayed: false )
-            sendEvent( name: "distanceDisplay", value: advanced == "No" ? '' : (scale == 'Metric' ? sprintf('%.1f', homeDistance) + ' km ' + bearing : sprintf('%.1f', homeDistance / 1.609344) + ' mi ' + bearing), isStateChange: true, displayed: false )
+            sendEvent( name: "distanceDisplay", value: advanced == "No" ? '' : (scale == 'Metric' ? sprintf('%.1f', homeDistance) + ' km @ ' + bearing : sprintf('%.1f', homeDistance / 1.609344) + ' mi @ ' + bearing), isStateChange: true, displayed: false )
         }        	
 
         closestDistance = closestDistance / 1000.0
@@ -359,12 +373,10 @@ private void processPlace(Map place, String action, String circle, List places) 
 private void updateData(places, presence, sleeping, currentPlace, closestPlace, arrivingAtPlace, leavingPlace) {
     def prevPlace = device.currentValue('currentPlace')
     if (currentPlace != prevPlace) {    
+    	sendEvent( name: "previousPlace", value: prevPlace, isStateChange: true, displayed: false)   
     	sendEvent( name: "currentPlace", value: currentPlace, isStateChange: true, displayed: advanced != 'No', descriptionText: currentPlace == '' ? "Left $prevPlace" : "Arrived at $currentPlace" )
     }
-    def currentPlaceDisplay = advanced == "No" ? '' : currentPlace
-    if (currentPlaceDisplay != device.currentValue('currentPlaceDisplay')) {    
-    	sendEvent( name: "currentPlaceDisplay", value: currentPlaceDisplay, isStateChange: true, displayed: false )
-    }
+   	doSendEvent("currentPlaceDisplay", advanced == "No" ? '' : (currentPlace ?: 'Away'))
 	if (closestPlace != device.currentValue('closestPlace')) {
     	sendEvent( name: "closestPlace", value: closestPlace, displayed: false )
     }
@@ -426,18 +438,22 @@ private static float getDistance(float lat1, float lng1, float lat2, float lng2)
     return dist; //meters
 }
 
-private String getBearing(float lat1, float lon1, float lat2, float lon2){
-  double longitude1 = lon1;
-  double longitude2 = lon2;
-  double latitude1 = Math.toRadians(lat1);
-  double latitude2 = Math.toRadians(lat2);
-  double longDiff= Math.toRadians(longitude2-longitude1);
-  double y= Math.sin(longDiff)*Math.cos(latitude2);
-  double x=Math.cos(latitude1)*Math.sin(latitude2)-Math.sin(latitude1)*Math.cos(latitude2)*Math.cos(longDiff);
-
+private String getBearingName(float degrees) {
   def bearings = ['N', 'N-NE', 'NE', 'E-NE', 'E', 'E-SE', 'SE', 'S-SE', 'S', 'S-SW', 'SW', 'W-SW', 'W', 'W-NW', 'NW', 'N-NW']
-  int bearing = Math.floor(((Math.toDegrees(Math.atan2(y, x)) + 360 + 11.25)%360) / 22.5).toInteger()
+  int bearing = Math.floor(((degrees + 360 + 11.25)%360) / 22.5).toInteger()
   return bearings[bearing]
+}
+
+private String getBearing(float lat1, float lon1, float lat2, float lon2){
+	double longitude1 = lon1;
+	double longitude2 = lon2;
+	double latitude1 = Math.toRadians(lat1);
+	double latitude2 = Math.toRadians(lat2);
+	double longDiff= Math.toRadians(longitude2-longitude1);
+	double y= Math.sin(longDiff)*Math.cos(latitude2);
+	double x=Math.cos(latitude1)*Math.sin(latitude2)-Math.sin(latitude1)*Math.cos(latitude2)*Math.cos(longDiff);
+
+	return getBearingName((float) Math.toDegrees(Math.atan2(y, x)))
 }
 
 def parse(String description) {
