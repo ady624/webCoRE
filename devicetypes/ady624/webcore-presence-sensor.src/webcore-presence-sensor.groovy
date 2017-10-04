@@ -16,8 +16,10 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-public static String version() { return "v0.2.0f1.20171001" }
+public static String version() { return "v0.2.0f3.20171003" }
 /*
+ *	10/03/2017 >>> v0.2.0f3.20171003 - BETA M2 - Bug fixes for geofencing
+ *	10/03/2017 >>> v0.2.0f2.20171003 - BETA M2 - Updated iOS app to add timestamps
  *	10/01/2017 >>> v0.2.0f1.20171001 - BETA M2 - Added debugging options
  *	09/30/2017 >>> v0.2.0f0.20170930 - BETA M2 - Added last update info for both geofences and location updates
  *	09/30/2017 >>> v0.2.0ef.20170930 - BETA M2 - Minor fixes for Android
@@ -163,7 +165,26 @@ def getOrdinalSuffix(value) {
 def processEvent(Map event) {
 	//log.error "LOCATION=$event.location PLACE=$event.place"
 	def places = getPlaces(event?.places)
+    def timestamp = (event.location?.timestamp ?: event.timestamp) ?: 0
+   	def delay = now() - timestamp
     if ((event.name == 'updated') && !!event.location && !event.location.error) {
+        if (delay > 30000) {
+            if (debugging) {
+                def info = "Received stale location update with a delay of ${delay}ms"
+                log.debug info
+                sendEvent( name: "debug", value: info, descriptionText: info, isStateChange: true, displayed: true )
+            }
+            return
+        }
+        if (timestamp < state.lastTimestamp) {
+            if (debugging) {
+                def info = "Received location update that is older than the last update"
+                log.debug info
+                sendEvent( name: "debug", value: info, descriptionText: info, isStateChange: true, displayed: true )
+            }
+            return
+        }
+        state.lastTimestamp = timestamp
     	//filter out accuracy
     	doSendEvent("latitude", event.location.latitude)
     	doSendEvent("longitude", event.location.longitude)
@@ -178,6 +199,7 @@ def processEvent(Map event) {
     	doSendEvent("verticalAccuracyMetric", event.location.verticalAccuracy)
         processLocation(event.location.latitude, event.location.longitude, places, event.location.horizontalAccuracy)
     } else {
+        state.lastTimestamp = timestamp > state.lastTimestamp ? timestamp : state.lastTimestamp
     	if (event?.place && (event?.place.size() == 71)) {
         	List parts = event.place.tokenize('|')
             if (parts.size() == 3) {
@@ -198,6 +220,7 @@ private void processLocation(float lat, float lng, List places, horizontalAccura
     String arrivingAtPlace = ""
     String leavingPlace = ""
     float homeDistance = -1
+    String bearing = '?'
     float closestDistance = -1
     int circles = 0
     String info = ''
@@ -239,6 +262,7 @@ private void processLocation(float lat, float lng, List places, horizontalAccura
             place.meta.d = distance
             if (place.h) {
                 homeDistance = distance / 1000.0
+                bearing = getBearing(place.p[0], place.p[1], lat, lng)
             }
         }
         if (!circles) {
@@ -249,7 +273,7 @@ private void processLocation(float lat, float lng, List places, horizontalAccura
         if ((homeDistance >= 0) && homeDistance != device.currentValue('distanceMetric')) {
             sendEvent( name: "distanceMetric", value: homeDistance, isStateChange: true, displayed: false )
             sendEvent( name: "distance", value: homeDistance / 1.609344, isStateChange: true, displayed: false )
-            sendEvent( name: "distanceDisplay", value: advanced == "No" ? '' : (scale == 'Metric' ? sprintf('%.1f', homeDistance) + ' km away' : sprintf('%.1f', homeDistance / 1.609344) + ' mi away'), isStateChange: true, displayed: false )
+            sendEvent( name: "distanceDisplay", value: advanced == "No" ? '' : (scale == 'Metric' ? sprintf('%.1f', homeDistance) + ' km ' + bearing : sprintf('%.1f', homeDistance / 1.609344) + ' mi ' + bearing), isStateChange: true, displayed: false )
         }        	
 
         closestDistance = closestDistance / 1000.0
@@ -399,6 +423,20 @@ private static float getDistance(float lat1, float lng1, float lat2, float lng2)
     return dist; //meters
 }
 
+private String getBearing(float lat1, float lon1, float lat2, float lon2){
+  double longitude1 = lon1;
+  double longitude2 = lon2;
+  double latitude1 = Math.toRadians(lat1);
+  double latitude2 = Math.toRadians(lat2);
+  double longDiff= Math.toRadians(longitude2-longitude1);
+  double y= Math.sin(longDiff)*Math.cos(latitude2);
+  double x=Math.cos(latitude1)*Math.sin(latitude2)-Math.sin(latitude1)*Math.cos(latitude2)*Math.cos(longDiff);
+
+  def bearings = ['N', 'N-NE', 'NE', 'E-NE', 'E', 'E-SE', 'SE', 'S-SE', 'S', 'S-SW', 'SW', 'W-SW', 'W', 'W-NW', 'NW', 'N-NW']
+  int bearing = Math.floor(((Math.toDegrees(Math.atan2(y, x)) + 360 + 11.25)%360) / 22.5).toInteger()
+  return bearings[bearing]
+}
+
 def parse(String description) {
 	//not used
 }
@@ -421,3 +459,4 @@ private formatLocalTime(format = "EEE, MMM d yyyy @ h:mm:ss a z", time = now()) 
 	formatter.setTimeZone(location.timeZone)
 	return formatter.format(time)
 }
+
