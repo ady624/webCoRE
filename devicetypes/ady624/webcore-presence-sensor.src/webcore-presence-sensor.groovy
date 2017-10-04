@@ -16,8 +16,11 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-public static String version() { return "v0.2.0f3.20171003" }
+public static String version() { return "v0.2.0f6.20171004" }
 /*
+ *	10/04/2017 >>> v0.2.0f6.20171003 - BETA M2 - Bug fixes for geofencing
+ *	10/04/2017 >>> v0.2.0f5.20171003 - BETA M2 - Bug fixes for geofencing
+ *	10/04/2017 >>> v0.2.0f4.20171003 - BETA M2 - Bug fixes for geofencing
  *	10/03/2017 >>> v0.2.0f3.20171003 - BETA M2 - Bug fixes for geofencing
  *	10/03/2017 >>> v0.2.0f2.20171003 - BETA M2 - Updated iOS app to add timestamps
  *	10/01/2017 >>> v0.2.0f1.20171001 - BETA M2 - Added debugging options
@@ -163,7 +166,7 @@ def getOrdinalSuffix(value) {
 }
 
 def processEvent(Map event) {
-	//log.error "LOCATION=$event.location PLACE=$event.place"
+	//log.error "GOT EVENT $event"
 	def places = getPlaces(event?.places)
     def timestamp = (event.location?.timestamp ?: event.timestamp) ?: 0
    	def delay = now() - timestamp
@@ -224,7 +227,7 @@ private void processLocation(float lat, float lng, List places, horizontalAccura
     float closestDistance = -1
     int circles = 0
     String info = ''
-    if (horizontalAccuracy >= 100) {
+    if (horizontalAccuracy > 50) {
     	info = " Low accuracy of ${horizontalAccuracy}m prevented updates to presence."
     } else {
         for (place in places) {
@@ -234,7 +237,7 @@ private void processLocation(float lat, float lng, List places, horizontalAccura
                 closestPlace = place.n
             }
             if (distance <= place.i) {
-                info += " Location is inside inner ${place.n}."
+                info += " Location is inside inner ${place.n}.\r\n"
                 //we're at this place
                 currentPlace = place.n
                 place.meta.p = true
@@ -242,7 +245,7 @@ private void processLocation(float lat, float lng, List places, horizontalAccura
                 circles += 1
             } else if (distance <= place.o) {
                 //we're close to this place            
-                info += " Location is in the buffer zone of ${place.n}."
+                info += " Location is in the buffer zone of ${place.n}.\r\n"
                 if (place.n == currentPlace) {
                     //departing
                     arrivingAtPlace = ''
@@ -255,7 +258,7 @@ private void processLocation(float lat, float lng, List places, horizontalAccura
                 circles += 1
             } else {
                 //we're not at this place
-                info += " Location is outside of ${place.n}."
+                info += " Location is outside of ${place.n}.\r\n"
                 place.meta.p = false
                 if (place.h) presence = 'not present'
             }
