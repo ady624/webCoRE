@@ -16,8 +16,9 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-public static String version() { return "v0.2.0f7.20171004" }
+public static String version() { return "v0.2.0f8.20171006" }
 /*
+ *	10/06/2017 >>> v0.2.0f8.20171006 - BETA M2 - Added support for Android geofence filtering depending on horizontal accuracy
  *	10/04/2017 >>> v0.2.0f7.20171004 - BETA M2 - Added speed and bearing support
  *	10/04/2017 >>> v0.2.0f6.20171004 - BETA M2 - Bug fixes for geofencing
  *	10/04/2017 >>> v0.2.0f5.20171003 - BETA M2 - Bug fixes for geofencing
@@ -222,7 +223,7 @@ def processEvent(Map event) {
             if (parts.size() == 3) {
                 def place = places.find{ it.id == parts[1] }
                 if (place) {
-                	processPlace(place, event.name, parts[2], places)
+                	processPlace(place, event.name, parts[2], places, event.location)
                 }
 			}
         }    
@@ -308,66 +309,71 @@ private void processLocation(float lat, float lng, List places, horizontalAccura
     }
 }
 
-private void processPlace(Map place, String action, String circle, List places) {
+private void processPlace(Map place, String action, String circle, List places, Map location) {
 	doSendEvent("lastGeofenceUpdate", "Last geofence update on\r\n${formatLocalTime("MM/dd/yyyy @ h:mm:ss a")}")
-	for (p in places) {
-    	p.meta = p.meta ?: [:]
-    	if (p != place) {
-            p.meta.p = false
+	def horizontalAccuracy = location?.horizontalAccuracy ?: 0
+    if (horizontalAccuracy > 100) {
+    	info = " Low accuracy of ${horizontalAccuracy}m prevented updates to presence."
+    } else {
+        for (p in places) {
+            p.meta = p.meta ?: [:]
+            if (p != place) {
+                p.meta.p = false
+            }
+        }
+        String presence = device.currentValue('presence')
+        String closestPlace = place.n
+        String currentPlace = device.currentValue('currentPlace')
+        String arrivingAtPlace = ""
+        String leavingPlace = ""
+        String info = ''
+        switch (action) {
+            case "entered":
+                switch (circle) {
+                    case "i":
+                        //arrived
+                        info += " Inner geofence of ${place.n} was just entered."
+                        presence = place.h ? 'present' : 'not present'
+                        currentPlace = place.n
+                        arrivingAtPlace = ''
+                        leavingPlace = ''
+                        place.meta.p = true
+                        break
+                    case "o":
+                        //arriving
+                        info += " Outter geofence of ${place.n} was just entered."
+                        arrivingAtPlace = currentPlace == '' ? place.n : ''
+                        leavingPlace = ''
+                        break
+                }
+                break
+            case "exited":
+                switch (circle) {
+                    case "i":
+                        //leaving
+                        info += " Inner geofence of ${place.n} was just exited."                    
+                        arrivingAtPlace = ''                    
+                        leavingPlace = currentPlace == place.n ? place.n : ''
+                        break
+                    case "o":
+                        //left
+                        info += " Outer geofence of ${place.n} was just exited."                    
+                        presence = 'not present'
+                        currentPlace = ''
+                        arrivingAtPlace = ''
+                        leavingPlace = ''
+                        break
+                }
+                break
+        }
+        state.places = places    
+        updateData(places, presence, device.currentValue('sleeping'), currentPlace, closestPlace, arrivingAtPlace, leavingPlace)
+        if (debugging) {
+            info = "Received geofence update for ${circle == 'i' ? 'inner' : 'outer'} circle of ${place.n}.$info"
+            log.debug info
+            sendEvent( name: "debug", value: info, descriptionText: info, isStateChange: true, displayed: true )
         }
     }
-    String presence = device.currentValue('presence')
-	String closestPlace = place.n
-    String currentPlace = device.currentValue('currentPlace')
-    String arrivingAtPlace = ""
-    String leavingPlace = ""
-    String info = ''
-    switch (action) {
-        case "entered":
-       		switch (circle) {
-	            case "i":
-	            	//arrived
-                    info += " Inner geofence of ${place.n} was just entered."
-                    presence = place.h ? 'present' : 'not present'
-                    currentPlace = place.n
-                    arrivingAtPlace = ''
-                    leavingPlace = ''
-                    place.meta.p = true
-	            	break
-	            case "o":
-	            	//arriving
-                    info += " Outter geofence of ${place.n} was just entered."
-                    arrivingAtPlace = currentPlace == '' ? place.n : ''
-                    leavingPlace = ''
-	            	break
-			}
-			break
-        case "exited":
-	        switch (circle) {
-	            case "i":
-	            	//leaving
-                    info += " Inner geofence of ${place.n} was just exited."                    
-                    arrivingAtPlace = ''                    
-                    leavingPlace = currentPlace == place.n ? place.n : ''
-	            	break
-	            case "o":
-	            	//left
-                    info += " Outer geofence of ${place.n} was just exited."                    
-                    presence = 'not present'
-                    currentPlace = ''
-                    arrivingAtPlace = ''
-                    leavingPlace = ''
-	            	break
-	        }
-            break
-    }
-    state.places = places    
-	updateData(places, presence, device.currentValue('sleeping'), currentPlace, closestPlace, arrivingAtPlace, leavingPlace)
-    if (debugging) {
-    	info = "Received geofence update for ${circle == 'i' ? 'inner' : 'outer'} circle of ${place.n}.$info"
-    	log.debug info
-		sendEvent( name: "debug", value: info, descriptionText: info, isStateChange: true, displayed: true )
-    }    
 }
 
 private void updateData(places, presence, sleeping, currentPlace, closestPlace, arrivingAtPlace, leavingPlace) {
