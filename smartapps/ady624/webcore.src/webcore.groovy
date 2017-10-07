@@ -1420,8 +1420,6 @@ private api_intf_dashboard_piston_delete() {
 }
 
 private api_intf_location_entered() {	
-	log.error params
-
 	def deviceId = params.device
     def dni = params.dni
     def device = getChildDevices().find{ (it.getDeviceNetworkId() == dni) || (hashId(it.id) == deviceId) }
@@ -1429,8 +1427,6 @@ private api_intf_location_entered() {
 }
 
 private api_intf_location_exited() {
-	log.error params
-
 	def deviceId = params.device
     def dni = params.dni
     def device = getChildDevices().find{ (it.getDeviceNetworkId() == dni) || (hashId(it.id) == deviceId) }
@@ -1438,11 +1434,9 @@ private api_intf_location_exited() {
 }
 
 private api_intf_location_updated() {
-	log.error params
 	def deviceId = params.device
     def dni = params.dni
     def device = getChildDevices().find{ (it.getDeviceNetworkId() == dni) || (hashId(it.id) == deviceId) }
-    log.error "GOT DEVICE $device - $device.id"
     Map location = params.location ? (LinkedHashMap) new groovy.json.JsonSlurper().parseText(params.location) : [error: "Invalid data"]
     if (device) device.processEvent([name: 'updated', location: location, places: state.settings.places])
 }
