@@ -18,8 +18,17 @@
  *
  *  Version history
 */
-public static String version() { return "v0.2.0ec.20170927" }
+public static String version() { return "v0.2.0f9.20171007" }
 /*
+ *	10/07/2017 >>> v0.2.0f9.20171007 - BETA M2 - Added previous location attribute support and methods to calculate distance between places, people, fixed locations...
+ *	10/06/2017 >>> v0.2.0f8.20171006 - BETA M2 - Added support for Android geofence filtering depending on horizontal accuracy
+ *	10/04/2017 >>> v0.2.0f7.20171004 - BETA M2 - Added speed and bearing support
+ *	10/04/2017 >>> v0.2.0f6.20171004 - BETA M2 - Bug fixes for geofencing
+ *	10/04/2017 >>> v0.2.0f5.20171003 - BETA M2 - Bug fixes for geofencing
+ *	10/04/2017 >>> v0.2.0f4.20171003 - BETA M2 - Bug fixes for geofencing
+ *	10/03/2017 >>> v0.2.0f3.20171003 - BETA M2 - Bug fixes for geofencing
+ *	10/03/2017 >>> v0.2.0f2.20171003 - BETA M2 - Updated iOS app to add timestamps
+ *	10/01/2017 >>> v0.2.0f1.20171001 - BETA M2 - Added debugging options
  *	09/30/2017 >>> v0.2.0f0.20170930 - BETA M2 - Added last update info for both geofences and location updates
  *	09/30/2017 >>> v0.2.0ef.20170930 - BETA M2 - Minor fixes for Android
  *	09/29/2017 >>> v0.2.0ed.20170929 - BETA M2 - Added support for Android presence
@@ -1411,6 +1420,8 @@ private api_intf_dashboard_piston_delete() {
 }
 
 private api_intf_location_entered() {	
+	log.error params
+
 	def deviceId = params.device
     def dni = params.dni
     def device = getChildDevices().find{ (it.getDeviceNetworkId() == dni) || (hashId(it.id) == deviceId) }
@@ -1418,6 +1429,8 @@ private api_intf_location_entered() {
 }
 
 private api_intf_location_exited() {
+	log.error params
+
 	def deviceId = params.device
     def dni = params.dni
     def device = getChildDevices().find{ (it.getDeviceNetworkId() == dni) || (hashId(it.id) == deviceId) }
@@ -1429,7 +1442,7 @@ private api_intf_location_updated() {
 	def deviceId = params.device
     def dni = params.dni
     def device = getChildDevices().find{ (it.getDeviceNetworkId() == dni) || (hashId(it.id) == deviceId) }
-    log.error "GOT DEVICE $device"
+    log.error "GOT DEVICE $device - $device.id"
     Map location = params.location ? (LinkedHashMap) new groovy.json.JsonSlurper().parseText(params.location) : [error: "Invalid data"]
     if (device) device.processEvent([name: 'updated', location: location, places: state.settings.places])
 }
@@ -2501,6 +2514,7 @@ private static Map attributes() {
 		distance					: [ n: "distance",				t: "decimal",	r: [null, null],	u: "mi",																		],
 		distanceMetric				: [ n: "distance (metric)",		t: "decimal",	r: [null, null],	u: "km",																		],
 		currentPlace				: [ n: "current place",			t: "string",																										],
+		previousPlace				: [ n: "previous place",		t: "string",																										],
 		closestPlace				: [ n: "closest place",			t: "string",																										],
 		arrivingAtPlace				: [ n: "arriving at place",		t: "string",																										],
 		leavingPlace				: [ n: "leaving place",			t: "string",																										],
@@ -2909,6 +2923,7 @@ private static Map functions() {
         abs				: [ t: "dynamic"						],
         rangevalue		: [ t: "dynamic",	d: "rangeValue"		],
         rainbowvalue	: [ t: "string",	d: "rainbowValue"	],
+        distance		: [ t: "decimal"						],
 	]
 }
 

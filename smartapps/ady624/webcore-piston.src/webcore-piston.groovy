@@ -18,8 +18,17 @@
  *
  *  Version history
 */
-public static String version() { return "v0.2.0ec.20170927" }
+public static String version() { return "v0.2.0f9.20171007" }
 /*
+ *	10/07/2017 >>> v0.2.0f9.20171007 - BETA M2 - Added previous location attribute support and methods to calculate distance between places, people, fixed locations...
+ *	10/06/2017 >>> v0.2.0f8.20171006 - BETA M2 - Added support for Android geofence filtering depending on horizontal accuracy
+ *	10/04/2017 >>> v0.2.0f7.20171004 - BETA M2 - Added speed and bearing support
+ *	10/04/2017 >>> v0.2.0f6.20171004 - BETA M2 - Bug fixes for geofencing
+ *	10/04/2017 >>> v0.2.0f5.20171003 - BETA M2 - Bug fixes for geofencing
+ *	10/04/2017 >>> v0.2.0f4.20171003 - BETA M2 - Bug fixes for geofencing
+ *	10/03/2017 >>> v0.2.0f3.20171003 - BETA M2 - Bug fixes for geofencing
+ *	10/03/2017 >>> v0.2.0f2.20171003 - BETA M2 - Updated iOS app to add timestamps
+ *	10/01/2017 >>> v0.2.0f1.20171001 - BETA M2 - Added debugging options
  *	09/30/2017 >>> v0.2.0f0.20170930 - BETA M2 - Added last update info for both geofences and location updates
  *	09/30/2017 >>> v0.2.0ef.20170930 - BETA M2 - Minor fixes for Android
  *	09/29/2017 >>> v0.2.0ed.20170929 - BETA M2 - Added support for Android presence
@@ -4907,6 +4916,10 @@ private Map getJson(rtData, name) {
 	return getJsonData(rtData, rtData.json, name)
 }
 
+private Map getPlaces(rtData, name) {
+	return getJsonData(rtData, rtData.settings?.places, name)
+}
+
 private Map getResponse(rtData, name) {
 	return getJsonData(rtData, rtData.response, name)
 }
@@ -4983,6 +4996,10 @@ private Map getVariable(rtData, name) {
             	result = getJson(rtData, name.substring(6))
         	} else if (name.startsWith('$json[') && (name.size() > 6)) {
             	result = getJson(rtData, name.substring(5))
+        	} else if (name.startsWith('$places.') && (name.size() > 8)) {
+            	result = getPlaces(rtData, name.substring(7))
+        	} else if (name.startsWith('$places[') && (name.size() > 8)) {
+            	result = getPlaces(rtData, name.substring(7))
             } else if (name.startsWith('$response.') && (name.size() > 10)) {
             	result = getResponse(rtData, name.substring(10))
             } else if (name.startsWith('$response[') && (name.size() > 10)) {
@@ -6979,6 +6996,98 @@ private func_random(rtData, params) {
 }
 
 
+/******************************************************************************/
+/*** random returns a random value											***/
+/*** Usage: distance((device | latitude, longitude), (device | latitude, longitude)[, unit])	***/
+/******************************************************************************/
+private func_distance(rtData, params) {
+	if (!params || !(params instanceof List) || (params.size() < 2) || (params.size() > 4)) {
+    	return [t: "error", v: "Invalid parameters. Expecting distance((device | latitude, longitude), (device | latitude, longitude)[, unit])"];
+    }
+    float lat1, lng1, lat2, lng2
+    def unit
+    def idx = 0
+    def pidx = 0
+    def errMsg = ''
+    while (pidx < params.size()) {
+  	 	if ((params[pidx].t != 'device') || ((params[pidx].t == 'device') && !!params[pidx].a)) {
+    		//a decimal or device attribute is provided
+    		switch (idx) {
+            	case 0:
+                	lat1 = evaluateExpression(rtData, params[pidx], 'decimal').v
+                    break
+            	case 1:
+                	lng1 = evaluateExpression(rtData, params[pidx], 'decimal').v
+                    break
+            	case 2:
+                	lat2 = evaluateExpression(rtData, params[pidx], 'decimal').v
+                    break
+            	case 3:
+                	lng2 = evaluateExpression(rtData, params[pidx], 'decimal').v
+                    break
+                case 4:
+                	unit = evaluateExpression(rtData, params[pidx], 'string').v
+            }
+            idx += 1
+            pidx += 1
+            continue
+        } else {
+            switch (idx) {
+                case 0:
+                case 2:
+                	params[pidx].a = 'latitude'
+                	float lat = evaluateExpression(rtData, params[pidx], 'decimal').v
+                	params[pidx].a = 'longitude'
+                	float lng = evaluateExpression(rtData, params[pidx], 'decimal').v
+                	if (idx == 0) {
+	                    lat1 = lat
+	                    lng1 = lng
+    	            } else {
+        	            lat2 = lat
+            	        lng2 = lng
+          			}
+                	idx += 2
+                    pidx += 1
+	                continue
+                default:
+                    errMsg = 'Invalid parameter order. Expecting parameter #${idx+1} to be a decimal, not a device.';
+                    pidx = -1
+    	            break;
+            }
+        }
+        if (pidx == -1) break
+    }
+    if (errMsg) return [t: 'error', v: errMsg]
+    if ((idx < 4) || (idx > 5)) return [t: 'error', v: 'Invalid parameter combination. Expecting either two devices, a device and two decimals, or four decimals, followed by an optional unit.']
+    double earthRadius = 6371000; //meters
+    double dLat = Math.toRadians(lat2-lat1);
+    double dLng = Math.toRadians(lng2-lng1);
+    double a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+               Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2)) *
+               Math.sin(dLng/2) * Math.sin(dLng/2);
+    double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    float dist = (float) (earthRadius * c);
+    switch (unit ?: 'm') {
+    	case 'km':
+        case 'kilometer':
+        case 'kilometers':
+        	return [t: 'decimal', v: dist / 1000.0]
+    	case 'mi':
+        case 'mile':
+        case 'miles':
+        	return [t: 'decimal', v: dist / 1609.3440]
+    	case 'ft':
+        case 'foot':
+        case 'feet':
+        	return [t: 'decimal', v: dist / 0.3048]
+    	case 'yd':
+        case 'yard':
+        case 'yards':
+        	return [t: 'decimal', v: dist / 0.9144]
+    }
+	return [t: 'decimal', v: dist]
+}
+
 
 /******************************************************************************/
 /*** 																		***/
@@ -7622,6 +7731,7 @@ private static Map getSystemVariables() {
 	return [
         '$args': [t: "dynamic", d: true],
         '$json': [t: "dynamic", d: true],
+        '$places': [t: "dynamic", d: true],
         '$response': [t: "dynamic", d: true],
         '$weather': [t: "dynamic", d: true],
         '$nfl': [t: "dynamic", d: true],
@@ -7709,6 +7819,7 @@ private getSystemVariableValue(rtData, name) {
 	switch (name) {
     	case '$args': return "${rtData.args}".toString()
     	case '$json': return "${rtData.json}".toString()
+    	case '$places': return "${rtData.settings?.places}".toString()
     	case '$response': return "${rtData.response}".toString()
         case '$weather': return "${rtData.weather}".toString()
         case '$nfl': return "${rtData.nfl}".toString()
