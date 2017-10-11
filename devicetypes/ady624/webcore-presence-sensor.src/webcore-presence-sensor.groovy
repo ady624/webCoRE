@@ -16,8 +16,9 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-public static String version() { return "v0.2.0f9.20171007" }
+public static String version() { return "v0.2.0fa.20171011" }
 /*
+ *	10/11/2017 >>> v0.2.0fa.20171010 - BETA M2 - Various bug fixes and improvements - fixed the mid() and random() functions
  *	10/07/2017 >>> v0.2.0f9.20171007 - BETA M2 - Added previous location attribute support and methods to calculate distance between places, people, fixed locations...
  *	10/06/2017 >>> v0.2.0f8.20171006 - BETA M2 - Added support for Android geofence filtering depending on horizontal accuracy
  *	10/04/2017 >>> v0.2.0f7.20171004 - BETA M2 - Added speed and bearing support
@@ -62,7 +63,7 @@ metadata {
         attribute "horizontalAccuracyMetric", "Number"        
         attribute "verticalAccuracy", "Number"
         attribute "verticalAccuracyMetric", "Number"
-        attribute "spped", "Number"
+        attribute "speed", "Number"
         attribute "speedMetric", "Number"
         attribute "bearing", "Number"
         command "asleep"
