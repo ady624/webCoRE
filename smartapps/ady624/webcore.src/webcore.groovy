@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.2.0f9.20171007" }
+public static String version() { return "v0.2.0fa.20171011" }
 /*
+ *	10/11/2017 >>> v0.2.0fa.20171010 - BETA M2 - Various bug fixes and improvements - fixed the mid() and random() functions
  *	10/07/2017 >>> v0.2.0f9.20171007 - BETA M2 - Added previous location attribute support and methods to calculate distance between places, people, fixed locations...
  *	10/06/2017 >>> v0.2.0f8.20171006 - BETA M2 - Added support for Android geofence filtering depending on horizontal accuracy
  *	10/04/2017 >>> v0.2.0f7.20171004 - BETA M2 - Added speed and bearing support
@@ -2519,8 +2520,11 @@ private static Map attributes() {
 		verticalAccuracyMetric		: [ n: "vertical accuracy (metric)",	t: "decimal",	r: [null, null],	u: "m",																	],
 		latitude					: [ n: "latitude",				t: "decimal",	r: [null, null],	u: "°",																			],
 		longitude					: [ n: "longitude",				t: "decimal",	r: [null, null],	u: "°",																			],        
-		closestPlaceDistance		: [ n: "distance to closest place",	t: "decimal",	r: [null, null],	u: "mi",																		],
-		closestPlaceDistanceMetric	: [ n: "distance to closest place (metric)",t: "decimal",	r: [null, null],	u: "km",																		],
+		closestPlaceDistance		: [ n: "distance to closest place",	t: "decimal",	r: [null, null],	u: "mi",																	],
+		closestPlaceDistanceMetric	: [ n: "distance to closest place (metric)",t: "decimal",	r: [null, null],	u: "km",															],
+		speed						: [ n: "speed",					t: "decimal",	r: [null, null],	u: "ft/s",																		],
+		speedMetric					: [ n: "speed (metric)",		t: "decimal",	r: [null, null],	u: "m/s",																		],
+		bearing						: [ n: "bearing",				t: "decimal",	r: [0, 360],		u: "°",																			],        
 	]
 }
 
