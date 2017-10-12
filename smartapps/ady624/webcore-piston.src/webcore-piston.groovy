@@ -828,7 +828,10 @@ def handleEvents(event) {
         //schedules.removeAll{ (it.t <= threshold) && (it.s == event.schedule.s) && (it.i == event.schedule.i) }
         schedules.remove(event.schedule)
         if (event.name == 'wc_async_reply') {
-        	if (event.schedule.stack) event.schedule.stack.response = event.jsonData
+        	if (event.schedule.stack) {
+              event.schedule.stack.response = event.responseData
+              event.schedule.stack.json = event.jsonData
+            }
             event.name = 'time'
             event.value = now()
             int responseCode = cast(rtData, event.responseCode, 'integer')
