@@ -3153,10 +3153,11 @@ public localHttpRequestHandler(physicalgraph.device.HubResponse hubResponse) {
 		setRtData.mediaData = data?.getBytes()
     } else {
         try {
-            if (data.startsWith('{') && data.endsWith('}')) {
-                    json = (LinkedHashMap) new groovy.json.JsonSlurper().parseText(data)
-                } else if (data.startsWith('[') && data.endsWith(']')) {
-                    json = (List) new groovy.json.JsonSlurper().parseText(data)
+            def trimmed = data.trim()
+            if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+                    json = (LinkedHashMap) new groovy.json.JsonSlurper().parseText(trimmed)
+                } else if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+                    json = (List) new groovy.json.JsonSlurper().parseText(trimmed)
                 } else {
                     json = [:]
                 }
