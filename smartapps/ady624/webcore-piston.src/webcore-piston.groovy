@@ -3168,7 +3168,7 @@ public localHttpRequestHandler(physicalgraph.device.HubResponse hubResponse) {
             json = [:]
         }
     }
-	handleEvents([date: new Date(), device: location, name: 'wc_async_reply', value: 'httpRequest', jsonData: json, responseCode: responseCode, setRtData: setRtData])
+	handleEvents([date: new Date(), device: location, name: 'wc_async_reply', value: 'httpRequest', contentType: mediaType, responseData: data, jsonData: json, responseCode: responseCode, setRtData: setRtData])
 }
 
 private long vcmd_httpRequest(rtData, device, params) {
