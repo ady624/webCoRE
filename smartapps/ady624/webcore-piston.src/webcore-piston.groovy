@@ -3141,7 +3141,7 @@ public localHttpRequestHandler(physicalgraph.device.HubResponse hubResponse) {
     }
     
     def binary = false
-    def mediaType = hubResponse.getHeaders()['content-type']?.toLowerCase()
+    def mediaType = hubResponse.getHeaders()['content-type']?.toLowerCase().tokenize(';')[0]
     switch (mediaType) {
         case 'image/jpeg':
         case 'image/png':
