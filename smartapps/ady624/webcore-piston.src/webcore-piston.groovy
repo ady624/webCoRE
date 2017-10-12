@@ -3203,7 +3203,7 @@ private long vcmd_httpRequest(rtData, device, params) {
 	}
 	def data = null
 	if (variables instanceof List) {
-    	for(variable in variables.findAll( !!it )) {
+    	for(variable in variables.findAll{ !!it }) {
         	data  = data ?: [:]
 			data[variable] = getVariable(rtData, variable).v
 		}
