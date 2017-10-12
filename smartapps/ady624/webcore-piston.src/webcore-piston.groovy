@@ -3154,7 +3154,7 @@ public localHttpRequestHandler(physicalgraph.device.HubResponse hubResponse) {
     if (binary) {
 		setRtData.mediaType = mediaType
 		setRtData.mediaData = data?.getBytes()
-    } else {
+    } else if (data) {
         try {
             def trimmed = data.trim()
             if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
