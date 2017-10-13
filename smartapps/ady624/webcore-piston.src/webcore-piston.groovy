@@ -828,7 +828,10 @@ def handleEvents(event) {
         //schedules.removeAll{ (it.t <= threshold) && (it.s == event.schedule.s) && (it.i == event.schedule.i) }
         schedules.remove(event.schedule)
         if (event.name == 'wc_async_reply') {
-        	if (event.schedule.stack) event.schedule.stack.response = event.jsonData
+        	if (event.schedule.stack) {
+              event.schedule.stack.response = event.responseData
+              event.schedule.stack.json = event.jsonData
+            }
             event.name = 'time'
             event.value = now()
             int responseCode = cast(rtData, event.responseCode, 'integer')
@@ -3138,7 +3141,7 @@ public localHttpRequestHandler(physicalgraph.device.HubResponse hubResponse) {
     }
     
     def binary = false
-    def mediaType = hubResponse.getHeaders()['content-type']?.toLowerCase()
+    def mediaType = hubResponse.getHeaders()['content-type']?.toLowerCase().tokenize(';')[0]
     switch (mediaType) {
         case 'image/jpeg':
         case 'image/png':
@@ -3151,12 +3154,13 @@ public localHttpRequestHandler(physicalgraph.device.HubResponse hubResponse) {
     if (binary) {
 		setRtData.mediaType = mediaType
 		setRtData.mediaData = data?.getBytes()
-    } else {
+    } else if (data) {
         try {
-            if (data.startsWith('{') && data.endsWith('}')) {
-                    json = (LinkedHashMap) new groovy.json.JsonSlurper().parseText(data)
-                } else if (data.startsWith('[') && data.endsWith(']')) {
-                    json = (List) new groovy.json.JsonSlurper().parseText(data)
+            def trimmed = data.trim()
+            if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+                    json = (LinkedHashMap) new groovy.json.JsonSlurper().parseText(trimmed)
+                } else if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+                    json = (List) new groovy.json.JsonSlurper().parseText(trimmed)
                 } else {
                     json = [:]
                 }
@@ -3164,7 +3168,7 @@ public localHttpRequestHandler(physicalgraph.device.HubResponse hubResponse) {
             json = [:]
         }
     }
-	handleEvents([date: new Date(), device: location, name: 'wc_async_reply', value: 'httpRequest', jsonData: json, responseCode: responseCode, setRtData: setRtData])
+	handleEvents([date: new Date(), device: location, name: 'wc_async_reply', value: 'httpRequest', contentType: mediaType, responseData: data, jsonData: json, responseCode: responseCode, setRtData: setRtData])
 }
 
 private long vcmd_httpRequest(rtData, device, params) {
