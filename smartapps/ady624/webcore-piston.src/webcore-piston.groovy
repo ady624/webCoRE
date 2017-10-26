@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.2.0fa.20171011" }
+public static String version() { return "v0.2.0fb.20171026" }
 /*
+ *	10/26/2017 >>> v0.2.0fb.20171026 - BETA M2 - Partial support for super global variables - works within same location - no inter-location comms yet
  *	10/11/2017 >>> v0.2.0fa.20171010 - BETA M2 - Various bug fixes and improvements - fixed the mid() and random() functions
  *	10/07/2017 >>> v0.2.0f9.20171007 - BETA M2 - Added previous location attribute support and methods to calculate distance between places, people, fixed locations...
  *	10/06/2017 >>> v0.2.0f8.20171006 - BETA M2 - Added support for Android geofence filtering depending on horizontal accuracy
@@ -4325,7 +4326,7 @@ private void subscribeAll(rtData) {
             if ((expression.t == 'variable') && expression.x && expression.x.startsWith('@')) {
                 subscriptionId = "${expression.x}"
                 deviceId = rtData.locationId
-                attribute = "${handle()}.${expression.x}"
+                attribute = "${expression.x.startsWith('@@') ? '@@' + handle() : rtData.instanceId}.${expression.x}"
             }
             if (subscriptionId && deviceId) {
                 def ct = subscriptions[subscriptionId]?.t ?: null
@@ -4424,7 +4425,7 @@ private void subscribeAll(rtData) {
                 case 'x':
                 	if (operand.x && operand.x.startsWith('@')) {
                     	def subscriptionId = operand.x
-                        def attribute = "${handle()}.${operand.x}"
+                        def attribute = "${operand.x.startsWith('@@') ? '@@' + handle() : rtData.instanceId}.${operand.x}"
                         def ct = subscriptions[subscriptionId]?.t ?: null
                         if ((ct == 'trigger') || (comparisonType == 'trigger')) {
                             ct = 'trigger'                       

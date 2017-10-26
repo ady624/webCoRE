@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.2.0fa.20171011" }
+public static String version() { return "v0.2.0fb.20171026" }
 /*
+ *	10/26/2017 >>> v0.2.0fb.20171026 - BETA M2 - Partial support for super global variables - works within same location - no inter-location comms yet
  *	10/11/2017 >>> v0.2.0fa.20171010 - BETA M2 - Various bug fixes and improvements - fixed the mid() and random() functions
  *	10/07/2017 >>> v0.2.0f9.20171007 - BETA M2 - Added previous location attribute support and methods to calculate distance between places, people, fixed locations...
  *	10/06/2017 >>> v0.2.0f8.20171006 - BETA M2 - Added support for Android geofence filtering depending on horizontal accuracy
@@ -859,6 +860,7 @@ private getHub() {
 
 private subscribeAll() {
 	subscribe(location, "${handle()}.poll", webCoREHandler)
+	subscribe(location, "${'@@' + handle()}", webCoREHandler)
 	subscribe(location, "askAlexa", askAlexaHandler)
 	subscribe(location, "echoSistant", echoSistantHandler)    
     subscribe(location, "HubUpdated", hubUpdatedHandler, [filterEvents: false])
@@ -2106,7 +2108,7 @@ public executePiston(pistonId, data, source) {
 }
 
 private sendVariableEvent(variable) {
-	if (!hubUID) sendLocationEvent([name: handle(), value: variable.name, isStateChange: true, displayed: false, linkText: "${handle()} global variable ${variable.name} changed", descriptionText: "${handle()} global variable ${variable.name} changed", data: [id: hashId(app.id), name: app.label, event: 'variable', variable: variable]])
+	if (!hubUID) sendLocationEvent([name: variable.name.startsWith('@@') ? '@@' + handle() : hashId(app.id), value: variable.name, isStateChange: true, displayed: false, linkText: "${handle()} global variable ${variable.name} changed", descriptionText: "${handle()} global variable ${variable.name} changed", data: [id: hashId(app.id), name: app.label, event: 'variable', variable: variable]])
 }
 
 private broadcastPistonList() {
@@ -2114,8 +2116,9 @@ private broadcastPistonList() {
 }
 
 def webCoREHandler(event) {
-    if (!event || (event.name != handle())) return;
+    if (!event || (!event.name.endsWith(handle()))) return;
     def data = event.jsonData ?: null
+    log.error "GOT EVENT WITH DATA $data"
     if (data && data.variable && (data.event == 'variable') && event.value && event.value.startsWith('@')) {
     	Map vars = atomicState.vars ?: [:]
         Map variable = data.variable
