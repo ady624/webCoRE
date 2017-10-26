@@ -6071,10 +6071,13 @@ private func_replace(rtData, params) {
     int cnt = Math.floor((params.size() - 1) / 2)
     for (int i = 0; i < cnt; i++) {
     	def search = evaluateExpression(rtData, params[i * 2 + 1], 'string').v
+        def replace = evaluateExpression(rtData, params[i * 2 + 2], 'string').v
         if ((search.size() > 2) && search.startsWith('/') && search.endsWith('/')) {
         	search = ~search.substring(1, search.size() - 1)
+	        value = value.replaceAll(search, replace)
+        } else {
+	        value = value.replace(search, replace)
         }
-        value = value.replaceAll(search, evaluateExpression(rtData, params[i * 2 + 2], 'string').v)
     }
     return [t: "string", v: value]
 }
