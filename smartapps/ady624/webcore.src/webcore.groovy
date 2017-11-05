@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.2.0fc.20171105" }
+public static String version() { return "v0.2.0fd.20171105" }
 /*
+ *	11/05/2017 >>> v0.2.0fd.20171105 - BETA M2 - Further DST fixes
  *	11/05/2017 >>> v0.2.0fc.20171105 - BETA M2 - DST fixes
  *	10/26/2017 >>> v0.2.0fb.20171026 - BETA M2 - Partial support for super global variables - works within same location - no inter-location comms yet
  *	10/11/2017 >>> v0.2.0fa.20171010 - BETA M2 - Various bug fixes and improvements - fixed the mid() and random() functions
