@@ -1770,7 +1770,6 @@ private scheduleTimer(rtData, timer, long lastRun = 0) {
     if (!delta) {
     	//let's get the offset
         time = evaluateExpression(rtData, evaluateOperand(rtData, null, timer.lo2), 'datetime').v
-        error " NOW TIME IS $time", rtData
         if (timer.lo2.t != 'c') {
         	def offset = evaluateOperand(rtData, null, timer.lo3)
         	time += (long) evaluateExpression(rtData, [t: 'duration', v: offset.v, vt: offset.vt], 'long').v
