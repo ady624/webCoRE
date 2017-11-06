@@ -1770,6 +1770,7 @@ private scheduleTimer(rtData, timer, long lastRun = 0) {
     if (!delta) {
     	//let's get the offset
         time = evaluateExpression(rtData, evaluateOperand(rtData, null, timer.lo2), 'datetime').v
+        error " NOW TIME IS $time", rtData
         if (timer.lo2.t != 'c') {
         	def offset = evaluateOperand(rtData, null, timer.lo3)
         	time += (long) evaluateExpression(rtData, [t: 'duration', v: offset.v, vt: offset.vt], 'long').v
@@ -1780,7 +1781,7 @@ private scheduleTimer(rtData, timer, long lastRun = 0) {
             while (time <= now()) {
             	//add days to bring it to next occurrence
                 //we need to go through local time to support DST
-            	time = localToUtcTime(utcToLocalTime(time) + 86400000)
+                time = localToUtcTime(utcToLocalTime(time) + 86400000)
             }
         }
     }
@@ -7172,6 +7173,12 @@ private getThreeAxisOrientation(value, getIndex = false) {
 	return value
 }
 
+private long getTimeToday(long time) {
+	long result = localToUtcTime(time + utcToLocalTime(getMidnightTime()))
+    //we need to adjust for time overlapping during DST changes
+    return result + time - (utcToLocalTime(result) % 86400000)
+}
+
 private cast(rtData, value, dataType, srcDataType = null) {
     //error "CASTING ($srcDataType) $value as $dataType", rtData
     //if (srcDataType == 'vector3') error "got x = $value.x", rtData
@@ -7312,11 +7319,11 @@ private cast(rtData, value, dataType, srcDataType = null) {
         	def n = localTime()
 			return utcToLocalTime((srcDataType == 'string') ? localToUtcTime(value) : cast(rtData, value, "long")) % 86400000
 		case "date":
-        	if ((srcDataType == 'time') && (value < 86400000)) value = localToUtcTime(value + utcToLocalTime(getMidnightTime()))
+        	if ((srcDataType == 'time') && (value < 86400000)) value = getTimeToday(value)
 			def d = utcToLocalTime((srcDataType == 'string') ? localToUtcTime(value) : cast(rtData, value, "long"))
             return localToUtcTime(d - (d % 86400000))
 		case "datetime":
-        	if ((srcDataType == 'time') && (value < 86400000)) value = localToUtcTime(value + utcToLocalTime(getMidnightTime()))
+        	if ((srcDataType == 'time') && (value < 86400000)) value = getTimeToday(value) //localToUtcTime(value + utcToLocalTime(getMidnightTime()))
 			return ((srcDataType == 'string') ? localToUtcTime(value) : cast(rtData, value, "long"))
 		case "vector3":
 			return (value instanceof Map) && (value.x != null) && (value.y != null) && (value.z != null) ? value : [x:0, y:0, z:0]
