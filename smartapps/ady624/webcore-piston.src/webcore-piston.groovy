@@ -1276,7 +1276,7 @@ private Boolean executeStatement(rtData, statement, async = false) {
                                     	if (rtData.event.name == operand.v) perform = true
                                     	break;
                                    	case 'x':
-                                    	if ((rtData.event.value == operand.x) && (rtData.event.name == operand.x.startsWith('@@') ? '@@' + handle() : rtData.instanceId)) perform = true
+                                    	if ((rtData.event.value == operand.x) && (rtData.event.name == (operand.x.startsWith('@@') ? '@@' + handle() : rtData.instanceId))) perform = true
                                     	break;
                                 }
                             }
