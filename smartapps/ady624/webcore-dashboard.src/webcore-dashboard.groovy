@@ -16,7 +16,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-public static String version() { return "v0.2.0fd.20171105" }
+public static String version() { return "v0.2.0fe.20171109" }
 /******************************************************************************/
 /*** webCoRE DEFINITION														***/
 /******************************************************************************/
@@ -49,7 +49,7 @@ preferences {
 def pageMain() {
     //clear devices cache
 	dynamicPage(name: "pageMain", title: "", install: false, uninstall: false) {
-        if (!parent || !parent.isInstalled()) {        
+        if (!parent || !parent.isInstalled()) {
             section() {
                 paragraph "Sorry, you cannot install a piston directly from the Marketplace, please use the webCoRE SmartApp instead."
             }
@@ -140,13 +140,13 @@ public dashboardEventHandler(evt) {
 }
 
 public updatePiston(pistonId, piston) {
-	broadcastEvent(pistonId, 'piston', piston.s.new, piston.t)	
+	broadcastEvent(pistonId, 'piston', piston.s.new, piston.t)
 }
 
 private void broadcastEvent(deviceId, eventName, eventValue, eventTime) {
 	def iid = state.instanceId
     def region = state.region ?: 'us'
-    if (!iid || !iid.startsWith(':') || !iid.endsWith(':')) return    
+    if (!iid || !iid.startsWith(':') || !iid.endsWith(':')) return
     asynchttp_v1.put(null, [
         uri: "https://api-${region}-${iid[32]}.webcore.co:9237",
         path: '/event/sink',
@@ -157,7 +157,7 @@ private void broadcastEvent(deviceId, eventName, eventValue, eventTime) {
         	v: eventValue,
         	t: eventTime
     	]
-    ])    
+    ])
 }
 
 /******************************************************************************/

@@ -16,7 +16,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-public static String version() { return "v0.2.0fd.20171105" }
+public static String version() { return "v0.2.0fe.20171109" }
 /******************************************************************************/
 /*** webCoRE DEFINITION														***/
 /******************************************************************************/
@@ -50,7 +50,7 @@ preferences {
 def pageSettings() {
     //clear devices cache
 	dynamicPage(name: "pageSettings", title: "", install: false, uninstall: false) {
-        if (!parent || !parent.isInstalled()) {        
+        if (!parent || !parent.isInstalled()) {
             section() {
                 paragraph "Sorry, you cannot install a piston directly from the Marketplace, please use the webCoRE SmartApp instead."
             }
@@ -60,12 +60,12 @@ def pageSettings() {
             }
         } else {
             section("Available devices") {
-                href "pageSelectDevices", title: "Available devices", description: "Tap here to select which devices are available to pistons" 
+                href "pageSelectDevices", title: "Available devices", description: "Tap here to select which devices are available to pistons"
             }
 
             section("Available contacts") {
                 if (location.getContactBookEnabled()) {
-                    href "pageSelectContacts", title: "Available contacts", description: "Tap here to select which contacts are available to pistons" 
+                    href "pageSelectContacts", title: "Available contacts", description: "Tap here to select which contacts are available to pistons"
                 } else {
                     paragraph "Your contact book is not enabled."
                 }
@@ -86,7 +86,7 @@ private pageSelectDevices() {
 			input "dev:actuator", "capability.actuator", multiple: true, title: "Which actuators", required: false, submitOnChange: true
 			input "dev:sensor", "capability.sensor", multiple: true, title: "Which sensors", required: false, submitOnChange: true
 		}
-        
+
 		section ('Select devices by capability') {
         	paragraph "If you cannot find a device by type, you may try looking for it by category below"
 			def d
@@ -147,7 +147,7 @@ def initData(devices, contacts) {
 		for(item in devices) {
 	    	if (item) {
 	    		def deviceType = item.key.replace('dev:', 'capability.')
-	    		def deviceIdList = item.value.collect{ it.id }        
+	    		def deviceIdList = item.value.collect{ it.id }
 	    		app.updateSetting(item.key, [type: deviceType, value: deviceIdList])
 	        }
 	    }

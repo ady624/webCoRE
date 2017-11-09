@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.2.0fd.20171105" }
+public static String version() { return "v0.2.0fe.20171109" }
 /*
+ *	11/09/2017 >>> v0.2.0fe.20171109 - BETA M2 - Fixed on events subscription for global and superglobal variables
  *	11/05/2017 >>> v0.2.0fd.20171105 - BETA M2 - Further DST fixes
  *	11/05/2017 >>> v0.2.0fc.20171105 - BETA M2 - DST fixes
  *	10/26/2017 >>> v0.2.0fb.20171026 - BETA M2 - Partial support for super global variables - works within same location - no inter-location comms yet
@@ -305,7 +306,7 @@ preferences {
 	page(name: "pageSettings")
     page(name: "pageChangePassword")
     page(name: "pageSavePassword")
-    page(name: "pageRebuildCache")    
+    page(name: "pageRebuildCache")
 	page(name: "pageRemove")
 }
 
@@ -347,7 +348,7 @@ def pageMain() {
  	               section() {
 	                	paragraph "Your location is not correctly setup."
                    }
-					pageSectionTimeZoneInstructions()                    	
+					pageSectionTimeZoneInstructions()
                 }
             } else {
                 section() {
@@ -365,13 +366,13 @@ def pageMain() {
     	if (settings.agreement == undefined) {
         	pageSectionDisclaimer()
         }
-    
+
     	if (settings.agreement) {
     		section("Engine block") {
 				href "pageEngineBlock", title: "Cast iron", description: app.version(), image: "https://cdn.rawgit.com/ady624/${handle()}/master/resources/icons/app-CoRE.png", required: false
 	        }
 		}
-        
+
 		section("Dashboard") {
 			if (!state.endpoint) {
 				href "pageInitializeDashboard", title: "Dashboard", description: "Tap to initialize", image: "https://cdn.rawgit.com/ady624/CoRE/master/resources/images/icons/dashboard.png", required: false
@@ -381,12 +382,12 @@ def pageMain() {
 				href "", title: "Register a browser", style: "embedded", url: getDashboardInitUrl(true), description: "Tap to open", image: "https://cdn.rawgit.com/ady624/CoRE/master/resources/images/icons/dashboard.png", required: false
 			}
 		}
-        
+
 		section(title:"Settings") {
 			href "pageSettings", title: "Settings", image: "https://cdn.rawgit.com/ady624/CoRE/master/resources/images/icons/settings.png", required: false
 		}
-        
-	}	
+
+	}
 }
 
 private pageSectionDisclaimer() {
@@ -452,7 +453,7 @@ private pageInitializeDashboard() {
 	dynamicPage(name: "pageInitializeDashboard", title: "", nextPage: success && hasTZ ? "pageSelectDevices" : null) {
 		if (!state.installed) {
 			if (success) {
-               	if (hasTZ) {            
+               	if (hasTZ) {
                     section() {
                         paragraph "Great, the dashboard is ready to go."
                     }
@@ -477,7 +478,7 @@ private pageInitializeDashboard() {
                         paragraph "Once you have finished the steps above, go back and try again", required: true
                     }
                     return
-                }                    
+                }
 			} else {
             	section() {
 					paragraph "Sorry, it looks like OAuth is not properly enabled."
@@ -523,7 +524,7 @@ private pageSelectDevices() {
 			input "dev:actuator", "capability.actuator", multiple: true, title: "Which actuators", required: false
 			input "dev:sensor", "capability.sensor", multiple: true, title: "Which sensors", required: false
 		}
-        
+
 		section ('Select devices by capability') {
         	paragraph "If you cannot find a device by type, you may try looking for it by category below"
 			def d
@@ -577,30 +578,30 @@ def pageSettings() {
 		section("General") {
 			label name: "name", title: "Name", state: (name ? "complete" : null), defaultValue: app.name, required: false
 		}
-        
+
         def storageApp = getStorageApp()
         if (storageApp) {
 			section("Available devices and contacts") {
 	        	app([title: 'Available devices and contacts', multiple: false, install: true, uninstall: false], 'storage', 'ady624', "${handle()} Storage")
 	        }
-		} else {        
+		} else {
 			section("Available devices") {
-				href "pageSelectDevices", title: "Available devices", description: "Tap here to select which devices are available to pistons" 
+				href "pageSelectDevices", title: "Available devices", description: "Tap here to select which devices are available to pistons"
 			}
 			section("Available contacts") {
 				if (location.getContactBookEnabled()) {
-					href "pageSelectContacts", title: "Available contacts", description: "Tap here to select which contacts are available to pistons" 
+					href "pageSelectContacts", title: "Available contacts", description: "Tap here to select which contacts are available to pistons"
 				} else {
     	        	paragraph "Your contact book is not enabled."
         	    }
 			}
 		}
 /*		section("Integrations") {
-			href "pageIntegrations", title: "Integrations with other services", description: "Tap here to configure your integrations" 
+			href "pageIntegrations", title: "Integrations with other services", description: "Tap here to configure your integrations"
 		}*/
 
 		section("Security") {
-			href "pageChangePassword", title: "Security", description: "Tap here to change your dashboard security settings" 
+			href "pageChangePassword", title: "Security", description: "Tap here to change your dashboard security settings"
 		}
 
 //		section(title: "Logging") {
@@ -612,9 +613,9 @@ def pageSettings() {
 		}
 
 		section(title: "Maintenance") {
-			paragraph "Memory usage is at ${mem()}", required: false			           
+			paragraph "Memory usage is at ${mem()}", required: false
 			input "disabled", "bool", title: "Disable all pistons", description: "Disable all pistons belonging to this instance", defaultValue: false, required: false
-			href "pageRebuildCache", title: "Clean up and rebuild data cache", description: "Tap here to change your clean up and rebuild your data cache" 
+			href "pageRebuildCache", title: "Clean up and rebuild data cache", description: "Tap here to change your clean up and rebuild your data cache"
 		}
 
 		section(title: "Recovery") {
@@ -623,16 +624,16 @@ def pageSettings() {
 		}
 
 		section("Uninstall") {
-			href "pageRemove", title: "Uninstall ${handle()}", description: "Tap here to uninstall ${handle()}" 
+			href "pageRemove", title: "Uninstall ${handle()}", description: "Tap here to uninstall ${handle()}"
 		}
-		
+
 	}
 }
 
 private pageChangePassword() {
 	dynamicPage(name: "pageChangePassword", title: "", nextPage: "pageSavePassword") {
 		section() {
-			paragraph "Choose a security password for your dashboard. You will need to enter this password when accessing your dashboard for the first time and possibly from time to time.", required: false			   
+			paragraph "Choose a security password for your dashboard. You will need to enter this password when accessing your dashboard for the first time and possibly from time to time.", required: false
 		}
 		pageSectionPIN()
 	}
@@ -728,7 +729,7 @@ def pageIntegrationTwilio() {
 	        input "twilio_token", "password", title: "Twilio authorization token", required: true
 	        input "twilio_number", "text", title: "Twilio phone number (+E.164 format)", required: true, defaultValue: "+"
 		}
-        
+
         section("Test your settings") {
         	paragraph "Once you have provided all details, test your integration here"
 	        input "twilio_test_number", "text", title: "Your mobile phone number (+E.164 format)", defaultValue: "+"
@@ -821,7 +822,7 @@ private initialize() {
         	"run$recoveryMethod"(recoveryHandler)
         } catch (all) { }
     }
-    
+
     //move lifx
     if (state.settings && state.settings.lifx_scenes) {
     	state.lifx = [
@@ -864,7 +865,7 @@ private subscribeAll() {
 	subscribe(location, "${handle()}.poll", webCoREHandler)
 	subscribe(location, "${'@@' + handle()}", webCoREHandler)
 	subscribe(location, "askAlexa", askAlexaHandler)
-	subscribe(location, "echoSistant", echoSistantHandler)    
+	subscribe(location, "echoSistant", echoSistantHandler)
     subscribe(location, "HubUpdated", hubUpdatedHandler, [filterEvents: false])
     subscribe(location, "summary", summaryHandler, [filterEvents: false])
     setPowerSource(getHub()?.isBatteryInUse() ? 'battery' : 'mains')
@@ -960,7 +961,7 @@ private api_get_base_result(deviceVersion = 0, updateCache = false) {
             ] : null,
             zipCode: location.getZipCode(),
         ],
-        now: now(),        
+        now: now(),
     ]
 }
 
@@ -989,7 +990,7 @@ private api_intf_dashboard_load() {
         if (!result) result = api_get_error_result("ERR_INVALID_TOKEN")
     }
     //for accuracy, use the time as close as possible to the render
-    result.now = now()            
+    result.now = now()
 	render contentType: "application/javascript;charset=utf-8", data: "${params.callback}(${groovy.json.JsonOutput.toJson(result)})"
 }
 
@@ -1003,7 +1004,7 @@ private api_intf_dashboard_refresh() {
         if (!result) result = api_get_error_result("ERR_INVALID_TOKEN")
     }
     //for accuracy, use the time as close as possible to the render
-    result.now = now()            
+    result.now = now()
 	render contentType: "application/javascript;charset=utf-8", data: "${params.callback}(${groovy.json.JsonOutput.toJson(result)})"
 }
 
@@ -1043,7 +1044,7 @@ private api_intf_dashboard_piston_get() {
         def clientDbVersion = params.db
         def requireDb = serverDbVersion != clientDbVersion
         if (pistonId) {
-            result = api_get_base_result(requireDb ? 0 : params.dev, true)            
+            result = api_get_base_result(requireDb ? 0 : params.dev, true)
             def piston = getChildApps().find{ hashId(it.id) == pistonId };
             if (piston) {
             	result.data = piston.get() ?: [:]
@@ -1059,7 +1060,7 @@ private api_intf_dashboard_piston_get() {
                     attributes: attributes().sort{ it.key },
                     comparisons: comparisons(),
                     functions: functions(),
-                    colors: [                
+                    colors: [
                         standard: colorUtil?.ALL
                     ],
                 ]
@@ -1071,7 +1072,7 @@ private api_intf_dashboard_piston_get() {
     	result = api_get_error_result("ERR_INVALID_TOKEN")
     }
     //for accuracy, use the time as close as possible to the render
-    result.now = now()            
+    result.now = now()
     render contentType: "application/javascript;charset=utf-8", data: "${params.callback}(${groovy.json.JsonOutput.toJson(result)})"
 }
 
@@ -1095,7 +1096,7 @@ private api_intf_dashboard_piston_backup() {
     	result = api_get_error_result("ERR_INVALID_TOKEN")
     }
     //for accuracy, use the time as close as possible to the render
-    result.now = now()            
+    result.now = now()
     render contentType: "application/javascript;charset=utf-8", data: "${params.callback}(${groovy.json.JsonOutput.toJson(result)})"
 }
 
@@ -1414,7 +1415,7 @@ private api_intf_dashboard_piston_delete() {
 			result = [status: "ST_SUCCESS"]
             state.remove(params.id)
             state.remove('sph${params.id}')
-			broadcastPistonList()            
+			broadcastPistonList()
         } else {
 	    	result = api_get_error_result("ERR_INVALID_ID")
         }
@@ -1424,7 +1425,7 @@ private api_intf_dashboard_piston_delete() {
     render contentType: "application/javascript;charset=utf-8", data: "${params.callback}(${groovy.json.JsonOutput.toJson(result)})"
 }
 
-private api_intf_location_entered() {	
+private api_intf_location_entered() {
 	def deviceId = params.device
     def dni = params.dni
     def device = getChildDevices().find{ (it.getDeviceNetworkId() == dni) || (hashId(it.id) == deviceId) }
@@ -1452,7 +1453,7 @@ private api_intf_variable_set() {
 	if (verifySecurityToken(params.token)) {
     	def pid = params.id;
     	def name = params.name;
-        def value = params.value ? (LinkedHashMap) new groovy.json.JsonSlurper().parseText(new String(params.value.decodeBase64(), "UTF-8")) : null        
+        def value = params.value ? (LinkedHashMap) new groovy.json.JsonSlurper().parseText(new String(params.value.decodeBase64(), "UTF-8")) : null
         Map globalVars
         Map localVars
         if (!pid) {
@@ -1470,7 +1471,7 @@ private api_intf_variable_set() {
     	            globalVars[name] = [t: value.t, v: value.v]
 	            }
 				sendVariableEvent([name: value.n, value: value.v, type: value.t])
-			}        
+			}
         	atomicState.vars = globalVars
 			result = [status: "ST_SUCCESS"] + [globalVars: globalVars]
         } else {
@@ -1490,7 +1491,7 @@ private api_intf_settings_set() {
 	def result
     debug "Dashboard: Request received to set settings"
 	if (verifySecurityToken(params.token)) {
-        def settings = params.settings ? (LinkedHashMap) new groovy.json.JsonSlurper().parseText(new String(params.settings.decodeBase64(), "UTF-8")) : null        
+        def settings = params.settings ? (LinkedHashMap) new groovy.json.JsonSlurper().parseText(new String(params.settings.decodeBase64(), "UTF-8")) : null
         atomicState.settings = settings
         testLifx()
 		result = [status: "ST_SUCCESS"]
@@ -1520,10 +1521,10 @@ private api_intf_dashboard_piston_evaluate() {
 }
 
 private api_intf_dashboard_piston_activity() {
-	def result    
+	def result
 	if (verifySecurityToken(params.token)) {
 	    def piston = getChildApps().find{ hashId(it.id) == params.id };
-	    if (piston) {               
+	    if (piston) {
 			result = [status: "ST_SUCCESS", activity: (piston.activity(params.log) ?: [:]) + [globalVars: listAvailableVariables()/*, mode: hashId(location.getCurrentMode().id), shm: location.currentState("alarmSystemStatus")?.value, hubs: location.getHubs().collect{ [id: hashId(it.id, updateCache), name: it.name, firmware: it.getFirmwareVersionString(), physical: it.getType().toString().contains('PHYSICAL'), powerSource: it.isBatteryInUse() ? 'battery' : 'mains' ]}*/]]
         } else {
 	    	result = api_get_error_result("ERR_INVALID_ID")
@@ -1570,7 +1571,7 @@ private api_execute() {
 	def data = [:]
     def remoteAddr = request.getHeader("X-FORWARDED-FOR") ?: request.getRemoteAddr()
     debug "Dashboard: Request received to execute a piston from IP $remoteAddr"
-	if (params) {    	
+	if (params) {
     	data = [:]
         for(param in params) {
         	if (!(param.key in ['theAccessToken', 'appId', 'action', 'controller', 'pistonIdOrName'])) {
@@ -1612,7 +1613,7 @@ def recoveryHandler() {
 	    }
     }
 	if (state.version != version()) {
-    	//updated        
+    	//updated
         atomicState.version = version()
         updated()
     }
@@ -1632,7 +1633,7 @@ def recoveryHandler() {
 
 private cleanUp() {
 	try {
-        List pistons = getChildApps().collect{ hashId(it.id) }    
+        List pistons = getChildApps().collect{ hashId(it.id) }
         for (item in state.findAll{ (it.key.startsWith('sph') && (it.value == 0)) || it.key.contains('-') || (it.key.startsWith(':') && !(it.key in pistons)) }) {
             state.remove(item.key)
         }
@@ -1682,7 +1683,7 @@ private getStorageApp(install = false) {
 private getDashboardApp(install = false) {
 	def name = handle() + ' Dashboard'
     def label = app.label + ' (dashboard)'
-	def dashboardApp = getChildApps().find{ it.name == name }    
+	def dashboardApp = getChildApps().find{ it.name == name }
     if (dashboardApp) {
     	if (label != dashboardApp.label) {
     		dashboardApp.updateLabel(label)
@@ -1700,7 +1701,7 @@ private getDashboardApp(install = false) {
 private String getDashboardInitUrl(register = false) {
 	def url = register ? getDashboardRegistrationUrl() : getDashboardUrl()
     if (!url) return null
-    return url + (register ? "register/" : "init/") + (apiServerUrl("").replace("https://", '').replace(".api.smartthings.com", "").replace(":443", "").replace("/", "") + ((hubUID ?: state.accessToken) + app.id).replace("-", "") + (hubUID ? '/?access_token=' + state.accessToken : '')).bytes.encodeBase64() 
+    return url + (register ? "register/" : "init/") + (apiServerUrl("").replace("https://", '').replace(".api.smartthings.com", "").replace(":443", "").replace("/", "") + ((hubUID ?: state.accessToken) + app.id).replace("-", "") + (hubUID ? '/?access_token=' + state.accessToken : '')).bytes.encodeBase64()
 }
 
 private String getDashboardRegistrationUrl() {
@@ -1990,7 +1991,7 @@ public Map getRunTimeData(semaphore = null, fetchWrappers = false) {
 	        waited = true
 	    	pause(250)
 	    }
-    }    
+    }
     def storageApp = !!fetchWrappers ? getStorageApp() : null
    	return [
         enabled: !settings.disabled,
@@ -2012,7 +2013,7 @@ public Map getRunTimeData(semaphore = null, fetchWrappers = false) {
         settings: state.settings ?: [:],
         lifx: state.lifx ?: [:],
         powerSource: state.powerSource ?: 'mains',
-		region: state.endpoint.contains('graph-eu') ? 'eu' : 'us',		
+		region: state.endpoint.contains('graph-eu') ? 'eu' : 'us',
         instanceId: hashId(app.id),
         sunTimes: getSunTimes(),
         started: startTime,
@@ -2076,11 +2077,11 @@ public void updateRunTimeData(data) {
         atomicState[data.semaphoreName] = 0
         //atomicState.remove(data.semaphoreName)
     }
-	//broadcast to dashboard    
+	//broadcast to dashboard
 	if (state.dashboard == 'active') {
     	def dashboardApp = getDashboardApp()
         if (dashboardApp) dashboardApp.updatePiston(id, piston)
-    }    
+    }
     recoveryHandler()
 }
 
@@ -2130,7 +2131,7 @@ def webCoREHandler(event) {
             atomicState.vars = vars
         }
         return;
-    }    
+    }
     switch (event.value) {
     	case 'poll':
         	int delay = (int) Math.round(2000 * Math.random())
@@ -2524,12 +2525,12 @@ private static Map attributes() {
 		horizontalAccuracyMetric	: [ n: "horizontal accuracy (metric)",	t: "decimal",	r: [null, null],	u: "m",																	],
 		verticalAccuracyMetric		: [ n: "vertical accuracy (metric)",	t: "decimal",	r: [null, null],	u: "m",																	],
 		latitude					: [ n: "latitude",				t: "decimal",	r: [null, null],	u: "°",																			],
-		longitude					: [ n: "longitude",				t: "decimal",	r: [null, null],	u: "°",																			],        
+		longitude					: [ n: "longitude",				t: "decimal",	r: [null, null],	u: "°",																			],
 		closestPlaceDistance		: [ n: "distance to closest place",	t: "decimal",	r: [null, null],	u: "mi",																	],
 		closestPlaceDistanceMetric	: [ n: "distance to closest place (metric)",t: "decimal",	r: [null, null],	u: "km",															],
 		speed						: [ n: "speed",					t: "decimal",	r: [null, null],	u: "ft/s",																		],
 		speedMetric					: [ n: "speed (metric)",		t: "decimal",	r: [null, null],	u: "m/s",																		],
-		bearing						: [ n: "bearing",				t: "decimal",	r: [0, 360],		u: "°",																			],        
+		bearing						: [ n: "bearing",				t: "decimal",	r: [0, 360],		u: "°",																			],
 	]
 }
 
@@ -2732,7 +2733,7 @@ private static Map virtualCommands() {
 		[ n: "queueAskAlexaMessage",d: "Queue AskAlexa message",			p: ["Message:text", "?Unit:text", "?Application:text"],																		l: true, dd: "Queue AskAlexa message '{0}' in unit {1}",aggregated: true,	],
 		[ n: "deleteAskAlexaMessages",d: "Delete AskAlexa messages",			p: ["Unit:text", "?Application:text"],																	l: true, dd: "Delete AskAlexa messages in unit {1}",aggregated: true,	],
 		[ n: "cancelPendingTasks",d: "Cancel pending tasks",			p: ["Scope:enum[Local,Global]"],																														dd: "Cancel all pending {0} tasks",		],
-*/		
+*/
 	]
 /*    + (location.contactBookEnabled ? [
 		sendNotificationToContacts : [n: "Send notification to contacts", p: ["Message:text","Contacts:contacts","Save notification:bool"], l: true, dd: "Send notification '{0}' to {1}", aggregated: true],
@@ -2959,7 +2960,7 @@ private Map getRoutineOptions(updateCache = false) {
 	def routines = location.helloHome?.getPhrases()
     def result = [:]
     for(routine in routines) {
-    	if (routine && routine?.label) 
+    	if (routine && routine?.label)
     		result[hashId(routine.id, updateCache)] = routine.label
     }
     return result
@@ -2976,7 +2977,7 @@ private Map getEchoSistantOptions() {
 private Map virtualDevices(updateCache = false) {
 	return [
     	date:				[ n: 'Date',						t: 'date',		],
-    	datetime:			[ n: 'Date & Time',					t: 'datetime',	],        
+    	datetime:			[ n: 'Date & Time',					t: 'datetime',	],
     	time:				[ n: 'Time',						t: 'time',		],
         askAlexa:			[ n: 'Ask Alexa',					t: 'enum',		o: getAskAlexaOptions(),					m: true	],
         echoSistant:		[ n: 'EchoSistant',					t: 'enum',		o: getEchoSistantOptions(),					m: true	],
