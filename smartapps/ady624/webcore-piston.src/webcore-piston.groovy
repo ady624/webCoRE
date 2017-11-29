@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.2.0fe.20171109" }
+public static String version() { return "v0.2.0ff.20171129" }
 /*
+ *	11/29/2017 >>> v0.2.0ff.20171129 - BETA M2 - Fixed missing conditions and triggers for several device attributes, new comparison group for binary files
  *	11/09/2017 >>> v0.2.0fe.20171109 - BETA M2 - Fixed on events subscription for global and superglobal variables
  *	11/05/2017 >>> v0.2.0fd.20171105 - BETA M2 - Further DST fixes
  *	11/05/2017 >>> v0.2.0fc.20171105 - BETA M2 - DST fixes

@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.2.0fe.20171109" }
+public static String version() { return "v0.2.0ff.20171129" }
 /*
+ *	11/29/2017 >>> v0.2.0ff.20171129 - BETA M2 - Fixed missing conditions and triggers for several device attributes, new comparison group for binary files
  *	11/09/2017 >>> v0.2.0fe.20171109 - BETA M2 - Fixed on events subscription for global and superglobal variables
  *	11/05/2017 >>> v0.2.0fd.20171105 - BETA M2 - Further DST fixes
  *	11/05/2017 >>> v0.2.0fc.20171105 - BETA M2 - DST fixes
@@ -2752,8 +2753,8 @@ private static Map virtualCommands() {
 private static Map comparisons() {
 	return [
     	conditions: [
-        	changed							: [ d: "changed",																	g:"bdis",						t: 1,	],
-        	did_not_change					: [ d: "did not change",															g:"bdis",						t: 1,	],
+        	changed							: [ d: "changed",																	g:"bdfis",						t: 1,	],
+        	did_not_change					: [ d: "did not change",															g:"bdfis",						t: 1,	],
     		is 								: [ d: "is",								dd: "are",								g:"bs",		p: 1						],
     		is_not	 						: [ d: "is not",							dd: "are not",							g:"bs",		p: 1						],
     		is_any_of 						: [ d: "is any of",							dd: "are any of",						g:"s",		p: 1,	m: true,			],
@@ -2793,7 +2794,7 @@ private static Map comparisons() {
 			happens_daily_at				: [ d: "happens daily at",															g:"t",		p: 1						],
     		arrives							: [ d: "arrives",																	g:"e",		p: 2						],
     		executes						: [ d: "executes",																	g:"v",		p: 1						],
-    		changes 						: [ d: "changes",							dd: "change",							g:"bdis",								],
+    		changes 						: [ d: "changes",							dd: "change",							g:"bdfis",								],
     		changes_to 						: [ d: "changes to",						dd: "change to",						g:"bdis",	p: 1,						],
     		changes_away_from 				: [ d: "changes away from",					dd: "change away from",					g:"bdis",	p: 1,						],
     		changes_to_any_of 				: [ d: "changes to any of",					dd: "change to any of",					g:"dis",	p: 1,	m: true,			],
@@ -2818,7 +2819,7 @@ private static Map comparisons() {
 			remains_even					: [ d: "remains even",						dd: "remain even",						g:"di",									],
 			becomes_odd						: [ d: "becomes odd",						dd: "become odd",						g:"di",									],
 			remains_odd						: [ d: "remains odd",						dd: "remain odd",						g:"di",									],
-    		stays_unchanged					: [ d: "stays unchanged",					dd: "stay unchanged",					g:"bdis",						t: 1,	],
+    		stays_unchanged					: [ d: "stays unchanged",					dd: "stay unchanged",					g:"bdfis",						t: 1,	],
     		stays	 						: [ d: "stays",								dd: "stay",								g:"bdis",	p: 1,				t: 1,	],
     		stays_away_from					: [ d: "stays away from",					dd: "stay away from",					g:"bdis",	p: 1,				t: 1,	],
     		stays_any_of					: [ d: "stays any of",						dd: "stay any of",						g:"dis",	p: 1,	m: true,	t: 1,	],
