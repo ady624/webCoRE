@@ -3648,6 +3648,9 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 							case 'datetime':
 								result = '<span num>' + utcToString(operand.c) + '</span>';
 								break;
+							case 'email':
+								result = '<span eml>' + operand.c + '</span>';
+								break;
 							case 'piston':
 								result = '<span lit>' + $scope.getPistonName(operand.c) + '</span>';
 								break;
@@ -4253,6 +4256,10 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 							object.c = (object.c instanceof Array) ? safeContacts : safeContacts[0];
 							object.e = '';
 							break;
+						case 'email':
+							object.c = anonymizeValue(object.c, {t: 'email'})
+							object.e = '';
+							break;
 						case 'uri':
 							object.c = anonymizeValue(object.c, {t: 'uri'})
 							object.e = '';
@@ -4313,9 +4320,10 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 						object = anonymizeValue(object, {t: 'contact'});
 						return object;
 					}
+				} else {
+					object = anonymizeValue(object, {t: 'unknown'});
+					return object;
 				}
-				object = anonymizeValue(object, {t: 'unknown'});
-				return object;
 			}
 			return object;
 		}
