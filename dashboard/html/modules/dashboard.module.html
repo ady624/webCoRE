@@ -148,7 +148,7 @@
 					<div class="no-animate alert alert-warning" ng-if="instance && permanentStatus" role="alert" ng-bind-html="permanentStatus"></div>
 					<div class="table-responsive no-animate" ng-repeat="category in categories" ng-if="instance && category.p && category.p.length && (category.t != 'h')">
 						<label ng-if="category.n">{{category.n}} ({{category.p.length}})</label>
-						<table class="table table-striped" ng-if="(category.t == 'd') || (category.t == 'dt')">
+						<table class="table table-striped" ng-if="(category.t == 'd') || (category.t == 'dt') || (category.t == 'dm') || (category.t == 'dl')">
 							<tbody>
 								<tr ng-repeat="piston in category.p" active="true" ng-if="piston.meta && piston.meta.a" data-toggle="tooltip" title="{{piston.meta.t ? 'Executed ' + timeSince(piston.meta.t) : 'Never executed'}}">
 									<td ng-click="openPiston(piston.id);"><span><i star class="fa fa-circle" ng-style="{opacity: piston.opacity}" aria-hidden="true"></i>{{piston.name}}<span state ng-bind-html="renderString(piston.meta.s.new)"></span><!--<span ng-if="piston.meta.s && piston.meta.s.new" state="{{piston.meta.s.new}}">{{piston.meta.s.new}}</span>--></span></td>
@@ -158,21 +158,21 @@
 								</tr>
 							</tbody>
 						</table>
-						<ptiles ng-if="(category.t == 't') || (category.t == 'm') || (category.t == 'l') || (category.t == 'dt') || (category.t == 'td')">
+						<ptiles ng-if="(category.t == 't') || (category.t == 'm') || (category.t == 'l') || (category.t == 'dt') || (category.t == 'dm') || (category.t == 'dl') || (category.t == 'td') || (category.t == 'md') || (category.t == 'ld')">
 							<ptilegroup ng-repeat="piston in category.p" ng-if="piston.meta && piston.meta.a">
-								<ptile ng-repeat="index in range(16) track by $index" class="{{category.t == 'l' ? 'large' : (category.t == 'm' ? 'medium' : '')}}" ng-if="piston.meta.s['i' + ($index + 1)] || piston.meta.s['t' + ($index + 1)]" ng-init="meta=getTileMeta(piston, $index);" ng-click="clickPistonTile($event, piston, ($index + 1));" data-toggle="tooltip" title="{{renderString(piston.meta.s.new)}}" ng-style="{color: piston.meta.s['c' + ($index + 1)], backgroundColor: piston.meta.s['b' + ($index + 1)]}" class="{{piston.meta.s['f' + ($index + 1)] ? 'blink' : ''}}" type="{{meta.type ? meta.type : ''}}" ng-attr-wide="{{!!meta && !!meta.options && (meta.options.wide == '1') ? '' : undefined}}">
-									<div ng-if-start="!meta.type" title data-fittext data-fittext-max="{{category.t == 'l' ? 24 : (category.t == 'm' ? 18 : 12)}}" ng-model="piston.meta.s" ng-bind-html="piston.meta.s['i' + ($index + 1)] ? renderString(piston.meta.s['i' + ($index + 1)]) : '--'"></div>
-									<div data-fittext data-fittext-max="{{category.t == 'l' ? 72 : (category.t == 'm' ? 54 : 36)}}" ng-model="piston.meta.s" ng-bind-html="piston.meta.s['t' + ($index + 1)] ? renderString(piston.meta.s['t' + ($index + 1)]) : '--'"></div>
-									<div ng-if-end title data-fittext data-fittext-max="{{category.t == 'l' ? 24 : (category.t == 'm' ? 18 : 12)}}" ng-model="piston.meta.s" ng-bind-html="piston.meta.s['o' + ($index + 1)] ? renderString(piston.meta.s['o' + ($index + 1)]) : (piston.meta.n ? timeCounter(piston.meta.n) : ' ')"></div>
+								<ptile ng-repeat="index in range(16) track by $index" class="{{category.t.indexOf('l') >= 0 ? 'large' : (category.t.indexOf('m') >= 0 ? 'medium' : '')}}" ng-if="piston.meta.s['i' + ($index + 1)] || piston.meta.s['t' + ($index + 1)]" ng-init="meta=getTileMeta(piston, $index);" ng-click="clickPistonTile($event, piston, ($index + 1));" data-toggle="tooltip" title="{{renderString(piston.meta.s.new)}}" ng-style="{color: piston.meta.s['c' + ($index + 1)], backgroundColor: piston.meta.s['b' + ($index + 1)]}" class="{{piston.meta.s['f' + ($index + 1)] ? 'blink' : ''}}" type="{{meta.type ? meta.type : ''}}" ng-attr-wide="{{!!meta && !!meta.options && (meta.options.wide == '1') ? '' : undefined}}">
+									<div ng-if-start="!meta.type" title data-fittext data-fittext-max="{{category.t.indexOf('l') >= 0 ? 24 : (category.t.indexOf('m') >= 0 ? 18 : 12)}}" ng-model="piston.meta.s" ng-bind-html="piston.meta.s['i' + ($index + 1)] ? renderString(piston.meta.s['i' + ($index + 1)]) : '--'"></div>
+									<div data-fittext data-fittext-max="{{category.t.indexOf('l') >= 0 ? 72 : (category.t.indexOf('m') >= 0 ? 54 : 36)}}" ng-model="piston.meta.s" ng-bind-html="piston.meta.s['t' + ($index + 1)] ? renderString(piston.meta.s['t' + ($index + 1)]) : '--'"></div>
+									<div ng-if-end title data-fittext data-fittext-max="{{category.t.indexOf('l') >= 0 ? 24 : (category.t.indexOf('m') >= 0 ? 18 : 12)}}" ng-model="piston.meta.s" ng-bind-html="piston.meta.s['o' + ($index + 1)] ? renderString(piston.meta.s['o' + ($index + 1)]) : (piston.meta.n ? timeCounter(piston.meta.n) : ' ')"></div>
 									<div ng-if="meta.type == 'gauge'" google-chart chart="getGaugeChart(piston, $index, meta)"></div>
 									<video ng-if="(meta.type == 'video') && !!meta.options && !!meta.options.src" class="{{meta.className}}" ng-attr-controls="{{meta.options.controls == '0' ? undefined : ''}}" ng-attr-autoplay="{{meta.options.autoplay == '1' ? '' : undefined}}" ng-attr-loop="{{meta.options.loop == '1' ? '' : undefined}}" ng-attr-muted="{{meta.options.muted == '1' ? '' : undefined}}">
-										<source src="{{meta.options.src}}"  />
+										<source ng-src="{{meta.options.src}}"  />
 									</video>
-									<img ng-if="(meta.type == 'image') && !!meta.options && !!meta.options.src" class="{{meta.className}}" src="{{meta.options.src}}" ng-attr-refresh="{{!!meta.options.refresh ? meta.options.refresh : undefined}}" on-refresh="refreshImage"/>
+									<img ng-if="(meta.type == 'image') && !!meta.options && !!meta.options.src" class="{{meta.className}}" ng-src="{{meta.options.src}}" ng-attr-refresh="{{!!meta.options.refresh ? meta.options.refresh : undefined}}" on-refresh="refreshImage"/>
 								</ptile>
 							</ptilegroup>
 						</ptiles>
-						<table class="table table-striped" ng-if="category.t == 'td'">
+						<table class="table table-striped" ng-if="(category.t == 'td') || (category.t == 'tm') || (category.t == 'tl')">
 							<tbody>
 								<tr ng-repeat="piston in category.p" active="true" ng-if="piston.meta && piston.meta.a" data-toggle="tooltip" title="{{piston.meta.t ? 'Executed ' + timeSince(piston.meta.t) : 'Never executed'}}">
 									<td ng-click="openPiston(piston.id);"><span><i star class="fa fa-circle" ng-style="{opacity: piston.opacity}" aria-hidden="true"></i>{{piston.name}}<span state ng-bind-html="renderString(piston.meta.s.new)"></span><!--<span ng-if="piston.meta.s && piston.meta.s.new" state="{{piston.meta.s.new}}">{{piston.meta.s.new}}</span>--></span></td>
