@@ -1984,6 +1984,47 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 
 
 
+	/* quick edit local variables */
+
+	$scope.editLocalVariable = function(variable) {
+		//we cannot edit variables that are statically defined in a piston
+		if (!variable || !variable.n || !variable.t || !!variable.v) return;
+		var value = $scope.localVars[variable.n];
+		if ((value instanceof Array) && (value.length == 0)) value = null
+		if (!variable) return;
+		$scope.designer = {};
+		$scope.designer.$variableName = variable.n;
+		$scope.designer.$variable = variable;
+		$scope.designer.$obj = variable;
+		$scope.designer.name = variable.n;
+		$scope.designer.type = variable.t;
+		$scope.designer.operand = {data: {t: !value ? '' : (variable.t == 'device' ? 'd' : 'c'), c:value, d: value}, multiple: false, dataType: variable.t, optional: true, onlyAllowConstants: true, disableExpressions: true}
+		window.designer = $scope.designer;
+		window.scope = $scope;
+		$scope.validateOperand($scope.designer.operand);
+		$scope.designer.dialog = ngDialog.open({
+			template: 'dialog-edit-local-variable',
+			className: 'ngdialog-theme-default ngdialog-large',
+			closeByDocument: false,
+			disableAnimation: true,
+			scope: $scope
+		});
+	};
+
+	$scope.updateLocalVariable = function(nextDialog) {
+		var variable = $scope.designer.$variable;
+		var value = variable.t == 'device' ? $scope.designer.operand.data.d : ($scope.designer.operand.data.t == 'c' ? $scope.designer.operand.data.c : null);
+		dataService.setVariable($scope.designer.$variableName, {t: variable.t, v: value}, $scope.pistonId).then(function(data) {
+			if (data && data.localVars && data.id && (data.id == $scope.pistonId)) {
+				$scope.localVars = data.localVars;
+			}
+		});
+		$scope.closeDialog();
+	}
+
+
+
+
 
 	/* global variables */
 
@@ -2868,6 +2909,13 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
             disableAnimation: true,
             scope: $scope
         });
+	}
+
+	$scope.getLocalVariable = function(name) {
+		for(i in $scope.piston.v) {
+			if ($scope.piston.v[i].n == name) return $scope.piston.v[i];
+		}
+		return null;
 	}
 
 	$scope.getLocalVariableType = function(name) {
