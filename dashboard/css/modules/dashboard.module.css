@@ -36,15 +36,9 @@ viewer.settings > form {
 }
 
 viewer.settings panel {
-	display: block;
-	margin: 8px auto;
-	max-width: 1070px;
+    display: block;
+    margin: 8px auto;
 }
-
-viewer.settings panel[name] {
-	padding: 8px 0px 0px 32px;
-}
-
 
 viewer.settings p {
 	text-align: justify;
@@ -60,7 +54,7 @@ viewer.settings panel::before {
 }
 
 viewer.settings panel[name]::before {
-	margin: -8px 0px 16px -32px;
+    margin: 0px 0px 8px 0px;
 }
 
 viewer.settings panel panel {
@@ -758,6 +752,10 @@ ptile div[google-chart] {
 	display: none;
   }
 
+    .navbar-right {
+	margin-right: 0px;
+    }
+
   .sidebar {
     position: fixed;
     top: 50px;
@@ -799,29 +797,34 @@ ptile div[google-chart] {
 		line-height: 44px !important;
 	}
 
-	.navbar-collapse {
-		min-height: 1280px;
-	}
 
-	viewer.pistons {
-		padding: 0px;
-	}
+    .navbar-fixed-bottom .navbar-collapse, .navbar-fixed-top .navbar-collapse {
+        max-height: calc(100vh - 50px);
+    }
 
-	div.table-responsive {
-		margin: 0px;
-		text-align: center;
-	}
+    .navbar-collapse {
+	min-height: calc(100vh - 50px);
+    }
 
-	.table-responsive label {
-		background: rgba(0, 0, 0, 0.05);
-	}
+    viewer.pistons {
+	padding: 0px;
+    }
+
+    div.table-responsive {
+	margin: 0px;
+	text-align: center;
+    }
+
+    .table-responsive label {
+	background: rgba(0, 0, 0, 0.05);
+    }
 
 
-	.topinfo {
-		margin-left: 0px !important;
-		padding: 4px;
-	}
-	
+    .topinfo {
+	margin-left: 0px !important;
+	padding: 4px;
+    }
+    
 }
 
 
@@ -852,3 +855,102 @@ ptile div[google-chart] {
     }
 
 
+ul.nav.nav-pills {
+    margin: 16px 0px;
+    padding-bottom: 16px;
+    border-bottom: solid 1px #ccc;
+
+}
+
+.nav-pills-footer {
+    border-top: solid 1px #ccc;
+    padding-top: 16px;
+    margin: 16px 0px;
+}
+
+.ngdialog-content ng-map {
+    height: 320px;
+    border: solid 1px #ccc;
+    border-radius: 4px;
+
+}
+
+
+.place {
+    position: relative;
+    display: inline-block;
+    width: 128px;
+    height: 128px;
+    overflow: hidden;
+    border: solid 1px #ccc;
+    border-radius: 4px;	
+    margin: 0px 8px 8px 0px !important;
+    cursor: pointer;
+}
+
+.place footer {
+    position: absolute;
+    height: 24px;
+    background: rgba(0, 0, 0, 0.75);
+    left: 0px;
+    bottom: 0px;
+    right: 0px;
+    z-index: 2;
+    text-align: center;
+    line-height: 24px;
+    font-size: 18px;
+    color: white;
+}
+
+.place footer i {
+    padding-right: 6px;
+}
+
+.place ng-map {
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+    position: absolute;
+    top: 0px;
+    left: 0px;
+    right: 0px;
+    bottom: 0px;
+}
+
+.place.new {
+    background: #eee;	
+    color: #ccc;
+}
+
+.place.new:hover {
+    color: #00ccff;
+}
+
+.place.new::before {
+    content: "+";
+    line-height: 120px;
+    text-align: center;
+    display: block;
+    font-size: 64px;
+}
+
+
+.place.device {
+    background: #9c9;	
+    color: #444;
+}
+
+.place.device i {
+    line-height: 96px;
+    text-align: center;
+    display: block;
+    font-size: 64px;	
+}
+
+.place.device footer {
+    font-size: 12px;
+}
+
+#places {
+    vertical-align: top;
+}
