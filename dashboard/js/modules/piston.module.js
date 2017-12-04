@@ -4681,7 +4681,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 			var dq = false;
 			var dv = false;
 			var startIndex = i;
-			function isCompositeVariable() {return (str.substr(startIndex, 6) == '$args.') || (str.substr(startIndex, 6) == '$json.') || (str.substr(startIndex, 10) == '$response.') || (str.substr(startIndex, 9) == '$weather.') || (str.substr(startIndex, 11) == '$incidents.') ||  (str.substr(startIndex, 6) == '$args[') || (str.substr(startIndex, 6) == '$json[') || (str.substr(startIndex, 10) == '$response[') || (str.substr(startIndex, 11) == '$incidents[');};
+			function isCompositeVariable() {return (str.substr(startIndex, 6) == '$args.') || (str.substr(startIndex, 6) == '$json.') || (str.substr(startIndex, 10) == '$response.') || (str.substr(startIndex, 5) == '$nfl.') || (str.substr(startIndex, 9) == '$weather.') || (str.substr(startIndex, 11) == '$incidents.') ||  (str.substr(startIndex, 6) == '$args[') || (str.substr(startIndex, 6) == '$json[') || (str.substr(startIndex, 10) == '$response[') || (str.substr(startIndex, 11) == '$incidents[');};
 			function addOperand() {
 				if (i-1 > startIndex) {
 					var value = str.slice(startIndex, i-1).trim();
@@ -4997,6 +4997,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 							if (item.x.startsWith('$json[') && (item.x.length > 6)) break;
 							if (item.x.startsWith('$response.') && (item.x.length > 10)) break;
 							if (item.x.startsWith('$response[') && (item.x.length > 10)) break;
+							if (item.x.startsWith('$nfl.') && (item.x.length > 5)) break;
 							if (item.x.startsWith('$weather.') && (item.x.length > 9)) break;
 							if (item.x.startsWith('$incidents.') && (item.x.length > 11)) break;
 							if (item.x.startsWith('$incidents[') && (item.x.length > 11)) break;
