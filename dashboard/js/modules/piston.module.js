@@ -4843,6 +4843,8 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 						}
 						continue;
 					case '"':
+					case '“':
+					case '”':
 						if (exp && !dv && !sq) {
 							dq = !dq;
 							odq = !odq;

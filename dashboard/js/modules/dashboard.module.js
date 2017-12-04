@@ -113,6 +113,9 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 	}
 
 	$scope.refreshImage = function(img) {
+		var found = false;
+		var parent = img.parentElement; while(parent) { if (parent.tagName.toLowerCase() == 'viewer') { found = true; break; };  parent = parent.parentElement; }
+		if (!found) return;
 		var src = img.osrc;
 		if (!src) {
 			src = img.src;
@@ -367,6 +370,10 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 		$scope.settings.categories[index] = $scope.settings.categories[index + 1];
 		$scope.settings.categories[index + 1] = x;
 	}
+
+	$scope.deleteCategory = function(index) {
+	    $scope.settings.categories.splice(index, 1);
+	};
 
 	$scope.hideSettings = function() {
 		ga('send', 'event', 'settings', 'hide');

@@ -8,7 +8,7 @@
 			<li></li>
 		</ul>
 	</loader>
-	<nav ng-if="initialized && (view != 'dashboard')" class="navbar navbar-default navbar-fixed-topw">
+	<nav ng-if="initialized && (view != 'dashboard')" class="navbar navbar-default navbar-fixed-top">
       <div class="container-fluid">
         <div class="navbar-header">
           <button id="navbar-btn" type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
@@ -30,6 +30,9 @@
             	</li>
 			</ul>
                 <ul class="nav navbar-nav navbar-right">
+					<li class="dropdown">
+                        <a target="_blank" href="https://community.webcore.co" class="" role="button" aria-haspopup="true" aria-expanded="false">Forum</a>
+					</li>
 					<li class="dropdown">
                         <a target="_blank" href="https://wiki.webcore.co" class="" role="button" aria-haspopup="true" aria-expanded="false">Wiki</a>
 					</li>
@@ -100,8 +103,14 @@
 						<li><a href="" ng-click="backup();">Backup piston(s)</a></li>						
 						<li ng-if="instanceCount > 1"><a href="" ng-click="movePiston();">Move piston(s)</a></li>						
 						<li><a href="" ng-click="showSettings();">Settings</a></li>						
+						<li>
+<!-- dashboard (sidebar) -->
+<ins class="adsbygoogle"
+     style="display:inline-block;width:120px;height:600px;padding: 20px;"
+     data-ad-client="ca-pub-4643048739403893"
+     data-ad-slot="8683068091" ng-init="initAds();"></ins>
+						</li>
 					</ul>
-
 <!--					<ul class="nav nav-sidebar">
 						<center>Advertisements</center>-->
 						<!--<script type="text/javascript-lazy" src="//z-na.amazon-adsystem.com/widgets/onejs?MarketPlace=US&adInstanceId=1c018b1f-0af0-4396-a510-867f9bdae50d"></script>-->

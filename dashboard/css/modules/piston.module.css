@@ -1269,6 +1269,7 @@ div[var] span {
 div[var] > span {
 	display: inline-block;
 	width: 50%;
+	vertical-align: top;
 	text-align: right;
 }
 
