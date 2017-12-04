@@ -23,7 +23,7 @@ config.controller('register', ['$scope', '$rootScope', 'dataService', '$timeout'
 	$scope.register = function() {
 		$scope.loading = true;
 		dataService.registerDashboard($scope.code).then(function(data) {
-			if (data && (data.length >= 80) && (data.length <= 140)) {
+			if (data && (data.length >= 80) && (data.length <= 180)) {
 				$location.path('/init/' + data);
 			} else {
 				$scope.setStatus("Sorry, the registration code you provided did not work...");
