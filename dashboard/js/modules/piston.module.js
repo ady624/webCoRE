@@ -3488,8 +3488,16 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 			var options = [];
 			if (!comparison.dataType) comparison.dataType = 'dynamic';
 			switch (comparison.dataType) {
+				// There may be a better way to compare these, but string is better than nothing
+				case 'color':
+				case 'hexcolor':
+				case 'object':
+				case 'vector3':
 				case 'enum':
 					dt = 's';
+					break;
+				case 'image':
+					dt = 'f'; // binary file
 					break;
 				case 'dynamic':
 					dt = '';

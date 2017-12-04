@@ -1881,4 +1881,4 @@ if (document.selection) {
      document.execCommand("Copy");
 }}
 
-version = function() { return 'v0.2.0e2.20170808'; };
+version = function() { return 'v0.2.0ff.20171129'; };
