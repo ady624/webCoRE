@@ -705,6 +705,12 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		var attributes = [];
 		for (attribute in $scope.db.attributes) {
 			attributes.push(': ' + attribute + ']');
+			if (attribute == 'threeAxis') {
+				attributes.push(': axisX]');
+				attributes.push(': axisY]');
+				attributes.push(': axisZ]');
+				attributes.push(': orientation]');
+			}
 		}
 		return {
 				autocomplete: [{
@@ -2774,7 +2780,12 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 					}
 				}
 			}
-			if (hasThreeAxis) result.push({id: 'orientation', n: 'orientation', t:'string'});
+			if (hasThreeAxis) {
+				result.push({id: 'axisX', n: 'X axis', t:'decimal'});
+				result.push({id: 'axisY', n: 'Y axis', t:'decimal'});
+				result.push({id: 'axisZ', n: 'Z axis', t:'decimal'});
+				result.push({id: 'orientation', n: 'orientation', t:'string'});
+			}
 			result.push({id: statusAttribute, n: '⌂ ' + statusAttribute, t:'string'});
 			result.sort($scope.sortByName);
 		}
@@ -4672,13 +4683,22 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 						//a device was found
 						var a = attribute.toLowerCase();
 						attribute = '';
+						virtualAttribute = '';
+						switch (a) {
+							case 'orientation':
+							case 'axisx':
+							case 'axisy':
+							case 'axisz':
+								virtualAttribute = a.replace('axisx', 'axisX').replace('axisy', 'axisY').replace('axisz', 'axisZ');
+								a = 'threeaxis';
+						}
 						if (a == statusAttribute) {
 							attribute = statusAttribute;
 						} else {
 							for (attributeIndex in device.a) {
 								var attr = device.a[attributeIndex];
 								if (a == attr.n.toLowerCase()) {
-									attribute = attr.n;
+									attribute = virtualAttribute ? virtualAttribute : attr.n;
 								}
 							}
 						}
