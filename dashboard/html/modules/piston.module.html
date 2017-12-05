@@ -145,9 +145,6 @@
 			<div class="row">
 				<div class="col-md-12">
 					<h2>Script <span small ng-click="hideScript = !hideScript">({{hideScript ? 'show' : 'hide'}})</span></h2>
-					<p ng-if="!hideScript">
-						<piston id="piston" ng-if="initialized" mode="{{mode}}" ng-repeat="piston in [piston]" data-nag-model="piston" ng-include="'piston'" trace="{{view.trace && (mode=='view') && !!trace && !!trace.points}}" no-animation context-menu="contextMenu()" context-menu-class="contextmenu"></piston>
-					</p>
 					<div ng-if="!hideScript">
 						<button class="btn btn-default" ng-click="edit();" title="Edit the piston">Edit »</button>
 						<button class="btn btn-warning" ng-click="test();" title="Test the piston">Test</button>
@@ -157,6 +154,11 @@
 						<toggle ng-if="trace && trace.points" ng-model="view.trace" on="Trace" off="Trace" ng-click="toggleView(null)"></toggle>
 						<button class="btn btn-danger pull-right" ng-click="deleteDialog();">Delete »</button>
 					</div>
+
+					<p ng-if="!hideScript">
+						<piston id="piston" ng-if="initialized" mode="{{mode}}" ng-repeat="piston in [piston]" data-nag-model="piston" ng-include="'piston'" trace="{{view.trace && (mode=='view') && !!trace && !!trace.points}}" no-animation context-menu="contextMenu()" context-menu-class="contextmenu"></piston>
+					</p>
+					
 				</div>
 			</div>
 			<div class="row">
