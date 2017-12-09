@@ -9,3 +9,8 @@
 visor*
 dist/visor*
 dashboard/fa*
+
+######################
+# Mac Hidden Files   #
+######################
+.DS_Store
