@@ -330,7 +330,7 @@ def pageMain() {
                 def dashboardUrl = parent.getDashboardUrl()
                 if (dashboardUrl) {
                     dashboardUrl = "${dashboardUrl}piston/${hashId(app.id)}"
-                    href "", title: "View piston in dashboard", style: "external", url: dashboardUrl, image: "https://cdn.rawgit.com/ady624/CoRE/master/resources/images/icons/dashboard.png", required: false
+                    href "", title: "View piston in dashboard", style: "external", url: dashboardUrl, image: "https://cdn.rawgit.com/ady624/${handle()}/master/resources/icons/dashboard.png", required: false
                 } else {
                     paragraph "Sorry, your dashboard does not seem to be enabled, please go to the parent app and enable the dashboard."
                 }
