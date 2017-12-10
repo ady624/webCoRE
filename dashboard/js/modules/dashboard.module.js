@@ -12,11 +12,15 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 	$scope.requestId = 0;
 	$scope.dropDownMenu = false;
 	$scope.endpoint = '';
+	$scope.rawEndpoint = '';
 	$scope.categories = [];
 	$scope.pausedPistons = [];
 	$scope.view = 'piston';
+	$scope.isAppHosted = !!window.BridgeCommander;
+	$scope.hostDeviceId = '';
 
 	$scope.init = function(instance, uri, pin) {
+		//if (!instance) instance = dataService.getInstance();
 		if ($scope.$$destroyed) return;
         if (tmrActivity) $timeout.cancel(tmrActivity);
 		tmrActivity = null;
@@ -29,10 +33,12 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 				if (currentRequestId != $scope.requestId) { return };
 				if (data) {
 					$scope.endpoint=data.endpoint + 'execute/:pistonId:';
+					$scope.rawEndpoint=data.endpoint;
+					$scope.rawAccessToken=data.accessToken;
 					if (data.error) {
 						switch (data.error) {
 							case 'ERR_INVALID_TOKEN':
-								$scope.dialogLogIn(data.name, data.uri);
+								$scope.dialogLogIn(data.name, data.uri, data.accessToken);
 								break;
 						}
 					} else {
@@ -44,6 +50,7 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
     		            if (!$scope.devices) $scope.devices = $scope.listAvailableDevices();
 	    	            if (!$scope.virtualDevices) $scope.virtualDevices = $scope.listAvailableVirtualDevices();
 						window.scope = $scope;
+						window.dataService = dataService;
 						$scope.loading = false;
 						var categories = $scope.getCategories();
 						while($scope.categories.length > categories.length) $scope.categories.pop();
@@ -106,6 +113,9 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 	}
 
 	$scope.refreshImage = function(img) {
+		var found = false;
+		var parent = img.parentElement; while(parent) { if (parent.tagName.toLowerCase() == 'viewer') { found = true; break; };  parent = parent.parentElement; }
+		if (!found) return;
 		var src = img.osrc;
 		if (!src) {
 			src = img.src;
@@ -186,6 +196,11 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
     };
 
 
+	$scope.getPlaces = function() {
+		var places = (!!$scope.instance && !!$scope.instance.settings && ($scope.instance.settings.places instanceof Array)) ? $scope.copy($scope.instance.settings.places) : [];
+		return places;
+	}
+
 	$scope.getCategories = function() {
 		var categories = (!!$scope.instance && !!$scope.instance.settings && ($scope.instance.settings.categories instanceof Array)) ? $scope.copy($scope.instance.settings.categories) : [];
 		if (!categories.length) categories = [{n: 'Uncategorized', t: 'd', i: 0}];
@@ -205,11 +220,21 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 		return $scope.categories[$scope.categories.length - 1];
 	}
 
+
+	$scope.updateLocation = function(position) {
+	    $scope.coords = position.coords;
+	}
+
 	$scope.showSettings = function() {
 		ga('send', 'event', 'settings', 'show');
+		if (navigator.geolocation) {
+		    navigator.geolocation.getCurrentPosition($scope.updateLocation);
+		}
+		$scope.checkPresenceSensor();
 		$scope.closeNavBar();
 		$scope.settings = $scope.copy($scope.instance.settings);
 		$scope.settings.categories = $scope.getCategories();
+		$scope.settings.places = $scope.getPlaces();
 		$scope.view = 'settings';
 	};
 
@@ -220,6 +245,117 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 		}
 		$scope.settings.categories.push({n: 'New Category ' + i, t: 'd', i: i});
 	}
+
+
+
+	$scope.randomHash = function(nChar) {
+	    var chars = '0123456789abcdef'.split('');
+	    var hex = '';
+	    for (var i = 0; i < nChar; i++) {
+	        hex += chars[Math.floor(Math.random() * 16)];
+	    }
+	    return ':' + hex + ':';
+	 }
+
+/*
+	$scope.addPlace = function() {
+	    coords = $scope.coords ? $scope.coords : {longituted: 0, latitude: 0};
+	    var place = {n: "Unnamed place", p:[coords.latitude, coords.longitude], i: 100, o: 400, id: $scope.randomHash(32)};
+	    $scope.settings.places.push(place);
+	}
+*/
+
+
+
+
+        $scope.addPlace = function() {
+                return $scope.editPlace(null);
+        };
+
+        $scope.editPlace = function(_place) {
+                var _new = !!_place ? false : true;
+                if (!_place) {
+		    coords = $scope.coords ? $scope.coords : {longituted: 0, latitude: 0};
+		    _place = {n: "", p:[coords.latitude, coords.longitude], i: 100, o: 500, id: $scope.randomHash(32)};
+                }
+		$scope.designer = {};
+                $scope.designer.$place = _place;
+                $scope.designer.$new = _new;
+		$scope.designer.name = _place.n;
+		$scope.designer.position = _place.p + [];
+		$scope.designer.inner = _place.i;
+		$scope.designer.outer = _place.o;
+		$scope.designer.home = !!_place.h;
+                //advanced options
+                window.designer = $scope.designer;
+                $scope.designer.dialog = ngDialog.open({
+                        template: 'dialog-edit-place',
+                        className: 'ngdialog-theme-default ngdialog-large',
+                        closeByDocument: false,
+                        disableAnimation: true,
+                        scope: $scope
+                });
+		//we need this trick to get the map to show properly
+		$scope.designer.showMap = true;
+        };
+
+
+        $scope.updatePlace = function() {
+                var _place = $scope.designer.$place;
+                _place.n = $scope.designer.name;
+                _place.p = $scope.designer.position;
+                _place.i = $scope.designer.inner;
+                _place.o = $scope.designer.outer;
+		_place.h = !!$scope.designer.home;
+		if (_place.i > _place.o) {
+		    var x = _place.i;
+		    _place.i = _place.o;
+		    _place.o = x;
+		}
+		if (_place.i + 100 >= _place.o) {
+		    _place.o = _place.i + 100;
+		}
+		if ($scope.designer.$new) $scope.settings.places.push(_place);
+		if (_place.h) {
+		    for (i in $scope.settings.places) {
+			$scope.settings.places[i].h = ($scope.settings.places[i] == _place);
+		    }
+		}
+                $scope.closeDialog();
+        }
+
+
+
+	$scope.movePlace = function($event, circle) {
+	    var center = $event ? $event.latLng : this.center;
+	    $scope.designer.position = [center.lat(), center.lng()];
+	    switch (circle) {
+		case 'i': $scope.designer.inner = this.radius; break;
+		case 'o': $scope.designer.outer = this.radius; break;
+	    }
+	    if ($scope.designer.inner > $scope.designer.outer) {
+		var x = $scope.designer.inner;
+		$scope.designer.inner = $scope.designer.outer;
+		$scope.designer.outer = x;
+	    }
+	    if ($scope.designer.inner < 50) {
+		$scope.designer.inner = 50;
+	    }
+	    if ($scope.designer.inner + 200 >= $scope.designer.outer) {
+	        $scope.designer.outer = $scope.designer.inner + 200;
+	    }
+	}
+
+	$scope.deletePlace = function() {
+	    for(var i=0; i<$scope.settings.places.length; i++) {
+		if ($scope.settings.places[i] == $scope.designer.$place) {
+		    $scope.settings.places.splice(i, 1);
+                    $scope.closeDialog();
+		    return;
+		}
+	    }
+            $scope.closeDialog();
+	};
 
 	$scope.moveCategoryUp = function(index) {
 		if ((index < 1) || (index >= $scope.settings.categories)) return;
@@ -235,9 +371,78 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 		$scope.settings.categories[index + 1] = x;
 	}
 
+	$scope.deleteCategory = function(index) {
+	    $scope.settings.categories.splice(index, 1);
+	};
+
 	$scope.hideSettings = function() {
 		ga('send', 'event', 'settings', 'hide');
 		$scope.view = 'piston';
+	}
+
+
+	$scope.messageHost = function(message, args, cbk) {
+	    if (!window.BridgeCommander) return;
+	    var platform = window.BridgeCommander.getPlatformName ? window.BridgeCommander.getPlatformName() : 'unknown';
+	    switch (platform) {
+		case "iOS":
+		    window.BridgeCommander.call(message, JSON.stringify(args)).then(function(result) { if (cbk) cbk(result ? JSON.parse(result) : null); });
+		    break;
+    		case "Android":
+		    if (window.BridgeCommander.hasOwnProperty(message)) {
+			var result = window.BridgeCommander[message](JSON.stringify(args));
+			if (cbk) cbk(result ? JSON.parse(result) : null);
+		    }
+		    break;
+		default:
+		    //support for legacy iOS app
+		    window.BridgeCommander.subscribe($scope.onAppRequest);
+		    window.BridgeCommander.call(message, JSON.stringify(args)).then(function(result) { if (cbk) cbk(result); });
+		    break;
+	    }
+	}
+
+	$scope.checkPresenceSensor = function() {
+	    $scope.messageHost('getStatus', {i: $scope.instance.id}, function(result) {	
+		$scope.hostDeviceId = result instanceof Object ? (result.dni ? result.dni : '') : '';
+		$scope.presenceSensorId = result instanceof Object ? !!result.s : !!result;
+	    });
+	}
+
+
+        $scope.registerPresenceSensor = function() {
+                $scope.designer.name = '';
+                //advanced options
+                window.designer = $scope.designer;
+                $scope.designer.dialog = ngDialog.open({
+                        template: 'dialog-register-presence-sensor',
+                        className: 'ngdialog-theme-default ngdialog-large',
+                        closeByDocument: false,
+                        disableAnimation: true,
+                        scope: $scope
+                });
+        };
+
+	$scope.doRegisterPresenceSensor = function() {
+	    var name = $scope.designer.name;
+	    $scope.closeDialog();
+	    if (!name) return;
+	    dataService.createPresenceSensor(name, $scope.hostDeviceId).then(function(data) {
+		var deviceId = data.deviceId;
+		if (deviceId)
+		    $scope.messageHost('register', {e: $scope.rawEndpoint, a: $scope.rawAccessToken, i: $scope.instance.id, d: deviceId}, function(result) { $scope.presenceSensorId = deviceId });
+	    });
+	}
+
+	$scope.unregisterPresenceSensor = function() {
+	    if (!$scope.presenceSensorId) return;
+	    dataService.destroyPresenceSensor($scope.presenceSensorId).then(function(data) {
+		$scope.messageHost('unregister', {i: $scope.instance.id});
+	    });
+	}
+
+	$scope.updatePlaces = function() {
+	    $scope.messageHost('update', {i: $scope.instance.id, p: $scope.instance.settings.places});
 	}
 
 	$scope.saveSettings = function() {
@@ -245,6 +450,7 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 		$scope.instance.settings = $scope.settings;
 		dataService.setSettings($scope.settings).then(function(data) {
 			$scope.instance.settings = $scope.settings;
+			$scope.updatePlaces();
 			$scope.hideSettings();
 		});
 	}
@@ -577,7 +783,7 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 		}
     };
 
-	$scope.dialogLogIn = function(sender, uri) {
+	$scope.dialogLogIn = function(sender, uri, accessToken) {
 		if (tmrActivity) $timeout.cancel(tmrActivity);
 		tmrActivity = null;
 		$scope.loading = false;
@@ -585,6 +791,7 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 		$scope.designer = {};
 		$scope.designer.sender = sender;
 		$scope.designer.uri = uri;
+		$scope.designer.accessToken = accessToken;
         $scope.designer.dialog = ngDialog.open({
             template: 'dialog-auth',
             className: 'ngdialog-theme-default ngdialog-large',
@@ -604,17 +811,16 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 	}
 
 
+	$scope.onAppRequest = function(payload) {$scope.setStatus(payload)};
+
 	$scope.initAds = function() {
-		$timeout(function() {
-			if (CHITIKA_ADS) {
-				CHITIKA_ADS.make_it_so();
-			}
-		}, 1, false);
+	    if ($scope.isAppHosted) return;
+	    window.adsbygoogle = (window.adsbygoogle || []).push({google_ad_client: "ca-pub-4643048739403893", enable_page_level_ads: true});
 	}
 
 	$scope.authenticate = function() {
 		$scope.closeDialog();
-		$scope.init(null, $scope.designer.uri, window.md5('pin:' + $scope.designer.password));
+		$scope.init(null, $scope.designer.uri + ($scope.designer.accessToken ? '?access_token=' + $scope.designer.accessToken : ''), window.md5('pin:' + $scope.designer.password));
 		$scope.designer = null;
 	}
 
@@ -947,5 +1153,9 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 			$scope.init();
 		}
 	}, 1);
+
+	if (navigator.geolocation) {
+	    navigator.geolocation.getCurrentPosition($scope.updateLocation);
+	}
 
 }]);

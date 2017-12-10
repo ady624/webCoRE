@@ -778,6 +778,11 @@ img.wu {
 }
 
 
+.clickable {
+	cursor: pointer;
+    vertical-align: middle;
+}
+
 span.swatch {
 	border-radius: 4px;
 	margin-right: 4px;

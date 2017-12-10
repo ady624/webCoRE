@@ -194,7 +194,7 @@
 					<h2>Variables</h2>
 					<div multicolumn>
 						<label var ng-if="piston && piston.v">Local variables</label>
-						<div ng-if="localVars" var ng-repeat="var in piston.v"><span><span class="vartype">{{var.t}}</span><span>{{var.n}}</span></span><span class="{{var.v == null ? 'notset' : ''}}" ng-bind-html="var.v ? renderOperand(var.v) : formatVariableValue(var, var.n)"></span></div>
+						<div ng-if="localVars" var ng-repeat="var in piston.v"><span><span class="vartype">{{var.t}}</span><span>{{var.n}}</span> <i class="clickable fa fa-pencil-square-o" aria-hidden="true" ng-if="!var.v && (var.t.substr(-1) != ']')" ng-click="editLocalVariable(var)"></i></span><span class="{{var.v == null ? 'notset' : ''}}" ng-bind-html="var.v ? renderOperand(var.v) : formatVariableValue(var, var.n)"></span></div>
 						<div novar>(no variables defined)</div>
 						<label var ng-if="globalVars">Global variables</label>
 						<div ng-if="globalVars" var ng-repeat="(name, var) in globalVars"><span><span class="vartype">{{var.t}}</span><span>{{name}}</span></span><span class="{{var.v == null ? 'notset' : ''}}" ng-bind-html="formatVariableValue(var)"></span></div>
@@ -2163,6 +2163,26 @@
 
 
 
+<script type="text/ng-template" id="dialog-edit-local-variable">
+	<designer>
+		<header>
+			<label>Edit the {{designer.name}} local variable</label>
+		</header>
+		<form>
+			<div class="form-group">
+				<label class="col-lg-12 no-padding">Value<span class="error" ng-if="!designer.operand.valid">{{designer.operand.error}}</label>
+				<operand ng-repeat="operand in [designer.operand]" ng-model="designer.operand" ng-include="'operand'"></operand>
+			</div>
+		</form>
+
+		<footer>
+			<button type="button" class="btn btn-info pull-right" ng-disabled="!designer.operand.valid" ng-click="updateLocalVariable();">Save</button>
+			<button type="button" class="btn btn-default" ng-click="closeDialog();">Cancel</button>
+		</footer>
+	</designer>
+</script>
+
+
 <script type="text/ng-template" id="dialog-edit-global-variable">
 	<designer>
 		<header>
@@ -2358,11 +2378,15 @@
 				</div>
 				<div class="form-group" ng-if="item.t == 'phone'">
 					<label class="col-lg-12 no-padding">Phone number</label>
-					<input type="text" ng-value="item.id" />
+					<input type="text" ng-model="item.id" />
 				</div>
 				<div class="form-group" ng-if="item.t == 'uri'">
 					<label class="col-lg-12 no-padding">URL</label>
-					<input type="text" ng-value="item.id" />
+					<input type="text" ng-model="item.id" />
+				</div>
+				<div class="form-group" ng-if="item.t == 'email'">
+					<label class="col-lg-12 no-padding">Email</label>
+					<input type="text" ng-model="item.id" />
 				</div>
 			</div>
 		</form>

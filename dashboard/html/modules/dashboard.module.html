@@ -8,7 +8,7 @@
 			<li></li>
 		</ul>
 	</loader>
-	<nav ng-if="initialized && (view != 'dashboard')" class="navbar navbar-default navbar-fixed-topw">
+	<nav ng-if="initialized && (view != 'dashboard')" class="navbar navbar-default navbar-fixed-top">
       <div class="container-fluid">
         <div class="navbar-header">
           <button id="navbar-btn" type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
@@ -30,6 +30,9 @@
             	</li>
 			</ul>
                 <ul class="nav navbar-nav navbar-right">
+					<li class="dropdown">
+                        <a target="_blank" href="https://community.webcore.co" class="" role="button" aria-haspopup="true" aria-expanded="false">Forum</a>
+					</li>
 					<li class="dropdown">
                         <a target="_blank" href="https://wiki.webcore.co" class="" role="button" aria-haspopup="true" aria-expanded="false">Wiki</a>
 					</li>
@@ -100,8 +103,14 @@
 						<li><a href="" ng-click="backup();">Backup piston(s)</a></li>						
 						<li ng-if="instanceCount > 1"><a href="" ng-click="movePiston();">Move piston(s)</a></li>						
 						<li><a href="" ng-click="showSettings();">Settings</a></li>						
+						<li>
+<!-- dashboard (sidebar) -->
+<ins class="adsbygoogle"
+     style="display:inline-block;width:120px;height:600px;padding: 20px;"
+     data-ad-client="ca-pub-4643048739403893"
+     data-ad-slot="8683068091" ng-init="initAds();"></ins>
+						</li>
 					</ul>
-
 <!--					<ul class="nav nav-sidebar">
 						<center>Advertisements</center>-->
 						<!--<script type="text/javascript-lazy" src="//z-na.amazon-adsystem.com/widgets/onejs?MarketPlace=US&adInstanceId=1c018b1f-0af0-4396-a510-867f9bdae50d"></script>-->
@@ -139,7 +148,7 @@
 					<div class="no-animate alert alert-warning" ng-if="instance && permanentStatus" role="alert" ng-bind-html="permanentStatus"></div>
 					<div class="table-responsive no-animate" ng-repeat="category in categories" ng-if="instance && category.p && category.p.length && (category.t != 'h')">
 						<label ng-if="category.n">{{category.n}} ({{category.p.length}})</label>
-						<table class="table table-striped" ng-if="(category.t == 'd') || (category.t == 'dt')">
+						<table class="table table-striped" ng-if="(category.t == 'd') || (category.t == 'dt') || (category.t == 'dm') || (category.t == 'dl')">
 							<tbody>
 								<tr ng-repeat="piston in category.p" active="true" ng-if="piston.meta && piston.meta.a" data-toggle="tooltip" title="{{piston.meta.t ? 'Executed ' + timeSince(piston.meta.t) : 'Never executed'}}">
 									<td ng-click="openPiston(piston.id);"><span><i star class="fa fa-circle" ng-style="{opacity: piston.opacity}" aria-hidden="true"></i>{{piston.name}}<span state ng-bind-html="renderString(piston.meta.s.new)"></span><!--<span ng-if="piston.meta.s && piston.meta.s.new" state="{{piston.meta.s.new}}">{{piston.meta.s.new}}</span>--></span></td>
@@ -149,21 +158,21 @@
 								</tr>
 							</tbody>
 						</table>
-						<ptiles ng-if="(category.t == 't') || (category.t == 'm') || (category.t == 'l') || (category.t == 'dt') || (category.t == 'td')">
+						<ptiles ng-if="(category.t == 't') || (category.t == 'm') || (category.t == 'l') || (category.t == 'dt') || (category.t == 'dm') || (category.t == 'dl') || (category.t == 'td') || (category.t == 'md') || (category.t == 'ld')">
 							<ptilegroup ng-repeat="piston in category.p" ng-if="piston.meta && piston.meta.a">
-								<ptile ng-repeat="index in range(16) track by $index" class="{{category.t == 'l' ? 'large' : (category.t == 'm' ? 'medium' : '')}}" ng-if="piston.meta.s['i' + ($index + 1)] || piston.meta.s['t' + ($index + 1)]" ng-init="meta=getTileMeta(piston, $index);" ng-click="clickPistonTile($event, piston, ($index + 1));" data-toggle="tooltip" title="{{renderString(piston.meta.s.new)}}" ng-style="{color: piston.meta.s['c' + ($index + 1)], backgroundColor: piston.meta.s['b' + ($index + 1)]}" class="{{piston.meta.s['f' + ($index + 1)] ? 'blink' : ''}}" type="{{meta.type ? meta.type : ''}}" ng-attr-wide="{{!!meta && !!meta.options && (meta.options.wide == '1') ? '' : undefined}}">
-									<div ng-if-start="!meta.type" title data-fittext data-fittext-max="{{category.t == 'l' ? 24 : (category.t == 'm' ? 18 : 12)}}" ng-model="piston.meta.s" ng-bind-html="piston.meta.s['i' + ($index + 1)] ? renderString(piston.meta.s['i' + ($index + 1)]) : '--'"></div>
-									<div data-fittext data-fittext-max="{{category.t == 'l' ? 72 : (category.t == 'm' ? 54 : 36)}}" ng-model="piston.meta.s" ng-bind-html="piston.meta.s['t' + ($index + 1)] ? renderString(piston.meta.s['t' + ($index + 1)]) : '--'"></div>
-									<div ng-if-end title data-fittext data-fittext-max="{{category.t == 'l' ? 24 : (category.t == 'm' ? 18 : 12)}}" ng-model="piston.meta.s" ng-bind-html="piston.meta.s['o' + ($index + 1)] ? renderString(piston.meta.s['o' + ($index + 1)]) : (piston.meta.n ? timeCounter(piston.meta.n) : ' ')"></div>
+								<ptile ng-repeat="index in range(16) track by $index" class="{{category.t.indexOf('l') >= 0 ? 'large' : (category.t.indexOf('m') >= 0 ? 'medium' : '')}}" ng-if="piston.meta.s['i' + ($index + 1)] || piston.meta.s['t' + ($index + 1)]" ng-init="meta=getTileMeta(piston, $index);" ng-click="clickPistonTile($event, piston, ($index + 1));" data-toggle="tooltip" title="{{renderString(piston.meta.s.new)}}" ng-style="{color: piston.meta.s['c' + ($index + 1)], backgroundColor: piston.meta.s['b' + ($index + 1)]}" class="{{piston.meta.s['f' + ($index + 1)] ? 'blink' : ''}}" type="{{meta.type ? meta.type : ''}}" ng-attr-wide="{{!!meta && !!meta.options && (meta.options.wide == '1') ? '' : undefined}}">
+									<div ng-if-start="!meta.type" title data-fittext data-fittext-max="{{category.t.indexOf('l') >= 0 ? 24 : (category.t.indexOf('m') >= 0 ? 18 : 12)}}" ng-model="piston.meta.s" ng-bind-html="piston.meta.s['i' + ($index + 1)] ? renderString(piston.meta.s['i' + ($index + 1)]) : '--'"></div>
+									<div data-fittext data-fittext-max="{{category.t.indexOf('l') >= 0 ? 72 : (category.t.indexOf('m') >= 0 ? 54 : 36)}}" ng-model="piston.meta.s" ng-bind-html="piston.meta.s['t' + ($index + 1)] ? renderString(piston.meta.s['t' + ($index + 1)]) : '--'"></div>
+									<div ng-if-end title data-fittext data-fittext-max="{{category.t.indexOf('l') >= 0 ? 24 : (category.t.indexOf('m') >= 0 ? 18 : 12)}}" ng-model="piston.meta.s" ng-bind-html="piston.meta.s['o' + ($index + 1)] ? renderString(piston.meta.s['o' + ($index + 1)]) : (piston.meta.n ? timeCounter(piston.meta.n) : ' ')"></div>
 									<div ng-if="meta.type == 'gauge'" google-chart chart="getGaugeChart(piston, $index, meta)"></div>
 									<video ng-if="(meta.type == 'video') && !!meta.options && !!meta.options.src" class="{{meta.className}}" ng-attr-controls="{{meta.options.controls == '0' ? undefined : ''}}" ng-attr-autoplay="{{meta.options.autoplay == '1' ? '' : undefined}}" ng-attr-loop="{{meta.options.loop == '1' ? '' : undefined}}" ng-attr-muted="{{meta.options.muted == '1' ? '' : undefined}}">
-										<source src="{{meta.options.src}}"  />
+										<source ng-src="{{meta.options.src}}"  />
 									</video>
-									<img ng-if="(meta.type == 'image') && !!meta.options && !!meta.options.src" class="{{meta.className}}" src="{{meta.options.src}}" ng-attr-refresh="{{!!meta.options.refresh ? meta.options.refresh : undefined}}" on-refresh="refreshImage"/>
+									<img ng-if="(meta.type == 'image') && !!meta.options && !!meta.options.src" class="{{meta.className}}" ng-src="{{meta.options.src}}" ng-attr-refresh="{{!!meta.options.refresh ? meta.options.refresh : undefined}}" on-refresh="refreshImage"/>
 								</ptile>
 							</ptilegroup>
 						</ptiles>
-						<table class="table table-striped" ng-if="category.t == 'td'">
+						<table class="table table-striped" ng-if="(category.t == 'td') || (category.t == 'tm') || (category.t == 'tl')">
 							<tbody>
 								<tr ng-repeat="piston in category.p" active="true" ng-if="piston.meta && piston.meta.a" data-toggle="tooltip" title="{{piston.meta.t ? 'Executed ' + timeSince(piston.meta.t) : 'Never executed'}}">
 									<td ng-click="openPiston(piston.id);"><span><i star class="fa fa-circle" ng-style="{opacity: piston.opacity}" aria-hidden="true"></i>{{piston.name}}<span state ng-bind-html="renderString(piston.meta.s.new)"></span><!--<span ng-if="piston.meta.s && piston.meta.s.new" state="{{piston.meta.s.new}}">{{piston.meta.s.new}}</span>--></span></td>
@@ -193,37 +202,56 @@
 
 	<viewer class="settings" ng-if="initialized && (view == 'settings')" class="no-animate">
 		<label class="header">Settings</label>
-		<form class="form-horizontal">
-			<panel name="General">
-				<panel name="Categories">
+
+
+
+<div class="container">	
+	<ul  class="nav nav-pills">
+	<li class="active"><a data-target="#places" data-toggle="tab">Places</a>
+	    </li>
+<!--	    <li class="">
+        <a data-target="#general" data-toggle="tab">General</a>
+	    </li>-->
+	    <li><a data-target="#categories" data-toggle="tab">Categories</a>
+	    </li>
+	    <li><a data-target="#integrations" data-toggle="tab">Integrations</a>
+	    </li>
+	</ul>
+
+	    <div class="tab-content clearfix">
+	      <div class="tab-pane" id="general">
+		Nothing here yet.
+		</div>
+		<div class="tab-pane" id="categories">
+
 					<div class="form-group row" ng-repeat="category in settings.categories">
-						<div class="col-sm-7">
+						<div class="col-xs-7">
 							<input type="text" ng-model="category.n" class="form-control col-sm-4" placeholder="Category name"/>
 						</div>
-						<div class="col-sm-2">
-							<select class="form-control col-sm-4" ng-model="category.t"><option value="d">Details</option><option value="t">Tiles</option><option value="m">Medium Tiles</option><option value="l">Large Tiles</option><option value="dt">Details/Tiles</option><option value="td">Tiles/Details</option><option value="h">Hidden</option></select>
+						<div class="col-xs-2">
+							<select class="form-control col-sm-4" ng-model="category.t"><option value="d">Details</option><option value="t">Tiles</option><option value="m">Medium Tiles</option><option value="l">Large Tiles</option><option value="dt">Details/Tiles</option><option value="dm">Details/Medium Tiles</option><option value="dl">Details/Large Tiles</option><option value="td">Tiles/Details</option><option value="md">Medium Tiles/Details</option><option value="ld">Large Tiles/Details</option><option value="h">Hidden</option></select>
 						</div>
-						<div class="col-sm-1">
+						<div class="col-xs-1">
 							<i class="fa fa-chevron-up catop" ng-if="$index > 0" ng-click="moveCategoryUp($index)"></i>
 						</div>
-						<div class="col-sm-1">
+						<div class="col-xs-1">
 							<i class="fa fa-chevron-down catop" ng-if="$index < settings.categories.length - 1" ng-click="moveCategoryDown($index)"></i>
 						</div>
-						<div class="col-sm-1">
+						<div class="col-xs-1">
 							<i class="fa fa-close catop" ng-click="deleteCategory($index)"></i>
 						</div>
 					</div>
-					<div class="form-group row">
+					<div class="">
 						<label class="form-check-label"><input type="checkbox" class="form-check-input" ng-model="settings.hidePP"/> Hide paused pistons</label>
-						<button ng-click="addCategory()" class="btn btn-info pull-right pad-right">Add category</button>
+						<button ng-click="addCategory()" class="btn btn-info pull-right">Add category</button>
 					</div>
-				</panel>
-			</panel>
-			<panel name="Integrations">
+
+		</div>
+        <div class="tab-pane" id="integrations">
 				<panel name="IFTTT">
 					<p><a target="_blank" href="https://www.ifttt.com">IFTTT</a> is a free web-based service that people use to create chains of simple conditional statements, called applets. An applet is triggered by changes that occur within other web services such as Gmail, Facebook, Instagram, or Pinterest. IFTTT is an initialism for If This Then That<sup><a target="_blank" href="https://en.wikipedia.org/wiki/IFTTT">[wikipedia]</a></sup>.</p>
 					<p>webCoRE can send events to IFTTT's <a target="_blank" href="https://ifttt.com/maker_webhooks">Maker Webhooks channel</a>. Please sign in into your IFTTT account and go to the Maker Webhooks channel's <a target="_blank" href="https://ifttt.com/services/maker_webhooks/settings">settings</a> to enable it and generate a webhooks URL. Copy the provided URL and paste it below:</p>
-						<div class="form-group">
+						<div class="form-group row">
 							<label class="control-label col-sm-3">IFTTT Maker Webhooks URL</label>
 							<div class="col-sm-9">
 								<input type="text" class="form-control" ng-model="settings.ifttt_url">
@@ -233,7 +261,7 @@
 				<panel name="LIFX">
 					<p><a target="_blank" href="https://www.lifx.com">LIFX</a> LIFX (pronounced Life-X) is a line of energy-efficient, multi-color, Wi-Fi enabled LED light bulbs that can be controlled via a Wi-Fi equipped device such as a smartphone or smartwatch. LIFX bulbs are equipped with a Wi-Fi microcontroller that uses master/slave concept. The master light bulb connects to the router via 802.11b/802.11g/802.11n and then to all the other LIFX bulbs in the house via a low power IPv6 802.15.4 mesh network<sup><a target="_blank" href="https://en.wikipedia.org/wiki/LIFX">[wikipedia]</a></sup>.</p>
 					<p>webCoRE can currently list and activate LIFX scenes. Please visit your <a target="_blank" href="https://cloud.lifx.com">LIFX cloud account</a> and go to Settings under your account. Generate a new token and copy it, then paste it into the field below:</p>
-						<div class="form-group">
+						<div class="form-group row">
 							<label class="control-label col-sm-3">LIFX Access Token</label>
 							<div class="col-sm-9">
 								<input type="text" class="form-control" ng-model="settings.lifx_token">
@@ -244,19 +272,55 @@
 					<p>webCoRE accepts external requests from other services via its <b>execute</b> endpoint. Data can be passed to webCoRE in the form of a query string, POST FORM data, or POST JSON data. Please set the Content-Type header to <i>application/json</i> if planning on sending JSON data in the POST body.</p>
 					<p><b>NOTE:</b> Please replace the :pistonId: portion with the actual ID of the piston you are trying to execute. Please note the piston has to be part of the instance you are calling with this endpoint. The piston ID can be found in the address bar when viewing the IP and is enclosed in between : characters. Please include those characters in the endpoint.</p>
 					<p>While not recommended, you can also use the piston name instead of a piston ID. Simply replace :pistonId: with the piston name, but be careful to URL encode the name. Typically, all spaces become %20</p>
-						<div class="form-group">
+						<div class="form-group row">
 							<label class="control-label col-sm-3">webCoRE Execute Endpoint</label>
 							<div class="col-sm-9">
 								<input type="text" class="form-control" ng-model="endpoint" readonly>
 							</div>
 						</div>
 				</panel>
-			</panel>
-			<panel>
+
+
+	</div>
+	<div class="tab-pane active form-horizontal" id="places">
+		<div ng-repeat="place in settings.places" class="place" ng-click="editPlace(place)">
+		    <footer><i ng-if="!!place.h" class="fa fa-home" aria-hidden="true"></i>{{place.n}}</footer>
+		    <ng-map center="{{place.p}}" zoom="14" mayTypeId="TERRAIN" controls="false" disable-default-u-i="true" pan-control="false" zoom-control="false" scale-control="false">
+		    <marker position="{{place.p}}" draggable="false""></marker>
+		    <shape name="circle" editable="false" draggable="false"
+		      stroke-color="#00CCFF"
+		      stroke-opacity="0.8"
+		      stroke-weight="2"
+		      fill-color="#00CCFF"
+		      fill-opacity="0.35"
+		      center="{{place.p}}"
+		      radius="{{place.i}}">
+		    </shape>
+		    <shape name="circle" editable="false" draggable="false"
+		      stroke-color="#CCC"
+		      stroke-opacity="0.8"
+		      stroke-weight="2"
+		      fill-color="#CCC"
+		      fill-opacity="0.35"
+		      center="{{place.p}}"
+		      radius="{{place.o}}">
+		    </shape>
+		  </ng-map>
+		</div><div ng-if="!!settings.places.length && isAppHosted && !presenceSensorId" class="place device" ng-click="registerPresenceSensor()"><i class="fa fa-map-marker" aria-hidden="true"></i><footer>Setup sensor</footer></div><div ng-if="settings.places.length < 10" class="place new" ng-click="addPlace()"></div>
+	</div>
+    </div>
+		<form class="form-horizontal">
+			<div class="nav-pills-footer">
 				<button class="btn btn-danger" ng-click="hideSettings()">Cancel</button>
 				<button class="btn btn-success pull-right" ng-click="saveSettings()">Apply</button>
-			</panel>
+			</div>
 		</form>
+
+
+  </div>
+
+
+
 	</viewer>
 
 
@@ -494,4 +558,75 @@
 	    <center>Please tap and hold the picture below to save it to your Photo Gallery</center>
 	    <img id="capturedImage" src="{{capturedImage}}"/>
 	</dnd-nodrag>
+</script>
+
+
+
+
+<script type="text/ng-template" id="dialog-edit-place">
+    <designer>
+        <header>
+            <label>Edit place</label>
+        </header>
+	<form>
+	    <div class="form-group">
+		<label>Please enter a name for this place...</label>
+		<input class="form-control" type="text" ng-model="designer.name"/>
+	    </div>
+	</form>
+	<form>
+	    <label>Drag the marker to the center of the location and adjust the inner circle and outer circle to adjust sensitivity. Inner circle needs to be entered to arrive at a place, while the outer circle needs to be exited to leave a place</label>
+	    <ng-map ng-if="designer.showMap" center="{{designer.position}}" zoom="16" mayTypeId="TERRAIN" on-click="movePlace()">
+	        <marker position="{{designer.position}}" title="{{designer.name}}" draggable="true" on-dragend="movePlace()"></marker>
+	        <shape name="circle" editable="true" draggable="false" on-center_changed="movePlace('i')" on-radius_changed="movePlace('i')"
+	          stroke-color="#00CCFF"
+	          stroke-opacity="0.8"
+	          stroke-weight="2"
+	          fill-color="#00CCFF"
+	          fill-opacity="0.35"
+	          center="{{designer.position}}"
+	          radius="{{designer.inner}}">
+	        </shape>
+	        <shape name="circle" editable="true" draggable="false" on-center_changed="movePlace('o')" on-radius_changed="movePlace('o')"
+	          stroke-color="#CCC"
+	          stroke-opacity="0.8"
+	          stroke-weight="2"
+	          fill-color="#CCC"
+	          fill-opacity="0.35"
+	          center="{{designer.position}}"
+	          radius="{{designer.outer}}">
+	        </shape>
+	    </ng-map>
+	    <div class="form-control-static text-center">
+		Location is at {{designer.position[0].toFixed(6)}}°, {{designer.position[1].toFixed(6)}}°, arriving radius of {{designer.inner.toFixed(0)}}m, leaving radius of {{designer.outer.toFixed(0)}}m
+	    </div>
+        </form>
+        <footer>
+            <button type="button" class="btn btn-info pull-right" ng-disabled="!designer.name" ng-click="updatePlace();">Save</button>
+            <button type="button" class="btn btn-success pull-right" ng-if="!designer.home" ng-click="designer.home = true">Set as home</button>
+            <button type="button" class="btn btn-default" ng-click="closeDialog();">Cancel</button>
+            <button ng-if="!designer.$new" type="button" class="btn btn-danger" ng-click="deletePlace();">Delete</button>
+        </footer>
+    </designer>
+
+</script>
+
+
+<script type="text/ng-template" id="dialog-register-presence-sensor">
+    <designer>
+        <header>
+            <label>Register presence sensor</label>
+        </header>
+	<form>
+	    <div class="form-group">
+		<label>Please enter a name for this device...</label>
+		<input class="form-control" type="text" ng-model="designer.name"/>
+	    </div>
+	</form>
+        <footer>
+            <button type="button" class="btn btn-info pull-right" ng-disabled="!designer.name" ng-click="doRegisterPresenceSensor();">Save</button>
+            <button type="button" class="btn btn-default" ng-click="closeDialog();">Cancel</button>
+        </footer>
+    </designer>
+
 </script>

@@ -685,7 +685,8 @@ piston[anonymized] *[sensitive] {
 piston[anonymized] span[uri],
 piston[anonymized] span[phn],
 piston[anonymized] span[cnt],
-piston[anonymized] span[dev] {
+piston[anonymized] span[dev],
+piston[anonymized] span[eml] {
 	font-size: 0px !important;
 	line-height: 0px !important;
 }
@@ -700,6 +701,12 @@ piston[anonymized] span[dev]:before {
 piston[anonymized] span[phn]::before {
 	line-height: 17px !important;
 	content: '[phone number]';
+	font-size: initial;
+}
+
+piston[anonymized] span[eml]::before {
+	line-height: 17px !important;
+	content: '[anonymous@webcore.co]';
 	font-size: initial;
 }
 
@@ -1269,6 +1276,7 @@ div[var] span {
 div[var] > span {
 	display: inline-block;
 	width: 50%;
+	vertical-align: top;
 	text-align: right;
 }
 

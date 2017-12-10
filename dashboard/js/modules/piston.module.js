@@ -705,6 +705,12 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		var attributes = [];
 		for (attribute in $scope.db.attributes) {
 			attributes.push(': ' + attribute + ']');
+			if (attribute == 'threeAxis') {
+				attributes.push(': axisX]');
+				attributes.push(': axisY]');
+				attributes.push(': axisZ]');
+				attributes.push(': orientation]');
+			}
 		}
 		return {
 				autocomplete: [{
@@ -1978,6 +1984,47 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 
 
 
+	/* quick edit local variables */
+
+	$scope.editLocalVariable = function(variable) {
+		//we cannot edit variables that are statically defined in a piston
+		if (!variable || !variable.n || !variable.t || !!variable.v) return;
+		var value = $scope.localVars[variable.n];
+		if ((value instanceof Array) && (value.length == 0)) value = null
+		if (!variable) return;
+		$scope.designer = {};
+		$scope.designer.$variableName = variable.n;
+		$scope.designer.$variable = variable;
+		$scope.designer.$obj = variable;
+		$scope.designer.name = variable.n;
+		$scope.designer.type = variable.t;
+		$scope.designer.operand = {data: {t: !value ? '' : (variable.t == 'device' ? 'd' : 'c'), c:value, d: value}, multiple: false, dataType: variable.t, optional: true, onlyAllowConstants: true, disableExpressions: true}
+		window.designer = $scope.designer;
+		window.scope = $scope;
+		$scope.validateOperand($scope.designer.operand);
+		$scope.designer.dialog = ngDialog.open({
+			template: 'dialog-edit-local-variable',
+			className: 'ngdialog-theme-default ngdialog-large',
+			closeByDocument: false,
+			disableAnimation: true,
+			scope: $scope
+		});
+	};
+
+	$scope.updateLocalVariable = function(nextDialog) {
+		var variable = $scope.designer.$variable;
+		var value = variable.t == 'device' ? $scope.designer.operand.data.d : ($scope.designer.operand.data.t == 'c' ? $scope.designer.operand.data.c : null);
+		dataService.setVariable($scope.designer.$variableName, {t: variable.t, v: value}, $scope.pistonId).then(function(data) {
+			if (data && data.localVars && data.id && (data.id == $scope.pistonId)) {
+				$scope.localVars = data.localVars;
+			}
+		});
+		$scope.closeDialog();
+	}
+
+
+
+
 
 	/* global variables */
 
@@ -2774,7 +2821,12 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 					}
 				}
 			}
-			if (hasThreeAxis) result.push({id: 'orientation', n: 'orientation', t:'string'});
+			if (hasThreeAxis) {
+				result.push({id: 'axisX', n: 'X axis', t:'decimal'});
+				result.push({id: 'axisY', n: 'Y axis', t:'decimal'});
+				result.push({id: 'axisZ', n: 'Z axis', t:'decimal'});
+				result.push({id: 'orientation', n: 'orientation', t:'string'});
+			}
 			result.push({id: statusAttribute, n: '⌂ ' + statusAttribute, t:'string'});
 			result.sort($scope.sortByName);
 		}
@@ -2857,6 +2909,13 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
             disableAnimation: true,
             scope: $scope
         });
+	}
+
+	$scope.getLocalVariable = function(name) {
+		for(i in $scope.piston.v) {
+			if ($scope.piston.v[i].n == name) return $scope.piston.v[i];
+		}
+		return null;
 	}
 
 	$scope.getLocalVariableType = function(name) {
@@ -3429,8 +3488,16 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 			var options = [];
 			if (!comparison.dataType) comparison.dataType = 'dynamic';
 			switch (comparison.dataType) {
+				// There may be a better way to compare these, but string is better than nothing
+				case 'color':
+				case 'hexcolor':
+				case 'object':
+				case 'vector3':
 				case 'enum':
 					dt = 's';
+					break;
+				case 'image':
+					dt = 'f'; // binary file
 					break;
 				case 'dynamic':
 					dt = '';
@@ -3588,6 +3655,9 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 								break;
 							case 'datetime':
 								result = '<span num>' + utcToString(operand.c) + '</span>';
+								break;
+							case 'email':
+								result = '<span eml>' + operand.c + '</span>';
 								break;
 							case 'piston':
 								result = '<span lit>' + $scope.getPistonName(operand.c) + '</span>';
@@ -4194,6 +4264,10 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 							object.c = (object.c instanceof Array) ? safeContacts : safeContacts[0];
 							object.e = '';
 							break;
+						case 'email':
+							object.c = anonymizeValue(object.c, {t: 'email'})
+							object.e = '';
+							break;
 						case 'uri':
 							object.c = anonymizeValue(object.c, {t: 'uri'})
 							object.e = '';
@@ -4254,9 +4328,10 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 						object = anonymizeValue(object, {t: 'contact'});
 						return object;
 					}
+				} else {
+					object = anonymizeValue(object, {t: 'unknown'});
+					return object;
 				}
-				object = anonymizeValue(object, {t: 'unknown'});
-				return object;
 			}
 			return object;
 		}
@@ -4622,7 +4697,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 			var dq = false;
 			var dv = false;
 			var startIndex = i;
-			function isCompositeVariable() {return (str.substr(startIndex, 6) == '$args.') || (str.substr(startIndex, 6) == '$json.') || (str.substr(startIndex, 10) == '$response.') || (str.substr(startIndex, 9) == '$weather.') || (str.substr(startIndex, 11) == '$incidents.') ||  (str.substr(startIndex, 6) == '$args[') || (str.substr(startIndex, 6) == '$json[') || (str.substr(startIndex, 10) == '$response[') || (str.substr(startIndex, 11) == '$incidents[');};
+			function isCompositeVariable() {return (str.substr(startIndex, 6) == '$args.') || (str.substr(startIndex, 6) == '$json.') || (str.substr(startIndex, 10) == '$response.') || (str.substr(startIndex, 5) == '$nfl.') || (str.substr(startIndex, 8) == '$places.') || (str.substr(startIndex, 9) == '$weather.') || (str.substr(startIndex, 11) == '$incidents.') ||  (str.substr(startIndex, 6) == '$args[') || (str.substr(startIndex, 6) == '$json[') || (str.substr(startIndex, 8) == '$places[') || (str.substr(startIndex, 10) == '$response[') || (str.substr(startIndex, 11) == '$incidents[');};
 			function addOperand() {
 				if (i-1 > startIndex) {
 					var value = str.slice(startIndex, i-1).trim();
@@ -4672,13 +4747,22 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 						//a device was found
 						var a = attribute.toLowerCase();
 						attribute = '';
+						virtualAttribute = '';
+						switch (a) {
+							case 'orientation':
+							case 'axisx':
+							case 'axisy':
+							case 'axisz':
+								virtualAttribute = a.replace('axisx', 'axisX').replace('axisy', 'axisY').replace('axisz', 'axisZ');
+								a = 'threeaxis';
+						}
 						if (a == statusAttribute) {
 							attribute = statusAttribute;
 						} else {
 							for (attributeIndex in device.a) {
 								var attr = device.a[attributeIndex];
 								if (a == attr.n.toLowerCase()) {
-									attribute = attr.n;
+									attribute = virtualAttribute ? virtualAttribute : attr.n;
 								}
 							}
 						}
@@ -4775,6 +4859,8 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 						}
 						continue;
 					case '"':
+					case '“':
+					case '”':
 						if (exp && !dv && !sq) {
 							dq = !dq;
 							odq = !odq;
@@ -4927,8 +5013,11 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 							if (item.x.startsWith('$args[') && (item.x.length > 6)) break;
 							if (item.x.startsWith('$json.') && (item.x.length > 6)) break;
 							if (item.x.startsWith('$json[') && (item.x.length > 6)) break;
+							if (item.x.startsWith('$places.') && (item.x.length > 8)) break;
+							if (item.x.startsWith('$places[') && (item.x.length > 8)) break;
 							if (item.x.startsWith('$response.') && (item.x.length > 10)) break;
 							if (item.x.startsWith('$response[') && (item.x.length > 10)) break;
+							if (item.x.startsWith('$nfl.') && (item.x.length > 5)) break;
 							if (item.x.startsWith('$weather.') && (item.x.length > 9)) break;
 							if (item.x.startsWith('$incidents.') && (item.x.length > 11)) break;
 							if (item.x.startsWith('$incidents[') && (item.x.length > 11)) break;
