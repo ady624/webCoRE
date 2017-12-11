@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.2.0ff.20171129" }
+public static String version() { return "v0.2.100.20171211" }
 /*
+ *	12/11/2017 >>> v0.2.100.20171211 - BETA M2 - Replaced the scheduler-based timeout recovery handling to ease up on resource usage
  *	11/29/2017 >>> v0.2.0ff.20171129 - BETA M2 - Fixed missing conditions and triggers for several device attributes, new comparison group for binary files
  *	11/09/2017 >>> v0.2.0fe.20171109 - BETA M2 - Fixed on events subscription for global and superglobal variables
  *	11/05/2017 >>> v0.2.0fd.20171105 - BETA M2 - Further DST fixes
@@ -759,15 +760,23 @@ def deviceHandler(event) {
 }
 
 def timeHandler(event, recovery = false) {
+try {
 	handleEvents([date: new Date(event.t), device: location, name: 'time', value: event.t, schedule: event, recovery: recovery])
+    } catch (Exception e) {
+    error "Unexpected error:", null, null, e
+    }
 }
 
+//new and improved timeout recovery management
+def timeoutRecoveryHandler_webCoRE(event) {
+	timeHandler([t:now()], true)
+}
+
+/*
 def timeRecoveryHandler(event) {
 	timeHandler(event, true)
-	//def event = [date: new Date(), device: location, name: 'time', value: now(), schedule: [t: 0, s: 0, i: -9]]
-    //executeEvent(rtData, event)
-	//processSchedules rtData, true
 }
+*/
 
 def executeHandler(event) {
 	handleEvents([date: event.date, device: location, name: 'execute', value: event.value, jsonData: event.jsonData])
@@ -776,7 +785,7 @@ def executeHandler(event) {
 //entry point for all events
 def handleEvents(event) {
 	//cancel all pending jobs, we'll handle them later
-	unschedule(timeHandler)
+	//unschedule(timeHandler)
     if (!state.active) return
 	def startTime = now()
     state.lastExecuted = startTime
@@ -795,7 +804,8 @@ def handleEvents(event) {
     	return;
     }
     checkVersion(rtData)
-	runIn(30, timeRecoveryHandler)
+    setTimeoutRecoveryHandler('timeoutRecoveryHandler_webCoRE')
+	//runIn(30, timeRecoveryHandler)
     if (rtData.semaphoreDelay) {
     	warn "Piston waited at a semaphore for ${rtData.semaphoreDelay}ms", rtData
     }
@@ -1121,11 +1131,11 @@ private processSchedules(rtData, scheduleJob = false) {
         	rtData.stats.nextSchedule = next.t
         	if (rtData.logging) info "Setting up scheduled job for ${formatLocalTime(next.t)} (in ${t}s)" + (schedules.size() > 1 ? ', with ' + (schedules.size() - 1).toString() + ' more job' + (schedules.size() > 2 ? 's' : '') + ' pending' : ''), rtData
         	runIn(t, timeHandler, [data: next])
-        	runIn(t + 30, timeRecoveryHandler, [data: next])
+        	//runIn(t + 30, timeRecoveryHandler, [data: next])
     	} else {
 	    	rtData.stats.nextSchedule = 0
             //remove the recovery
-    		unschedule(timeRecoveryHandler)
+    		//unschedule(timeRecoveryHandler)
 	    }
     }
     if (rtData.piston.o?.pep) atomicState.schedules = schedules

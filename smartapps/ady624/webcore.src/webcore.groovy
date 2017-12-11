@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.2.0ff.20171129" }
+public static String version() { return "v0.2.100.20171211" }
 /*
+ *	12/11/2017 >>> v0.2.100.20171211 - BETA M2 - Replaced the scheduler-based timeout recovery handling to ease up on resource usage
  *	11/29/2017 >>> v0.2.0ff.20171129 - BETA M2 - Fixed missing conditions and triggers for several device attributes, new comparison group for binary files
  *	11/09/2017 >>> v0.2.0fe.20171109 - BETA M2 - Fixed on events subscription for global and superglobal variables
  *	11/05/2017 >>> v0.2.0fd.20171105 - BETA M2 - Further DST fixes
@@ -1981,8 +1982,9 @@ public Map getRunTimeData(semaphore = null, fetchWrappers = false) {
     if (semaphore) {
     	def waited = false
     	//if we need to wait for a semaphore, we do it here
+        def lastSemaphore
     	while (semaphore) {
-	        def lastSemaphore = atomicState[semaphoreName] ?: 0
+	        lastSemaphore = lastSemaphore ?: (atomicState[semaphoreName] ?: 0)
 	        if (!lastSemaphore || (now() - lastSemaphore > 10000)) {
 	        	semaphoreDelay = waited ? now() - startTime : 0
 	            semaphore = now()
