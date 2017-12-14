@@ -14,8 +14,16 @@ div[header] {
     padding: 0px;
 }
 
+.checkbox {
+	float: right;
+}
+
 div[header] h2 {
 	margin: 16px 0px;
+}
+
+div .script {
+	padding: 20px 0px;
 }
 
 h2 > span[small] {
@@ -33,7 +41,6 @@ piston {
     display: block;
     background: #fffcf0;
     margin: 0px;
-    margin-top: 10px;
     color: #444;
     font-family: monospace;
     overflow: hidden;
@@ -343,11 +350,6 @@ table[properties] tr td:last-child > * {
 table[properties] tr td:last-child > input {
 	padding: 0px 4px;
 }
-
-
-
-
-
 
 
 piston[printing] {

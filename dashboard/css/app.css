@@ -10,6 +10,22 @@ body {
     overflow: hidden;
 }
 
+h2 {
+    color: #00a0dc;
+    font-weight: 300;
+    font-size: 22px;
+}
+
+h3 {
+    color: #00a0dc;
+    text-transform: uppercase;
+    font-weight: 300;
+    font-size: 22px;
+    display: inline;
+    vertical-align: middle;
+    padding-right: 20px;
+}
+
 body {
 	font-family: Verdana;
 	font-size: 12px;
@@ -109,15 +125,13 @@ viewer {
 	padding: 0px 16px;
 }
 
-
 nav.navbar {
     z-index: 100;
 	position: fixed;
 	width: 100%;
     z-index: 100;
     border-radius: 0px !important;
-    border: 0;
-    box-shadow: 1px 1px 5px rgba(0, 0, 0, 0.25)
+    border: 0px;
 }
 
 
