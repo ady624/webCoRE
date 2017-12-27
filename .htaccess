@@ -1,4 +1,4 @@
 RewriteEngine On
 
 RewriteCond %{REQUEST_FILENAME} !-f
-RewriteRule ^(.*)$ /index.htm [L,NC]
+RewriteRule ^(.*)$ /index.html [L,NC]
