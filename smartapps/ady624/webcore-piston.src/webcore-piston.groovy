@@ -3217,7 +3217,7 @@ private long vcmd_httpRequest(rtData, device, params) {
 	def internal = uri.startsWith("10.") || uri.startsWith("192.168.")
 	if ((!internal) && uri.startsWith("172.")) {
 		//check for the 172.16.x.x/12 class
-		def b = uri.substring(4,2)
+		def b = uri.substring(4,6)
 		if (b.isInteger()) {
 			b = b.toInteger()
 			internal = (b >= 16) && (b <= 31)
