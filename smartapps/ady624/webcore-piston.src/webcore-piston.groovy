@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.2.100.20171211" }
+public static String version() { return "v0.2.101.20171227" }
 /*
+ *	12/27/2017 >>> v0.2.101.20171227 - BETA M2 - Fixed 172.x.x.x web requests thanks to @tbam, fixed array subscripting with 0.0 decimal value as in a for loop using $index
  *	12/11/2017 >>> v0.2.100.20171211 - BETA M2 - Replaced the scheduler-based timeout recovery handling to ease up on resource usage
  *	11/29/2017 >>> v0.2.0ff.20171129 - BETA M2 - Fixed missing conditions and triggers for several device attributes, new comparison group for binary files
  *	11/09/2017 >>> v0.2.0fe.20171109 - BETA M2 - Fixed on events subscription for global and superglobal variables
