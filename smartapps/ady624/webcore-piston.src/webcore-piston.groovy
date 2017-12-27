@@ -5061,7 +5061,9 @@ private Map getVariable(rtData, name) {
         	Map indirectVar = getVariable(rtData, var.index)
             //indirect variable addressing
             if (indirectVar && (indirectVar.t != 'error')) {
-            	var.index = cast(rtData, indirectVar.t == 'decimal' ? cast(rtData, indirectVar.v, 'integer', indirectVar.t) : indirectVar.v, 'string', indirectVar.t)
+                def value = indirectVar.t == 'decimal' ? cast(rtData, indirectVar.v, 'integer', indirectVar.t) : indirectVar.v
+                def dataType = indirectVar.t == 'decimal' ? 'integer' : indirectVar.t
+                var.index = cast(rtData, value, 'string', dataType)
             }
         	result.v = result.v[var.index]
 //        } else {
