@@ -1807,7 +1807,7 @@ private scheduleTimer(rtData, timer, long lastRun = 0) {
     lastRun = lastRun ? utcToLocalTime(lastRun) : rightNow
     long nextSchedule = lastRun
 
-    if (lastRun >= rightNow) {
+    if (lastRun > rightNow) {
     	//sometimes ST runs timers early, so we need to make sure we're at least in the near future
     	rightNow = lastRun + 1
     }
