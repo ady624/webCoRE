@@ -1814,7 +1814,7 @@ private scheduleTimer(rtData, timer, long lastRun = 0) {
 
     if (intervalUnit == 'h') {
     	long min = cast(rtData, timer.lo.om, 'long')
-    	nextSchedule = (long) 3600000 * (Math.floor(nextSchedule / 3600000) - 1) + (min * 60000)
+    	nextSchedule = (long) 3600000 * Math.floor(nextSchedule / 3600000) + (min * 60000)
     }
 
     //next date
