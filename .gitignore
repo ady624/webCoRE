@@ -9,6 +9,8 @@
 visor*
 dist/visor*
 dashboard/fa*
+dashboard/mp3*
+dashboard/js/components/fa*
 
 ######################
 # Mac Hidden Files   #
