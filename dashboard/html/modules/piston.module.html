@@ -100,6 +100,7 @@
 			</div>
 			<div warning ng-if="meta.active && !subscriptions.events && !schedules.length && !piston.o.des" class="alert alert-warning">This piston does not subscribe to any events. Unless executed by other means, it will never run on its own.</div>
 			<div class="row">
+				<div class="columnCards">
 				<div class="col-md-4">
 					<h2>Status</h2>
 					<div ng-if="meta.active">
@@ -118,6 +119,7 @@
 						</div>
 					</p>
 				</div>
+
 				<div class="col-md-4">
 					<h2>Quick facts</h2>
 					<p>Piston state: <span ng-bind-html="renderString(state.new)"></span></p>
@@ -140,6 +142,7 @@
 						<p>You do not have automatic backup enabled for this piston.</p>
 						<button class="btn btn-default" ng-click="enableAutomaticBackup()">Enable automatic backup »</button>
 					</div>
+				</div>
 				</div>
 			</div>
 			<div class="row">
