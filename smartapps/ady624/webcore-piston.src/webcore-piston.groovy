@@ -1672,7 +1672,7 @@ private long executeVirtualCommand(rtData, devices, task, params)
     return delay
 }
 
-private executePhysicalCommand(rtData, device, command, params = [], delay = null, scheduleDevice = null, disableCommandOptimization = false) {
+private executePhysicalCommand(rtData, device, command, params = [], delay = null, scheduleDevice = null, disableCommandOptimization = true) {
 	if (!!delay && !!scheduleDevice) {
     	//we're using schedules instead
         def statement = rtData.currentAction
