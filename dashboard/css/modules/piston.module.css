@@ -1021,6 +1021,7 @@ div.logs {
 	border: solid 1px #ccc;
 	overflow-y: auto;
 	margin-bottom: 20px;
+	box-shadow: 0 2px 5px 0 rgba(0, 0, 0, 0.16), 0 2px 10px 0 rgba(0, 0, 0, 0.12);
 }
 
 table.logs {
@@ -1146,6 +1147,7 @@ div[multicolumn] {
     border: solid 1px #ccc;
     background: #f8f8f8;
 	padding-bottom: 8px;
+	box-shadow: 0 2px 5px 0 rgba(0, 0, 0, 0.16), 0 2px 10px 0 rgba(0, 0, 0, 0.12);
 }
 
 
@@ -1458,4 +1460,17 @@ dnd-nodrag[disabled] * {
 		-webkit-column-count: 1;
 		-moz-column-count: 1;	
 	}
+}
+
+#columnCards {
+    border-style: 1px solid #eee;
+    box-shadow: 0 2px 5px 0 rgba(0, 0, 0, 0.16), 0 2px 10px 0 rgba(0, 0, 0, 0.12);
+    margin-top: 20px;
+    margin-bottom: 10px;
+    margin-left: 15px;
+    margin-right: 20px;
+    width: 30%;
+    min-width: 275px;
+    height: 100%;
+    min-height: 325px;
 }
