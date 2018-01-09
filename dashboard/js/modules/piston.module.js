@@ -636,6 +636,22 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 
 	$scope.listDevicesWithAttributes = function(attributes) {
 		if (!attributes || !(attributes instanceof Array) || !attributes.length) return $scope.instance.devices;
+		// Virtual status attribute is available on all devices
+		if (attributes.length === 1 && attributes[0] === statusAttribute) return $scope.instance.devices;
+		// Use threeAxis instead of attributes derived from it
+		var isThreeAxis;
+		attributes = attributes.filter(function(a) {
+			switch (a) {
+				case 'orientation':
+				case 'axisX':
+				case 'axisY':
+				case 'axisZ':
+					isThreeAxis = true;
+				case statusAttribute:
+					return false;
+			}
+			return true;
+		}).concat(isThreeAxis ? 'threeAxis' : []);
 		var result = {};
 		for (d in $scope.instance.devices) {
 			var device = $scope.instance.devices[d];
