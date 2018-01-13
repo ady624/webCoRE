@@ -1933,6 +1933,11 @@ private registerInstance() {
 
 private initSunriseAndSunset() {
     def sunTimes = app.getSunriseAndSunset()
+    if (!sunTimes.sunrise) {
+        warn "Actual sunrise and sunset times are unavailable; please reset the location for your hub", rtData
+        sunTimes.sunrise = new Date(getMidnightTime() + 7 * 3600000)
+        sunTimes.sunset = new Date(getMidnightTime() + 19 * 3600000)
+    }
     state.sunTimes = [
     	sunrise: sunTimes.sunrise.time,
     	sunset: sunTimes.sunset.time,
@@ -1946,6 +1951,11 @@ private getSunTimes() {
     //we require an update every 8 hours
     if (!updated || (now() - updated < 28800000)) return state.sunTimes
     return initSunriseAndSunset()
+}
+
+private getMidnightTime(rtData) {
+	def rightNow = localTime()
+    return localToUtcTime(rightNow - rightNow.mod(86400000))
 }
 
 /******************************************************************************/
