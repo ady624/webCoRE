@@ -7701,6 +7701,11 @@ private initSunriseAndSunset(rtData) {
     def rightNow = localTime()
     if (!rtData.sunTimes) {
     	def sunTimes = app.getSunriseAndSunset()
+        if (!sunTimes.sunrise) {
+            warn "Actual sunrise and sunset times are unavailable; please reset the location for your hub", rtData
+            sunTimes.sunrise = new Date(getMidnightTime() + 7 * 3600000)
+            sunTimes.sunset = new Date(getMidnightTime() + 19 * 3600000)
+        }
         rtData.sunTimes = [
     		sunrise: sunTimes.sunrise.time,
     		sunset: sunTimes.sunset.time,
