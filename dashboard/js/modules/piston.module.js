@@ -5144,6 +5144,18 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		operand.eval = '...';
 		var expression = operand.data.exp;
 		var dataType = operand.data.vt;
+		// Display durations relative to the selected unit; otherwise the expression
+		// will evaluate and return in terms of milliseconds.
+		switch (dataType) {
+			case 's':
+			case 'm':
+			case 'h':
+			case 'd':
+			case 'w':
+			case 'n':
+			case 'y':
+				dataType = 'ms';
+		}
 		$timeout.cancel(operand.tmrDelayEvaluation);
 		operand.tmrDelayEvaluation = $timeout(function() { if ($scope.designer && $scope.designer.dialog) {operand.eval = '(evaluating)'; evaluateExpression(expression, dataType, operand);}}, 2500);
 	}
