@@ -1881,4 +1881,14 @@ if (document.selection) {
      document.execCommand("Copy");
 }}
 
+// Polyfills
+if (!String.prototype.endsWith) {
+	String.prototype.endsWith = function(search, this_len) {
+		if (this_len === undefined || this_len > this.length) {
+			this_len = this.length;
+		}
+		return this.substring(this_len - search.length, this_len) === search;
+	};
+}
+
 version = function() { return 'v0.2.101.20171227'; };
