@@ -40,6 +40,7 @@
                         <a id="options" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false"><i class="fa fa-cog" aria-hidden="true"></i> Options<span class="caret"></span></a>
                         <ul class="dropdown-menu btn btn-default">
 							<li><a href="" ng-click="showDashboard();">Go to dashboard</a></li>
+							<li role="separator" class="divider"></li>
 							<li><a href="" ng-click="showFuelStreams();">View fuel streams</a></li>
                             <li role="separator" class="divider"></li>
                             <li ng-click="newPiston();"><a>Add a new piston</a></li>
@@ -97,11 +98,12 @@
 			<div class="row">
 				<div class="sidebar">
 					<ul class="nav nav-sidebar">
-						<li><a href="" ng-click="newPiston();">Add a new piston</a></li>
-						<li><a href="" ng-click="showDashboard();">Go to dashboard (beta)</a></li>
-						<li><a href="" ng-click="showFuelStreams();">View fuel streams (beta)</a></li>
-						<li><a href="" ng-click="backup();">Backup piston(s)</a></li>						
-						<li ng-if="instanceCount > 1"><a href="" ng-click="movePiston();">Move piston(s)</a></li>						
+                        <li class="logo"><a href=""><img src="https://cdn.rawgit.com/ady624/webCoRE/master/resources/icons/app-CoRE@3x.png" height="60" width="60"></a></li>
+                        <li><a href="" ng-click="newPiston();">New Piston</a></li>
+						<li><a href="" ng-click="showDashboard();">Dashboard (beta)</a></li>
+						<li><a href="" ng-click="showFuelStreams();">Fuel Streams(beta)</a></li>
+						<li><a href="" ng-click="backup();">Backup Piston(s)</a></li>						
+						<li ng-if="instanceCount > 1"><a href="" ng-click="movePiston();">Move Piston(s)</a></li>						
 						<li><a href="" ng-click="showSettings();">Settings</a></li>						
 						<li>
 <!-- dashboard (sidebar) -->
