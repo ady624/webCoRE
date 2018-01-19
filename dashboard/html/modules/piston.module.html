@@ -222,9 +222,17 @@
 			</div>
 
 
+
 			<div class="row">
+				
 				<div class="col-md-12 col-lg-6">
-					<h2>Logs</h2>
+					<p>
+					<h3>Logs</h3>
+					<span class="pull-right" data-toggle="collapse" data-target="#collapseLogs">(toggle visibility)</span>
+					</p>
+
+					<div class="collapse in" id="collapseLogs">
+
 					<div class="logs">
 						<table class="table logs table-striped">
 							<thead>
@@ -253,8 +261,19 @@
 						<span class="pull-right form-control-static">Logging level&nbsp;</span>
 					</div>
 				</div>
+				</div>
+
+
+
+
 				<div class="col-md-12 col-lg-6">
-					<h2>Variables</h2>
+					<p>
+					<h3>Variables</h3>
+					<span class="pull-right" data-toggle="collapse" data-target="#collapseVars">(toggle visibility)</span>
+					</p>
+
+					<div class="collapse in" id="collapseVars">
+
 					<div multicolumn>
 						<label var ng-if="piston && piston.v">Local variables</label>
 						<div ng-if="localVars" var ng-repeat="var in piston.v"><span><span class="vartype">{{var.t}}</span><span>{{var.n}}</span> <i class="clickable fa fa-pencil-square-o" aria-hidden="true" ng-if="!var.v && (var.t.substr(-1) != ']')" ng-click="editLocalVariable(var)"></i></span><span class="{{var.v == null ? 'notset' : ''}}" ng-bind-html="var.v ? renderOperand(var.v) : formatVariableValue(var, var.n)"></span></div>
@@ -266,10 +285,18 @@
 						<div var ng-repeat="i in systemVarNames" ng-if="(!systemVars[i].d || (systemVars[i].v != null)) && (!i.startsWith('$current')) && (!i.startsWith('$previous'))"><span><span class="vartype">{{systemVars[i].t}}</span><span>{{i}}</span></span><span class="{{systemVars[i].v == null ? 'notset' : ''}}" ng-bind-html="formatVariableValue(systemVars[i], i)"></span></div>
 					</div>
 				</div>
+				</div>
 			</div>
+
+
 			<div class="row">				
 				<div class="col-md-12">
-					<h2>Evaluation console</h2>
+					<p>
+					<h3>Evaluation Console</h3>
+					<span class="pull-right" data-toggle="collapse" data-target="#collapseCons">(toggle visibility)</span>
+					</p>
+
+					<div class="collapse in" id="collapseCons">
 					<console ng-if="initialized" mode="{{mode}}">
 						<label>Evaluation console</label>
 						<content>
@@ -284,11 +311,19 @@
 					</console>
 				</div>
 			</div>
+			</div>
 			<div class="row" ng-if="!mobile && stats && stats.timing && stats.timing.length">
 				<div class="col-md-12">
-					<h2>Statistics</h2>
+
+					<p>
+					<h3>Statistics</h3>
+					<span class="pull-right" data-toggle="collapse" data-target="#collapseStats">(toggle visibility)</span>
+					</p>
+					
+					<div class="collapse in" id="collapseStats">
 					<canvas id="line" height="100" class="chart chart-line" chart-data="chart.data" chart-labels="chart.labels" chart-series="chart.series" chart-options="chart.options" chart-dataset-override="chart.datasetOverride" disabled-chart-click_ed="chart.onClick"></canvas>
 				</div>
+			</div>
 			</div>
 		</div>
 		<footer>
