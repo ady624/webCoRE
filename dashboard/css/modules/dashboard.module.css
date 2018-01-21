@@ -306,6 +306,11 @@ li[instance] {
   font-weight: 300;
 }
 
+.logo {
+	padding-right: 20px; /* offset sidebar padding 20px */
+	margin: 0px;
+}
+
 .nav-sidebar > .active > a,
 .nav-sidebar > .active > a:hover,
 .nav-sidebar > .active > a:focus {
