@@ -827,9 +827,11 @@ ptile div[google-chart] {
 	text-align: center;
     }
 
+    .table-responsive label {
+	background: rgba(0, 0, 0, 0.05);
+    }
 
-
-
+}
 
 /* column sizes */
 
