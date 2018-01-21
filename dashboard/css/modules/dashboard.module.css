@@ -361,7 +361,8 @@ li[instance] {
 
 .table>tbody>tr>td, .table>tbody>tr>th, .table>tfoot>tr>td, .table>tfoot>tr>th, .table>thead>tr>td, .table>thead>tr>th {
 	padding: 12px;
-    border-bottom: 1px solid #ddd;
+    border-bottom: 1px solid #eee;
+    border-top: 1px solid #eee;
 }
 
 table {
@@ -374,14 +375,14 @@ table {
 
 .table-responsive tr:hover {
 	cursor: pointer;
-	background-color: rgba(0, 160, 220, 0.2) !important;
+	background-color: #eee !important;
 }
 
 tr[active=false] {
 	color: #ccc;
 }
 
-.table-responsive label {
+.table-responsive label{
 	width: 100%;
 	margin: 0px;
 	color: #00a0dc;
@@ -495,10 +496,9 @@ td[opt]:hover > actions {
 	right: 0px;
 }
 
-
-
 .topinfo {
-	margin: 4px 8px !important;
+	margin: 4px 8px 20px 4px !important;
+	color: #00a0dc;
 }
 
 hub {
@@ -826,18 +826,6 @@ ptile div[google-chart] {
 	margin: 0px;
 	text-align: center;
     }
-
-    .table-responsive label {
-	background: rgba(0, 0, 0, 0.05);
-    }
-
-
-    .topinfo {
-	margin-left: 0px !important;
-	padding: 4px;
-    }
-    
-}
 
 
 
