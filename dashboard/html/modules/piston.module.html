@@ -31,11 +31,11 @@
 			</button>
 
 				<div ng-if="mode=='view'" class="nav navbar-nav btn-group hidden-xs hidden-sm">
-					<span class="title btn btn-default" title="Back to piston list" ng-click="home()"><i class="fa fa-chevron-left" aria-hidden="true"></i>&nbsp;{{location.name}} \ {{instance.name}} ({{instance.coreVersion.split('.').splice(0,3).join('.')}})</span>
+					<span class="title btn" title="Back to piston list" ng-click="home()"><i class="fa fa-chevron-left" aria-hidden="true"></i>&nbsp;{{location.name}} \ {{instance.name}} ({{instance.coreVersion.split('.').splice(0,3).join('.')}})</span>
 				</div>
 
 				<div ng-if="mode=='view'" class="nav navbar-nav btn-group hidden-md hidden-lg">
-					<span class="title btn btn-default" title="Back to piston list" ng-click="home()"><i class="fa fa-chevron-left" aria-hidden="true"></i>&nbsp;Back</span>
+					<span class="title btn" title="Back to piston list" ng-click="home()"><i class="fa fa-chevron-left" aria-hidden="true"></i>&nbsp;Back</span>
 				</div>
 
 
@@ -44,7 +44,7 @@
 				<div class="nav navbar-nav navbar-right">
 	                <li class="dropdown">
 	                    
-	                    <ul class="dropdown-menu btn">
+	                    <ul class="dropdown-menu btn btn-">
 							<li><a href="" ng-click="edit();" title="Edit the piston">Edit</a></li>
 							<li><a href="" ng-click="test();" title="Test the piston">Test</a></li>
 	                        <li><a href="" ng-click="snapshot(true);" title="Take an anonymized snapshot of the piston"><i class="fa fa-camera" aria-hidden="true"></i> Anonymized Snapshot</a></li>
@@ -52,7 +52,8 @@
 							
 							<li><a href="" ng-click="textSnapshot();" title="Copy piston to clipboard"><i class="fa fa-copy" aria-hidden="true"></i> Copy Piston</a></li>
 							<li><a href="" ng-click="deleteDialog();">Delete</a></li>
-							<li style="padding-left: 20px; padding-top: 10px">Trace  <input type="checkbox" ng-if="trace && trace.points" ng-model="view.trace" ng-click="toggleView(null)"></li>
+							<li><span style="padding: 20px">Trace
+							<input id="checkbox" type="checkbox" class="ng-if="trace && trace.points" ng-model="view.trace" on="Trace" off="Trace" ng-click="toggleView(null)"></span></li>
 	                    </ul>
 	                </li>
 	        	</div>
@@ -144,7 +145,7 @@
 			<div warning ng-if="meta.active && !subscriptions.events && !schedules.length && !piston.o.des" class="alert alert-warning">This piston does not subscribe to any events. Unless executed by other means, it will never run on its own.</div>
 			
 
-			<div class="row">
+			<div class="container-fluid">
 
 				<div id="columnCards" class="col-md-4">
 					<h2>Status</h2>
@@ -213,7 +214,7 @@
 							<button class="btn btn-success" ng-click="snapshot(true);" title="Take an anonymized snapshot of the piston"><i class="fa fa-camera" aria-hidden="true"></i></button>
 							<button class="btn btn-danger" ng-click="snapshot();" title="Take a snapshot of the piston"><i class="fa fa-camera" aria-hidden="true"></i></button>
 							<button class="btn btn-default" ng-click="textSnapshot();" title="Copy piston to clipboard"><i class="fa fa-copy" aria-hidden="true"></i></button>
-							<toggle ng-if="trace && trace.points" ng-model="view.trace" on="Trace" off="Trace" ng-click="toggleView(null)"></toggle>
+							<toggle class="ng-if="trace && trace.points" ng-model="view.trace" on="Trace" off="Trace" ng-click="toggleView(null)"></toggle>
 							<button class="btn btn-danger" ng-click="deleteDialog();">Delete</button>
 							<span class="pull-right" small ng-click="hideScript = !hideScript">({{hideScript ? 'show' : 'hide'}})</span>
 						</div>
