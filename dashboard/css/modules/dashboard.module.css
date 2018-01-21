@@ -300,7 +300,7 @@ li[instance] {
   margin-top: 10px;
 }
 .nav-sidebar > li > a {
-  padding: 10px 20px;
+  padding: 25px 20px;
   color: #00a0dc;
   text-transform: uppercase;
   font-weight: 300;
@@ -311,6 +311,7 @@ li[instance] {
 .nav-sidebar > .active > a:focus {
   color: #fff;
   background-color: #428bca;
+  transition-duration: 0.3s;
 }
 
 
@@ -959,4 +960,40 @@ ul.nav.nav-pills {
 
 #places {
     vertical-align: top;
+}
+
+.sidebarNewPiston {
+	  border-left: 5px solid #00a0dc;
+	  border-top: 1px solid #eee;
+	  border-bottom: 1px solid #eee;
+}
+
+.sidebarDash {
+	  border-left: 5px solid #ED207B;
+	  border-top: 1px solid #eee;
+	  border-bottom: 1px solid #eee;
+}
+
+.sidebarFuel {
+	  border-left: 5px solid #3AB54A;
+	  border-top: 1px solid #eee;
+	  border-bottom: 1px solid #eee;
+}
+
+.sidebarBackup {
+	  border-left: 5px solid #BF1E2E;
+	  border-top: 1px solid #eee;
+	  border-bottom: 1px solid #eee;
+}
+
+.sidebarMove {
+	  border-left: 5px solid #F7941D;	  
+	  border-top: 1px solid #eee;
+	  border-bottom: 1px solid #eee;
+}
+
+.sidebarSettings {
+	  border-left: 5px solid #B3B5B4;	  
+	  border-top: 1px solid #eee;
+	  border-bottom: 1px solid #eee;
 }

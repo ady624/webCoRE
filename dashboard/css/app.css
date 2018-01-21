@@ -962,21 +962,22 @@ span.s-up {
 }
 
 .btn-default {
-    background: #00A0DC;
-    color: #fff;
-    border: none;
-    border-radius: 0px;
-    text-shadow: none;
+    background: #00A0DC !important;
+    color: #fff !important;
+    border: none !important;
+    border-radius: 0px !important;
+    text-shadow: none !important;
+    text-decoration: none !important;
 
 }
 
 .btn-default:hover,
 .btn-default:focus,
 .btn-default:active    {
-    background: #999;
-    color: #fff;
-    transition-duration: 0.3s;
-
+    background: #999 !important;
+    color: #fff !important;
+    transition-duration: 0.3s !important;
+    text-decoration: none !important;
 
 }
 

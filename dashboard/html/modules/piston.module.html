@@ -44,7 +44,7 @@
 				<div class="nav navbar-nav navbar-right">
 	                <li class="dropdown">
 	                    
-	                    <ul class="dropdown-menu btn btn-">
+	                    <ul class="dropdown-menu btn btn">
 							<li><a href="" ng-click="edit();" title="Edit the piston">Edit</a></li>
 							<li><a href="" ng-click="test();" title="Test the piston">Test</a></li>
 	                        <li><a href="" ng-click="snapshot(true);" title="Take an anonymized snapshot of the piston"><i class="fa fa-camera" aria-hidden="true"></i> Anonymized Snapshot</a></li>
@@ -185,10 +185,10 @@
 
 					<h2>Automatic Backup</h2>
 					<div ng-if="meta.bin">
-						<p>Automatic backup is enabled for this piston.</p>
-						<p>{{mobile ? 'Touch' : 'Click'}} the box below to reveal your backup bin code. You should make a note of this code as you may use it later to restore a piston that you "mistakenly" deleted.</p>
+						<p> Automatic backup enabled. </p>
+						<p>{{mobile ? 'Touch' : 'Click'}} the box to reveal your backup bin code. Make a note of this code as you may use it later to restore a deleted piston.</p>
 						<p class="well bin animated" reveal="{{revealing}}" ng-click="revealBin();">{{meta.bin}}</p>
-						<p class="text-center"><b>Please do NOT share this code with anyone.</b></p>
+						<p class="text-center"><b>Do NOT share this code with anyone.</b></p>
 					</div>
 					<div ng-if="!meta.bin">
 						<p>You do not have automatic backup enabled for this piston.</p>

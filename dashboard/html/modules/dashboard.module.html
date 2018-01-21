@@ -17,43 +17,51 @@
             <span class="icon-bar"></span>
             <span class="icon-bar"></span>
           </button>
+
           <a class="navbar-brand">{{location.name}} \ {{instance ? instance.name + ' (' + instance.coreVersion.split('.').splice(0,3).join('.') + ')' : 'loading...'}}</a>
         </div>
+
         <div id="navbar" class="navbar-collapse collapse">
           	<ul class="nav navbar-nav navbar-left" ng-init="locations = listLocations()">
                	<li class="dropdown">
                     <a class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">{{location.name}} \ {{instance ? instance.name + ' (' + instance.coreVersion.split('.').splice(0,3).join('.') + ')' : 'loading...'}}<span class="caret"></span></a>
-                   	<ul class="dropdown-menu btn btn-default">
+                   	<ul class="dropdown-menu">
                         <li role="separator" class="dropdown-header" ng-repeat-start="l in locations" ng-init="instances = listInstances(l.id)">{{l.name}}</li>
                     	<li instance ng-repeat="i in instances" ng-repeat-end class="{{i.id == instance.id ? 'active-tick' : ''}}" ng-click="switchInstance(i.id);"><a>{{i.name}} ({{i.coreVersion.split('.').splice(0,3).join('.')}})</a></li>
 	            	</ul>
             	</li>
 			</ul>
-                <ul class="nav navbar-nav navbar-right">
-					<li class="dropdown">
-                        <a target="_blank" href="https://community.webcore.co" class="" role="button" aria-haspopup="true" aria-expanded="false">Forum</a>
-					</li>
-					<li class="dropdown">
-                        <a target="_blank" href="https://wiki.webcore.co" class="" role="button" aria-haspopup="true" aria-expanded="false">Wiki</a>
-					</li>
-                    <li class="dropdown">
-                        <a id="options" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false"><i class="fa fa-cog" aria-hidden="true"></i> Options<span class="caret"></span></a>
-                        <ul class="dropdown-menu btn btn-default">
-							<li><a href="" ng-click="showDashboard();">Go to dashboard</a></li>
+
+			<div class="nav navbar-nav navbar-right">
+				<div class="nav navbar-nav btn-group">
+   						<a target="_blank" href="https://community.webcore.co" class="btn btn-default" role="button" aria-haspopup="true" aria-expanded="false">Forum</a>
+  				</div>
+				
+				<div class="nav navbar-nav btn-group">
+					<a target="_blank" href="https://wiki.webcore.co" class="btn btn-default" type="button" aria-haspopup="true" aria-expanded="false">Wiki</a>
+  				</div>
+			</div>
+
+			<div class="nav navbar-nav navbar-right">
+  				<div class="nav navbar-nav btn-group">
+   						<a id="options" class="btn btn-default dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false"><i class="fa fa-cog" aria-hidden="true"></i> Options <span class="caret"></span></a>
+                        <ul class="dropdown-menu">
+							<li><a href="" ng-click="showDashboard();">Dashboard</a></li>
 							<li role="separator" class="divider"></li>
-							<li><a href="" ng-click="showFuelStreams();">View fuel streams</a></li>
+							<li><a href="" ng-click="showFuelStreams();">Fuel Streams</a></li>
                             <li role="separator" class="divider"></li>
-                            <li ng-click="newPiston();"><a>Add a new piston</a></li>
-                            <li ng-if="instanceCount > 1" ng-click="movePiston();"><a>Move piston(s)</a></li>
+                            <li ng-click="newPiston();"><a>New Piston</a></li>
+                            <li ng-if="instanceCount > 1" ng-click="movePiston();"><a>Move Piston(s)</a></li>
                             <li role="separator" class="divider"></li>
-                            <li><a href="register">Register another instance</a></li>
+                            <li><a href="register">Register Instance</a></li>
                             <li role="separator" class="divider"></li>
                             <li><a ng-click="showSettings()">Settings</a></li>
                             <li role="separator" class="divider"></li>
-                            <li ng-click="logOut();"><a>Log out</a></li>
+                            <li ng-click="logOut();"><a>Log Out</a></li>
                         </ul>
-                    </li>
-                </ul>
+				</div>
+			
+  			</div>
         </div>
       </div>
     </nav>
@@ -99,12 +107,12 @@
 				<div class="sidebar">
 					<ul class="nav nav-sidebar">
                         <li class="logo"><a href=""><img src="https://cdn.rawgit.com/ady624/webCoRE/master/resources/icons/app-CoRE@3x.png" height="60" width="60"></a></li>
-                        <li><a href="" ng-click="newPiston();">New Piston</a></li>
-						<li><a href="" ng-click="showDashboard();">Dashboard (beta)</a></li>
-						<li><a href="" ng-click="showFuelStreams();">Fuel Streams(beta)</a></li>
-						<li><a href="" ng-click="backup();">Backup Piston(s)</a></li>						
-						<li ng-if="instanceCount > 1"><a href="" ng-click="movePiston();">Move Piston(s)</a></li>						
-						<li><a href="" ng-click="showSettings();">Settings</a></li>						
+                        <li><a href="" ng-click="newPiston();" class="sidebarNewPiston">New Piston</a></li>
+						<li><a href="" ng-click="showDashboard();" class="sidebarDash">Dashboard (beta)</a></li>
+						<li><a href="" ng-click="showFuelStreams();" class="sidebarFuel">Fuel Streams (beta)</a></li>
+						<li><a href="" ng-click="backup();" class="sidebarBackup">Backup Piston(s)</a></li>						
+						<li ng-if="instanceCount > 1"><a href="" ng-click="movePiston();"" class="sidebarMove">Move Piston(s)</a></li>						
+						<li><a href="" ng-click="showSettings();" class="sidebarSettings">Settings</a></li>						
 						<li>
 <!-- dashboard (sidebar) -->
 <ins class="adsbygoogle"
