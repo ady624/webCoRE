@@ -302,8 +302,8 @@ li[instance] {
 .nav-sidebar > li > a {
   padding: 25px 20px;
   color: #00a0dc;
-  text-transform: uppercase;
   font-weight: 300;
+  font-size: 15px;
 }
 
 .logo {
@@ -864,6 +864,25 @@ ul.nav.nav-pills {
 
 }
 
+.nav-pills > li.active > a {
+	background-color: #00a0dc;
+	border-radius: 0px;
+	text-transform: uppercase;
+}
+
+.nav-pills > li.active > a:focus, 
+.nav-pills > li.active > a:hover, {
+	border-radius: 0px;
+}
+
+.nav-pills > li > a {
+	border-radius: 0px;
+	color: #00a0dc;
+	text-transform: uppercase;
+	cursor: pointer;
+}
+
+
 .nav-pills-footer {
     border-top: solid 1px #ccc;
     padding-top: 16px;
@@ -884,8 +903,8 @@ ul.nav.nav-pills {
     width: 128px;
     height: 128px;
     overflow: hidden;
-    border: solid 1px #ccc;
-    border-radius: 4px;	
+    border: solid 1px #ddd;
+    border-radius: 0px;	
     margin: 0px 8px 8px 0px !important;
     cursor: pointer;
 }

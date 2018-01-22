@@ -32,36 +32,29 @@
             	</li>
 			</ul>
 
-			<div class="nav navbar-nav navbar-right">
-				<div class="nav navbar-nav btn-group">
-   						<a target="_blank" href="https://community.webcore.co" class="btn btn-default" role="button" aria-haspopup="true" aria-expanded="false">Forum</a>
-  				</div>
+			<ul class="nav navbar-nav navbar-right">
+				<li class="dropdown">
+   						<a target="_blank" href="https://community.webcore.co" class="dropdown-toggle" aria-haspopup="true" aria-expanded="false">Forum</a>
+  				</li>
 				
-				<div class="nav navbar-nav btn-group">
-					<a target="_blank" href="https://wiki.webcore.co" class="btn btn-default" type="button" aria-haspopup="true" aria-expanded="false">Wiki</a>
-  				</div>
-			</div>
-
-			<div class="nav navbar-nav navbar-right">
-  				<div class="nav navbar-nav btn-group">
-   						<a id="options" class="btn btn-default dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false"><i class="fa fa-cog" aria-hidden="true"></i> Options <span class="caret"></span></a>
+				<li class="dropdown">
+					<a target="_blank" href="https://wiki.webcore.co" class="dropdown-toggle" type="button" aria-haspopup="true" aria-expanded="false">Wiki</a>
+  				</li>
+			
+  				<li class="dropdown">
+   						<a id="options" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false"><i class="fa fa-cog" aria-hidden="true"></i> Options <span class="caret"></span></a>
                         <ul class="dropdown-menu">
 							<li><a href="" ng-click="showDashboard();">Dashboard</a></li>
-							<li role="separator" class="divider"></li>
 							<li><a href="" ng-click="showFuelStreams();">Fuel Streams</a></li>
-                            <li role="separator" class="divider"></li>
                             <li ng-click="newPiston();"><a>New Piston</a></li>
                             <li ng-if="instanceCount > 1" ng-click="movePiston();"><a>Move Piston(s)</a></li>
-                            <li role="separator" class="divider"></li>
                             <li><a href="register">Register Instance</a></li>
-                            <li role="separator" class="divider"></li>
                             <li><a ng-click="showSettings()">Settings</a></li>
-                            <li role="separator" class="divider"></li>
                             <li ng-click="logOut();"><a>Log Out</a></li>
                         </ul>
-				</div>
+				</li>
 			
-  			</div>
+  			</ul>
         </div>
       </div>
     </nav>
@@ -107,12 +100,12 @@
 				<div class="sidebar">
 					<ul class="nav nav-sidebar">
                         <li class="logo"><a href=""><img class="logo" src="https://community.webcore.co/uploads/default/original/2X/d/d82aa5d0f719318d1f35bafdec06e2c8cf3c54be.svg" width="90%"></a></li>
-                        <li><a href="" ng-click="newPiston();" class="sidebarNewPiston">New Piston</a></li>
-						<li><a href="" ng-click="showDashboard();" class="sidebarDash">Dashboard (beta)</a></li>
-						<li><a href="" ng-click="showFuelStreams();" class="sidebarFuel">Fuel Streams (beta)</a></li>
-						<li><a href="" ng-click="backup();" class="sidebarBackup">Backup Piston(s)</a></li>						
-						<li ng-if="instanceCount > 1"><a href="" ng-click="movePiston();"" class="sidebarMove">Move Piston(s)</a></li>						
-						<li><a href="" ng-click="showSettings();" class="sidebarSettings">Settings</a></li>						
+                        <li><a href="" ng-click="newPiston();" class="sidebarNewPiston"><span class="glyphicon glyphicon-plus" aria-hidden="true"></span>&nbsp;&nbsp;New Piston</a></li>
+						<li><a href="" ng-click="showDashboard();" class="sidebarDash"><span class="glyphicon glyphicon-th" aria-hidden="true"></span>&nbsp;&nbsp;Dashboard (beta)</a></li>
+						<li><a href="" ng-click="showFuelStreams();" class="sidebarFuel"><span class="glyphicon glyphicon-equalizer" aria-hidden="true"></span>&nbsp;&nbsp;Fuel Streams (beta)</a></li>
+						<li><a href="" ng-click="backup();" class="sidebarBackup"><span class="glyphicon glyphicon-cloud-download" aria-hidden="true"></span>&nbsp;&nbsp;Backup Piston(s)</a></li>						
+						<li ng-if="instanceCount > 1"><a href="" ng-click="movePiston();"" class="sidebarMove"><span class="glyphicon glyphicon-sort" aria-hidden="true"></span>&nbsp;&nbsp;Move Piston(s)</a></li>						
+						<li><a href="" ng-click="showSettings();" class="sidebarSettings"><span class="glyphicon glyphicon-wrench" aria-hidden="true"></span>&nbsp;&nbsp;Settings</a></li>						
 						<li>
 <!-- dashboard (sidebar) -->
 <ins class="adsbygoogle"
