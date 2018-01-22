@@ -1460,8 +1460,9 @@ dnd-nodrag[disabled] * {
 	}
 }
 
-#columnCards {
+.columnCards {
     border: 1px solid #eee;
+    padding: 10px;
     margin-top: 20px;
     margin-bottom: 5px;
     margin-left: 10px;

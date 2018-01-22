@@ -356,7 +356,7 @@ li[instance] {
 }
 
 .table-striped>tbody>tr:nth-of-type(even) {
-    background-color: #ffffff;
+    background-color: rgba(0, 160, 220, 0.1);
 }
 
 .table>tbody>tr>td, .table>tbody>tr>th, .table>tfoot>tr>td, .table>tfoot>tr>th, .table>thead>tr>td, .table>thead>tr>th {
@@ -379,7 +379,7 @@ table {
 }
 
 tr[active=false] {
-	color: #ccc;
+	color: #bcbcbc;
 }
 
 .table-responsive label{

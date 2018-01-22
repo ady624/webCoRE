@@ -147,7 +147,8 @@
 
 			<div class="container-fluid">
 
-				<div id="columnCards" class="col-md-4">
+				<div class="col-md-4">
+					<div class="columnCards">
 					<h2>Status</h2>
 					<div ng-if="meta.active">
 						<p>This piston is currently active and humming happily.</p>
@@ -165,10 +166,12 @@
 						</div>
 					</p>
 				</div>
+			</div>
 
 
 
-				<div id="columnCards" class="col-md-4">
+				<div class="col-md-4">
+					<div class="columnCards">
 					<h2>Quick Facts</h2>
 					<p>Piston state: <span ng-bind-html="renderString(state.new)"></span></p>
 					<p>Last executed: {{lastExecuted ? utcToString(lastExecuted) : 'never'}}</p>
@@ -178,10 +181,11 @@
 					<p>Memory used: {{memory ? memory : 'unknown'}}</p>
 					<p>External URL: <a href="{{endpoint}}" target="_blank">(click to open/execute)</a></p>
 				</div>
+				</div>
 
 
-				<div id="columnCards" class="col-md-4">
-			
+				<div class="col-md-4">
+					<div class="columnCards">
 
 					<h2>Automatic Backup</h2>
 					<div ng-if="meta.bin">
@@ -193,8 +197,9 @@
 					<div ng-if="!meta.bin">
 						<p>You do not have automatic backup enabled for this piston.</p>
 						<button class="btn btn-default" ng-click="enableAutomaticBackup()">Enable automatic backup »</button>
-
+			
 					</div>
+				</div>
 				</div>
 			</div>
 
