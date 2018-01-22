@@ -1011,3 +1011,15 @@ ul.nav.nav-pills {
 	  border-top: 1px solid #eee;
 	  border-bottom: 1px solid #eee;
 }
+
+.sidebarRegister {
+	  border-left: 5px solid #F7941D;	  
+	  border-top: 1px solid #eee;
+	  border-bottom: 1px solid #eee;
+}
+
+.sidebarLogout {
+	  border-left: 5px solid #000;	  
+	  border-top: 1px solid #eee;
+	  border-bottom: 1px solid #eee;
+}

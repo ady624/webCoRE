@@ -219,7 +219,7 @@
 							<button class="btn btn-success" ng-click="snapshot(true);" title="Take an anonymized snapshot of the piston"><i class="fa fa-camera" aria-hidden="true"></i></button>
 							<button class="btn btn-danger" ng-click="snapshot();" title="Take a snapshot of the piston"><i class="fa fa-camera" aria-hidden="true"></i></button>
 							<button class="btn btn-default" ng-click="textSnapshot();" title="Copy piston to clipboard"><i class="fa fa-copy" aria-hidden="true"></i></button>
-							<toggle class="ng-if="trace && trace.points" ng-model="view.trace" on="Trace" off="Trace" ng-click="toggleView(null)"></toggle>
+							<toggle ng-if="trace && trace.points" ng-model="view.trace" on="Trace" off="Trace" ng-click="toggleView(null)"></toggle>
 							<button class="btn btn-danger" ng-click="deleteDialog();">Delete</button>
 							<span class="pull-right" small ng-click="hideScript = !hideScript">({{hideScript ? 'show' : 'hide'}})</span>
 						</div>

@@ -8,8 +8,13 @@
 			<li></li>
 		</ul>
 	</loader>
-	<nav ng-if="initialized && (view != 'dashboard')" class="navbar navbar-default navbar-fixed-top">
+
+
+<!-- Start navigation -->
+	<nav ng-if="initialized && (view != 'dashboard')" class="navbar navbar-inverse navbar-fixed-top">
       <div class="container-fluid">
+
+<!-- Brand -->
         <div class="navbar-header">
           <button id="navbar-btn" type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
             <span class="sr-only">Toggle navigation</span>
@@ -17,45 +22,45 @@
             <span class="icon-bar"></span>
             <span class="icon-bar"></span>
           </button>
-
           <a class="navbar-brand">{{location.name}} \ {{instance ? instance.name + ' (' + instance.coreVersion.split('.').splice(0,3).join('.') + ')' : 'loading...'}}</a>
         </div>
 
-        <div id="navbar" class="navbar-collapse collapse">
-          	<ul class="nav navbar-nav navbar-left" ng-init="locations = listLocations()">
-               	<li class="dropdown">
-                    <a class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">{{location.name}} \ {{instance ? instance.name + ' (' + instance.coreVersion.split('.').splice(0,3).join('.') + ')' : 'loading...'}}<span class="caret"></span></a>
+<!-- Nav links and content -->
+        <div id="navbar" class="collapse navbar-collapse">
+          	<ul class="nav navbar-nav" ng-init="locations = listLocations()">
+               	<li class="dropdown"><a class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">{{location.name}} \ {{instance ? instance.name + ' (' + instance.coreVersion.split('.').splice(0,3).join('.') + ')' : 'loading...'}}<span class="caret"></span></a>
                    	<ul class="dropdown-menu">
                         <li role="separator" class="dropdown-header" ng-repeat-start="l in locations" ng-init="instances = listInstances(l.id)">{{l.name}}</li>
-                    	<li instance ng-repeat="i in instances" ng-repeat-end class="{{i.id == instance.id ? 'active-tick' : ''}}" ng-click="switchInstance(i.id);"><a>{{i.name}} ({{i.coreVersion.split('.').splice(0,3).join('.')}})</a></li>
+                    	<li instance ng-repeat="i in instances" ng-repeat-end class="{{i.id == instance.id ? 'active-tick' : ''}}" ng-click="switchInstance(i.id);"><a>{{l.name}} \ {{i.name}} ({{i.coreVersion.split('.').splice(0,3).join('.')}})</a></li>
 	            	</ul>
             	</li>
 			</ul>
-
+				
 			<ul class="nav navbar-nav navbar-right">
 				<li class="dropdown">
-   						<a target="_blank" href="https://community.webcore.co" class="dropdown-toggle" aria-haspopup="true" aria-expanded="false">Forum</a>
-  				</li>
-				
+					<a target="_blank" role="button" aria-haspopup="true" aria-expanded="false" href="https://community.webcore.co">Forum</a>
+				</li>
 				<li class="dropdown">
-					<a target="_blank" href="https://wiki.webcore.co" class="dropdown-toggle" type="button" aria-haspopup="true" aria-expanded="false">Wiki</a>
-  				</li>
-			
-  				<li class="dropdown">
-   						<a id="options" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false"><i class="fa fa-cog" aria-hidden="true"></i> Options <span class="caret"></span></a>
+					<a target="_blank" role="button" aria-haspopup="true" aria-expanded="false" href="https://wiki.webcore.co">Wiki</a>
+				</li>
+
+				<li class="dropdown">
+   					<a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Options <span class="caret"></span></a>
                         <ul class="dropdown-menu">
-							<li><a href="" ng-click="showDashboard();">Dashboard</a></li>
-							<li><a href="" ng-click="showFuelStreams();">Fuel Streams</a></li>
-                            <li ng-click="newPiston();"><a>New Piston</a></li>
-                            <li ng-if="instanceCount > 1" ng-click="movePiston();"><a>Move Piston(s)</a></li>
-                            <li><a href="register">Register Instance</a></li>
-                            <li><a ng-click="showSettings()">Settings</a></li>
-                            <li ng-click="logOut();"><a>Log Out</a></li>
+                        	<li><a href="#" ng-click="newPiston();"><span class="glyphicon glyphicon-plus" aria-hidden="true"></span>&nbsp;&nbsp;New Piston</a></li>
+							<li><a href="#" ng-click="showDashboard();"><span class="glyphicon glyphicon-th" aria-hidden="true"></span>&nbsp;&nbsp;Dashboard</a></li>
+							<li><a href="#" ng-click="showFuelStreams();"><span class="glyphicon glyphicon-equalizer" aria-hidden="true"></span>&nbsp;&nbsp;Fuel Streams</a></li>
+							<li><a href="" ng-click="backup();"><span class="glyphicon glyphicon-cloud-download" aria-hidden="true"></span>&nbsp;&nbsp;Backup Piston(s)</a></li>
+                            <li ng-if="instanceCount > 1"><a href="#" ng-click="movePiston();">Move Piston(s)</a></li>
+                            <li><a href="register"><span class="glyphicon glyphicon-home" aria-hidden="true"></span>&nbsp;&nbsp;Register Instance</a></li>
+                            <li><a href="#" ng-click="showSettings()"><span class="glyphicon glyphicon-wrench" aria-hidden="true"></span>&nbsp;&nbsp;Settings</a></li>
+                            <li><a href="#" ng-click="logOut();"><span class="glyphicon glyphicon-log-out" aria-hidden="true"></span>&nbsp;&nbsp;Log Out</a></li>
                         </ul>
 				</li>
 			
   			</ul>
         </div>
+
       </div>
     </nav>
 
@@ -103,10 +108,12 @@
                         <li><a href="" ng-click="newPiston();" class="sidebarNewPiston"><span class="glyphicon glyphicon-plus" aria-hidden="true"></span>&nbsp;&nbsp;New Piston</a></li>
 						<li><a href="" ng-click="showDashboard();" class="sidebarDash"><span class="glyphicon glyphicon-th" aria-hidden="true"></span>&nbsp;&nbsp;Dashboard (beta)</a></li>
 						<li><a href="" ng-click="showFuelStreams();" class="sidebarFuel"><span class="glyphicon glyphicon-equalizer" aria-hidden="true"></span>&nbsp;&nbsp;Fuel Streams (beta)</a></li>
-						<li><a href="" ng-click="backup();" class="sidebarBackup"><span class="glyphicon glyphicon-cloud-download" aria-hidden="true"></span>&nbsp;&nbsp;Backup Piston(s)</a></li>						
-						<li ng-if="instanceCount > 1"><a href="" ng-click="movePiston();"" class="sidebarMove"><span class="glyphicon glyphicon-sort" aria-hidden="true"></span>&nbsp;&nbsp;Move Piston(s)</a></li>						
+						<li><a href="" ng-click="backup();" class="sidebarBackup"><span class="glyphicon glyphicon-cloud-download" aria-hidden="true"></span>&nbsp;&nbsp;Backup Piston(s)</a></li>	
+						<li><a href="register" class="sidebarRegister"><span class="glyphicon glyphicon-home" aria-hidden="true"></span>&nbsp;&nbsp;Register Instance</a></li>		
+						<li ng-if="instanceCount > 1"><a href="" ng-click="movePiston();"" class="sidebarMove"><span class="glyphicon glyphicon-sort" aria-hidden="true"></span>&nbsp;&nbsp;Move Piston(s)</a></li>				
 						<li><a href="" ng-click="showSettings();" class="sidebarSettings"><span class="glyphicon glyphicon-wrench" aria-hidden="true"></span>&nbsp;&nbsp;Settings</a></li>						
 						<li>
+						<li><a href="#" ng-click="logOut();" class="sidebarLogout"><span class="glyphicon glyphicon-log-out" aria-hidden="true"></span>&nbsp;&nbsp;Log Out</a></li>
 <!-- dashboard (sidebar) -->
 <ins class="adsbygoogle"
      style="display:inline-block;width:120px;height:600px;padding: 20px;"

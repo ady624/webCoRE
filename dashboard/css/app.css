@@ -297,6 +297,26 @@ toggle.input-group-addon {
     margin: 7.5px 3px;
 }
 
+.navbar-nav > li > .dropdown-menu {
+    margin-top: 0;
+    border-radius: 0;
+    box-shadow: none;
+}
+
+
+.dropdown-menu > li > a {
+    padding: 3px 30px;
+    border-left: 4px solid transparent;
+
+}
+
+.dropdown-menu > li > a:hover,
+.dropdown-menu > li > a:active,
+.dropdown-menu > li > a:focus {
+    padding: 3px 30px;
+    border-left: 4px solid #00a0dc;
+}
+
 .danger {
 	color: #c12e2a;
 }
@@ -587,7 +607,6 @@ ul .dropdown li {
 .dropdown-menu .divider {
     background-color: #ccc;
 }
-
 
 input[type=number] {
 	text-align: right;
@@ -908,15 +927,11 @@ span.s-up {
 	nav:not([fixed]) ul.dropdown-menu > li > a,
 	nav:not([fixed]) li.dropdown > a {
 		display: block;
-		padding: 8px 20px;
 		clear: both;
-		font-weight: 400;
-		height:44px;
-		line-height: 28px;
-		color: #333 !important;
-		white-space: nowrap;
-		font-size: 14px;
 		border-bottom: solid 1px #ccc;
+        color: #9d9d9d;
+        padding: 5px;
+        font-size: 14px;
 	}
 
 	.active-tick a::before {
@@ -955,14 +970,13 @@ span.s-up {
 .btn:hover,
 .btn:focus,
 .btn:active    {
-    background: #999;
+    background: #444;
     color: #fff;
     transition-duration: 0.3s;
 }
 
 .btn-default {
-    background: #00A0DC !important;
-    color: #fff !important;
+    background: #eee !important;
     border: none !important;
     border-radius: 0px !important;
     text-shadow: none !important;
@@ -972,13 +986,11 @@ span.s-up {
 .btn-default:hover,
 .btn-default:focus,
 .btn-default:active    {
-    background: #999 !important;
+    background: #444 !important;
     color: #fff !important;
     transition-duration: 0.3s !important;
     text-decoration: none !important;
-
 }
-
 
 /* success button */
 .btn-success {
@@ -1001,7 +1013,7 @@ span.s-up {
 
 /* info button */
 .btn-info {
-    background: #39b3d7;
+    background: #00a0dc;
     color: #FFF;
     border: none;
     border-radius: 0px;
@@ -1012,7 +1024,7 @@ span.s-up {
 .btn-info:hover,
 .btn-info:focus,
 .btn-info:active    {
-    background: #4abde8;
+    background: #19a9df;
     color: #fff;
     transition-duration: 0.3s;
 
@@ -1055,10 +1067,37 @@ span.s-up {
     transition-duration: 0.3s;
 }
 
+
+/* toggle button */
 .toggle.btn {
     width: 72px;
     height: 32px;
     min-height: 32px;
 }
 
+.toggle-handle {
+    background-color: #444 !important;
+}
 
+
+.toggle-on {
+    background-color: #00a0dc !important;
+}
+
+.toggle-on:active,
+.toggle-on:focus,
+.toggle-on:hover {
+    background-color: #00a0dc !important;
+}
+
+.btn-primary {
+    background-image: #00a0dc !important;
+    color: #fff;
+    background-image: none;
+}
+
+.btn-primary:active,
+.btn-primary:focus,
+.btn-primary:hover, {
+    background-image: #00a0dc !important;
+}
