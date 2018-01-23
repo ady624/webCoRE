@@ -578,12 +578,10 @@ label:not(.form-check-label) > input {
 }
 
 .active-tick a::before {
-  float: left;
   font-size: 12px;
   line-height: 1.5em;
 	vertical-align: center;
-  margin-left: -16px;
-	margin-right: 0px;
+	margin-right: 5px;
   content: '\f00c';
 	font-family: 'FontAwesome';
 }

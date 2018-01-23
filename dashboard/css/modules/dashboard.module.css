@@ -302,7 +302,6 @@ li[instance] {
 .nav-sidebar > li > a {
   padding: 25px 20px;
   color: #00a0dc;
-  font-weight: 300;
   font-size: 15px;
 }
 
@@ -805,10 +804,6 @@ ptile div[google-chart] {
     	line-height: 44px;
  }
 
-	.table-responsive td {
-		line-height: 44px !important;
-	}
-
 
     .navbar-fixed-bottom .navbar-collapse, .navbar-fixed-top .navbar-collapse {
         max-height: calc(100vh - 50px);
@@ -856,6 +851,16 @@ ptile div[google-chart] {
 		}
     }
 
+	.navbar-inverse .navbar-nav > li > a {
+	padding-left: 10px !important;
+	}
+
+	.navbar-inverse .navbar-nav > li > a:hover, 
+	.navbar-inverse .navbar-nav > li > a:focus, 
+	.navbar-inverse .navbar-nav > li > a:active {
+	color: #9d9d9d;
+	border-left: 4px solid #00a0dc;
+	}
 
 ul.nav.nav-pills {
     margin: 16px 0px;
@@ -881,7 +886,6 @@ ul.nav.nav-pills {
 	text-transform: uppercase;
 	cursor: pointer;
 }
-
 
 .nav-pills-footer {
     border-top: solid 1px #ccc;
