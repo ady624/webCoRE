@@ -9,56 +9,54 @@
 	</ul>
 </loader>
 <error ng-if="error" ng-animate><p ng-bind-html="error"></p><button class="btn btn-default" ng-click="home()">Go home</button></error>
-<nav ng-if="initialized" ng-animate class="navbar navbar-default">
-	
+
+<!-- Start nav -->
+<nav ng-if="initialized" ng-animate class="navbar navbar-inverse navbar-fixed-top">
 	<div class="container-fluid">
-		<!-- Brand and toggle get grouped for better mobile display -->
-		
+
+<!-- Brand section -->
+
 		<div class="navbar-header" style="width:100%">
-
-			<button ng-if="mode=='edit'" type="button" class="navbar-toggle btn collapsed" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1" aria-expanded="false">
+			<button ng-if="mode=='edit'" id="navbar-btn" type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1" aria-expanded="false">
+				<span class="sr-only">Toggle navigation</span>
+				<span class="icon-bar"></span>
+				<span class="icon-bar"></span>
+				<span class="icon-bar"></span>
+			</button>
+			<button ng-if="mode=='view'" id="navbar-btn" type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar-view-collapse" aria-expanded="false">
 				<span class="sr-only">Toggle navigation</span>
 				<span class="icon-bar"></span>
 				<span class="icon-bar"></span>
 				<span class="icon-bar"></span>
 			</button>
 
-			<button ng-if="mode=='view'" type="button" class="navbar-toggle btn collapsed" data-toggle="collapse" data-target="#navbar-view-collapse" aria-expanded="false">
-				<span class="sr-only">Toggle navigation</span>
-				<span class="icon-bar"></span>
-				<span class="icon-bar"></span>
-				<span class="icon-bar"></span>
-			</button>
+<!-- View mode -->
 
-				<div ng-if="mode=='view'" class="nav navbar-nav btn-group hidden-xs hidden-sm">
-					<span class="title btn" title="Back to piston list" ng-click="home()"><i class="fa fa-chevron-left" aria-hidden="true"></i>&nbsp;{{location.name}} \ {{instance.name}} ({{instance.coreVersion.split('.').splice(0,3).join('.')}})</span>
-				</div>
-
-				<div ng-if="mode=='view'" class="nav navbar-nav btn-group hidden-md hidden-lg">
-					<span class="title btn" title="Back to piston list" ng-click="home()"><i class="fa fa-chevron-left" aria-hidden="true"></i>&nbsp;Back</span>
-				</div>
-
-
-			<div ng-if="mode=='view'" class="collapse navbar-collapse" id="navbar-view-collapse">
-
-				<div class="nav navbar-nav navbar-right">
-	                <li class="dropdown">
-	                    
-	                    <ul class="dropdown-menu btn btn">
-							<li><a href="" ng-click="edit();" title="Edit the piston">Edit</a></li>
-							<li><a href="" ng-click="test();" title="Test the piston">Test</a></li>
-	                        <li><a href="" ng-click="snapshot(true);" title="Take an anonymized snapshot of the piston"><i class="fa fa-camera" aria-hidden="true"></i> Anonymized Snapshot</a></li>
-	                        <li><a href="" ng-click="snapshot();" title="Take a snapshot of the piston"><i class="fa fa-camera" aria-hidden="true"></i> Snapshot</a></li>
-							
-							<li><a href="" ng-click="textSnapshot();" title="Copy piston to clipboard"><i class="fa fa-copy" aria-hidden="true"></i> Copy Piston</a></li>
-							<li><a href="" ng-click="deleteDialog();">Delete</a></li>
-							<li><span style="padding: 20px">Trace
-							<input id="checkbox" type="checkbox" class="ng-if="trace && trace.points" ng-model="view.trace" on="Trace" off="Trace" ng-click="toggleView(null)"></span></li>
-	                    </ul>
-	                </li>
-	        	</div>
-
+			<div ng-if="mode=='view'" class="nav navbar-nav btn-group hidden-xs hidden-sm">
+				<span class="title btn" title="Back to piston list" ng-click="home()"><i class="fa fa-chevron-left" aria-hidden="true"></i>&nbsp;{{location.name}} \ {{instance.name}} ({{instance.coreVersion.split('.').splice(0,3).join('.')}})</span>
 			</div>
+			<div ng-if="mode=='view'" class="nav navbar-nav btn-group hidden-md hidden-lg">
+					<span class="title btn" title="Back to piston list" ng-click="home()"><i class="fa fa-chevron-left" aria-hidden="true"></i>&nbsp;Back</span>
+			</div>
+			<div ng-if="mode=='view'" class="collapse navbar-collapse" id="navbar-view-collapse">    
+	            <ul class="nav navbar-nav">
+	            	<li class="dropdown>">
+						<ul class="dropdown-menu">
+							<li class="dropdown"><a href="" ng-click="edit();" title="Edit the piston">Edit</a></li>
+							<li class="dropdown"><a href="" ng-click="test();" title="Test the piston">Test</a></li>
+	                        <li class="dropdown"><a href="" ng-click="snapshot(true);" title="Take an anonymized snapshot of the piston"><i class="fa fa-camera" aria-hidden="true"></i> Anonymized Snapshot</a></li>
+	                        <li class="dropdown"><a href="" ng-click="snapshot();" title="Take a snapshot of the piston"><i class="fa fa-camera" aria-hidden="true"></i> Snapshot</a></li>
+							<li class="dropdown"><a href="" ng-click="textSnapshot();" title="Copy piston to clipboard"><i class="fa fa-copy" aria-hidden="true"></i> Copy Piston</a></li>
+							<li class="dropdown"><a href="" ng-click="deleteDialog();">Delete</a></li>
+							<li class="dropdown"><div class="pistontrace"><input id="checkbox" type="checkbox" class="ng-if="trace && trace.points" ng-model="view.trace" on="Trace" off="Trace" ng-click="toggleView(null)"><a href="" >&nbsp;Trace</a></div></li>
+						</ul>
+					</li>
+	            </ul>
+			</div>
+
+<!-- End view mode -->
+
+<!-- Edit mode -->
 
 			<div ng-if="mode=='edit'" class="nav navbar-nav btn-group">
 				<button class="btn btn-default {{view.variables ? 'active' : ''}}" ng-click="toggleView('variables');" title="Show variables"><i class="fa fa-subscript" aria-hidden="true"></i></button>
@@ -74,19 +72,24 @@
 				</button>
 			</div>
 		
+<!-- Collect the nav links, forms, and other content for toggling -->
 
-		
-
-		<!-- Collect the nav links, forms, and other content for toggling -->
 		<div ng-if="mode=='edit'" class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
-			<div class="nav navbar-nav navbar-right btn-group">
-				<button ng-if="(mode=='edit') && !!meta.build" class="btn btn-warning" ng-click="cancel();">Cancel</button>
-				<button ng-if="mode=='edit'" class="btn btn-success" ng-click="save();">Save</button>
-			</div>
-			<ul ng-if="mode=='edit'" class="nav navbar-nav navbar-right">
-				<li class="dropdown">
-					<a class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false"><i class="fa fa-cog" aria-hidden="true"></i> Options<span class="caret"></span></a>
-					<ul class="dropdown-menu btn">
+			
+			<ul class="nav navbar-nav navbar-right">
+			<li class="dropdown">
+				<a ng-if="(mode=='edit') && !!meta.build" ng-click="cancel();" role="button">Cancel</a>
+			</li>
+			<li class="dropdown">
+				<a ng-if="(mode=='edit')" ng-click="deleteDialog();" role="button">Delete</a>
+			</li>
+			<li class="dropdown">
+				<a ng-if="mode=='edit'" ng-click="save();" role="button">Save</a>
+
+
+			<li ng-if="mode=='edit'" class="dropdown">
+					<a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Options <span class="caret"></span></a>
+					<ul class="dropdown-menu">
 						<li class="{{view.variables ? 'active-tick' : ''}}" ng-click="toggleView('variables');"><a>Show variables</a>
 						</li>
 						<li class="{{view.elseIfs ? 'active-tick' : ''}}" ng-click="toggleView('elseIfs');"><a>Show complex IFs</a>
@@ -104,20 +107,14 @@
 						<li class="{{view.console ? 'active-tick' : ''}}" ng-click="toggleView('console');"><a>Show evaluation console</a>
 						</li>
 					</ul>
-				</li>
+
 			</ul>
-			<!--	  <form class="navbar-form navbar-left">
-		<div class="form-group">
-		  <input type="text" class="form-control" placeholder="Search">
-		</div>
-		<button type="submit" class="btn btn-default">Submit</button>
-	  </form>-->
 	  	</div>
 		</div>
-		<!-- /.navbar-collapse -->
 	</div>
 </nav>
 
+<!-- End nav -->
 
 
 <viewer ng-if="initialized" ng-animate options="{{viewerPiston.showOptions}}" mode="{{mode}}">

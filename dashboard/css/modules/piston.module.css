@@ -1471,3 +1471,24 @@ dnd-nodrag[disabled] * {
     min-width: 275px;
     height: 275px;
 }
+
+.pistontrace {
+    border-left: 4px solid transparent !important;
+    display: block !important;
+	clear: both !important;
+	border-bottom: solid 1px #ccc !important;
+    color: #9d9d9d !important;
+    padding: 5px !important;
+    font-size: 14px !important;
+    text-decoration: none !important;
+
+}
+
+.pistontrace:hover,
+.pistontrace:active,
+.pistontrace:focus {
+    padding: 5px !important;
+    border-left: 4px solid #00a0dc !important;
+    background: #eee !important;
+    cursor: pointer !important;
+}

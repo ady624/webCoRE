@@ -870,7 +870,7 @@ ul.nav.nav-pills {
 }
 
 .nav-pills > li.active > a {
-	background-color: #00a0dc;
+	background-color: #00a0dc !important;
 	border-radius: 0px;
 	text-transform: uppercase;
 }

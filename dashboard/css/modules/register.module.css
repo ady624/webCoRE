@@ -1,34 +1,45 @@
 body {
 	overflow-y: auto;
+	background-color: #eee;
+	margin: 10% auto;
 }
 
 div[welcome] {
-	width: 800px;
-	display: table;
-	background: rgba(255, 255, 255, 0.95);
+	width: 400px;
 	border-radius: 4px;
 	margin: 32px auto;
 	padding-bottom: 32px;
 }
 
-div[welcome] > label {
-	display: block;
-	width: 100%;
-	text-align: center;
-	font-size: 32px;
-	font-weight: normal;
-	padding: 32px;
+div[welcome] img {
+	max-width: 400px;
+}
+
+div[login] {
+	max-width: 400px;
+	margin: 0 auto;
 }
 
 div[welcome] > div {
-	padding: 0px 32px;
+	padding: 32px;
 	text-align: justify;
 }
+
+.loginbox {
+	max-width: 450px; /* 400px max-width for content plus 25+25px padding */
+	border-radius: 0px;
+	border: 1px solid #999;
+	background: #fff;
+	padding: 25px;
+	margin: 0 auto;
+	min-height: 631px;
+}
+
 
 panel {
 	display: inline-block;
 	padding: 32px;
-	width: 50%;
+	width: 100%;
 	margin: 0px;
 	float: left;
 }
@@ -43,11 +54,31 @@ panel p {
 }
 
 input[code] {
-	font-size: 32px !important;
 	height: 48px !important;
-	text-align: center;
+	font-size: 26px !important;
+	width: 100%;
 	color: #999 !important;
+	border-radius: 0px;
+}
+
+input[code]:focus {
+	width: 100%;
 	text-transform: lowercase;
+
+}
+
+input[login] {
+	height: 48px !important;
+	font-size: 26px !important;
+	width: 100%;
+	color: #999 !important;
+	border-radius: 0px;
+}
+
+input[login]:focus {
+	width: 100%;
+	text-transform: lowercase;
+
 }
 
 ng-view {
@@ -67,4 +98,26 @@ ng-view {
 		border-left: none;
 		border-top: solid 1px #eee
 	} 
+}
+
+.nav-pills {
+	padding: 0 32px;
+}
+
+.nav-pills > li.active > a {
+	background-color: #00a0dc !important;
+	border-radius: 0px;
+	text-transform: uppercase;
+}
+
+.nav-pills > li.active > a:focus, 
+.nav-pills > li.active > a:hover, {
+	border-radius: 0px;
+}
+
+.nav-pills > li > a {
+	border-radius: 0px;
+	color: #00a0dc;
+	text-transform: uppercase;
+	cursor: pointer;
 }
