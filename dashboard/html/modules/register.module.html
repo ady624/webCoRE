@@ -18,7 +18,7 @@
 	</div>
 
 	<div class="d-flex p-2" login>
-		<ul  class="nav nav-pills pull-right">
+		<ul  class="nav nav-pills">
 			<li class="active"><a data-target="#instance" data-toggle="tab">Register Instance</a>
 	    	</li>
 	    	<li><a data-target="#account" data-toggle="tab">Login</a>
@@ -32,13 +32,13 @@
 			<div class="tab-pane fade in active" id="instance">
 				<panel>
 					<div class="form-group">
-						<p>To get started, please register a webCoRE instance.</p>
-						<p><a target="_blank" href="https://wiki.webcore.co/#Opening_the_new_dashboard_from_your_phone">First time?</a></p>
+						<p>Enter your registration code to get started.</p>
+						<p><a target="_blank" href="https://wiki.webcore.co/#Opening_the_new_dashboard_from_your_phone">Where's my code?</a></p>
 					</div>
 					<div class="form-group">
 						<input code class="form-control" type="text" maxlength="4" ng-model="code" />
 					</div>
-					<div class="form-group text-right">
+					<div class="form-group">
 						<button class="btn btn-info" ng-disabled="code.length != 4" ng-click="register();">Register</button>
 
 					</div>
@@ -60,7 +60,7 @@
 						<label>Password</label>
 						<input login class="form-control" type="password" ng-model="password" disabled/>
 					</div>
-					<div class="form-group text-right">
+					<div class="form-group">
 						<button class="btn btn-info" ng-disabled="(username.length < 4) || (password.length < 8)" ng-click="setStatus('Sorry, account log in is not yet available');">Log in</button>
 					</div>
 				</panel>
