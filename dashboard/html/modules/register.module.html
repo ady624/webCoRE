@@ -11,62 +11,73 @@
 <div class="container">
 	<div class="loginbox">
 
-	<div class="d-flex p-2">
-		<div welcome>
-			<img src="https://community.webcore.co/uploads/default/original/2X/d/d82aa5d0f719318d1f35bafdec06e2c8cf3c54be.svg">
+		<div class="d-flex p-2">
+			<div welcome>
+				<img src="https://community.webcore.co/uploads/default/original/2X/d/d82aa5d0f719318d1f35bafdec06e2c8cf3c54be.svg">
+			</div>
 		</div>
-	</div>
 
-	<div class="d-flex p-2" login>
-		<ul  class="nav nav-pills">
-			<li class="active"><a data-target="#instance" data-toggle="tab">Register Instance</a>
-	    	</li>
-	    	<li><a data-target="#account" data-toggle="tab">Login</a>
-	    	</li>
-		</ul>
-		<div class="tab-content clearfix">
-	     	<div class="tab-pane" id="general">
-				Nothing here yet.
+		<div class="d-flex p-2" login>
+			<ul  class="nav nav-pills">
+				<li class="active"><a data-target="#instance" data-toggle="tab">Register Instance</a>
+		    	</li>
+		    	<!-- <li><a data-target="#account" data-toggle="tab">Login</a>
+		    	</li> -->
+			</ul>
+			<div class="tab-content clearfix">
+		     	<div class="tab-pane" id="general">
+					Nothing here yet.
+				</div>
+
+				<div class="tab-pane fade in active" id="instance">
+					<panel>
+						<div class="form-group">
+							<p>Enter your registration code to get started.</p>
+							<p><a target="_blank" href="https://wiki.webcore.co/#Opening_the_new_dashboard_from_your_phone">Where's my code?</a></p>
+						</div>
+						<div class="input-group">
+							<input code class="form-control" type="text" maxlength="4" ng-model="code" />
+							<span class="input-group-addon"><a ng-disabled="code.length != 4" ng-click="register();" href="#"><span class="glyphicon glyphicon-menu-right" aria-hidden="true"></span></a></span>
+						</div>
+					</panel>
+
+				</div>
+				<!-- ACCOUNTS NOT CURRENTLY ACTIVE
+	        	<div class="tab-pane" id="account">
+					<panel>
+						<div class="form-group">
+							<p>Accounts are not currently enabled.</p>
+							<p>You do not need an account to use webCoRE. Please register an instance.</p>
+						</div>
+						<div class="form-group">
+							<label>Username</label>
+							<input login class="form-control" type="text" ng-model="username" disabled/>
+						</div>
+						<div class="form-group">
+							<label>Password</label>
+							<input login class="form-control" type="password" ng-model="password" disabled/>
+						</div>
+						<div class="form-group">
+							<button class="btn btn-info" ng-disabled="(username.length < 4) || (password.length < 8)" ng-click="setStatus('Sorry, account log in is not yet available');">Log in</button>
+						</div>
+					</panel>
+	        	</div>
+	        	-->
+
 			</div>
 
-			<div class="tab-pane fade in active" id="instance">
-				<panel>
-					<div class="form-group">
-						<p>Enter your registration code to get started.</p>
-						<p><a target="_blank" href="https://wiki.webcore.co/#Opening_the_new_dashboard_from_your_phone">Where's my code?</a></p>
-					</div>
-					<div class="form-group">
-						<input code class="form-control" type="text" maxlength="4" ng-model="code" />
-					</div>
-					<div class="form-group">
-						<button class="btn btn-info" ng-disabled="code.length != 4" ng-click="register();">Register</button>
-
-					</div>
-				</panel>
-
-			</div>
-
-        	<div class="tab-pane" id="account">
-				<panel>
-					<div class="form-group">
-						<p>Accounts are not currently enabled.</p>
-						<p>You do not need an account to use webCoRE. Please register an instance.</p>
-					</div>
-					<div class="form-group">
-						<label>Username</label>
-						<input login class="form-control" type="text" ng-model="username" disabled/>
-					</div>
-					<div class="form-group">
-						<label>Password</label>
-						<input login class="form-control" type="password" ng-model="password" disabled/>
-					</div>
-					<div class="form-group">
-						<button class="btn btn-info" ng-disabled="(username.length < 4) || (password.length < 8)" ng-click="setStatus('Sorry, account log in is not yet available');">Log in</button>
-					</div>
-				</panel>
-        	</div>
 		</div>
+		<div class="register-icons align-text-bottom">
+		<a href="https://www.paypal.me/ady624"><i class="fa fa-paypal fa-3x" aria-hidden="true"></i></a>
+		<span class="sr-only">Donate</span>
+
+		<a href="https://wiki.webcore.co/"><i class="fa fa-book fa-3x" aria-hidden="true"></i>
+		<span class="sr-only">Wiki</span>
+
+		<a href="https://community.webcore.co/"><i class="fa fa-comments fa-3x" aria-hidden="true"></i>
+		<span class="sr-only">Community Forum</span>
 	</div>
-</div>	
+
+	</div>	
 </div>
 </div>

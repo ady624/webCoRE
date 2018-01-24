@@ -27,12 +27,11 @@ div[welcome] > div {
 
 .loginbox {
 	max-width: 450px; /* 400px max-width for content plus 25+25px padding */
-	border-radius: 0px;
+	border-radius: 5px;
 	border: 1px solid #999;
 	background: #fff;
 	padding: 25px;
 	margin: 0 auto;
-	min-height: 631px;
 }
 
 
@@ -119,5 +118,23 @@ ng-view {
 	border-radius: 0px;
 	color: #00a0dc;
 	text-transform: uppercase;
+	cursor: pointer;
+}
+
+.register-icons {
+	text-align: center;
+	position: relative;
+	margin-top: 50px;
+}
+
+.register-icons > a {
+	color: #ccc;
+	padding: 10px;
+}
+
+.register-icons > a:hover,
+.register-icons > a:focus,
+.register-icons > a:active {
+	color: #999;
 	cursor: pointer;
 }
