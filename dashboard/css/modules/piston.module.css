@@ -1412,6 +1412,7 @@ dnd-nodrag[disabled] * {
 		margin: 0px;
 		padding: 0px;
 		overflow-y: auto;
+		font-size: 10px;
 	}
 
 	piston[mode=edit] {
@@ -1419,7 +1420,6 @@ dnd-nodrag[disabled] * {
 		width: 100% !important;
 		height: 100% !important;
 		display:  block;
-		font-size: 10px;
 	}
 
 	toolbar {

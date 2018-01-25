@@ -274,6 +274,7 @@ nav[fixed] a {
 
 /* Hide for mobile, show later */
 .sidebar {
+	display: none;
   width: 275px;
   float: left;
 }
@@ -319,7 +320,7 @@ li[instance] {
 .nav-sidebar > .active > a:hover,
 .nav-sidebar > .active > a:focus {
   color: #fff;
-  background-color: #428bca;
+  background-color: #eee;
   transition-duration: 0.3s;
 }
 
