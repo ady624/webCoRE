@@ -274,8 +274,7 @@ nav[fixed] a {
 
 /* Hide for mobile, show later */
 .sidebar {
-  display: none;
-  width: 250px;
+  width: 275px;
   float: left;
 }
 
@@ -305,9 +304,15 @@ li[instance] {
   font-size: 15px;
 }
 
-.logo {
+.logo-sm {
+	width: 50px;
+	padding-right: 10px;
+}
+
+.logo-lg {
 	padding-right: 20px; /* offset sidebar padding 20px */
 	margin: 0px;
+	width: 180px;
 }
 
 .nav-sidebar > .active > a,
@@ -498,6 +503,7 @@ td[opt]:hover > actions {
 .topinfo {
 	margin: 4px 8px 20px 4px !important;
 	color: #15bfff;
+	padding-top: 10px;
 }
 
 hub {
@@ -783,7 +789,7 @@ ptile div[google-chart] {
   }
 
 	.main {
-		padding-left: 260px !important;
+		padding-left: 285px !important;
 	}
 
 }
@@ -853,11 +859,10 @@ ptile div[google-chart] {
 
 	.navbar-inverse .navbar-nav > li > a {
 	padding-left: 10px !important;
+	border-left: 4px solid transparent;
 	}
 
-	.navbar-inverse .navbar-nav > li > a:hover, 
-	.navbar-inverse .navbar-nav > li > a:focus, 
-	.navbar-inverse .navbar-nav > li > a:active {
+	.navbar-inverse .navbar-nav > li > a:hover {
 	color: #9d9d9d;
 	border-left: 4px solid #15bfff;
 	}

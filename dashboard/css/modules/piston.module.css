@@ -1377,9 +1377,9 @@ dnd-nodrag[disabled] * {
 
 	piston:not([printing]) line,
 	piston:not([printing]) line * {
-		line-height: 44px !important;
-		min-height: 44px !important;
-		font-size: 16px;
+		line-height: 16px !important;
+		min-height: 22px !important;
+		font-size: 12px;
 	}
 
 	piston:not([printing]) line::after {
@@ -1394,6 +1394,10 @@ dnd-nodrag[disabled] * {
 	piston:not([printing]) condition subscription,
 	piston:not([printing]) statement async {
 		margin-top: 16px;
+	}
+
+	viewer {
+		padding: 0px 5px;
 	}
 }
 
@@ -1415,6 +1419,7 @@ dnd-nodrag[disabled] * {
 		width: 100% !important;
 		height: 100% !important;
 		display:  block;
+		font-size: 10px;
 	}
 
 	toolbar {
