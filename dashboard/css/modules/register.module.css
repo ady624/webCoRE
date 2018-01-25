@@ -1,6 +1,6 @@
 body {
 	overflow-y: auto;
-	background-color: #eee;
+	background-color: #999;
 	margin: 10% auto;
 }
 
@@ -27,7 +27,7 @@ div[welcome] > div {
 
 .loginbox {
 	max-width: 450px; /* 400px max-width for content plus 25+25px padding */
-	border-radius: 5px;
+	border-radius: 0px;
 	border: 1px solid #999;
 	background: #fff;
 	padding: 25px;
@@ -49,7 +49,7 @@ panel+panel {
 }
 
 panel p {
-	text-align: justify;
+	text-align: left;
 }
 
 input[code] {
@@ -104,7 +104,7 @@ ng-view {
 }
 
 .nav-pills > li.active > a {
-	background-color: #00a0dc !important;
+	background-color: #15bfff !important;
 	border-radius: 0px;
 	text-transform: uppercase;
 }
@@ -116,7 +116,7 @@ ng-view {
 
 .nav-pills > li > a {
 	border-radius: 0px;
-	color: #00a0dc;
+	color: #15bfff;
 	text-transform: uppercase;
 	cursor: pointer;
 }
@@ -129,7 +129,7 @@ ng-view {
 
 .register-icons > a {
 	color: #ccc;
-	padding: 10px;
+	padding: 6px;
 }
 
 .register-icons > a:hover,

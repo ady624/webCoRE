@@ -9,6 +9,7 @@ viewer[mode=view] {
 
 div[header] {
     margin: 0px -15px;
+    margin-bottom: 20px;
     background: #eee;
     border-bottom: solid 1px #ccc;
     padding: 0px;
@@ -1142,7 +1143,7 @@ div[multicolumn] {
     -ms-column-gap: 0px;
     -o-column-gap: 0px;
     column-gap: 0px;
-    border: solid 1px #eee;
+    border: 1px solid #ccc;
     background: #f8f8f8;
 	padding-bottom: 8px;
 
@@ -1463,16 +1464,12 @@ dnd-nodrag[disabled] * {
 .columnCards {
     border: 1px solid #eee;
     padding: 10px;
-    margin-top: 20px;
     margin-bottom: 5px;
-    margin-left: 10px;
-    margin-right: 10px;
-    width: 30%;
     min-width: 275px;
     height: 275px;
 }
 
-.pistontrace {
+div[input] {
     border-left: 4px solid transparent !important;
     display: block !important;
 	clear: both !important;
@@ -1484,11 +1481,22 @@ dnd-nodrag[disabled] * {
 
 }
 
-.pistontrace:hover,
-.pistontrace:active,
-.pistontrace:focus {
+div[input]:hover,
+div[input]:active,
+div[input]:focus {
     padding: 5px !important;
-    border-left: 4px solid #00a0dc !important;
+    border-left: 4px solid #15bfff !important;
     background: #eee !important;
     cursor: pointer !important;
+}
+
+.toggle-arrow {
+	font-size: 16px;
+	font-weight: 700;
+	cursor: pointer;
+}
+
+.toggle-arrow:hover {
+	font-size: 18px;
+	transition-duration: 0.3s;
 }

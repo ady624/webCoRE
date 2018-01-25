@@ -301,7 +301,7 @@ li[instance] {
 }
 .nav-sidebar > li > a {
   padding: 25px 20px;
-  color: #00a0dc;
+  color: #444;
   font-size: 15px;
 }
 
@@ -384,14 +384,14 @@ tr[active=false] {
 .table-responsive label{
 	width: 100%;
 	margin: 0px;
-	color: #00a0dc;
+	color: #15bfff;
 	font-size: 14px;
 	font-weight: 300;
 }
 
 td i[star] {	
 	display: inline-block;
-	color: #00a0dc;
+	color: #15bfff;
 	font-size: 8px;
 	margin-top: -4px;
 	padding: 1em 4px 0px 0px;
@@ -497,7 +497,7 @@ td[opt]:hover > actions {
 
 .topinfo {
 	margin: 4px 8px 20px 4px !important;
-	color: #00a0dc;
+	color: #15bfff;
 }
 
 hub {
@@ -859,7 +859,7 @@ ptile div[google-chart] {
 	.navbar-inverse .navbar-nav > li > a:focus, 
 	.navbar-inverse .navbar-nav > li > a:active {
 	color: #9d9d9d;
-	border-left: 4px solid #00a0dc;
+	border-left: 4px solid #15bfff;
 	}
 
 ul.nav.nav-pills {
@@ -870,7 +870,7 @@ ul.nav.nav-pills {
 }
 
 .nav-pills > li.active > a {
-	background-color: #00a0dc !important;
+	background-color: #15bfff !important;
 	border-radius: 0px;
 	text-transform: uppercase;
 }
@@ -882,7 +882,7 @@ ul.nav.nav-pills {
 
 .nav-pills > li > a {
 	border-radius: 0px;
-	color: #00a0dc;
+	color: #15bfff;
 	text-transform: uppercase;
 	cursor: pointer;
 }
@@ -981,7 +981,7 @@ ul.nav.nav-pills {
 }
 
 .sidebarNewPiston {
-	  border-left: 5px solid #00a0dc;
+	  border-left: 5px solid #15bfff;
 	  border-top: 1px solid #eee;
 	  border-bottom: 1px solid #eee;
 }

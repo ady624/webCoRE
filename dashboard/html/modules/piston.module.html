@@ -41,8 +41,8 @@
 							<li class="dropdown"><a href="" ng-click="test();" title="Test the piston">Test</a></li>
 	                        <li class="dropdown"><a href="" ng-click="snapshot(true);" title="Take an anonymized snapshot of the piston"><i class="fa fa-camera" aria-hidden="true"></i> Anonymized Snapshot</a></li>
 	                        <li class="dropdown"><a href="" ng-click="snapshot();" title="Take a snapshot of the piston"><i class="fa fa-camera" aria-hidden="true"></i> Snapshot</a></li>
-							<li class="dropdown"><a href="" ng-click="textSnapshot();" title="Copy piston to clipboard"><i class="fa fa-copy" aria-hidden="true"></i> Copy Piston</a></li>
-							<li class="dropdown"><a href="" ng-click="deleteDialog();">Delete</a></li>
+							<li class="dropdown"><a href="" ng-click="textSnapshot();" title="Copy piston to clipboard"><i class="fa fa-copy" aria-hidden="true"  title="Copy piston"></i> Copy Piston</a></li>
+							<li class="dropdown"><a href="" ng-click="deleteDialog();" title="Delete piston">Delete</a></li>
 							<li class="dropdown"><div class="pistontrace"><input id="checkbox" type="checkbox" class="ng-if="trace && trace.points" ng-model="view.trace" on="Trace" off="Trace" ng-click="toggleView(null)"><a href="" >&nbsp;Trace</a></div></li>
 						</ul>
 					</li>
@@ -192,6 +192,7 @@
 			
 					</div>
 				</div>
+			</div>
 				</div>
 			</div>
 
@@ -213,7 +214,7 @@
 							<button class="btn btn-default" ng-click="textSnapshot();" title="Copy piston to clipboard"><i class="fa fa-copy" aria-hidden="true"></i></button>
 							<toggle ng-if="trace && trace.points" ng-model="view.trace" on="Trace" off="Trace" ng-click="toggleView(null)"></toggle>
 							<button class="btn btn-danger" ng-click="deleteDialog();">Delete</button>
-							<span class="pull-right" small ng-click="hideScript = !hideScript">({{hideScript ? 'show' : 'hide'}})</span>
+							<span class="toggle-arrow pull-right" small ng-click="hideScript = !hideScript" title="Hide/Show">{{hideCards ? '&#8592;' : '&#8595;'}}</span>
 						</div>
 
 						<p ng-if="!hideScript">
@@ -223,18 +224,16 @@
 				</div>
 			</div>
 
-
-
 			<div class="row">
 				
 				<div class="col-md-12 col-lg-6">
 					<p>
 					<h3>Logs</h3>
-					<span class="pull-right" data-toggle="collapse" data-target="#collapseLogs">(toggle visibility)</span>
+					<span class="toggle-arrow pull-right" small ng-click="hideLogs=!hideLogs" title="Hide/Show">{{hideLogs ? '&#8592;' : '&#8595;'}}</span>
 					</p>
-
+					<div ng-if="!hideLogs">
 					<div class="collapse in" id="collapseLogs">
-
+				
 					<div class="logs">
 						<table class="table logs table-striped">
 							<thead>
@@ -264,6 +263,7 @@
 					</div>
 				</div>
 				</div>
+				</div>
 
 
 
@@ -271,9 +271,9 @@
 				<div class="col-md-12 col-lg-6">
 					<p>
 					<h3>Variables</h3>
-					<span class="pull-right" data-toggle="collapse" data-target="#collapseVars">(toggle visibility)</span>
+					<span class="toggle-arrow pull-right" small ng-click="hideVars=!hideVars" title="Hide/Show">{{hideVars ? '&#8592;' : '&#8595;'}}</span>
 					</p>
-
+					<div ng-if="!hideVars">
 					<div class="collapse in" id="collapseVars">
 
 					<div multicolumn>
@@ -287,6 +287,7 @@
 						<div var ng-repeat="i in systemVarNames" ng-if="(!systemVars[i].d || (systemVars[i].v != null)) && (!i.startsWith('$current')) && (!i.startsWith('$previous'))"><span><span class="vartype">{{systemVars[i].t}}</span><span>{{i}}</span></span><span class="{{systemVars[i].v == null ? 'notset' : ''}}" ng-bind-html="formatVariableValue(systemVars[i], i)"></span></div>
 					</div>
 				</div>
+			</div>
 				</div>
 			</div>
 
@@ -295,9 +296,9 @@
 				<div class="col-md-12">
 					<p>
 					<h3>Evaluation Console</h3>
-					<span class="pull-right" data-toggle="collapse" data-target="#collapseCons">(toggle visibility)</span>
+					<span class="toggle-arrow pull-right" small ng-click="hideEval=!hideEval" title="Hide/Show">{{hideEval ? '&#8592;' : '&#8595;'}}</span>
 					</p>
-
+					<div ng-if="!hideEval">
 					<div class="collapse in" id="collapseCons">
 					<console ng-if="initialized" mode="{{mode}}">
 						<label>Evaluation console</label>
@@ -314,18 +315,20 @@
 				</div>
 			</div>
 			</div>
+			</div>
 			<div class="row" ng-if="!mobile && stats && stats.timing && stats.timing.length">
 				<div class="col-md-12">
 
 					<p>
 					<h3>Statistics</h3>
-					<span class="pull-right" data-toggle="collapse" data-target="#collapseStats">(toggle visibility)</span>
+					<span class="toggle-arrow pull-right" small ng-click="hideStats=!hideStats" title="Hide/Show">{{hideStats ? '&#8592;' : '&#8595;'}}</span>
 					</p>
-					
+					<div ng-if="!hideStats">
 					<div class="collapse in" id="collapseStats">
 					<canvas id="line" height="100" class="chart chart-line" chart-data="chart.data" chart-labels="chart.labels" chart-series="chart.series" chart-options="chart.options" chart-dataset-override="chart.datasetOverride" disabled-chart-click_ed="chart.onClick"></canvas>
 				</div>
 			</div>
+		</div>
 			</div>
 		</div>
 		<footer>

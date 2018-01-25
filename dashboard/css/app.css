@@ -11,13 +11,13 @@ body {
 }
 
 h2 {
-    color: #00a0dc;
+    color: #444;
     font-weight: 300;
     font-size: 22px;
 }
 
 h3 {
-    color: #00a0dc;
+    color: #444;
     font-weight: 300;
     font-size: 22px;
     display: inline;
@@ -272,10 +272,10 @@ info {
 
 .input-group-addon {
 	border-radius: 0;
-	border-top: 1px solid #00a0dc;
-	border-bottom: 1px solid #00a0dc;
-	border-right: 1px solid #00a0dc;
-	background-color: #00a0dc;
+	border-top: 1px solid #15bfff;
+	border-bottom: 1px solid #15bfff;
+	border-right: 1px solid #15bfff;
+	background-color: #15bfff;
 	text-decoration: none;
 	color: #fff;
 }
@@ -338,7 +338,7 @@ toggle.input-group-addon {
 .dropdown-menu > li > a:active,
 .dropdown-menu > li > a:focus {
     padding: 3px 30px;
-    border-left: 4px solid #00a0dc;
+    border-left: 4px solid #15bfff;
 }
 
 .danger {
@@ -954,7 +954,7 @@ span.s-up {
 
 /* info button */
 .btn-info {
-    background: #00a0dc;
+    background: #15bfff;
     color: #FFF;
     border: none;
     border-radius: 0px;
@@ -1022,17 +1022,17 @@ span.s-up {
 
 
 .toggle-on {
-    background-color: #00a0dc !important;
+    background-color: #15bfff !important;
 }
 
 .toggle-on:active,
 .toggle-on:focus,
 .toggle-on:hover {
-    background-color: #00a0dc !important;
+    background-color: #15bfff !important;
 }
 
 .btn-primary {
-    background-image: #00a0dc !important;
+    background-image: #15bfff !important;
     color: #fff;
     background-image: none;
 }
@@ -1040,5 +1040,5 @@ span.s-up {
 .btn-primary:active,
 .btn-primary:focus,
 .btn-primary:hover, {
-    background-image: #00a0dc !important;
+    background-image: #15bfff !important;
 }
