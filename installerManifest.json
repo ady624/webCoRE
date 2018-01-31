@@ -1,0 +1,65 @@
+{
+    "namespace": "ady624",
+    "repoOwner": "ady624",
+    "repoName": "webCoRE",
+    "repoBranch": "master",
+    "name": "webCoRE",
+    "author": "Adrian Caramaliu",
+    "description": "Web enabled Community's own Rule Engine",
+    "category": "My Apps",
+    "videoUrl": "",
+    "photoUrl": "",
+    "bannerUrl": "",
+    "smartApps": {
+        "parent": {
+            "name": "webCoRE",
+            "iconUrl": "https://cdn.rawgit.com/ady624/webCoRE/master/resources/icons/app-CoRE.png",
+            "published": true,
+            "oAuth": true,
+            "appSettings": {},
+            "version": "0.2.102.20180116",
+            "appUrl": "smartapps/ady624/webcore.src/webcore.groovy"
+        },
+        "children": [{
+                "name": "webCoRE Piston",
+                "iconUrl": "https://cdn.rawgit.com/ady624/webCoRE/master/resources/icons/app-CoRE.png",
+                "published": true,
+                "oAuth": false,
+                "appUrl": "smartapps/ady624/webcore-piston.src/webcore-piston.groovy",
+                "appSettings": {},
+                "version": "0.2.102.20180116",
+                "optional": false
+            },
+            {
+                "name": "webCoRE Storage",
+                "iconUrl": "https://cdn.rawgit.com/ady624/webCoRE/master/resources/icons/app-CoRE.png",
+                "published": true,
+                "oAuth": false,
+                "appUrl": "smartapps/ady624/webcore-storage.src/webcore-storage.groovy",
+                "appSettings": {},
+                "version": "0.2.102.20180116",
+                "optional": false
+            },
+            {
+                "name": "webCoRE Dashboard",
+                "iconUrl": "https://cdn.rawgit.com/ady624/webCoRE/master/resources/icons/app-CoRE.png",
+                "published": true,
+                "oAuth": false,
+                "appUrl": "smartapps/ady624/webcore-dashboard.src/webcore-dashboard.groovy",
+                "appSettings": {},
+                "version": "0.2.102.20180116",
+                "optional": false
+            }
+        ]
+    },
+    "deviceHandlers": [{
+                "name": "webCoRE Presence Sensor",
+                "iconUrl": "https://cdn.rawgit.com/ady624/webCoRE/master/resources/icons/app-CoRE.png",
+                "published": true,
+                "oAuth": false,
+                "appUrl": "devicetypes/ady624/webcore-presence-sensor.src/webcore-presence-sensor.groovy",
+                "appSettings": {},
+                "version": "0.2.0fa.20171011",
+                "optional": false
+            }]
+}
