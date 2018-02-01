@@ -16,8 +16,9 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-public static String version() { return "v0.2.0fa.20171011" }
+public static String version() { return "v0.2.102.20180201" }
 /*
+ *	02/01/2018 >>> v0.2.102.20180201 - BETA M2 - Fixed SmartThings app crash, thanks to @JohnHoke
  *	10/11/2017 >>> v0.2.0fa.20171010 - BETA M2 - Various bug fixes and improvements - fixed the mid() and random() functions
  *	10/07/2017 >>> v0.2.0f9.20171007 - BETA M2 - Added previous location attribute support and methods to calculate distance between places, people, fixed locations...
  *	10/06/2017 >>> v0.2.0f8.20171006 - BETA M2 - Added support for Android geofence filtering depending on horizontal accuracy
@@ -77,7 +78,7 @@ metadata {
 	}
 
 	tiles(scale: 2) {    
-		multiAttributeTile(name: "display", width: 2, height: 2, canChangeBackground: true) {
+		multiAttributeTile(name: "display", type: "generic", width: 2, height: 2, canChangeBackground: true) {
 			tileAttribute ("device.display", key: "PRIMARY_CONTROL") {
             	attributeState "present, not sleeping", label: 'Home', icon:"st.nest.nest-away", backgroundColor:"#c0ceb9"
 				attributeState "present, sleeping", label: 'Home (asleep)', icon:"st.Bedroom.bedroom2", backgroundColor:"#6879a3"
