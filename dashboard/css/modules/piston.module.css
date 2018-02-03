@@ -15,10 +15,6 @@ div[header] {
     padding: 0px;
 }
 
-.checkbox {
-	float: right;
-}
-
 div[header] h2 {
 	margin: 16px 0px;
 }
@@ -115,7 +111,7 @@ piston[movable=true] > gutter {
 }
 
 piston[movable=true] > gutter::after {
-	width: 28px;	
+	width: 28px;
 }
 
 piston[movable=true] content {
@@ -404,6 +400,10 @@ viewer[mode=view] piston content {
 	z-index: 2;
 }
 
+.navbar-collapse.in{
+	width:100%;
+}
+
 nav~piston {
 	top: 52px;
 }
@@ -619,7 +619,7 @@ span[kwd] + task {
 span.hl.err,
 span.hl.err * {
 	background: #fcc !important;
-	color: #f00 !important;	
+	color: #f00 !important;
 }
 
 label[group] {
@@ -643,7 +643,7 @@ span.vartype {
 	float:left;
 	text-align: right;
 	line-height: 20px;;
-	width: 60px;	
+	width: 60px;
 	*/
 	color: #2b91af;
 	font-size: 0.75em;
@@ -653,7 +653,7 @@ span.vartype {
 
 span.varval {
 	float:right;
-	width: 60px;	
+	width: 60px;
 	color: #2b91af;
 	text-align: right;
 	font-size: 0.75em;
@@ -943,7 +943,7 @@ parameter[optional=true] label.control-label::after {
 [clipboard-item] [item] {
 	position: relative !important;
 	display:  block;
-	background: #fffcf0 !important;	
+	background: #fffcf0 !important;
 	border: solid 1px #ccc !important;
 	padding: 8px;
 }
@@ -1134,7 +1134,7 @@ div[items] div[item] item button {
 div[multicolumn] {
 	column-count: 2;
 	-webkit-column-count: 2;
-	-moz-column-count: 2;	
+	-moz-column-count: 2;
     -webkit-column-rule: solid 1px #eee; /* Chrome, Safari, Opera */
     -moz-column-rule:solid 1px #eee; /* Firefox */
     column-rule: solid 1px #eee;
@@ -1252,7 +1252,7 @@ label[var] {
 }
 
 * + label[var] {
-	margin: 16px 0px 0px 0px;	
+	margin: 16px 0px 0px 0px;
 }
 
 div[novar] {
@@ -1296,7 +1296,7 @@ span.notset {
 
 
 badge {
-	display: inline;	
+	display: inline;
 	background: rgba(0, 0, 0, 0.1);
 	padding: 0px 4px;
 	border-radius: 8px;
@@ -1327,7 +1327,7 @@ textarea[ifttt] {
 
 
 .form-group label,
-[taskedit] label {	
+[taskedit] label {
 	display: block !important;
 }
 
@@ -1363,15 +1363,15 @@ piston[printing] dnd-nodrag[disabled] {
 
 
 dnd-nodrag[disabled] * {
-	color: rgba(0, 0, 0, 0.2) !important;	
+	color: rgba(0, 0, 0, 0.2) !important;
 	border-color: rgba(0, 0, 0, 0.05) !important;
 	font-style: italic;
 }
 
 
 
-@media only screen 
-  and (min-device-width: 320px) 
+@media only screen
+  and (min-device-width: 320px)
   and (max-device-width: 568px)
   and (-webkit-min-device-pixel-ratio: 2) {
 
@@ -1407,7 +1407,7 @@ dnd-nodrag[disabled] * {
 	div[items] div+div {
 		border-top: solid 1px #ccc;
 	}
-	
+
 	viewer[mode=edit] {
 		margin: 0px;
 		padding: 0px;
@@ -1432,7 +1432,7 @@ dnd-nodrag[disabled] * {
 	div[multicolumn] {
 		column-count: 1;
 		-webkit-column-count: 1;
-		-moz-column-count: 1;	
+		-moz-column-count: 1;
 	}
 
 	textarea[ifttt] {
@@ -1462,7 +1462,7 @@ dnd-nodrag[disabled] * {
 	div[multicolumn] {
 		column-count: 1;
 		-webkit-column-count: 1;
-		-moz-column-count: 1;	
+		-moz-column-count: 1;
 	}
 }
 
@@ -1504,4 +1504,19 @@ div[input]:focus {
 .toggle-arrow:hover {
 	font-size: 18px;
 	transition-duration: 0.3s;
+}
+
+
+.dropdown-trace{
+	margin: 0;
+  padding: 5px !important;
+	border-left: 4px solid transparent;
+	color: #9d9d9d;
+
+}
+
+.dropdown-trace:hover{
+  background-color: #eee;
+	border-left: 3px solid #15bfff;
+	cursor: pointer;
 }

@@ -856,6 +856,7 @@ span.s-up {
 
 	nav:not([fixed]) ul.navbar-right {
 		margin-top: 32px !important;
+    width: 100%;
 	}
 
 	nav:not([fixed]) ul.dropdown-menu > li {
@@ -939,9 +940,8 @@ span.s-up {
     border: none;
     border-radius: 0px;
     text-shadow: none;
-
-
 }
+
 .btn-success:hover,
 .btn-success:focus,
 .btn-success:active    {
@@ -1043,6 +1043,16 @@ span.s-up {
     background-color: #15acff !important;
 }
 
+.navbar-toggle{
+  background-color: #BDC3C7;
+}
+
+.navbar-toggle:hover,
+.navbar-toggle:active,
+.navbar-toggle:focus{
+  background-color: #BDC3C7 !important;
+}
+
 .icon-bar{
-  background-color: #fff;
+  background-color: #000 !important;
 }

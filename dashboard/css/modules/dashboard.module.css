@@ -283,6 +283,11 @@ nav[fixed] a {
 	font-size: 12px;
 }
 
+.navbar-inverse .navbar-brand:hover{
+	color: #999;
+	text-shadow: none;
+}
+
 
 li[instance] {
 	min-width: 178px;
