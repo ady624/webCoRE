@@ -1,5 +1,4 @@
-html,
-body {
+html, body {
     position: absolute;
     left: 0px;
     top: 0px;
@@ -119,12 +118,11 @@ viewer {
 }
 
 nav.navbar {
-    z-index: 100;
+  z-index: 100;
 	position: fixed;
 	width: 100%;
-    z-index: 100;
-    border-radius: 0px !important;
-    border: 0px;
+  border-radius: 0px !important;
+  border: 0px;
 }
 
 
@@ -327,7 +325,6 @@ toggle.input-group-addon {
     box-shadow: none;
 }
 
-
 .dropdown-menu > li > a {
     padding: 3px 30px;
     border-left: 4px solid transparent;
@@ -340,6 +337,7 @@ toggle.input-group-addon {
     padding: 3px 30px;
     border-left: 4px solid #15bfff;
 }
+
 
 .danger {
 	color: #c12e2a;
@@ -541,7 +539,6 @@ ul .dropdown-menu:hover {
 }
 
 ul .dropdown li {
-    height: 30px;
     vertical-align: middle;
 }
 
@@ -812,7 +809,7 @@ span.s-up {
 	body > logo {
 		font-size: 80px;
 	}
-	
+
 	.ngdialog {
 		padding: 0px !important;
 		overflow: hidden;
@@ -846,7 +843,7 @@ span.s-up {
 
 
 	nav:not([fixed]) li a.dropdown-toggle,
-	nav:not([fixed]) li[role=separator]:not(.dropdown-header) {		
+	nav:not([fixed]) li[role=separator]:not(.dropdown-header) {
 		display: none !important;
 	}
 
@@ -860,7 +857,7 @@ span.s-up {
 	nav:not([fixed]) ul.navbar-right {
 		margin-top: 32px !important;
 	}
-	
+
 	nav:not([fixed]) ul.dropdown-menu > li {
 		padding: 0px;
 	}
@@ -882,15 +879,15 @@ span.s-up {
 	li.dropdown-header {
 		padding: 8px 20px !important;
 		border-bottom: solid 1px #ccc;
-		
+
 	}
 
 	ul:active {
-		background: none !important;		
+		background: none !important;
 	}
 	a:hover {
 		background: #eee !important;
-	}	
+	}
 
 }
 
@@ -901,7 +898,7 @@ span.s-up {
 
 /* default button */
 .btn {
-    background-color: #ccc;
+    background-color: #ECF0F1;
     color: #000;
     border: none;
     border-radius: 0px;
@@ -912,13 +909,14 @@ span.s-up {
 .btn:hover,
 .btn:focus,
 .btn:active    {
-    background: #aaa;
-    color: #fff;
+    background: #BDC3C7;
+    color: #000;
     transition-duration: 0.3s;
 }
 
 .btn-default {
-    background: #ccc !important;
+    background: #ECF0F1 !important;
+    color: #000 !important;
     border: none !important;
     border-radius: 0px !important;
     text-shadow: none !important;
@@ -928,15 +926,15 @@ span.s-up {
 .btn-default:hover,
 .btn-default:focus,
 .btn-default:active    {
-    background: #aaa !important;
-    color: #fff !important;
+    background: #BDC3C7 !important;
+    color: #000 !important;
     transition-duration: 0.3s !important;
     text-decoration: none !important;
 }
 
 /* success button */
 .btn-success {
-    background: #47a447;
+    background: #4caf50;
     color: #FFF;
     border: none;
     border-radius: 0px;
@@ -947,7 +945,7 @@ span.s-up {
 .btn-success:hover,
 .btn-success:focus,
 .btn-success:active    {
-    background: #00d255;
+    background: #43a047;
     color: #fff;
     transition-duration: 0.3s;
 
@@ -966,7 +964,7 @@ span.s-up {
 .btn-info:hover,
 .btn-info:focus,
 .btn-info:active    {
-    background: #19a9df;
+    background: #15acff;
     color: #fff;
     transition-duration: 0.3s;
 
@@ -974,7 +972,7 @@ span.s-up {
 
 /* warning button */
 .btn-warning {
-    background: #ed9c28;
+    background: #E67E22;
     color: #FFF;
     border: none;
     border-radius: 0px;
@@ -985,7 +983,7 @@ span.s-up {
 .btn-warning:hover,
 .btn-warning:focus,
 .btn-warning:active    {
-    background: #ff961f;
+    background: #D35400;
     color: #fff;
     transition-duration: 0.3s;
 
@@ -993,7 +991,7 @@ span.s-up {
 
 /* danger button */
 .btn-danger {
-    background: #CC0000;
+    background: #E74C3C;
     color: #fff;
     border: none;
     border-radius: 0px;
@@ -1004,7 +1002,7 @@ span.s-up {
 .btn-danger:hover,
 .btn-danger:focus,
 .btn-danger:active {
-    background: #db0000;
+    background: #C0392B;
     color: #fff;
     transition-duration: 0.3s;
 }
@@ -1018,7 +1016,7 @@ span.s-up {
 }
 
 .toggle-handle {
-    background-color: #444 !important;
+    background-color: #BDC3C7 !important;
 }
 
 
@@ -1029,11 +1027,12 @@ span.s-up {
 .toggle-on:active,
 .toggle-on:focus,
 .toggle-on:hover {
-    background-color: #15bfff !important;
+    background-color: #15acff !important;
+    color: #fff;
 }
 
 .btn-primary {
-    background-image: #15bfff !important;
+    background-color: #15bfff !important;
     color: #fff;
     background-image: none;
 }
@@ -1041,5 +1040,9 @@ span.s-up {
 .btn-primary:active,
 .btn-primary:focus,
 .btn-primary:hover, {
-    background-image: #15bfff !important;
+    background-color: #15acff !important;
+}
+
+.icon-bar{
+  background-color: #fff;
 }
