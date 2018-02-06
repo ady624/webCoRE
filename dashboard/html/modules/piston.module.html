@@ -124,7 +124,7 @@
 	<div class="container" ng-if="mode=='view'">
 		<div class="row script">
 
-			<span class="toggle-arrow pull-right" small ng-click="hideCards=!hideCards" title="Hide/Show">{{hideCards ? '&#8592;' : '&#8595;'}}</span>
+			<span class="fa fa-caret-down pull-right" ng-class="( 'fa-rotate-90': hideCards }" small ng-click="hideCards=!hideCards" title="Hide/Show"></span>
 			<div ng-if="!hideCards">
 			<div class="row" ng-if="0==1">
 				<div class="col-md-12">
@@ -204,7 +204,7 @@
 			<div class="row">
 
 				<div class="col-md-12">
-				<span class="toggle-arrow pull-right hidden-sm hidden-md hidden-lg" small ng-click="hideScript = !hideScript" title="Hide/Show">{{hideCards ? '&#8592;' : '&#8595;'}}</span>
+				<span class="fa fa-caret-down pull-right" ng-class="( 'fa-rotate-90':hideScript }" small ng-click="hideScript = !hideScript" title="Hide/Show"></span>
 					<div ng-if="!hideScript">
 
 
@@ -218,7 +218,7 @@
 							<button class="btn btn-default" ng-click="textSnapshot();" title="Copy piston to clipboard"><i class="fa fa-copy" aria-hidden="true"></i></button>
 							<toggle ng-if="trace && trace.points" ng-model="view.trace" on="Trace" off="Trace" ng-click="toggleView(null)"></toggle>
 							<button class="btn btn-danger" ng-click="deleteDialog();">Delete</button>
-							<span class="toggle-arrow pull-right" small ng-click="hideScript = !hideScript" title="Hide/Show">{{hideCards ? '&#8592;' : '&#8595;'}}</span>
+							<span class="toggle-arrow pull-right" small ng-click="hideScript = !hideScript" title="Hide/Show"></span>
 						</div>
 
 						<p ng-if="!hideScript">
@@ -233,7 +233,7 @@
 				<div class="col-md-12 col-lg-6">
 					<p>
 					<h3>Logs</h3>
-					<span class="toggle-arrow pull-right" small ng-click="hideLogs=!hideLogs" title="Hide/Show">{{hideLogs ? '&#8592;' : '&#8595;'}}</span>
+					<span class="fa fa-caret-down pull-right" ng-class="( 'fa-rotate-90':hideLogs }" small ng-click="hideLogs=!hideLogs" title="Hide/Show"></span>
 					</p>
 					<div ng-if="!hideLogs">
 					<div class="collapse in" id="collapseLogs">
@@ -275,7 +275,7 @@
 				<div class="col-md-12 col-lg-6">
 					<p>
 					<h3>Variables</h3>
-					<span class="toggle-arrow pull-right" small ng-click="hideVars=!hideVars" title="Hide/Show">{{hideVars ? '&#8592;' : '&#8595;'}}</span>
+					<span class="fa fa-caret-down pull-right" ng-class="( 'fa-rotate-90':hideVars }" small ng-click="hideVars=!hideVars" title="Hide/Show"></span>
 					</p>
 					<div ng-if="!hideVars">
 					<div class="collapse in" id="collapseVars">
@@ -300,7 +300,7 @@
 				<div class="col-md-12">
 					<p>
 					<h3>Evaluation Console</h3>
-					<span class="toggle-arrow pull-right" small ng-click="hideEval=!hideEval" title="Hide/Show">{{hideEval ? '&#8592;' : '&#8595;'}}</span>
+					<span class="fa fa-caret-down pull-right" ng-class="( 'fa-rotate-90':hideEval }" small ng-click="hideEval=!hideEval" title="Hide/Show"></span>
 					</p>
 					<div ng-if="!hideEval">
 					<div class="collapse in" id="collapseCons">
@@ -325,7 +325,7 @@
 
 					<p>
 					<h3>Statistics</h3>
-					<span class="toggle-arrow pull-right" small ng-click="hideStats=!hideStats" title="Hide/Show">{{hideStats ? '&#8592;' : '&#8595;'}}</span>
+					<span class="fa fa-caret-down pull-right" ng-class="( 'fa-rotate-90':hideStats }" small ng-click="hideStats=!hideStats" title="Hide/Show"></span>
 					</p>
 					<div ng-if="!hideStats">
 					<div class="collapse in" id="collapseStats">

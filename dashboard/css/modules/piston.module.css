@@ -1495,17 +1495,6 @@ div[input]:focus {
     cursor: pointer !important;
 }
 
-.toggle-arrow {
-	font-size: 16px;
-	font-weight: 700;
-	cursor: pointer;
-}
-
-.toggle-arrow:hover {
-	font-size: 18px;
-	transition-duration: 0.3s;
-}
-
 
 .dropdown-trace{
 	margin: 0;

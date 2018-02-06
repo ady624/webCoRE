@@ -157,6 +157,7 @@ footer button.btn + button.btn {
 
 .ngdialog.ngdialog-large .ngdialog-content {
 	width: 768px;
+  background-color: #fff;
 }
 
 .ngdialog.ngdialog-wiki .ngdialog-content {
@@ -265,7 +266,7 @@ info {
 }
 
 .input-group {
-	margin: 10px 0;
+	margin: 3px 0;
 }
 
 .input-group-addon {
@@ -801,7 +802,11 @@ span.s-up {
 @-o-keyframes s-flash { 0%, 30%, 70%, 100% { opacity: 1; } 50% { opacity: 0; } }
 @keyframes s-flash { 0%, 30%, 70%, 100% { opacity: 1; } 50% { opacity: 0; } }
 
-.tooltip .tooltip-inner { color: #444; background-color:#eee; border: solid 1px #444; }
+.tooltip{
+   z-index: 12000;
+}
+
+.tooltip .tooltip-inner { color: #444; background-color:#eee; border: solid 1px #444;}
 .tooltip.top .tooltip-arrow { border-top-color: #444 ; }
 .tooltip.bottom .tooltip-arrow { border-bottom-color: #444 ; }
 
@@ -916,7 +921,7 @@ span.s-up {
 }
 
 .btn-default {
-    background: #ECF0F1 !important;
+    background: #d4d8d8 !important;
     color: #000 !important;
     border: none !important;
     border-radius: 0px !important;
@@ -925,12 +930,19 @@ span.s-up {
 }
 
 .btn-default:hover,
-.btn-default:focus,
-.btn-default:active    {
-    background: #BDC3C7 !important;
+.btn-default:focus{
+    background: #bcc0c0 !important;
     color: #000 !important;
     transition-duration: 0.3s !important;
     text-decoration: none !important;
+}
+
+nav .btn-default.active{
+  background-color: #15bfff !important;
+}
+
+button .btn .btn-default active{
+  background-color: #15bfff;
 }
 
 /* success button */
