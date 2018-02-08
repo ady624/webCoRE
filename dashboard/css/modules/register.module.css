@@ -41,7 +41,7 @@ ng-view {
 }
 
 .loginbox{
-	margin: 30px;
+	margin: 30px auto;
 }
 
 .form-group{
@@ -65,4 +65,4 @@ ng-view {
 
 .help-row button{
 	margin: 2px auto;
-}
+}ser
