@@ -1,55 +1,13 @@
 body {
 	overflow-y: auto;
 	background-color: #fff;
-	margin: 10% auto;
+	display: flex;
+	align-items: center;
+	justify-content: center;
 }
-
-div[welcome] {
-	width: 400px;
-	border-radius: 4px;
-	margin: 32px auto;
-	padding-bottom: 32px;
-}
-
-div[welcome] img {
-	max-width: 400px;
-}
-
-div[login] {
-	max-width: 400px;
-	margin: 0 auto;
-}
-
-div[welcome] > div {
-	padding: 32px;
-	text-align: justify;
-}
-
-.loginbox {
-	max-width: 450px; /* 400px max-width for content plus 25+25px padding */
-	border-radius: 0px;
-	border: 0;
-	background: #fff;
-	padding: 25px;
-	margin: 0 auto;
-}
-
 
 panel {
-	display: inline-block;
 	padding: 32px;
-	width: 100%;
-	margin: 0px;
-	float: left;
-}
-
-panel+panel {
-	border-left: solid 1px #eee;
-	float: right;
-}
-
-panel p {
-	text-align: left;
 }
 
 input[code] {
@@ -63,7 +21,6 @@ input[code] {
 input[code]:focus {
 	width: 100%;
 	text-transform: lowercase;
-
 }
 
 input[login] {
@@ -77,64 +34,35 @@ input[login] {
 input[login]:focus {
 	width: 100%;
 	text-transform: lowercase;
-
 }
 
 ng-view {
 	position: relative;
 }
 
-@media (max-width: 767px) {
-	div[welcome] {
-		width: 80%;
-	}
-
-	panel {
-		width: 100%;
-	}
-
-	panel+panel {
-		border-left: none;
-		border-top: solid 1px #eee
-	}
+.loginbox{
+	margin: 30px auto;
 }
 
-.nav-pills {
-	padding: 0 32px;
+.form-group{
+	margin: 50px 20px;
 }
 
-.nav-pills > li.active > a {
-	background-color: #15bfff !important;
-	border-radius: 0px;
-	text-transform: uppercase;
-}
-
-.nav-pills > li.active > a:focus,
-.nav-pills > li.active > a:hover, {
-	border-radius: 0px;
-}
-
-.nav-pills > li > a {
-	border-radius: 0px;
-	color: #15bfff;
-	text-transform: uppercase;
-	cursor: pointer;
-}
-
-.register-icons {
+.help-row{
 	text-align: center;
-	position: relative;
-	margin-top: 50px;
 }
 
-.register-icons > a {
-	color: #ccc;
-	padding: 6px;
+.help-row a{
+	text-decoration: none;
+	color: #000;
+	color: #fff;
 }
 
-.register-icons > a:hover,
-.register-icons > a:focus,
-.register-icons > a:active {
-	color: #999;
-	cursor: pointer;
+.help-row a:hover{
+	text-decoration: none;
+
 }
+
+.help-row button{
+	margin: 2px auto;
+}ser

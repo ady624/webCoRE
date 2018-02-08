@@ -41,17 +41,17 @@
 				<li class="dropdown">
  					<a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Options <span class="caret"></span></a>
           <ul class="dropdown-menu">
-            <li><a href="#" ng-click="newPiston();"><span class="glyphicon glyphicon-plus" aria-hidden="true"></span>&nbsp;&nbsp;New Piston</a></li>
-						<li><a href="#" ng-click="showDashboard();"><span class="glyphicon glyphicon-th" aria-hidden="true"></span>&nbsp;&nbsp;Dashboard</a></li>
-						<li><a href="#" ng-click="showFuelStreams();"><span class="glyphicon glyphicon-equalizer" aria-hidden="true"></span>&nbsp;&nbsp;Fuel Streams</a></li>
-						<li><a href="" ng-click="backup();"><span class="glyphicon glyphicon-cloud-download" aria-hidden="true"></span>&nbsp;&nbsp;Backup Piston(s)</a></li>
+            <li><a href="#" ng-click="newPiston();"><i class="fa fa-plus" aria-hidden="true"></i>&nbsp;&nbsp;New Piston</a></li>
+						<li><a href="#" ng-click="showDashboard();"><i class="fa fa-th-list" aria-hidden="true"></i>&nbsp;&nbsp;Dashboard</a></li>
+						<li><a href="#" ng-click="showFuelStreams();"><i class="fa fa-area-chart" aria-hidden="true"></i></span>&nbsp;&nbsp;Fuel Streams</a></li>
+						<li><a href="" ng-click="backup();"><i class="fa fa-cloud-upload" aria-hidden="true"></i></span>&nbsp;&nbsp;Backup Piston(s)</a></li>
             <li ng-if="instanceCount > 1"><a href="#" ng-click="movePiston();">Move Piston(s)</a></li>
-            <li><a href="register"><span class="glyphicon glyphicon-home" aria-hidden="true"></span>&nbsp;&nbsp;Register Instance</a></li>
-            <li><a href="#" ng-click="showSettings()"><span class="glyphicon glyphicon-wrench" aria-hidden="true"></span>&nbsp;&nbsp;Settings</a></li>
+            <li><a href="register"><i class="fa fa-home" aria-hidden="true"></i>&nbsp;&nbsp;Register Instance</a></li>
+            <li><a href="#" ng-click="showSettings()"><i class="fa fa-wrench" aria-hidden="true"></i>&nbsp;&nbsp;Settings</a></li>
 						<li><a target="_blank" aria-haspopup="true" aria-expanded="false" href="https://www.paypal.me/ady624"><i class="fa fa-paypal" aria-hidden="true"></i>&nbsp;&nbsp;Donate</a></li>
 						<li><a target="_blank" aria-haspopup="true" aria-expanded="false" href="https://community.webcore.co"><i class="fa fa-comments" aria-hidden="true"></i>&nbsp;&nbsp;Forum</a></li>
 						<li><a target="_blank" aria-haspopup="true" aria-expanded="false" href="https://wiki.webcore.co"><i class="fa fa-book" aria-hidden="true"></i>&nbsp;&nbsp;Wiki</a></li>
-						<li><a href="#" ng-click="logOut();"><span class="glyphicon glyphicon-log-out" aria-hidden="true"></span>&nbsp;&nbsp;Log Out</a></li>
+						<li><a href="#" ng-click="logOut();"><i class="fa fa-sign-out" aria-hidden="true"></i>&nbsp;&nbsp;Log Out</a></li>
 					</ul>
 				</li>
 			</ul>
@@ -99,16 +99,16 @@
 		<div class="row">
 			<div class="sidebar">
 				<ul class="nav nav-sidebar">
-                      <li class="logo"><img class="logo-sm" src="https://raw.githubusercontent.com/ady624/webCoRE/master/resources/icons/app-CoRE%403x.png" alt="webCoRE logo"><img class="logo-lg" src="https://community.webcore.co/uploads/default/original/2X/d/d82aa5d0f719318d1f35bafdec06e2c8cf3c54be.svg" width="90%"></li>
-                      <li><a href="" ng-click="newPiston();" class="sidebarNewPiston"><span class="glyphicon glyphicon-plus" aria-hidden="true"></span>&nbsp;&nbsp;New Piston</a></li>
-					<li><a href="" ng-click="showDashboard();" class="sidebarDash"><span class="glyphicon glyphicon-th" aria-hidden="true"></span>&nbsp;&nbsp;Dashboard (beta)</a></li>
-					<li><a href="" ng-click="showFuelStreams();" class="sidebarFuel"><span class="glyphicon glyphicon-equalizer" aria-hidden="true"></span>&nbsp;&nbsp;Fuel Streams (beta)</a></li>
-					<li><a href="" ng-click="backup();" class="sidebarBackup"><span class="glyphicon glyphicon-cloud-download" aria-hidden="true"></span>&nbsp;&nbsp;Backup Piston(s)</a></li>
-					<li><a href="register" class="sidebarRegister"><span class="glyphicon glyphicon-home" aria-hidden="true"></span>&nbsp;&nbsp;Register Instance</a></li>
-					<li ng-if="instanceCount > 1"><a href="" ng-click="movePiston();"" class="sidebarMove"><span class="glyphicon glyphicon-sort" aria-hidden="true"></span>&nbsp;&nbsp;Move Piston(s)</a></li>
-					<li><a href="" ng-click="showSettings();" class="sidebarSettings"><span class="glyphicon glyphicon-wrench" aria-hidden="true"></span>&nbsp;&nbsp;Settings</a></li>
+	        <li class="logo"><img class="logo-sm" src="https://raw.githubusercontent.com/ady624/webCoRE/master/resources/icons/app-CoRE%403x.png" alt="webCoRE logo"><img class="logo-lg" src="https://community.webcore.co/uploads/default/original/2X/d/d82aa5d0f719318d1f35bafdec06e2c8cf3c54be.svg" width="90%"></li>
+          <li><a href="" ng-click="newPiston();" class="sidebarNewPiston"><i class="fa fa-plus" aria-hidden="true"></i>&nbsp;&nbsp;New Piston</a></li>
+					<li><a href="" ng-click="showDashboard();" class="sidebarDash"><i class="fa fa-th-list" aria-hidden="true"></i>&nbsp;&nbsp;Dashboard (beta)</a></li>
+					<li><a href="" ng-click="showFuelStreams();" class="sidebarFuel"><i class="fa fa-area-chart" aria-hidden="true"></i></span>&nbsp;&nbsp;Fuel Streams (beta)</a></li>
+					<li><a href="" ng-click="backup();" class="sidebarBackup"><i class="fa fa-cloud-upload" aria-hidden="true"></i></span>&nbsp;&nbsp;Backup Piston(s)</a></li>
+					<li><a href="register" class="sidebarRegister"><i class="fa fa-home" aria-hidden="true"></i>&nbsp;&nbsp;Register Instance</a></li>
+					<li ng-if="instanceCount > 1"><a href="" ng-click="movePiston();"" class="sidebarMove"><i class="fa fa-sort" aria-hidden="true"></i>&nbsp;&nbsp;Move Piston(s)</a></li>
+					<li><a href="" ng-click="showSettings();" class="sidebarSettings"><i class="fa fa-wrench" aria-hidden="true"></i>&nbsp;&nbsp;Settings</a></li>
 					<li>
-					<li><a href="#" ng-click="logOut();" class="sidebarLogout"><span class="glyphicon glyphicon-log-out" aria-hidden="true"></span>&nbsp;&nbsp;Log Out</a></li>
+					<li><a href="#" ng-click="logOut();" class="sidebarLogout"><i class="fa fa-sign-out" aria-hidden="true"></i>&nbsp;&nbsp;Log Out</a></li>
 <!-- dashboard (sidebar) -->
 <ins class="adsbygoogle"
    style="display:inline-block;width:120px;height:600px;padding: 20px;"
