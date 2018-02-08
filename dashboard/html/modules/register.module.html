@@ -1,83 +1,65 @@
 <status ng-if="status" ng-animate ng-bind-html="status" ng-click="setStatus()"></status>
-<loader ng-if="loading" ng-animate>
-    <ul>
-        <li></li>
-        <li></li>
-        <li></li>
-        <li></li>
-    </ul>
-</loader>
 
-<div class="container">
-	<div class="loginbox">
-
-		<div class="d-flex p-2">
-			<div welcome>
+<div class="container loginbox">
+		<div class="row">
+      <div class="col-sm-6 col-sm-offset-3 col-md-4 col-md-offset-4">
+        <div class="row">
 				<img src="https://community.webcore.co/uploads/default/original/2X/d/d82aa5d0f719318d1f35bafdec06e2c8cf3c54be.svg">
-			</div>
-		</div>
-
-		<div class="d-flex p-2" login>
-			<!--<ul  class="nav nav-pills">
-				<li class="active"><a data-target="#instance" data-toggle="tab">Register Instance</a>
-		    	</li>
-		    	<li><a data-target="#account" data-toggle="tab">Login</a>
-		    	</li> -->
-			</ul>
-			<div class="tab-content clearfix">
-		     	<div class="tab-pane" id="general">
-					Nothing here yet.
-				</div>
-
-				<div class="tab-pane fade in active" id="instance">
-					<panel>
-						<div class="form-group">
-							<p>Enter your registration code to get started.</p>
-							<p><a target="_blank" href="https://wiki.webcore.co/#Opening_the_new_dashboard_from_your_phone">Where's my code?</a></p>
-						</div>
-						<div class="input-group">
-							<input code class="form-control " type="text" maxlength="4" ng-model="code" />
-							<a ng-disabled="code.length != 4" ng-click="register();" href="#" class="input-group-addon"><span class="glyphicon glyphicon-menu-right" aria-hidden="true"></span></a>
-						</div>
-					</panel>
-
-				</div>
-				<!-- ACCOUNTS NOT CURRENTLY ACTIVE
-	        	<div class="tab-pane" id="account">
-					<panel>
-						<div class="form-group">
-							<p>Accounts are not currently enabled.</p>
-							<p>You do not need an account to use webCoRE. Please register an instance.</p>
-						</div>
-						<div class="form-group">
-							<label>Username</label>
-							<input login class="form-control" type="text" ng-model="username" disabled/>
-						</div>
-						<div class="form-group">
-							<label>Password</label>
-							<input login class="form-control" type="password" ng-model="password" disabled/>
-						</div>
-						<div class="form-group">
-							<button class="btn btn-info" ng-disabled="(username.length < 4) || (password.length < 8)" ng-click="setStatus('Sorry, account log in is not yet available');">Log in</button>
-						</div>
-					</panel>
-	        	</div>
-	        	-->
-
-			</div>
-
-		</div>
-		<div class="register-icons align-text-bottom">
-		<a href="https://www.paypal.me/ady624"><i class="fa fa-paypal fa-2x" aria-hidden="true"></i></a>
-		<span class="sr-only">Donate</span>
-
-		<a href="https://wiki.webcore.co/"><i class="fa fa-book fa-2x" aria-hidden="true"></i>
-		<span class="sr-only">Wiki</span>
-
-		<a href="https://community.webcore.co/"><i class="fa fa-comments fa-2x" aria-hidden="true"></i>
-		<span class="sr-only">Community Forum</span>
-	</div>
-
-	</div>
+        </div>
+        <div class="row">
+          <div id="instance">
+  					<panel>
+  						<div class="form-group">
+  							<p>Enter your registration code to get started.</p>
+  							<p><a target="_blank" href="https://wiki.webcore.co/#Opening_the_new_dashboard_from_your_phone">Where's my code?</a></p>
+  						</div>
+  						<div class="input-group">
+  							<input code class="form-control " type="text" maxlength="4" ng-model="code" />
+  							<a ng-disabled="code.length != 4" ng-click="register();" href="#" class="input-group-addon"><span class="glyphicon glyphicon-menu-right" aria-hidden="true"></span></a>
+  						</div>
+  					</panel>
+  				</div>
+        </div>
+        <div class="row align-items-center help-row">
+            <button type="button" class="btn btn-primary"><a href="https://www.paypal.me/ady624"><i class="fa fa-paypal" aria-hidden="true"></i>
+              PayPal</a></button>
+            <button type="button" class="btn btn-primary"><a href="https://wiki.webcore.co/"><i class="fa fa-book" aria-hidden="true"></i>
+              Wiki</a></button>
+            <button type="button" class="btn btn-primary"><a href="https://community.webcore.co/"><i class="fa fa-comments" aria-hidden="true"></i>
+              Forum</a></button>
+          </div>
+        </div>
+		  </div>
+    </div>
 </div>
+
+
+
+<!-- ACCOUNTS NOT CURRENTLY ACTIVE
+<ul  class="nav nav-pills">
+	<div login>
+			<li class="active"><a data-target="#instance" data-toggle="tab">Register Instance</a>
+	    </li>
+	    <li><a data-target="#account" data-toggle="tab">Login</a>
+	    </li>
+</ul>
+<div class="tab-pane" id="account">
+  <panel>
+	  <div class="form-group">
+		  <p>Accounts are not currently enabled.</p>
+		  <p>You do not need an account to use webCoRE. Please register an instance.</p>
+	  </div>
+	  <div class="form-group">
+		  <label>Username</label>
+		  <input login class="form-control" type="text" ng-model="username" disabled/>
+	  </div>
+	  <div class="form-group">
+		  <label>Password</label>
+		    <input login class="form-control" type="password" ng-model="password" disabled/>
+	  </div>
+	  <div class="form-group">
+		  <button class="btn btn-info" ng-disabled="(username.length < 4) || (password.length < 8)" ng-click="setStatus('Sorry, account log in is not yet available');">Log in</button>
+	  </div>
+  </panel>
 </div>
+-->
