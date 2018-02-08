@@ -400,10 +400,6 @@ viewer[mode=view] piston content {
 	z-index: 2;
 }
 
-.navbar-collapse.in{
-	width:100%;
-}
-
 nav~piston {
 	top: 52px;
 }

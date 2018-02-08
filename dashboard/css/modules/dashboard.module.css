@@ -802,6 +802,10 @@ ptile div[google-chart] {
 
 @media (max-width: 767px) {
 
+
+.navbar-collapse{
+	padding-left: 15px !important;
+}
 	div.main {
 		padding: 0px;
 	}
@@ -819,10 +823,6 @@ ptile div[google-chart] {
 
     .navbar-fixed-bottom .navbar-collapse, .navbar-fixed-top .navbar-collapse {
         max-height: calc(100vh - 50px);
-    }
-
-    .navbar-collapse {
-	min-height: calc(100vh - 50px);
     }
 
     viewer.pistons {

@@ -125,6 +125,13 @@ nav.navbar {
   border: 0px;
 }
 
+.navbar-collapse{
+  margin-right: -30px;
+  margin-left: -15px;
+  padding-left: 30px;
+  overflow-y:visible;
+}
+
 
 form toggle+label {
 	margin-left: 16px;
@@ -320,15 +327,9 @@ toggle.input-group-addon {
     margin: 7.5px 3px;
 }
 
-.navbar-nav > li > .dropdown-menu {
-    margin-top: 0;
-    border-radius: 0;
-    box-shadow: none;
-}
 
 .dropdown-menu > li > a {
     padding: 3px 30px;
-    border-left: 4px solid transparent;
 
 }
 
@@ -811,6 +812,11 @@ span.s-up {
 .tooltip.bottom .tooltip-arrow { border-bottom-color: #444 ; }
 
 @media only screen and (max-width: 767px) {
+
+  .navbar-collapse {
+min-height: calc(100vh - 50px);
+  }
+  
 	body > logo {
 		font-size: 80px;
 	}
@@ -855,13 +861,7 @@ span.s-up {
 	nav:not([fixed]) ul {
 		margin-top: 0px !important;
 		margin-bottom: 0px !important;
-		padding: 0px !important;
-	}
 
-
-	nav:not([fixed]) ul.navbar-right {
-		margin-top: 32px !important;
-    width: 100%;
 	}
 
 	nav:not([fixed]) ul.dropdown-menu > li {
@@ -872,9 +872,9 @@ span.s-up {
 	nav:not([fixed]) li.dropdown > a {
 		display: block;
 		clear: both;
-		border-bottom: solid 1px #ccc;
+		border-bottom: solid 1px #efefef;
         color: #9d9d9d;
-        padding: 5px;
+        padding: 12px;
         font-size: 14px;
 	}
 
@@ -1057,6 +1057,8 @@ button .btn .btn-default active{
 
 .navbar-toggle{
   background-color: #BDC3C7;
+  margin-bottom: 0;
+  margin-right: 0;
 }
 
 .navbar-toggle:hover,
