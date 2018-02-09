@@ -1057,7 +1057,7 @@ button .btn .btn-default active{
 .navbar-toggle{
   background-color: #BDC3C7;
   margin-bottom: 0;
-  margin-right: 0;
+  margin-right: 10px;
 }
 
 .navbar-toggle:hover,
