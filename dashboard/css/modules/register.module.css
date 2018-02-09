@@ -8,6 +8,7 @@ body {
 
 panel {
 	padding: 32px;
+
 }
 
 input[code] {
@@ -19,7 +20,7 @@ input[code] {
 }
 
 input[code]:focus {
-	width: 100%;
+	max-width: 100%;
 	text-transform: lowercase;
 }
 
@@ -34,6 +35,10 @@ input[login] {
 input[login]:focus {
 	width: 100%;
 	text-transform: lowercase;
+}
+
+.input-group{
+	margin: 15px;
 }
 
 ng-view {

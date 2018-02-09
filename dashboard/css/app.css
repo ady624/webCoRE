@@ -120,7 +120,6 @@ viewer {
 nav.navbar {
   z-index: 100;
 	position: fixed;
-	width: 100%;
   border-radius: 0px !important;
   border: 0px;
 }
@@ -816,7 +815,7 @@ span.s-up {
   .navbar-collapse {
 min-height: calc(100vh - 50px);
   }
-  
+
 	body > logo {
 		font-size: 80px;
 	}
