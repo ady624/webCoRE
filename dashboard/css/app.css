@@ -816,7 +816,7 @@ span.s-up {
   .navbar-collapse {
 min-height: calc(100vh - 50px);
   }
-  
+
 	body > logo {
 		font-size: 80px;
 	}
@@ -1058,7 +1058,7 @@ button .btn .btn-default active{
 .navbar-toggle{
   background-color: #BDC3C7;
   margin-bottom: 0;
-  margin-right: 0;
+  margin-right: 10px;
 }
 
 .navbar-toggle:hover,
