@@ -636,6 +636,22 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 
 	$scope.listDevicesWithAttributes = function(attributes) {
 		if (!attributes || !(attributes instanceof Array) || !attributes.length) return $scope.instance.devices;
+		// Virtual status attribute is available on all devices
+		if (attributes.length === 1 && attributes[0] === statusAttribute) return $scope.instance.devices;
+		// Use threeAxis instead of attributes derived from it
+		var isThreeAxis;
+		attributes = attributes.filter(function(a) {
+			switch (a) {
+				case 'orientation':
+				case 'axisX':
+				case 'axisY':
+				case 'axisZ':
+					isThreeAxis = true;
+				case statusAttribute:
+					return false;
+			}
+			return true;
+		}).concat(isThreeAxis ? 'threeAxis' : []);
 		var result = {};
 		for (d in $scope.instance.devices) {
 			var device = $scope.instance.devices[d];
@@ -5128,6 +5144,18 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		operand.eval = '...';
 		var expression = operand.data.exp;
 		var dataType = operand.data.vt;
+		// Display durations relative to the selected unit; otherwise the expression
+		// will evaluate and return in terms of milliseconds.
+		switch (dataType) {
+			case 's':
+			case 'm':
+			case 'h':
+			case 'd':
+			case 'w':
+			case 'n':
+			case 'y':
+				dataType = 'ms';
+		}
 		$timeout.cancel(operand.tmrDelayEvaluation);
 		operand.tmrDelayEvaluation = $timeout(function() { if ($scope.designer && $scope.designer.dialog) {operand.eval = '(evaluating)'; evaluateExpression(expression, dataType, operand);}}, 2500);
 	}

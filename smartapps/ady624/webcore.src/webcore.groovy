@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.2.101.20171227" }
+public static String version() { return "v0.2.102.20180116" }
 /*
+ *      01/16/2018 >>> v0.2.102.20180116 - BETA M2 - Fixed IE 11 script error, display of offset expression evaluation, blank device lists on piston restore, avoid error and log a warning when ST sunrise/sunset is blank
  *	12/27/2017 >>> v0.2.101.20171227 - BETA M2 - Fixed 172.x.x.x web requests thanks to @tbam, fixed array subscripting with 0.0 decimal value as in a for loop using $index
  *	12/11/2017 >>> v0.2.100.20171211 - BETA M2 - Replaced the scheduler-based timeout recovery handling to ease up on resource usage
  *	11/29/2017 >>> v0.2.0ff.20171129 - BETA M2 - Fixed missing conditions and triggers for several device attributes, new comparison group for binary files
@@ -1933,6 +1934,11 @@ private registerInstance() {
 
 private initSunriseAndSunset() {
     def sunTimes = app.getSunriseAndSunset()
+    if (!sunTimes.sunrise) {
+        warn "Actual sunrise and sunset times are unavailable; please reset the location for your hub", rtData
+        sunTimes.sunrise = new Date(getMidnightTime() + 7 * 3600000)
+        sunTimes.sunset = new Date(getMidnightTime() + 19 * 3600000)
+    }
     state.sunTimes = [
     	sunrise: sunTimes.sunrise.time,
     	sunset: sunTimes.sunset.time,
@@ -1946,6 +1952,11 @@ private getSunTimes() {
     //we require an update every 8 hours
     if (!updated || (now() - updated < 28800000)) return state.sunTimes
     return initSunriseAndSunset()
+}
+
+private getMidnightTime(rtData) {
+	def rightNow = localTime()
+    return localToUtcTime(rightNow - rightNow.mod(86400000))
 }
 
 /******************************************************************************/
