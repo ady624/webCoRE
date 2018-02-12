@@ -541,6 +541,7 @@ ul .dropdown-menu:hover {
 
 ul .dropdown li {
     vertical-align: middle;
+    cursor: pointer;
 }
 
 .dropdown-menu .divider {
