@@ -157,7 +157,7 @@
 					<p>
 						<p>Piston Category</p>
 						<div>
-							<select selectpicker ng-model="$parent.$parent.category" class="form-control" ng-change="setCategory()"><option ng-repeat="category in categories" value="{{category.i}}">{{category.n ? category.n : '(no name)'}}</option></select>
+							<select selectpicker ng-model="$parent.$parent.$parent.category" class="form-control" ng-change="setCategory()"><option ng-repeat="category in categories" value="{{category.i}}">{{category.n ? category.n : '(no name)'}}</option></select>
 						</div>
 					</p>
 				</div>
