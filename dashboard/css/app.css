@@ -1070,3 +1070,11 @@ button .btn .btn-default active{
 .icon-bar{
   background-color: #000 !important;
 }
+
+.open>.dropdown-toggle.btn-info {
+  background-color: #15acff;
+}
+
+.open>.dropdown-toggle.btn-info:hover {
+  background-color: #15acff;
+}
