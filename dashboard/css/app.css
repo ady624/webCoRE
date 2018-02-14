@@ -906,35 +906,73 @@ min-height: calc(100vh - 50px);
 .btn {
     background-color: #ECF0F1;
     color: #000;
-    border: none;
-    border-radius: 0px;
-    text-shadow: none;
-
 }
 
 .btn:hover,
 .btn:focus,
-.btn:active    {
+.btn:active {
     background: #BDC3C7;
     color: #000;
+}
+
+.btn,
+.btn:hover,
+.btn:focus,
+.btn:active,
+.btn.btn-default,
+.btn.btn-default:hover,
+.btn.btn-default:active,
+.btn.btn-default:focus, 
+.btn.btn-primary,
+.btn.btn-primary:hover,
+.btn.btn-primary:active,
+.btn.btn-primary:focus, 
+.btn.btn-secondary,
+.btn.btn-secondary:hover,
+.btn.btn-secondary:active,
+.btn.btn-secondary:focus, 
+.btn.btn-success,
+.btn.btn-success:hover,
+.btn.btn-success:active,
+.btn.btn-success:focus, 
+.btn.btn-info,
+.btn.btn-info:hover,
+.btn.btn-info:active,
+.btn.btn-info:focus,
+.btn.btn-warning,
+.btn.btn-warning:hover,
+.btn.btn-warning:active,
+.btn.btn-warning:focus,
+.btn.btn-danger,
+.btn.btn-danger:hover,
+.btn.btn-danger:active,
+.btn.btn-danger:focus,
+.form-control.btn-default,
+.form-control.btn-default:hover,
+.form-control.btn-default:active,
+.form-control.btn-default:focus,
+.form-control.btn-info,
+.form-control.btn-info:hover,
+.form-control.btn-info:active,
+.form-control.btn-info:focus {
+    border-color: transparent;
+    border-radius: 0;
+    text-shadow: none;
+    text-decoration: none;
     transition-duration: 0.3s;
+    -webkit-box-shadow: none;
+    box-shadow: none;
 }
 
 .btn-default {
     background: #d4d8d8 !important;
     color: #000 !important;
-    border: none !important;
-    border-radius: 0px !important;
-    text-shadow: none !important;
-    text-decoration: none !important;
 }
 
 .btn-default:hover,
 .btn-default:focus{
     background: #bcc0c0 !important;
     color: #000 !important;
-    transition-duration: 0.3s !important;
-    text-decoration: none !important;
 }
 
 nav .btn-default.active{
@@ -949,9 +987,6 @@ button .btn .btn-default active{
 .btn-success {
     background: #4caf50;
     color: #FFF;
-    border: none;
-    border-radius: 0px;
-    text-shadow: none;
 }
 
 .btn-success:hover,
@@ -959,64 +994,42 @@ button .btn .btn-default active{
 .btn-success:active    {
     background: #43a047;
     color: #fff;
-    transition-duration: 0.3s;
-
 }
 
 /* info button */
 .btn-info {
     background: #15bfff;
     color: #FFF;
-    border: none;
-    border-radius: 0px;
-    text-shadow: none;
-
-
 }
 .btn-info:hover,
 .btn-info:focus,
 .btn-info:active    {
     background: #15acff;
     color: #fff;
-    transition-duration: 0.3s;
-
 }
 
 /* warning button */
 .btn-warning {
     background: #E67E22;
     color: #FFF;
-    border: none;
-    border-radius: 0px;
-    text-shadow: none;
-
-
 }
 .btn-warning:hover,
 .btn-warning:focus,
 .btn-warning:active    {
     background: #D35400;
     color: #fff;
-    transition-duration: 0.3s;
-
 }
 
 /* danger button */
 .btn-danger {
     background: #E74C3C;
     color: #fff;
-    border: none;
-    border-radius: 0px;
-    text-shadow: none;
-
-
 }
 .btn-danger:hover,
 .btn-danger:focus,
 .btn-danger:active {
     background: #C0392B;
     color: #fff;
-    transition-duration: 0.3s;
 }
 
 
@@ -1028,7 +1041,7 @@ button .btn .btn-default active{
 }
 
 .toggle-handle {
-    background-color: #BDC3C7 !important;
+    background-color: #EDF3F7 !important;
 }
 
 
@@ -1073,8 +1086,10 @@ button .btn .btn-default active{
 
 .open>.dropdown-toggle.btn-info {
   background-color: #15acff;
+  border-color: transparent;
 }
 
 .open>.dropdown-toggle.btn-info:hover {
   background-color: #15acff;
+  border-color: transparent;
 }
