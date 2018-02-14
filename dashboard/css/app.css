@@ -329,6 +329,7 @@ toggle.input-group-addon {
 
 .dropdown-menu > li > a {
     padding: 3px 30px;
+    border-left: 4px solid transparent;
 
 }
 
