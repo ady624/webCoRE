@@ -488,12 +488,11 @@ error {
 	right: 0px;
 	bottom: 0px;
 	margin: auto;
-	width: 600px;
 	max-width: 80%;
 	height: auto;
-	max-height: 250px;
+	max-height: 400px;
 	padding: 32px;
-	background: rgba(0, 0, 0, 0.1);
+	background: #eee;
 	border-radius: 8px;
 	text-align: center;
 	z-index: 99999;
