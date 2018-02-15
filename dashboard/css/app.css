@@ -124,10 +124,17 @@ nav.navbar {
 }
 
 .navbar-collapse{
-  margin-right: -30px;
-  margin-left: -15px;
-  padding-left: 30px;
   overflow-y:visible;
+}
+
+.navbar-inverse .navbar-nav > li > a {
+  color: #ddd;
+}
+@media only screen and (max-width: 767px) {
+  body nav:not([fixed]) ul.dropdown-menu > li > a, 
+  body nav:not([fixed]) li.dropdown > a {
+    color: #ddd;
+  }
 }
 
 
@@ -321,17 +328,23 @@ toggle.input-group-addon {
     margin: 7.5px 3px;
 }
 
+.navbar-collapse.collapsing .dropdown-menu,
+.navbar-collapse.in .dropdown-menu {
+  padding: 0;
+}
 
-.dropdown-menu > li > a {
-    padding: 3px 30px;
+.dropdown-menu > li > a,
+.navbar-collapse.collapsing > .nav > li > a,
+.navbar-collapse.in > .nav > li > a {
     border-left: 4px solid transparent;
-
 }
 
 .dropdown-menu > li > a:hover,
 .dropdown-menu > li > a:active,
-.dropdown-menu > li > a:focus {
-    padding: 3px 30px;
+.dropdown-menu > li > a:focus,
+.navbar-collapse.in > .nav > li > a:hover,
+.navbar-collapse.in > .nav > li > a:active,
+.navbar-collapse.in > .nav > li > a:focus {
     border-left: 4px solid #15bfff;
 }
 
@@ -884,6 +897,8 @@ min-height: calc(100vh - 50px);
 	}
 	a:hover {
 		background: #eee !important;
+		color: #333 !important;
+		text-shadow: none !important;
 	}
 
 }
