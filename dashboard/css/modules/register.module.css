@@ -6,52 +6,31 @@ body {
 	justify-content: center;
 }
 
-panel {
-	padding: 32px;
+.loginbox {
+	max-width: 300px;
+	margin: 0 auto;
+}
 
+.loginbox .input-group .form-control,
+.loginbox .input-group .btn {
+	border-radius: 0 !important;
 }
 
 input[name="code"] {
-	height: 48px !important;
-	font-size: 26px !important;
-	width: 100%;
-	color: #999 !important;
-	border-radius: 0px;
-}
-
-input[name="code"]:focus {
-	max-width: 100%;
+	font-size: 26px;
 	text-transform: lowercase;
-}
-
-input[login] {
-	height: 48px !important;
-	font-size: 26px !important;
-	width: 100%;
-	color: #999 !important;
-	border-radius: 0px;
-}
-
-input[login]:focus {
-	width: 100%;
-	text-transform: lowercase;
-}
-
-.input-group{
-	margin: 15px;
 }
 
 ng-view {
 	position: relative;
 }
 
-.loginbox{
-	margin: 30px auto;
+#instance, 
+.loginbox .input-group, 
+.help-row {
+	margin-top: 40px;
 }
 
-.form-group{
-	margin: 50px 20px;
-}
 
 .help-row{
 	text-align: center;
@@ -59,15 +38,10 @@ ng-view {
 
 .help-row a{
 	text-decoration: none;
-	color: #000;
 	color: #fff;
 }
 
 .help-row a:hover{
 	text-decoration: none;
-
+	color: #fff;
 }
-
-.help-row button{
-	margin: 2px auto;
-}ser

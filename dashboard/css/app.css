@@ -270,10 +270,6 @@ info {
     color: #eee;
 }
 
-.input-group {
-	margin: 3px 0;
-}
-
 .input-group-addon {
 	border-radius: 0;
 	border-top: 1px solid #15bfff;
