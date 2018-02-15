@@ -1467,7 +1467,7 @@ dnd-nodrag[disabled] * {
     padding: 10px;
     margin-bottom: 5px;
     min-width: 275px;
-    height: 275px;
+    min-height: 275px;
 }
 
 div[input] {
