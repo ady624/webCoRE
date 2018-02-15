@@ -1466,8 +1466,13 @@ dnd-nodrag[disabled] * {
     border: 1px solid #eee;
     padding: 10px;
     margin-bottom: 5px;
-    min-width: 275px;
-    min-height: 275px;
+}
+
+@media only screen and (min-width: 992px) {
+	.columnCards {
+		min-width: 275px;
+		min-height: 275px;
+	}
 }
 
 div[input] {
