@@ -122,49 +122,36 @@
 	</div>
 
 	<div class="container" ng-if="mode=='view'">
+		
+		<div warning ng-if="meta.active && !subscriptions.events && !schedules.length && !piston.o.des" class="alert alert-warning">This piston does not subscribe to any events. Unless executed by other means, it will never run on its own.</div>
+
+		<div class="text-right">
+			<span class="fa fa-caret-down rotate-on-collapse" data-toggle="collapse" data-target="#collapseCards" aria-expanded="true" small title="Hide/Show"></span>
+		</div>
+		
 		<div class="row">
 			
-			<div warning ng-if="meta.active && !subscriptions.events && !schedules.length && !piston.o.des" class="alert alert-warning">This piston does not subscribe to any events. Unless executed by other means, it will never run on its own.</div>
-
-			<span class="fa fa-caret-down pull-right rotate-on-collapse" data-toggle="collapse" data-target="#collapseCards" aria-expanded="true" small title="Hide/Show"></span>
 			<div class="collapse in" id="collapseCards">
-			<div class="row" ng-if="0==1">
-				<div class="col-md-12">
-					<div class="btn-group btn-group-justified" role="group">
-						<label class="btn btn-default" type="button">Pause</label>
-						<label class="btn btn-default" type="button" ng-click="edit();">Edit</label>
-						<label class="btn btn-default" type="button">Export</label>
-						<label class="btn btn-default" type="button">Backup</label>
-						<label class="btn btn-default" type="button">Restore</label>
-					</div>
-				</div>
-			</div>
-
-
-			<div class="container-fluid">
-
 				<div class="col-md-4">
 					<div class="columnCards">
-					<h2>Status</h2>
-					<div ng-if="meta.active">
-						<p>This piston is currently active and humming happily.</p>
-						<button class="btn btn-default" ng-click="pause();">Pause »</button>
-					</div>
-					<div ng-if="!meta.active">
-						<p>This piston is currently <span class="danger">PAUSED</span>. No actions will be performed by this piston until you resume it.</p>
-						<button class="btn btn-default" ng-click="resume();">Resume »</button>
-					</div>
-					<hr/>
-					<p>
-						<p>Piston Category</p>
-						<div>
-							<select selectpicker ng-model="$parent.$parent.category" class="form-control" ng-change="setCategory()"><option ng-repeat="category in categories" value="{{category.i}}">{{category.n ? category.n : '(no name)'}}</option></select>
+						<h2>Status</h2>
+						<div ng-if="meta.active">
+							<p>This piston is currently active and humming happily.</p>
+							<button class="btn btn-default" ng-click="pause();">Pause »</button>
 						</div>
-					</p>
+						<div ng-if="!meta.active">
+							<p>This piston is currently <span class="danger">PAUSED</span>. No actions will be performed by this piston until you resume it.</p>
+							<button class="btn btn-default" ng-click="resume();">Resume »</button>
+						</div>
+						<hr/>
+						<p>
+							<p>Piston Category</p>
+							<div>
+								<select selectpicker ng-model="$parent.$parent.category" class="form-control" ng-change="setCategory()"><option ng-repeat="category in categories" value="{{category.i}}">{{category.n ? category.n : '(no name)'}}</option></select>
+							</div>
+						</p>
+					</div>
 				</div>
-			</div>
-
-
 
 				<div class="col-md-4">
 					<div class="columnCards">
