@@ -1093,3 +1093,10 @@ button .btn .btn-default active{
   background-color: #15acff;
   border-color: transparent;
 }
+
+.rotate-on-collapse {
+  transition: transform 0.2s ease-out;
+}
+.rotate-on-collapse[aria-expanded="false"] {
+  transform: rotate(90deg);
+}

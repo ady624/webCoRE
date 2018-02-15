@@ -124,8 +124,8 @@
 	<div class="container" ng-if="mode=='view'">
 		<div class="row script">
 
-			<span class="fa fa-caret-down pull-right" ng-class="{ 'fa-rotate-90': hideCards }" small ng-click="hideCards=!hideCards" title="Hide/Show"></span>
-			<div ng-if="!hideCards">
+			<span class="fa fa-caret-down pull-right rotate-on-collapse" data-toggle="collapse" data-target="#collapseCards" aria-expanded="true" small title="Hide/Show"></span>
+			<div class="collapse in" id="collapseCards">
 			<div class="row" ng-if="0==1">
 				<div class="col-md-12">
 					<div class="btn-group btn-group-justified" role="group">
@@ -157,7 +157,7 @@
 					<p>
 						<p>Piston Category</p>
 						<div>
-							<select selectpicker ng-model="$parent.$parent.$parent.category" class="form-control" ng-change="setCategory()"><option ng-repeat="category in categories" value="{{category.i}}">{{category.n ? category.n : '(no name)'}}</option></select>
+							<select selectpicker ng-model="$parent.$parent.category" class="form-control" ng-change="setCategory()"><option ng-repeat="category in categories" value="{{category.i}}">{{category.n ? category.n : '(no name)'}}</option></select>
 						</div>
 					</p>
 				</div>
@@ -202,15 +202,10 @@
 
 
 			<div class="row">
-
 				<div class="col-md-12">
-				<span class="fa fa-caret-down pull-right" ng-class="{ 'fa-rotate-90':hideScript }" small ng-click="hideScript = !hideScript" title="Hide/Show"></span>
-					<div ng-if="!hideScript">
-
-
+					<h3 class="pull-left">Script </h3>
+					<span class="fa fa-caret-down pull-right rotate-on-collapse" data-toggle="collapse" data-target="#collapseScript" aria-expanded="true" small title="Hide/Show"></span>
 						<div class="collapse navbar-collapse script" id="navbar-view-collapse">
-							<h3>Script </h3>
-
 							<button class="btn btn-default" ng-click="edit();" title="Edit the piston">Edit</button>
 							<button class="btn btn-warning" ng-click="test();" title="Test the piston">Test</button>
 							<button class="btn btn-success" ng-click="snapshot(true);" title="Take an anonymized snapshot of the piston"><i class="fa fa-camera" aria-hidden="true"></i></button>
@@ -218,13 +213,12 @@
 							<button class="btn btn-default" ng-click="textSnapshot();" title="Copy piston to clipboard"><i class="fa fa-copy" aria-hidden="true"></i></button>
 							<toggle ng-if="trace && trace.points" ng-model="view.trace" on="Trace" off="Trace" ng-click="toggleView(null)"></toggle>
 							<button class="btn btn-danger" ng-click="deleteDialog();">Delete</button>
-							<span class="toggle-arrow pull-right" small ng-click="hideScript = !hideScript" title="Hide/Show"></span>
 						</div>
 
-						<p ng-if="!hideScript">
+						<div class="clearfix"></div>
+						<p class="collapse in" id="collapseScript">
 							<piston id="piston" ng-if="initialized" mode="{{mode}}" ng-repeat="piston in [piston]" data-nag-model="piston" ng-include="'piston'" trace="{{view.trace && (mode=='view') && !!trace && !!trace.points}}" no-animation context-menu="contextMenu()" context-menu-class="contextmenu"></piston>
 						</p>
-					</div>
 				</div>
 			</div>
 
@@ -233,9 +227,8 @@
 				<div class="col-md-12 col-lg-6">
 					<p>
 					<h3>Logs</h3>
-					<span class="fa fa-caret-down pull-right" ng-class="{ 'fa-rotate-90':hideLogs }" small ng-click="hideLogs=!hideLogs" title="Hide/Show"></span>
+					<span class="fa fa-caret-down pull-right rotate-on-collapse" data-toggle="collapse" data-target="#collapseLogs" aria-expanded="true" small title="Hide/Show"></span>
 					</p>
-					<div ng-if="!hideLogs">
 					<div class="collapse in" id="collapseLogs">
 
 					<div class="logs">
@@ -267,7 +260,6 @@
 					</div>
 				</div>
 				</div>
-				</div>
 
 
 
@@ -275,9 +267,8 @@
 				<div class="col-md-12 col-lg-6">
 					<p>
 					<h3>Variables</h3>
-					<span class="fa fa-caret-down pull-right" ng-class="{ 'fa-rotate-90':hideVars }" small ng-click="hideVars=!hideVars" title="Hide/Show"></span>
+					<span class="fa fa-caret-down pull-right rotate-on-collapse" data-toggle="collapse" data-target="#collapseVars" aria-expanded="true" small title="Hide/Show"></span>
 					</p>
-					<div ng-if="!hideVars">
 					<div class="collapse in" id="collapseVars">
 
 					<div multicolumn>
@@ -292,7 +283,6 @@
 					</div>
 				</div>
 			</div>
-				</div>
 			</div>
 
 
@@ -300,9 +290,8 @@
 				<div class="col-md-12">
 					<p>
 					<h3>Evaluation Console</h3>
-					<span class="fa fa-caret-down pull-right" ng-class="{ 'fa-rotate-90':hideEval }" small ng-click="hideEval=!hideEval" title="Hide/Show"></span>
+					<span class="fa fa-caret-down pull-right rotate-on-collapse" data-toggle="collapse" data-target="#collapseCons" aria-expanded="true" small title="Hide/Show"></span>
 					</p>
-					<div ng-if="!hideEval">
 					<div class="collapse in" id="collapseCons">
 					<console ng-if="initialized" mode="{{mode}}">
 						<label>Evaluation console</label>
@@ -319,20 +308,17 @@
 				</div>
 			</div>
 			</div>
-			</div>
 			<div class="row" ng-if="!mobile && stats && stats.timing && stats.timing.length">
 				<div class="col-md-12">
 
 					<p>
 					<h3>Statistics</h3>
-					<span class="fa fa-caret-down pull-right" ng-class="{ 'fa-rotate-90':hideStats }" small ng-click="hideStats=!hideStats" title="Hide/Show"></span>
+					<span class="fa fa-caret-down pull-right rotate-on-collapse " data-toggle="collapse" data-target="#collapseStats" aria-expanded="true" small title="Hide/Show"></span>
 					</p>
-					<div ng-if="!hideStats">
 					<div class="collapse in" id="collapseStats">
 					<canvas id="line" height="100" class="chart chart-line" chart-data="chart.data" chart-labels="chart.labels" chart-series="chart.series" chart-options="chart.options" chart-dataset-override="chart.datasetOverride" disabled-chart-click_ed="chart.onClick"></canvas>
 				</div>
 			</div>
-		</div>
 			</div>
 		</div>
 		<footer>
