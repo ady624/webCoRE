@@ -980,50 +980,40 @@ ul.nav.nav-pills {
     vertical-align: top;
 }
 
-.sidebarNewPiston {
-	  border-left: 5px solid #15bfff;
-	  border-top: 1px solid #eee;
-	  border-bottom: 1px solid #eee;
+.nav-sidebar > li > a {
+	border: 1px solid #eee;
+	border-left-width: 5px;
+	border-right-width: 0;
 }
 
-.sidebarDash {
-	  border-left: 5px solid #ED207B;
-	  border-top: 1px solid #eee;
-	  border-bottom: 1px solid #eee;
+.nav-sidebar > li > a.newPiston {
+	  border-left-color: #15bfff;
 }
 
-.sidebarFuel {
-	  border-left: 5px solid #3AB54A;
-	  border-top: 1px solid #eee;
-	  border-bottom: 1px solid #eee;
+.nav-sidebar > li > a.dash {
+	  border-left-color: #ED207B;
 }
 
-.sidebarBackup {
-	  border-left: 5px solid #BF1E2E;
-	  border-top: 1px solid #eee;
-	  border-bottom: 1px solid #eee;
+.nav-sidebar > li > a.fuel {
+	  border-left-color: #3AB54A;
 }
 
-.sidebarMove {
-	  border-left: 5px solid #F7941D;
-	  border-top: 1px solid #eee;
-	  border-bottom: 1px solid #eee;
+.nav-sidebar > li > a.backup {
+	  border-left-color: #BF1E2E;
 }
 
-.sidebarSettings {
-	  border-left: 5px solid #B3B5B4;
-	  border-top: 1px solid #eee;
-	  border-bottom: 1px solid #eee;
+.nav-sidebar > li > a.move {
+	  border-left-color: #F7941D;
 }
 
-.sidebarRegister {
-	  border-left: 5px solid #F7941D;
-	  border-top: 1px solid #eee;
-	  border-bottom: 1px solid #eee;
+.nav-sidebar > li > a.settings {
+	  border-left-color: #B3B5B4;
 }
 
-.sidebarLogout {
-	  border-left: 5px solid #000;
-	  border-top: 1px solid #eee;
-	  border-bottom: 1px solid #eee;
+.nav-sidebar > li > a.register {
+	  border-left-color: #F7941D;
+}
+
+.nav-sidebar > li > a.logout {
+	  border-left-color: #000;
 }
