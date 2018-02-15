@@ -21,11 +21,11 @@
     </div>
 
 <!--External links // collapsed on xs-->
-	<div class="nav navbar-nav navbar-right hidden-xs">
-		<li><a target="_blank" aria-haspopup="true" aria-expanded="false" href="https://www.paypal.me/ady624"><i class="fa fa-paypal" aria-hidden="true"></i>&nbsp;&nbsp;Donate</a></li>
-		<li><a target="_blank" aria-haspopup="true" aria-expanded="false" href="https://community.webcore.co"><i class="fa fa-comments" aria-hidden="true"></i>&nbsp;&nbsp;Forum</a></li>
-		<li><a target="_blank" aria-haspopup="true" aria-expanded="false" href="https://wiki.webcore.co"><i class="fa fa-book" aria-hidden="true"></i>&nbsp;&nbsp;Wiki</a></li>
-	</div>
+	<ul class="nav navbar-nav navbar-right hidden-xs">
+			<li><a target="_blank" aria-haspopup="true" aria-expanded="false" href="https://www.paypal.me/ady624"><i class="fa fa-paypal" aria-hidden="true"></i>&nbsp;&nbsp;Donate</a></li>
+			<li><a target="_blank" aria-haspopup="true" aria-expanded="false" href="https://community.webcore.co"><i class="fa fa-comments" aria-hidden="true"></i>&nbsp;&nbsp;Forum</a></li>
+			<li><a target="_blank" aria-haspopup="true" aria-expanded="false" href="https://wiki.webcore.co"><i class="fa fa-book" aria-hidden="true"></i>&nbsp;&nbsp;Wiki</a></li>
+	</ul>
 
 <!-- Nav links and content -->
     <div class="collapse navbar-collapse" id="navbar">
@@ -43,8 +43,8 @@
           <ul class="dropdown-menu">
             <li><a href="#" ng-click="newPiston();"><i class="fa fa-plus" aria-hidden="true"></i>&nbsp;&nbsp;New Piston</a></li>
 						<li><a href="#" ng-click="showDashboard();"><i class="fa fa-th-list" aria-hidden="true"></i>&nbsp;&nbsp;Dashboard</a></li>
-						<li><a href="#" ng-click="showFuelStreams();"><i class="fa fa-area-chart" aria-hidden="true"></i></span>&nbsp;&nbsp;Fuel Streams</a></li>
-						<li><a href="" ng-click="backup();"><i class="fa fa-cloud-upload" aria-hidden="true"></i></span>&nbsp;&nbsp;Backup Piston(s)</a></li>
+						<li><a href="#" ng-click="showFuelStreams();"><i class="fa fa-area-chart" aria-hidden="true"></i>&nbsp;&nbsp;Fuel Streams</a></li>
+						<li><a href="" ng-click="backup();"><i class="fa fa-cloud-upload" aria-hidden="true"></i>&nbsp;&nbsp;Backup Piston(s)</a></li>
             <li ng-if="instanceCount > 1"><a href="#" ng-click="movePiston();">Move Piston(s)</a></li>
             <li><a href="register"><i class="fa fa-home" aria-hidden="true"></i>&nbsp;&nbsp;Register Instance</a></li>
             <li><a href="#" ng-click="showSettings()"><i class="fa fa-wrench" aria-hidden="true"></i>&nbsp;&nbsp;Settings</a></li>
@@ -102,13 +102,15 @@
 	        <li class="logo"><img class="logo-sm" src="https://raw.githubusercontent.com/ady624/webCoRE/master/resources/icons/app-CoRE%403x.png" alt="webCoRE logo"><img class="logo-lg" src="https://community.webcore.co/uploads/default/original/2X/d/d82aa5d0f719318d1f35bafdec06e2c8cf3c54be.svg" width="90%"></li>
           <li><a href="" ng-click="newPiston();" class="newPiston"><i class="fa fa-plus" aria-hidden="true"></i>&nbsp;&nbsp;New Piston</a></li>
 					<li><a href="" ng-click="showDashboard();" class="dash"><i class="fa fa-th-list" aria-hidden="true"></i>&nbsp;&nbsp;Dashboard (beta)</a></li>
-					<li><a href="" ng-click="showFuelStreams();" class="fuel"><i class="fa fa-area-chart" aria-hidden="true"></i></span>&nbsp;&nbsp;Fuel Streams (beta)</a></li>
-					<li><a href="" ng-click="backup();" class="backup"><i class="fa fa-cloud-upload" aria-hidden="true"></i></span>&nbsp;&nbsp;Backup Piston(s)</a></li>
+					<li><a href="" ng-click="showFuelStreams();" class="fuel"><i class="fa fa-area-chart" aria-hidden="true"></i>&nbsp;&nbsp;Fuel Streams (beta)</a></li>
+					<li><a href="" ng-click="backup();" class="backup"><i class="fa fa-cloud-upload" aria-hidden="true"></i>&nbsp;&nbsp;Backup Piston(s)</a></li>
 					<li><a href="register" class="register"><i class="fa fa-home" aria-hidden="true"></i>&nbsp;&nbsp;Register Instance</a></li>
-					<li ng-if="instanceCount > 1"><a href="" ng-click="movePiston();"" class="move"><i class="fa fa-sort" aria-hidden="true"></i>&nbsp;&nbsp;Move Piston(s)</a></li>
+					<li ng-if="instanceCount > 1"><a href="" ng-click="movePiston();" class="move"><i class="fa fa-sort" aria-hidden="true"></i>&nbsp;&nbsp;Move Piston(s)</a></li>
 					<li><a href="" ng-click="showSettings();" class="settings"><i class="fa fa-wrench" aria-hidden="true"></i>&nbsp;&nbsp;Settings</a></li>
 					<li>
 					<li><a href="#" ng-click="logOut();" class="logout"><i class="fa fa-sign-out" aria-hidden="true"></i>&nbsp;&nbsp;Log Out</a></li>
+					<li class="text-center">
+						
 <!-- dashboard (sidebar) -->
 <ins class="adsbygoogle"
    style="display:inline-block;width:120px;height:600px;padding: 20px;"
@@ -205,7 +207,7 @@
 	</div>
 </viewer>
 
-<viewer class="settings" ng-if="initialized && (view == 'settings')" class="no-animate">
+<viewer class="settings no-animate" ng-if="initialized && (view == 'settings')">
 	<label class="header">Settings</label>
 
 
@@ -291,7 +293,7 @@
 	<div ng-repeat="place in settings.places" class="place" ng-click="editPlace(place)">
 	    <footer><i ng-if="!!place.h" class="fa fa-home" aria-hidden="true"></i>{{place.n}}</footer>
 	    <ng-map center="{{place.p}}" zoom="14" mayTypeId="TERRAIN" controls="false" disable-default-u-i="true" pan-control="false" zoom-control="false" scale-control="false">
-	    <marker position="{{place.p}}" draggable="false""></marker>
+	    <marker position="{{place.p}}" draggable="false"></marker>
 	    <shape name="circle" editable="false" draggable="false"
 	      stroke-color="#00CCFF"
 	      stroke-opacity="0.8"

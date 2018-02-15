@@ -302,7 +302,7 @@
 		<footer>
 			<p></p>
 		</footer>
-	</div>
+
 	<piston id="editor" console="{{view.console}}" ng-if="initialized && (mode=='edit')" mode="{{mode}}" ng-repeat="piston in [piston]" data-nag-model="piston" ng-include="'piston'" movable="{{(mode=='edit') && view.movable}}" context-menu="contextMenu()" context-menu-class="contextmenu"></piston>
 	<console ng-if="(mode == 'edit') && view.console && initialized" mode="{{mode}}">
 		<label>Evaluation console</label>
