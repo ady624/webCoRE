@@ -19,7 +19,6 @@ h3 {
     color: #444;
     font-weight: 300;
     font-size: 22px;
-    display: inline;
     vertical-align: middle;
     padding-right: 20px;
 }
@@ -1097,7 +1096,7 @@ button .btn .btn-default active{
 .rotate-on-collapse {
   transition: transform 0.2s ease-out;
   padding: 10px;
-  margin: -4px -10px 0 0;
+  margin: 10px -10px 0 0;
 }
 .rotate-on-collapse[aria-expanded="false"] {
   transform: rotate(90deg);

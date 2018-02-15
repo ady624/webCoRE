@@ -144,12 +144,10 @@
 							<button class="btn btn-default" ng-click="resume();">Resume »</button>
 						</div>
 						<hr/>
-						<p>
-							<p>Piston Category</p>
-							<div>
-								<select selectpicker ng-model="$parent.$parent.category" class="form-control" ng-change="setCategory()"><option ng-repeat="category in categories" value="{{category.i}}">{{category.n ? category.n : '(no name)'}}</option></select>
-							</div>
-						</p>
+						<p>Piston Category</p>
+						<div>
+							<select selectpicker ng-model="$parent.$parent.category" class="form-control" ng-change="setCategory()"><option ng-repeat="category in categories" value="{{category.i}}">{{category.n ? category.n : '(no name)'}}</option></select>
+						</div>
 					</div>
 				</div>
 
@@ -189,7 +187,7 @@
 
 
 
-			<div class="row script">
+			<div class="row">
 				<div class="col-md-12">
 					<h3 class="pull-left">Script </h3>
 					<span class="fa fa-caret-down pull-right rotate-on-collapse" data-toggle="collapse" data-target="#collapseScript" aria-expanded="true" small title="Hide/Show"></span>
@@ -213,10 +211,8 @@
 			<div class="row">
 
 				<div class="col-md-12 col-lg-6">
-					<p>
-					<h3>Logs</h3>
 					<span class="fa fa-caret-down pull-right rotate-on-collapse" data-toggle="collapse" data-target="#collapseLogs" aria-expanded="true" small title="Hide/Show"></span>
-					</p>
+					<h3>Logs</h3>
 					<div class="collapse in" id="collapseLogs">
 
 					<div class="logs">
@@ -253,10 +249,8 @@
 
 
 				<div class="col-md-12 col-lg-6">
-					<p>
-					<h3>Variables</h3>
 					<span class="fa fa-caret-down pull-right rotate-on-collapse" data-toggle="collapse" data-target="#collapseVars" aria-expanded="true" small title="Hide/Show"></span>
-					</p>
+					<h3>Variables</h3>
 					<div class="collapse in" id="collapseVars">
 
 					<div multicolumn>
@@ -276,10 +270,8 @@
 
 			<div class="row">
 				<div class="col-md-12">
-					<p>
-					<h3>Evaluation Console</h3>
 					<span class="fa fa-caret-down pull-right rotate-on-collapse" data-toggle="collapse" data-target="#collapseCons" aria-expanded="true" small title="Hide/Show"></span>
-					</p>
+					<h3>Evaluation Console</h3>
 					<div class="collapse in" id="collapseCons">
 					<console ng-if="initialized" mode="{{mode}}">
 						<label>Evaluation console</label>
@@ -299,10 +291,8 @@
 			<div class="row" ng-if="!mobile && stats && stats.timing && stats.timing.length">
 				<div class="col-md-12">
 
-					<p>
-					<h3>Statistics</h3>
 					<span class="fa fa-caret-down pull-right rotate-on-collapse " data-toggle="collapse" data-target="#collapseStats" aria-expanded="true" small title="Hide/Show"></span>
-					</p>
+					<h3>Statistics</h3>
 					<div class="collapse in" id="collapseStats">
 					<canvas id="line" height="100" class="chart chart-line" chart-data="chart.data" chart-labels="chart.labels" chart-series="chart.series" chart-options="chart.options" chart-dataset-override="chart.datasetOverride" disabled-chart-click_ed="chart.onClick"></canvas>
 				</div>
