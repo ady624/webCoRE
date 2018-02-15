@@ -43,7 +43,7 @@
        				<li class="dropdown"><a href="" ng-click="snapshot();" title="Take a snapshot of the piston"><i class="fa fa-camera" aria-hidden="true"></i> Snapshot</a></li>
 							<li class="dropdown"><a href="" ng-click="textSnapshot();" title="Copy piston to clipboard"><i class="fa fa-copy" aria-hidden="true"  title="Copy piston"></i> Copy Piston</a></li>
 							<li class="dropdown"><a href="" ng-click="deleteDialog();" title="Delete piston">Delete</a></li>
-							<li class="dropdown dropdown-trace">Trace&nbsp;&nbsp;<input type="checkbox" ng-if="trace && trace.points" ng-model="view.trace" on="Trace" off="Trace" ng-click="toggleView(null)"></li>
+							<li class="{{trace && trace.points && view.trace ? 'active-tick' : ''}}"><a href="" ng-click="view.trace = !view.trace; toggleView(null);">Trace</a></li>
 						</ul>
 					</li>
         </ul>
