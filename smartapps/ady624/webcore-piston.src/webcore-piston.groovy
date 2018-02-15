@@ -2785,7 +2785,7 @@ private long vcmd_sendNotificationToContacts(rtData, device, params) {
     if (recipients.size()) {
         if (recipients && recipients.size()) {
 			def save = !!params[2]
-			sendNotificationToContacts(message, recipients, [event: save])
+			sendNotificationToContacts(message, recipients, [event: save, view: [name: "webCoRE", data: [:]]])
         }
 	} else {
     	error "Invalid list of contacts: ${params[1]}", rtData
