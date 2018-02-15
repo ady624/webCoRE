@@ -1096,6 +1096,8 @@ button .btn .btn-default active{
 
 .rotate-on-collapse {
   transition: transform 0.2s ease-out;
+  padding: 10px;
+  margin: -4px -10px 0 0;
 }
 .rotate-on-collapse[aria-expanded="false"] {
   transform: rotate(90deg);
