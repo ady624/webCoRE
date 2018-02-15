@@ -11,7 +11,7 @@ panel {
 
 }
 
-input[code] {
+input[name="code"] {
 	height: 48px !important;
 	font-size: 26px !important;
 	width: 100%;
@@ -19,7 +19,7 @@ input[code] {
 	border-radius: 0px;
 }
 
-input[code]:focus {
+input[name="code"]:focus {
 	max-width: 100%;
 	text-transform: lowercase;
 }
