@@ -335,7 +335,7 @@
 <script type="text/ng-template" id="dialog-auth">
 <designer>
     <header>
-  	     <label>Authentication Required</label>
+  	     <h3>Authentication Required</h3>
      </header>
      <form>
   	     <div class="form-group">
@@ -357,7 +357,7 @@
 <script type="text/ng-template" id="dialog-del-instance">
 <designer>
     <header>
-       <label>Unresponsive CoRE instance</label>
+       <h3>Unresponsive CoRE instance</h3>
    </header>
    <form>
        <div class="form-group">
@@ -377,47 +377,46 @@
 <script type="text/ng-template" id="dialog-add-piston">
 <designer ng-if="designer.page==0">
       <header>
-          <label>Create a new piston</label>
+          <h3>Create a new piston</h3>
           <span>Please select one of the methods below</span>
       </header>
       <items>
-          <item ng-repeat="item in designer.items" type="{{item.type}}" class="fa fa-{{item.icon}} {{item.cssClass}}" caption="{{item.name}}" ng-click="setDesignerType(item.type)"></item>
+           <item ng-repeat="item in designer.items" type="{{item.type}}" class="btn btn-block btn-lg {{item.cssClass}}" ng-click="setDesignerType(item.type)">
+             <i class="fa fa-lg fa-{{item.icon}}"></i>
+             {{item.name}}
+          </item>
       </items>
 </designer>
 <designer ng-if="designer.page==1">
       <header ng-if="designer.type=='blank'">
-          <label>Create a new blank piston</label>
+          <h3>Create a new blank piston</h3>
           <span>You are about to create a new piston from scratch. Yey! Click Create to get started.</span>
       </header>
       <header ng-if="designer.type=='duplicate'">
-          <label>Create a duplicate piston</label>
+          <h3>Create a duplicate piston</h3>
           <span>You are about to create a duplicate piston. Select the source piston below and click Create to get started.</span>
       </header>
       <header ng-if="designer.type=='template'">
-          <label>Create new piston from a template</label>
+          <h3>Create new piston from a template</h3>
           <span>You wanted to create a new piston from a template. The bad news is, there are no templates yet :( But the good news is, you can start one from scratch. Yey! Click Next to get started.</span>
       </header>
       <header ng-if="designer.type=='restore'">
-          <label>Restore a piston</label>
+          <h3>Restore a piston</h3>
           <span>Please enter the backup bin code below and click Create to get started.</span>
           <p><b>NOTE:</b> Only backup bin codes created by your account are supported. All others will generate an empty piston.</p>
       </header>
       <header ng-if="designer.type=='import'">
-          <label>Import a new piston</label>
+          <h3>Import a new piston</h3>
           <span>You wanted to import a new piston. The bad news is, there is no way yet :( But the good news is, you can start one from scratch. Yey! Click Next to get started.</span>
       </header>
       <form>
           <div class="form-group">
-              <div class="form-table input-group">
 	            <label for="author">Author</label>
                   <input class="form-control"  id="author" ng-model="designer.author" type="text" />
-              </div>
           </div>
           <div class="form-group">
-              <div class="form-table input-group">
 	            <label for="name">Piston name</label>
                   <input class="form-control"  id="name" ng-model="designer.name" type="text" />
-              </div>
           </div>
 		<div class="form-group" ng-if="designer.type=='duplicate'">
 			<label for="piston">Select the piston you want to duplicate</label>
@@ -482,7 +481,7 @@
 <script type="text/ng-template" id="dialog-move-piston">
 <designer>
       <header>
-          <label>Move piston(s)</label>
+          <h3>Move piston(s)</h3>
       </header>
 	<form>
 		<div class="form-group">
@@ -515,7 +514,7 @@
 <script type="text/ng-template" id="dialog-backup-piston">
 <designer>
       <header>
-          <label>Backup piston(s)</label>
+          <h3>Backup piston(s)</h3>
       </header>
 	<form ng-if="designer.page==0">
 		<div class="form-group">
@@ -573,7 +572,7 @@
 <script type="text/ng-template" id="dialog-edit-place">
   <designer>
       <header>
-          <label>Edit place</label>
+          <h3>Edit place</h3>
       </header>
 <form>
     <div class="form-group">
@@ -622,7 +621,7 @@
 <script type="text/ng-template" id="dialog-register-presence-sensor">
   <designer>
       <header>
-          <label>Register presence sensor</label>
+          <h3>Register presence sensor</h3>
       </header>
 <form>
     <div class="form-group">

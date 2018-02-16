@@ -282,6 +282,10 @@ nav[fixed] a {
 
 .navbar-brand {
 	font-size: 12px;
+	max-width: calc(100vw - 65px);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 }
 
 .navbar-inverse .navbar-brand:hover{

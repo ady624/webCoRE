@@ -593,51 +593,12 @@ designer items {
     display: block;
     /*margin-right: -8px;*/
 }
-designer items > item {
-    display: inline-block;
-    min-width: 96px;
-    max-width: 128px;
-    width: 15.5%;
-    height: 96px;
-    border: solid 1px #ccc;
-    border-radius: 4px;
-    margin: 0px 8px 8px 0px;
-    text-align: center;
-    line-height: 32px;
-    font-size: 32px !important;
-    padding: 16px 4px;
-    cursor: pointer;
+designer items item.btn {
+  text-align: left;
 }
-designer items > item::after {
-    margin-top: 16px;
-    display: block;
-    content: attr(caption);
-    font-size: 12px;
-}
-designer items > item[selected] {
-    background-color: #aaddff;
-    cursor: default;
-}
-designer items > item.wide {
-	min-width: 100%;
-	max-width: 100%;
-	padding-left: 64px;
-	width: 100%;
-	min-height: 64px;
-	height: auto;
-	line-height: 32px;
-	font-size: 32px !important;
-}
-designer items > item.wide::before {
-	padding: 0px 16px;
-	float: left;
-	margin-left: -64px;
-}
-designer items > item.wide::after {
-	/* float: left; */
-	margin: 0px;
-	text-align: left;
-	font-size: 16px;
+designer items item.btn.btn-lg {
+  padding-top: 12px;
+  padding-bottom: 12px;
 }
 
 designer form > p,
