@@ -99,8 +99,11 @@
 				</div>
 			</div>
 			<div warning ng-if="meta.active && !subscriptions.events && !schedules.length && !piston.o.des" class="alert alert-warning">This piston does not subscribe to any events. Unless executed by other means, it will never run on its own.</div>
+			
+
 			<div class="row">
-				<div class="col-md-4">
+
+				<div id="columnCards" class="col-md-4">
 					<h2>Status</h2>
 					<div ng-if="meta.active">
 						<p>This piston is currently active and humming happily.</p>
@@ -118,7 +121,10 @@
 						</div>
 					</p>
 				</div>
-				<div class="col-md-4">
+
+
+
+				<div id="columnCards" class="col-md-4">
 					<h2>Quick facts</h2>
 					<p>Piston state: <span ng-bind-html="renderString(state.new)"></span></p>
 					<p>Last executed: {{lastExecuted ? utcToString(lastExecuted) : 'never'}}</p>
@@ -128,7 +134,11 @@
 					<p>Memory used: {{memory ? memory : 'unknown'}}</p>
 					<p>External URL: <a href="{{endpoint}}" target="_blank">(click to open/execute)</a></p>
 				</div>
-				<div class="col-md-4">
+
+
+				<div id="columnCards" class="col-md-4">
+			
+
 					<h2>Automatic backup</h2>
 					<div ng-if="meta.bin">
 						<p>Automatic backup is enabled for this piston.</p>
@@ -139,9 +149,13 @@
 					<div ng-if="!meta.bin">
 						<p>You do not have automatic backup enabled for this piston.</p>
 						<button class="btn btn-default" ng-click="enableAutomaticBackup()">Enable automatic backup »</button>
+
 					</div>
 				</div>
 			</div>
+
+
+
 			<div class="row">
 				<div class="col-md-12">
 					<h2>Script <span small ng-click="hideScript = !hideScript">({{hideScript ? 'show' : 'hide'}})</span></h2>
