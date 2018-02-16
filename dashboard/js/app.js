@@ -1838,6 +1838,12 @@ function initBootstrapSelect() {
 	$('select').selectpicker();
 }
 
+// ios-drag-drop mishandles touches on mobile nav menus; stop propagation of the
+// touchstart event in nav menus before it bubbles up to the document level
+$(document.documentElement).on('touchstart', '.navbar-collapse *', function (e) { 
+  e.stopPropagation();
+});
+
 
 window.onerror = function myErrorHandler(errorMsg, url, lineNumber) {
     //alert("Error occured: " + errorMsg + ' at ' + url + ' line ' + lineNumber);//or any message
