@@ -10,18 +10,55 @@
 </loader>
 <error ng-if="error" ng-animate><p ng-bind-html="error"></p><button class="btn btn-default" ng-click="home()">Go home</button></error>
 <nav ng-if="initialized" ng-animate class="navbar navbar-default">
+	
 	<div class="container-fluid">
 		<!-- Brand and toggle get grouped for better mobile display -->
-		<div class="navbar-header">
-			<button ng-if="mode=='edit'" type="button" class="navbar-toggle btn btn-default collapsed" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1" aria-expanded="false">
+		
+		<div class="navbar-header" style="width:100%">
+
+			<button ng-if="mode=='edit'" type="button" class="navbar-toggle btn collapsed" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1" aria-expanded="false">
 				<span class="sr-only">Toggle navigation</span>
 				<span class="icon-bar"></span>
 				<span class="icon-bar"></span>
 				<span class="icon-bar"></span>
 			</button>
-			<div ng-if="mode=='view'" class="nav navbar-nav btn-group">
-				<span class="title btn btn-default" title="Back to piston list" ng-click="home()"><i class="fa fa-chevron-left" aria-hidden="true"></i>&nbsp;{{location.name}} \ {{instance.name}} ({{instance.coreVersion.split('.').splice(0,3).join('.')}})</span>
+
+			<button ng-if="mode=='view'" type="button" class="navbar-toggle btn collapsed" data-toggle="collapse" data-target="#navbar-view-collapse" aria-expanded="false">
+				<span class="sr-only">Toggle navigation</span>
+				<span class="icon-bar"></span>
+				<span class="icon-bar"></span>
+				<span class="icon-bar"></span>
+			</button>
+
+				<div ng-if="mode=='view'" class="nav navbar-nav btn-group hidden-xs hidden-sm">
+					<span class="title btn btn-default" title="Back to piston list" ng-click="home()"><i class="fa fa-chevron-left" aria-hidden="true"></i>&nbsp;{{location.name}} \ {{instance.name}} ({{instance.coreVersion.split('.').splice(0,3).join('.')}})</span>
+				</div>
+
+				<div ng-if="mode=='view'" class="nav navbar-nav btn-group hidden-md hidden-lg">
+					<span class="title btn btn-default" title="Back to piston list" ng-click="home()"><i class="fa fa-chevron-left" aria-hidden="true"></i>&nbsp;Back</span>
+				</div>
+
+
+			<div ng-if="mode=='view'" class="collapse navbar-collapse" id="navbar-view-collapse">
+
+				<div class="nav navbar-nav navbar-right">
+	                <li class="dropdown">
+	                    
+	                    <ul class="dropdown-menu btn">
+							<li><a href="" ng-click="edit();" title="Edit the piston">Edit</a></li>
+							<li><a href="" ng-click="test();" title="Test the piston">Test</a></li>
+	                        <li><a href="" ng-click="snapshot(true);" title="Take an anonymized snapshot of the piston"><i class="fa fa-camera" aria-hidden="true"></i> Anonymized Snapshot</a></li>
+	                        <li><a href="" ng-click="snapshot();" title="Take a snapshot of the piston"><i class="fa fa-camera" aria-hidden="true"></i> Snapshot</a></li>
+							
+							<li><a href="" ng-click="textSnapshot();" title="Copy piston to clipboard"><i class="fa fa-copy" aria-hidden="true"></i> Copy Piston</a></li>
+							<li><a href="" ng-click="deleteDialog();">Delete</a></li>
+							<li style="padding-left: 20px; padding-top: 10px">Trace  <input type="checkbox" ng-if="trace && trace.points" ng-model="view.trace" ng-click="toggleView(null)"></li>
+	                    </ul>
+	                </li>
+	        	</div>
+
 			</div>
+
 			<div ng-if="mode=='edit'" class="nav navbar-nav btn-group">
 				<button class="btn btn-default {{view.variables ? 'active' : ''}}" ng-click="toggleView('variables');" title="Show variables"><i class="fa fa-subscript" aria-hidden="true"></i></button>
 				<button class="btn btn-default {{view.elseIfs ? 'active' : ''}}" ng-click="toggleView('elseIfs');" title="Show complex IFs"><i class="fa fa-code-fork" aria-hidden="true"></i></button>
@@ -35,7 +72,9 @@
 				<button class="btn btn-default" title="Redo" ng-click="redo();" ng-disabled="!stack || !stack.redo || !stack.redo.length"><i class="fa fa-repeat" aria-hidden="true"></i>
 				</button>
 			</div>
-		</div>
+		
+
+		
 
 		<!-- Collect the nav links, forms, and other content for toggling -->
 		<div ng-if="mode=='edit'" class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
@@ -72,10 +111,14 @@
 		</div>
 		<button type="submit" class="btn btn-default">Submit</button>
 	  </form>-->
+	  	</div>
 		</div>
 		<!-- /.navbar-collapse -->
 	</div>
 </nav>
+
+
+
 <viewer ng-if="initialized" ng-animate options="{{viewerPiston.showOptions}}" mode="{{mode}}">
 	<div header ng-if="mode=='view'">
 		<div class="container">
@@ -99,8 +142,11 @@
 				</div>
 			</div>
 			<div warning ng-if="meta.active && !subscriptions.events && !schedules.length && !piston.o.des" class="alert alert-warning">This piston does not subscribe to any events. Unless executed by other means, it will never run on its own.</div>
+			
+
 			<div class="row">
-				<div class="col-md-4">
+
+				<div id="columnCards" class="col-md-4">
 					<h2>Status</h2>
 					<div ng-if="meta.active">
 						<p>This piston is currently active and humming happily.</p>
@@ -112,14 +158,17 @@
 					</div>
 					<hr/>
 					<p>
-						<p>Piston category</p>
+						<p>Piston Category</p>
 						<div>
 							<select selectpicker ng-model="$parent.$parent.category" class="form-control" ng-change="setCategory()"><option ng-repeat="category in categories" value="{{category.i}}">{{category.n ? category.n : '(no name)'}}</option></select>
 						</div>
 					</p>
 				</div>
-				<div class="col-md-4">
-					<h2>Quick facts</h2>
+
+
+
+				<div id="columnCards" class="col-md-4">
+					<h2>Quick Facts</h2>
 					<p>Piston state: <span ng-bind-html="renderString(state.new)"></span></p>
 					<p>Last executed: {{lastExecuted ? utcToString(lastExecuted) : 'never'}}</p>
 					<p>Next scheduled: {{nextSchedule ? utcToString(nextSchedule) : 'never'}}</p>
@@ -128,8 +177,12 @@
 					<p>Memory used: {{memory ? memory : 'unknown'}}</p>
 					<p>External URL: <a href="{{endpoint}}" target="_blank">(click to open/execute)</a></p>
 				</div>
-				<div class="col-md-4">
-					<h2>Automatic backup</h2>
+
+
+				<div id="columnCards" class="col-md-4">
+			
+
+					<h2>Automatic Backup</h2>
 					<div ng-if="meta.bin">
 						<p>Automatic backup is enabled for this piston.</p>
 						<p>{{mobile ? 'Touch' : 'Click'}} the box below to reveal your backup bin code. You should make a note of this code as you may use it later to restore a piston that you "mistakenly" deleted.</p>
@@ -139,26 +192,40 @@
 					<div ng-if="!meta.bin">
 						<p>You do not have automatic backup enabled for this piston.</p>
 						<button class="btn btn-default" ng-click="enableAutomaticBackup()">Enable automatic backup »</button>
+
 					</div>
 				</div>
 			</div>
+
+
+
 			<div class="row">
 				<div class="col-md-12">
-					<h2>Script <span small ng-click="hideScript = !hideScript">({{hideScript ? 'show' : 'hide'}})</span></h2>
-					<p ng-if="!hideScript">
-						<piston id="piston" ng-if="initialized" mode="{{mode}}" ng-repeat="piston in [piston]" data-nag-model="piston" ng-include="'piston'" trace="{{view.trace && (mode=='view') && !!trace && !!trace.points}}" no-animation context-menu="contextMenu()" context-menu-class="contextmenu"></piston>
-					</p>
+
 					<div ng-if="!hideScript">
-						<button class="btn btn-default" ng-click="edit();" title="Edit the piston">Edit »</button>
-						<button class="btn btn-warning" ng-click="test();" title="Test the piston">Test</button>
-						<button class="btn btn-success" ng-click="snapshot(true);" title="Take an anonymized snapshot of the piston"><i class="fa fa-camera" aria-hidden="true"></i></button>
-						<button class="btn btn-danger" ng-click="snapshot();" title="Take a snapshot of the piston"><i class="fa fa-camera" aria-hidden="true"></i></button>
-						<button class="btn btn-default" ng-click="textSnapshot();" title="Copy piston to clipboard"><i class="fa fa-copy" aria-hidden="true"></i></button>
-						<toggle ng-if="trace && trace.points" ng-model="view.trace" on="Trace" off="Trace" ng-click="toggleView(null)"></toggle>
-						<button class="btn btn-danger pull-right" ng-click="deleteDialog();">Delete »</button>
+						
+					
+						<div class="collapse navbar-collapse script" id="navbar-view-collapse">
+							<h3>Script </h3>
+
+							<button class="btn btn-default" ng-click="edit();" title="Edit the piston">Edit</button>
+							<button class="btn btn-warning" ng-click="test();" title="Test the piston">Test</button>
+							<button class="btn btn-success" ng-click="snapshot(true);" title="Take an anonymized snapshot of the piston"><i class="fa fa-camera" aria-hidden="true"></i></button>
+							<button class="btn btn-danger" ng-click="snapshot();" title="Take a snapshot of the piston"><i class="fa fa-camera" aria-hidden="true"></i></button>
+							<button class="btn btn-default" ng-click="textSnapshot();" title="Copy piston to clipboard"><i class="fa fa-copy" aria-hidden="true"></i></button>
+							<toggle ng-if="trace && trace.points" ng-model="view.trace" on="Trace" off="Trace" ng-click="toggleView(null)"></toggle>
+							<button class="btn btn-danger" ng-click="deleteDialog();">Delete</button>
+							<span class="pull-right" small ng-click="hideScript = !hideScript">({{hideScript ? 'show' : 'hide'}})</span>
+						</div>
+
+						<p ng-if="!hideScript">
+							<piston id="piston" ng-if="initialized" mode="{{mode}}" ng-repeat="piston in [piston]" data-nag-model="piston" ng-include="'piston'" trace="{{view.trace && (mode=='view') && !!trace && !!trace.points}}" no-animation context-menu="contextMenu()" context-menu-class="contextmenu"></piston>
+						</p>
 					</div>
 				</div>
 			</div>
+
+
 			<div class="row">
 				<div class="col-md-12 col-lg-6">
 					<h2>Logs</h2>
