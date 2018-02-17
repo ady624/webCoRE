@@ -11,6 +11,10 @@ body {
 	margin: 0 auto;
 }
 
+.loginbox-logo {
+	max-width: 100%;
+}
+
 .loginbox .input-group .form-control,
 .loginbox .input-group .btn {
 	border-radius: 0 !important;

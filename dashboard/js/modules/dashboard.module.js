@@ -815,7 +815,8 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 
 	$scope.initAds = function() {
 	    if ($scope.isAppHosted) return;
-	    window.adsbygoogle = (window.adsbygoogle || []).push({google_ad_client: "ca-pub-4643048739403893", enable_page_level_ads: true});
+	    window.adsbygoogle = (window.adsbygoogle || []);
+	    window.adsbygoogle.push({google_ad_client: "ca-pub-4643048739403893", enable_page_level_ads: true});
 	}
 
 	$scope.authenticate = function() {

@@ -53,7 +53,7 @@
 
 <!-- Edit mode -->
 
-			<div ng-if="mode=='edit'" class="nav navbar-nav btn-group">
+			<div ng-if="mode=='edit'" class="nav navbar-nav btn-group hidden-xxs">
 				<button class="btn btn-default {{view.variables ? 'active' : ''}}" ng-click="toggleView('variables');" title="Show variables"><i class="fa fa-subscript" aria-hidden="true"></i></button>
 				<button class="btn btn-default {{view.elseIfs ? 'active' : ''}}" ng-click="toggleView('elseIfs');" title="Show complex IFs"><i class="fa fa-code-fork" aria-hidden="true"></i></button>
 				<button class="btn btn-default {{view.restrictions ? 'active' : ''}}" ng-click="toggleView('restrictions');" title="Show restrictions"><i class="fa fa-filter" aria-hidden="true"></i></button>
@@ -189,30 +189,29 @@
 
 			<div class="row">
 				<div class="col-md-12">
-					<h3 class="pull-left">Script </h3>
 					<span class="fa fa-caret-down pull-right rotate-on-collapse" data-toggle="collapse" data-target="#collapseScript" aria-expanded="true" small title="Hide/Show"></span>
+					<h3 class="pull-left">
+						Script 
+					</h3>
 						<div class="collapse navbar-collapse script" id="navbar-view-collapse">
-							<button class="btn btn-default" ng-click="edit();" title="Edit the piston">Edit</button>
-							<button class="btn btn-warning" ng-click="test();" title="Test the piston">Test</button>
-							<button class="btn btn-success" ng-click="snapshot(true);" title="Take an anonymized snapshot of the piston"><i class="fa fa-camera" aria-hidden="true"></i></button>
-							<button class="btn btn-danger" ng-click="snapshot();" title="Take a snapshot of the piston"><i class="fa fa-camera" aria-hidden="true"></i></button>
-							<button class="btn btn-default" ng-click="textSnapshot();" title="Copy piston to clipboard"><i class="fa fa-copy" aria-hidden="true"></i></button>
-							<toggle ng-if="trace && trace.points" ng-model="view.trace" on="Trace" off="Trace" ng-click="toggleView(null)"></toggle>
-							<button class="btn btn-danger" ng-click="deleteDialog();">Delete</button>
+							<div ng-include="'piston-editor-buttons'"></div>
 						</div>
 
 						<div class="clearfix"></div>
-						<p class="collapse in" id="collapseScript">
+						<div class="collapse in" id="collapseScript">
 							<piston id="piston" ng-if="initialized" mode="{{mode}}" ng-repeat="piston in [piston]" data-nag-model="piston" ng-include="'piston'" trace="{{view.trace && (mode=='view') && !!trace && !!trace.points}}" no-animation context-menu="contextMenu()" context-menu-class="contextmenu"></piston>
-						</p>
+							<div ng-include="'piston-editor-buttons'" class="hidden-xs"></div>
+						</div>
 				</div>
 			</div>
 
 			<div class="row">
 
 				<div class="col-md-12 col-lg-6">
-					<span class="fa fa-caret-down pull-right rotate-on-collapse" data-toggle="collapse" data-target="#collapseLogs" aria-expanded="true" small title="Hide/Show"></span>
-					<h3>Logs</h3>
+					<h3>
+						<span class="fa fa-caret-down pull-right rotate-on-collapse" data-toggle="collapse" data-target="#collapseLogs" aria-expanded="true" small title="Hide/Show"></span>
+						Logs
+					</h3>
 					<div class="collapse in" id="collapseLogs">
 
 					<div class="logs">
@@ -249,8 +248,10 @@
 
 
 				<div class="col-md-12 col-lg-6">
-					<span class="fa fa-caret-down pull-right rotate-on-collapse" data-toggle="collapse" data-target="#collapseVars" aria-expanded="true" small title="Hide/Show"></span>
-					<h3>Variables</h3>
+					<h3>
+						<span class="fa fa-caret-down pull-right rotate-on-collapse" data-toggle="collapse" data-target="#collapseVars" aria-expanded="true" small title="Hide/Show"></span>
+						Variables
+					</h3>
 					<div class="collapse in" id="collapseVars">
 
 					<div multicolumn>
@@ -270,8 +271,10 @@
 
 			<div class="row">
 				<div class="col-md-12">
-					<span class="fa fa-caret-down pull-right rotate-on-collapse" data-toggle="collapse" data-target="#collapseCons" aria-expanded="true" small title="Hide/Show"></span>
-					<h3>Evaluation Console</h3>
+					<h3>
+						<span class="fa fa-caret-down pull-right rotate-on-collapse" data-toggle="collapse" data-target="#collapseCons" aria-expanded="true" small title="Hide/Show"></span>
+						Evaluation Console
+					</h3>
 					<div class="collapse in" id="collapseCons">
 					<console ng-if="initialized" mode="{{mode}}">
 						<label>Evaluation console</label>
@@ -291,8 +294,10 @@
 			<div class="row" ng-if="!mobile && stats && stats.timing && stats.timing.length">
 				<div class="col-md-12">
 
-					<span class="fa fa-caret-down pull-right rotate-on-collapse " data-toggle="collapse" data-target="#collapseStats" aria-expanded="true" small title="Hide/Show"></span>
-					<h3>Statistics</h3>
+					<h3>
+						<span class="fa fa-caret-down pull-right rotate-on-collapse " data-toggle="collapse" data-target="#collapseStats" aria-expanded="true" small title="Hide/Show"></span>
+						Statistics
+					</h3>
 					<div class="collapse in" id="collapseStats">
 					<canvas id="line" height="100" class="chart chart-line" chart-data="chart.data" chart-labels="chart.labels" chart-series="chart.series" chart-options="chart.options" chart-dataset-override="chart.datasetOverride" disabled-chart-click_ed="chart.onClick"></canvas>
 				</div>
@@ -367,6 +372,16 @@
 </viewer>
 
 <!-- Begin script -->
+
+<script type="text/ng-template" id="piston-editor-buttons">
+	<button class="btn btn-default" ng-click="edit();" title="Edit the piston">Edit</button>
+	<button class="btn btn-warning" ng-click="test();" title="Test the piston">Test</button>
+	<button class="btn btn-success" ng-click="snapshot(true);" title="Take an anonymized snapshot of the piston"><i class="fa fa-camera" aria-hidden="true"></i></button>
+	<button class="btn btn-danger" ng-click="snapshot();" title="Take a snapshot of the piston"><i class="fa fa-camera" aria-hidden="true"></i></button>
+	<button class="btn btn-default" ng-click="textSnapshot();" title="Copy piston to clipboard"><i class="fa fa-copy" aria-hidden="true"></i></button>
+	<toggle ng-if="trace && trace.points" ng-model="view.trace" on="Trace" off="Trace" ng-click="toggleView(null)"></toggle>
+	<button class="btn btn-danger" ng-click="deleteDialog();">Delete</button>
+</script>
 
 <script type="text/ng-template" id="dialog-captured-image">
 	<br/>

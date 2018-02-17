@@ -269,70 +269,6 @@ nav[fixed] a {
     padding-bottom: 15px;
 }
 
-/*
- * Sidebar
- */
-
-/* Hide for mobile, show later */
-.sidebar {
-	display: none;
-  width: 275px;
-  float: left;
-}
-
-.navbar-brand {
-	font-size: 12px;
-	max-width: calc(100vw - 65px);
-	overflow: hidden;
-	text-overflow: ellipsis;
-	white-space: nowrap;
-}
-
-.navbar-inverse .navbar-brand:hover{
-	color: #999;
-	text-shadow: none;
-}
-
-
-li[instance] {
-	min-width: 178px;
-}
-
-@media (min-width: 768px) {
-}
-
-/* Sidebar navigation */
-.nav-sidebar {
-  margin-right: -21px; /* 20px padding + 1px border */
-  margin-bottom: 20px;
-  margin-left: -20px;
-  margin-top: 10px;
-}
-.nav-sidebar > li > a {
-  padding: 25px 20px;
-  color: #444;
-  font-size: 15px;
-}
-
-.logo-sm {
-	width: 50px;
-	padding-right: 10px;
-}
-
-.logo-lg {
-	padding-right: 20px; /* offset sidebar padding 20px */
-	margin: 0px;
-	width: 180px;
-}
-
-.nav-sidebar > .active > a,
-.nav-sidebar > .active > a:hover,
-.nav-sidebar > .active > a:focus {
-  color: #fff;
-  background-color: #eee;
-  transition-duration: 0.3s;
-}
-
 
 /*
  * Main content
@@ -784,19 +720,6 @@ ptile div[google-chart] {
 	margin-right: 0px;
     }
 
-  .sidebar {
-    position: fixed;
-    top: 50px;
-    bottom: 0;
-    left: 0;
-    z-index: 2;
-    display: block;
-    padding-left: 20px;
-    overflow-x: hidden;
-    overflow-y: auto; /* Scrollable contents if viewport is shorter than content. */
-    background-color: #ffffff;
-    border-right: 1px solid #eee;
-  }
 
 	.main {
 		padding-left: 285px !important;

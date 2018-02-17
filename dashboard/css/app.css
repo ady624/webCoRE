@@ -35,10 +35,11 @@ ng-view > logo {
 	margin: auto;
 	left: 0px; top: 0px; right: 0px; bottom: 0px;
 	position: absolute;
-	height: 200px;
-	width: 40%;
+	height: 140px;
 	text-align: center;
 	z-index: 1;
+	max-width: 400px;
+	padding: 0 10px;
 }
 
 * {
@@ -783,7 +784,9 @@ span.s-up {
 @media only screen and (max-width: 767px) {
 
   .navbar-collapse {
-min-height: calc(100vh - 50px);
+		height: calc(100vh - 50px);
+		max-height: none !important;
+		padding-bottom: 100px;
   }
 
 	body > logo {
@@ -1064,8 +1067,101 @@ button .btn .btn-default active{
 .rotate-on-collapse {
   transition: transform 0.2s ease-out;
   padding: 10px;
-  margin: 10px -10px 0 0;
+  margin: -5px -10px 0 0;
+  font-size: 14px;
+  cursor: pointer;
 }
 .rotate-on-collapse[aria-expanded="false"] {
   transform: rotate(90deg);
+}
+h3 .rotate-on-collapse {
+  margin-right: -30px;
+}
+
+@media (max-width: 341px) {
+  .hidden-xxs {
+    display: none!important;
+  }
+}
+
+
+/*
+ * Sidebar
+ */
+
+/* Hide for mobile, show later */
+.sidebar {
+	display: none;
+  width: 275px;
+  float: left;
+}
+
+.navbar-brand {
+	font-size: 12px;
+	max-width: calc(100vw - 65px);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.navbar-inverse .navbar-brand:hover{
+	color: #999;
+	text-shadow: none;
+}
+
+
+li[instance] {
+	min-width: 178px;
+}
+
+@media (min-width: 768px) {
+}
+
+/* Sidebar navigation 
+ * must remain in app.css to avoid FOUC during page transitions */
+.nav-sidebar {
+  margin-right: -21px; /* 20px padding + 1px border */
+  margin-bottom: 20px;
+  margin-left: -20px;
+  margin-top: 10px;
+}
+.nav-sidebar > li > a {
+  padding: 25px 20px;
+  color: #444;
+  font-size: 15px;
+}
+
+.logo-sm {
+	width: 50px;
+	padding-right: 10px;
+}
+
+.logo-lg {
+	padding-right: 20px; /* offset sidebar padding 20px */
+	margin: 0px;
+	width: 180px;
+}
+
+.nav-sidebar > .active > a,
+.nav-sidebar > .active > a:hover,
+.nav-sidebar > .active > a:focus {
+  color: #fff;
+  background-color: #eee;
+  transition-duration: 0.3s;
+}
+
+@media (min-width: 768px) {
+  .sidebar {
+    position: fixed;
+    top: 50px;
+    bottom: 0;
+    left: 0;
+    z-index: 2;
+    display: block;
+    padding-left: 20px;
+    overflow-x: hidden;
+    overflow-y: auto; /* Scrollable contents if viewport is shorter than content. */
+    background-color: #ffffff;
+    border-right: 1px solid #eee;
+  }
 }
