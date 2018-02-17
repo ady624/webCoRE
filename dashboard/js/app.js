@@ -1655,7 +1655,13 @@ function renderString($sce, value) {
                         if (classList == undefined) {
                             return '[' + result + ']';
                         }
-                        var cls = classList.trim().replace(/\s/g, ',').split(',');
+                        var cls = classList.trim();
+                        // Ensure that unencoded commas in URLs do not get split
+                        // into separate commands
+                        while (/(\bsrc=\S+),/.test(cls)) {
+                          cls = cls.replace(/(\bsrc=\S+),/, '$1:webCoRE-comma:');
+                        }
+                        cls = cls.replace(/\s+/g, ',').split(',');
                         var className = '';
                         var color = '';
 						var backColor='';
@@ -1690,7 +1696,7 @@ function renderString($sce, value) {
 									meta.type = 'video';
 									break;
                                 default:
-									if (/\d+(.\d+)?(x|em)/.test(cls[x])) {
+									if (/^\d+(\.\d+)?(x|em)/.test(cls[x])) {
 										fontSize = cls[x].replace('x', 'em');
 									} else if (cls[x].startsWith('b-')) {
 										backColor = cls[x].substr(2).replace(/[^#0-9a-z]/gi, '');
@@ -1701,7 +1707,7 @@ function renderString($sce, value) {
 									} else if (cls[x].indexOf('=') > 0) {
 										//options
 										var p = cls[x].indexOf('=');
-										meta.options[cls[x].substr(0, p)] = cls[x].substr(p + 1);
+										meta.options[cls[x].substr(0, p)] = cls[x].substr(p + 1).replace(/:webCoRE-comma:/g, ',');
 									} else {
 										color = cls[x].replace(/[^#0-9a-z]/gi, '');
 									}
