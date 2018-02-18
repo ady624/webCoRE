@@ -18,6 +18,7 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 	$scope.view = 'piston';
 	$scope.isAppHosted = !!window.BridgeCommander;
 	$scope.hostDeviceId = '';
+	$scope.sidebarCollapsed = false;
 
 	$scope.init = function(instance, uri, pin) {
 		//if (!instance) instance = dataService.getInstance();
@@ -1135,6 +1136,10 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 	$scope.initSocialMedia = function() {
 		$window.FB.XFBML.parse();
 	};
+	
+	$scope.toggleSidebar = function() {
+		$scope.sidebarCollapsed = !$scope.sidebarCollapsed;
+	}
 
 
     //init

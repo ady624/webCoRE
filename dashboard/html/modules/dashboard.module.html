@@ -45,7 +45,7 @@
 						<li><a href="#" ng-click="showDashboard();"><i class="fa fa-th-list" aria-hidden="true"></i>&nbsp;&nbsp;Dashboard</a></li>
 						<li><a href="#" ng-click="showFuelStreams();"><i class="fa fa-area-chart" aria-hidden="true"></i>&nbsp;&nbsp;Fuel Streams</a></li>
 						<li><a href="" ng-click="backup();"><i class="fa fa-cloud-upload" aria-hidden="true"></i>&nbsp;&nbsp;Backup Piston(s)</a></li>
-            <li ng-if="instanceCount > 1"><a href="#" ng-click="movePiston();">Move Piston(s)</a></li>
+            <li ng-if="instanceCount > 1"><a href="#" ng-click="movePiston();"><i class="fa fa-sort" aria-hidden="true"></i>Move Piston(s)</a></li>
             <li><a href="register"><i class="fa fa-home" aria-hidden="true"></i>&nbsp;&nbsp;Register Instance</a></li>
             <li><a href="#" ng-click="showSettings()"><i class="fa fa-wrench" aria-hidden="true"></i>&nbsp;&nbsp;Settings</a></li>
 						<li><a target="_blank" aria-haspopup="true" aria-expanded="false" href="https://www.paypal.me/ady624"><i class="fa fa-paypal" aria-hidden="true"></i>&nbsp;&nbsp;Donate</a></li>
@@ -97,18 +97,35 @@
 <viewer class="pistons" ng-if="initialized && ((view == 'piston') || (view == 'settings'))" class="no-animate">
 	<div class="body container-fluid">
 		<div class="row">
-			<div class="sidebar">
+			<div class="sidebar no-ng-animate" ng-class="{ 'sidebar-collapsed': !!sidebarCollapsed }">
+				<span ng-click="toggleSidebar()" class="fa fa-caret-left collapse-control"></span>
 				<ul class="nav nav-sidebar">
-	        <li class="logo"><img class="logo-sm" src="img/webCoRE-mark.svg" alt="webCoRE logo"><img class="logo-lg" src="img/webCoRE-text.svg" width="90%"></li>
-          <li><a href="" ng-click="newPiston();" class="newPiston"><i class="fa fa-plus" aria-hidden="true"></i>&nbsp;&nbsp;New Piston</a></li>
-					<li><a href="" ng-click="showDashboard();" class="dash"><i class="fa fa-th-list" aria-hidden="true"></i>&nbsp;&nbsp;Dashboard (beta)</a></li>
-					<li><a href="" ng-click="showFuelStreams();" class="fuel"><i class="fa fa-area-chart" aria-hidden="true"></i>&nbsp;&nbsp;Fuel Streams (beta)</a></li>
-					<li><a href="" ng-click="backup();" class="backup"><i class="fa fa-cloud-upload" aria-hidden="true"></i>&nbsp;&nbsp;Backup Piston(s)</a></li>
-					<li><a href="register" class="register"><i class="fa fa-home" aria-hidden="true"></i>&nbsp;&nbsp;Register Instance</a></li>
-					<li ng-if="instanceCount > 1"><a href="" ng-click="movePiston();" class="move"><i class="fa fa-sort" aria-hidden="true"></i>&nbsp;&nbsp;Move Piston(s)</a></li>
-					<li><a href="" ng-click="showSettings();" class="settings"><i class="fa fa-wrench" aria-hidden="true"></i>&nbsp;&nbsp;Settings</a></li>
+					<li class="logo"><img class="logo-sm" src="img/webCoRE-mark.svg" alt="webCoRE logo"><img class="logo-lg" src="img/webCoRE-text.svg" width="90%"></li>
+					<li><a href="" ng-click="newPiston();" class="newPiston" data-toggle="{{sidebarCollapsed ? 'tooltip' : ''}}" data-placement="right" data-title="New Piston">
+						<i class="fa fa-plus" aria-hidden="true"></i>&nbsp;&nbsp;New Piston
+					</a></li>
+					<li><a href="" ng-click="showDashboard();" class="dash" data-toggle="{{sidebarCollapsed ? 'tooltip' : ''}}" data-placement="right" data-title="Dashboard (beta)">
+						<i class="fa fa-th-list" aria-hidden="true"></i>&nbsp;&nbsp;Dashboard (beta)
+					</a></li>
+					<li><a href="" ng-click="showFuelStreams();" class="fuel" data-toggle="{{sidebarCollapsed ? 'tooltip' : ''}}" data-placement="right" data-title="Fuel Streams (beta)">
+						<i class="fa fa-area-chart" aria-hidden="true"></i>&nbsp;&nbsp;Fuel Streams (beta)
+					</a></li>
+					<li><a href="" ng-click="backup();" class="backup" data-toggle="{{sidebarCollapsed ? 'tooltip' : ''}}" data-placement="right" data-title="Backup Piston(s)">
+						<i class="fa fa-cloud-upload" aria-hidden="true"></i>&nbsp;&nbsp;Backup Piston(s)
+					</a></li>
+					<li><a href="register" class="register" data-toggle="{{sidebarCollapsed ? 'tooltip' : ''}}" data-placement="right" data-title="Register Instance">
+						<i class="fa fa-home" aria-hidden="true"></i>&nbsp;&nbsp;Register Instance
+					</a></li>
+					<li ng-if="instanceCount > 1"><a href="" ng-click="movePiston();" class="move" data-toggle="{{sidebarCollapsed ? 'tooltip' : ''}}" data-placement="right" data-title="Move Piston(s)">
+						<i class="fa fa-sort" aria-hidden="true"></i>&nbsp;&nbsp;Move Piston(s)
+					</a></li>
+					<li><a href="" ng-click="showSettings();" class="settings" data-toggle="{{sidebarCollapsed ? 'tooltip' : ''}}" data-placement="right" data-title="Settings">
+						<i class="fa fa-wrench" aria-hidden="true"></i>&nbsp;&nbsp;Settings
+					</a></li>
 					<li>
-					<li><a href="#" ng-click="logOut();" class="logout"><i class="fa fa-sign-out" aria-hidden="true"></i>&nbsp;&nbsp;Log Out</a></li>
+					<li><a href="#" ng-click="logOut();" class="logout" data-toggle="{{sidebarCollapsed ? 'tooltip' : ''}}" data-placement="right" data-title="Log Out">
+						<i class="fa fa-sign-out" aria-hidden="true"></i>&nbsp;&nbsp;Log Out
+					</a></li>
 					<li class="text-center">
 						
 <!-- dashboard (sidebar) -->
@@ -140,7 +157,7 @@
 					</li>
 				</ul>-->
 			</div>
-			<div class="main">
+			<div class="main no-ng-animate" ng-class="{ 'sidebar-collapsed': !!sidebarCollapsed }">
 				<div lonely ng-if="!loading && !instance.pistons.length">
 					<i class="fa fa-frown-o" aria-hidden="true"></i>
 					<div>It's kinda lonely in here...<br/>How about <a ng-click="newPiston();">creating a piston</a>?</div>

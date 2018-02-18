@@ -600,6 +600,8 @@ designer items item.btn {
 designer items item.btn.btn-lg {
   padding-top: 12px;
   padding-bottom: 12px;
+  font-size: 16px;
+  white-space: normal;
 }
 
 designer form > p,
@@ -1064,18 +1066,85 @@ button .btn .btn-default active{
   border-color: transparent;
 }
 
-.rotate-on-collapse {
+.collapse-control {
   transition: transform 0.2s ease-out;
   padding: 10px;
   margin: -5px -10px 0 0;
   font-size: 14px;
   cursor: pointer;
 }
+h3 .collapse-control {
+  margin-right: -30px;
+}
+
 .rotate-on-collapse[aria-expanded="false"] {
   transform: rotate(90deg);
 }
-h3 .rotate-on-collapse {
-  margin-right: -30px;
+
+.sidebar {
+  transition: width 0.25s ease-out;
+}
+.sidebar > .collapse-control {
+  transition: all 0.25s ease-out;
+  position: fixed;
+  background: #eee;
+  bottom: 16px;
+  left: 259px;
+  margin: 0;
+  font-size: 16px;
+  width: 32px;
+  height: 32px;
+  z-index: 2;
+  border-radius: 20px;
+  padding: 8px;
+  padding-left: 12px;
+}
+.sidebar > .collapse-control:hover {
+  background: #ddd;
+}
+.sidebar.sidebar-collapsed {
+  width: 50px;
+}
+.sidebar > .collapse-control {
+  transition: transform 0.5s ease-out, left 0.25s ease-out;
+}
+.sidebar.sidebar-collapsed > .collapse-control {
+  left: 33px;
+  transform: rotate(180deg);
+}
+
+.sidebar .nav-sidebar > li > a {
+  transition: padding 0.25s ease-out;
+}
+.sidebar.sidebar-collapsed .nav-sidebar > li > a {
+  padding: 15px;
+}
+
+.sidebar .nav-sidebar > li > a > .fa {
+  transition: all 0.25s ease-out;
+}
+.sidebar.sidebar-collapsed .nav-sidebar > li > a > .fa {
+  transform: scale(1.3);
+  width: 30px;
+  padding-right: 10px;
+}
+
+.sidebar .logo {
+  transition: margin-left 0.25s ease-out;
+}
+.sidebar.sidebar-collapsed .logo {
+  margin-left: -30px;
+}
+
+.sidebar.sidebar-collapsed .adsbygoogle {
+  display: none !important;
+}
+
+.main { 
+  transition: padding-left 0.25s ease-out;
+}
+.main.sidebar-collapsed {
+  padding-left: 60px !important;
 }
 
 @media (max-width: 341px) {
@@ -1094,6 +1163,7 @@ h3 .rotate-on-collapse {
 	display: none;
   width: 275px;
   float: left;
+  -ms-overflow-style: -ms-autohiding-scrollbar;
 }
 
 .navbar-brand {
@@ -1126,9 +1196,22 @@ li[instance] {
   margin-top: 10px;
 }
 .nav-sidebar > li > a {
+  white-space: nowrap;
   padding: 25px 20px;
   color: #444;
   font-size: 15px;
+  margin-top: -1px;
+}
+.sidebar .nav-sidebar > li > a > .fa {
+  width: 20px;
+  text-align: center;
+}
+
+.nav-sidebar .logo {
+  position: relative;
+  z-index: 1;
+  white-space: nowrap;
+  width: 295px;
 }
 
 .logo-sm {

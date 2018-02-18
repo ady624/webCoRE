@@ -316,7 +316,7 @@ app.filter('orderObjectBy', function() {
 
 
 
-var config = app.config(['$routeProvider', '$locationProvider', '$sceDelegateProvider', '$rootScopeProvider',  function ($routeProvider, $locationProvider, $sceDelegateProvider,  $rootScopeProvider) {
+var config = app.config(['$routeProvider', '$locationProvider', '$sceDelegateProvider', '$rootScopeProvider', '$animateProvider',  function ($routeProvider, $locationProvider, $sceDelegateProvider,  $rootScopeProvider, $animateProvider) {
 	$rootScopeProvider.digestTtl(10000); 
 	//$cfpLoadingBarProvider.includeSpinner = false;
     var ext = '.module.css';
@@ -324,6 +324,8 @@ var config = app.config(['$routeProvider', '$locationProvider', '$sceDelegatePro
         'self',
         cdn + '**'
     ]);
+    // Allow ng-animate to be disabled on certain elements
+    $animateProvider.classNameFilter(/^(?:(?!no-ng-animate).)*$/);
     $routeProvider.
     when('/', {
         templateUrl: cdn + theme + 'html/modules/dashboard.module.html?v=' + version(),
