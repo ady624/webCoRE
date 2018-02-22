@@ -1104,6 +1104,10 @@ h3 .collapse-control {
   -ms-overflow-style: -ms-autohiding-scrollbar;
 }
 
+.main > .collapse-control {
+  display: none;
+}
+
 .navbar-brand {
 	font-size: 12px;
 	max-width: calc(100vw - 65px);
@@ -1184,89 +1188,89 @@ li[instance] {
     background-color: #ffffff;
     border-right: 1px solid #eee;
   }
-}
 
-/* Sidebar collapsing and transitions */
+  /* Sidebar collapsing and transitions */
 
-.main.allow-transition { 
-  transition: padding-left 0.25s ease-out;
-}
-.main.sidebar-collapsed {
-  padding-left: 60px !important;
-}
+  .main.allow-transition { 
+    transition: padding-left 0.25s ease-out;
+  }
+  .main.sidebar-collapsed {
+    padding-left: 60px !important;
+  }
 
-.main.allow-transition > .collapse-control {
-  transition: left 0.25s ease-out, padding 0.25s ease-out;
-}
-.main > .collapse-control {
-  position: fixed;
-  background: #eee;
-  border: 1px solid #fff;
-  border-left: 0;
-  top: 58px;
-  left: 275px;
-  margin: 0;
-  font-size: 16px;
-  width: 25px;
-  height: 30px;
-  line-height: 12px;
-  z-index: 2;
-  border-top-right-radius: 50%;
-  border-bottom-right-radius: 50%;
-  padding: 8px;
-  padding-left: 7px;
-}
-.main > .collapse-control:hover {
-  background: #ddd;
-}
-.main.sidebar-collapsed > .collapse-control {
-  left: 50px;
-  padding-left: 9px;
-}
+  .main.allow-transition > .collapse-control {
+    transition: left 0.25s ease-out, padding 0.25s ease-out;
+  }
+  .main > .collapse-control {
+    position: fixed;
+    display: block;
+    background: #eee;
+    border: 1px solid #fff;
+    border-left: 0;
+    top: 58px;
+    left: 275px;
+    margin: 0;
+    font-size: 16px;
+    width: 25px;
+    height: 30px;
+    line-height: 12px;
+    z-index: 2;
+    border-top-right-radius: 50%;
+    border-bottom-right-radius: 50%;
+    padding: 8px;
+    padding-left: 7px;
+  }
+  .main > .collapse-control:hover {
+    background: #ddd;
+  }
+  .main.sidebar-collapsed > .collapse-control {
+    left: 50px;
+    padding-left: 9px;
+  }
 
-/* Rotate the icon */
-.main.allow-transition > .collapse-control::before {
-  transition: transform 0.5s ease-out;
-}
-.main > .collapse-control::before {
-  display: inline-block;
-}
-.main.sidebar-collapsed > .collapse-control::before {
-  transform: rotate(180deg);
-}
+  /* Rotate the icon */
+  .main.allow-transition > .collapse-control::before {
+    transition: transform 0.5s ease-out;
+  }
+  .main > .collapse-control::before {
+    display: inline-block;
+  }
+  .main.sidebar-collapsed > .collapse-control::before {
+    transform: rotate(180deg);
+  }
 
 
-.sidebar.allow-transition {
-  transition: width 0.25s ease-out;
-}
-.sidebar.sidebar-collapsed {
-  width: 50px;
-}
+  .sidebar.allow-transition {
+    transition: width 0.25s ease-out;
+  }
+  .sidebar.sidebar-collapsed {
+    width: 50px;
+  }
 
-.sidebar.allow-transition .nav-sidebar > li > a {
-  transition: padding 0.25s ease-out;
-}
-.sidebar.sidebar-collapsed .nav-sidebar > li > a {
-  padding: 15px;
-}
+  .sidebar.allow-transition .nav-sidebar > li > a {
+    transition: padding 0.25s ease-out;
+  }
+  .sidebar.sidebar-collapsed .nav-sidebar > li > a {
+    padding: 15px;
+  }
 
-.sidebar.allow-transition .nav-sidebar > li > a > .fa {
-  transition: all 0.25s ease-out;
-}
-.sidebar.sidebar-collapsed .nav-sidebar > li > a > .fa {
-  transform: scale(1.3);
-  width: 30px;
-  padding-right: 10px;
-}
+  .sidebar.allow-transition .nav-sidebar > li > a > .fa {
+    transition: all 0.25s ease-out;
+  }
+  .sidebar.sidebar-collapsed .nav-sidebar > li > a > .fa {
+    transform: scale(1.3);
+    width: 30px;
+    padding-right: 10px;
+  }
 
-.sidebar.allow-transition .logo {
-  transition: margin-left 0.25s ease-out;
-}
-.sidebar.sidebar-collapsed .logo {
-  margin-left: -30px;
-}
+  .sidebar.allow-transition .logo {
+    transition: margin-left 0.25s ease-out;
+  }
+  .sidebar.sidebar-collapsed .logo {
+    margin-left: -30px;
+  }
 
-.sidebar.sidebar-collapsed .adsbygoogle {
-  display: none !important;
+  .sidebar.sidebar-collapsed .adsbygoogle {
+    display: none !important;
+  }
 }
-

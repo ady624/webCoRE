@@ -449,7 +449,7 @@ td[opt]:hover > actions {
 .topinfo {
 	margin: 4px 8px 20px 4px !important;
 	color: #15bfff;
-	padding-top: 10px;
+	padding: 10px 10px 0;
 }
 
 hub {
