@@ -300,6 +300,37 @@ app.directive('title', function(){
     };
 });
 
+app.directive('collapseControl', ['dataService', function(dataService) {
+	return function(scope, element, attr) {
+		var id = (attr.target || attr.ariaControls || '').replace('#', '');
+		var wasCollapsed = dataService.isCollapsed(id);
+		
+    console.log(attr);
+		if (wasCollapsed && 'ariaExpanded' in attr) {
+			element.attr('aria-expanded', 'false');
+		}
+		
+		element.bind('click', function(event) {
+			var collapsed = dataService.isCollapsed(id);
+			dataService.setCollapsed(id, !collapsed);
+		});
+	};
+}]);
+
+app.directive('collapseTarget', ['dataService', function(dataService) {
+	return function(scope, element, attr) {
+		var id = attr.id || '';
+		var collapseClass = attr.collapseClass || 'in';
+		var collapsed = dataService.isCollapsed(id);
+		
+		if (collapsed) {
+			element.removeClass(collapseClass);
+		} else {
+			element.addClass(collapseClass);
+		}
+	};
+}]);
+
 app.filter('orderObjectBy', function() {
   return function(items, field, reverse) {
     var filtered = [];
@@ -1325,6 +1356,27 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 	        if (device.cn.indexOf('Power Meter') >= 0) return 'powerMeter';
 		}
 		return 'unknownDevice';
+	}
+  
+  dataService.getAllCollapsed = function() {
+		return dataService.loadFromStore('collapsed') || [];
+	}
+	
+	dataService.isCollapsed = function(id) {
+		return dataService.getAllCollapsed().indexOf(id) >= 0;
+	}
+	
+	dataService.setCollapsed = function(id, collapsed) {
+		var allCollapsed = dataService.getAllCollapsed();
+		var index = allCollapsed.indexOf(id);
+		
+		if (collapsed && index < 0) {
+			allCollapsed.push(id);
+		} else if (!collapsed && index >= 0) {
+			allCollapsed.splice(index, 1);
+		}
+		
+		dataService.saveToStore('collapsed', allCollapsed);
 	}
 
 

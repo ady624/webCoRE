@@ -18,7 +18,8 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 	$scope.view = 'piston';
 	$scope.isAppHosted = !!window.BridgeCommander;
 	$scope.hostDeviceId = '';
-	$scope.sidebarCollapsed = false;
+	$scope.sidebarCollapsed = dataService.isCollapsed('dashboardSidebar');
+	$scope.completedInitialRender = false;
 
 	$scope.init = function(instance, uri, pin) {
 		//if (!instance) instance = dataService.getInstance();
@@ -48,6 +49,7 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 						$scope.instance = dataService.getInstance();
 						$scope.currentInstanceId = $scope.instance.id;
 						$scope.instanceCount = dataService.getInstanceCount();
+						$scope.sidebarCollapsed = dataService.isCollapsed('dashboardSidebar');
     		            if (!$scope.devices) $scope.devices = $scope.listAvailableDevices();
 	    	            if (!$scope.virtualDevices) $scope.virtualDevices = $scope.listAvailableVirtualDevices();
 						window.scope = $scope;
@@ -83,12 +85,18 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 						}
 						$scope.clock();
 						$scope.render();
+						$timeout(function() {
+							$scope.completedInitialRender = true;
+						});
 					}
 				} else {
 					$scope.dialogDeleteInstance(instance);
 				}
 			}, function(data) {
 				$scope.render();
+				$timeout(function() {
+					$scope.completedInitialRender = true;
+				});
 			});
 	};
 

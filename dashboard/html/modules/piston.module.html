@@ -126,12 +126,12 @@
 		<div warning ng-if="meta.active && !subscriptions.events && !schedules.length && !piston.o.des" class="alert alert-warning">This piston does not subscribe to any events. Unless executed by other means, it will never run on its own.</div>
 
 		<div class="text-right">
-			<span class="fa fa-caret-down collapse-control rotate-on-collapse" data-toggle="collapse" data-target="#collapseCards" aria-expanded="true" small title="Hide/Show"></span>
+			<span class="fa fa-caret-down collapse-control rotate-on-collapse" data-toggle="collapse" collapse-control data-target="#collapseCards" aria-expanded="true" small title="Hide/Show"></span>
 		</div>
 		
 		<div class="row">
 			
-			<div class="collapse in" id="collapseCards">
+			<div class="collapse in" collapse-target id="collapseCards">
 				<div class="col-md-4">
 					<div class="columnCards">
 						<h2>Status</h2>
@@ -189,7 +189,7 @@
 
 			<div class="row">
 				<div class="col-md-12">
-					<span class="fa fa-caret-down pull-right collapse-control rotate-on-collapse" data-toggle="collapse" data-target="#collapseScript" aria-expanded="true" small title="Hide/Show"></span>
+					<span class="fa fa-caret-down pull-right collapse-control rotate-on-collapse" data-toggle="collapse" collapse-control data-target="#collapseScript" aria-expanded="true" small title="Hide/Show"></span>
 					<h3 class="pull-left">
 						Script 
 					</h3>
@@ -198,7 +198,7 @@
 						</div>
 
 						<div class="clearfix"></div>
-						<div class="collapse in" id="collapseScript">
+						<div class="collapse in" collapse-target id="collapseScript">
 							<piston id="piston" ng-if="initialized" mode="{{mode}}" ng-repeat="piston in [piston]" data-nag-model="piston" ng-include="'piston'" trace="{{view.trace && (mode=='view') && !!trace && !!trace.points}}" no-animation context-menu="contextMenu()" context-menu-class="contextmenu"></piston>
 							<div ng-include="'piston-editor-buttons'" class="hidden-xs"></div>
 						</div>
@@ -209,10 +209,10 @@
 
 				<div class="col-md-12 col-lg-6">
 					<h3>
-						<span class="fa fa-caret-down pull-right collapse-control rotate-on-collapse" data-toggle="collapse" data-target="#collapseLogs" aria-expanded="true" small title="Hide/Show"></span>
+						<span class="fa fa-caret-down pull-right collapse-control rotate-on-collapse" data-toggle="collapse" collapse-control data-target="#collapseLogs" aria-expanded="true" small title="Hide/Show"></span>
 						Logs
 					</h3>
-					<div class="collapse in" id="collapseLogs">
+					<div class="collapse in" collapse-target id="collapseLogs">
 
 					<div class="logs">
 						<table class="table logs table-striped">
@@ -249,10 +249,10 @@
 
 				<div class="col-md-12 col-lg-6">
 					<h3>
-						<span class="fa fa-caret-down pull-right collapse-control rotate-on-collapse" data-toggle="collapse" data-target="#collapseVars" aria-expanded="true" small title="Hide/Show"></span>
+						<span class="fa fa-caret-down pull-right collapse-control rotate-on-collapse" data-toggle="collapse" collapse-control data-target="#collapseVars" aria-expanded="true" small title="Hide/Show"></span>
 						Variables
 					</h3>
-					<div class="collapse in" id="collapseVars">
+					<div class="collapse in" collapse-target id="collapseVars">
 
 					<div multicolumn>
 						<label var ng-if="piston && piston.v">Local variables</label>
@@ -272,10 +272,10 @@
 			<div class="row">
 				<div class="col-md-12">
 					<h3>
-						<span class="fa fa-caret-down pull-right collapse-control rotate-on-collapse" data-toggle="collapse" data-target="#collapseCons" aria-expanded="true" small title="Hide/Show"></span>
+						<span class="fa fa-caret-down pull-right collapse-control rotate-on-collapse" data-toggle="collapse" collapse-control data-target="#collapseCons" aria-expanded="true" small title="Hide/Show"></span>
 						Evaluation Console
 					</h3>
-					<div class="collapse in" id="collapseCons">
+					<div class="collapse in" collapse-target id="collapseCons">
 					<console ng-if="initialized" mode="{{mode}}">
 						<label>Evaluation console</label>
 						<content>
@@ -295,10 +295,10 @@
 				<div class="col-md-12">
 
 					<h3>
-						<span class="fa fa-caret-down pull-right collapse-control rotate-on-collapse " data-toggle="collapse" data-target="#collapseStats" aria-expanded="true" small title="Hide/Show"></span>
+						<span class="fa fa-caret-down pull-right collapse-control rotate-on-collapse" collapse-control data-toggle="collapse" data-target="#collapseStats" aria-expanded="true" small title="Hide/Show"></span>
 						Statistics
 					</h3>
-					<div class="collapse in" id="collapseStats">
+					<div class="collapse in" collapse-target id="collapseStats">
 					<canvas id="line" height="100" class="chart chart-line" chart-data="chart.data" chart-labels="chart.labels" chart-series="chart.series" chart-options="chart.options" chart-dataset-override="chart.datasetOverride" disabled-chart-click_ed="chart.onClick"></canvas>
 				</div>
 			</div>

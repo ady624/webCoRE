@@ -97,8 +97,7 @@
 <viewer class="pistons" ng-if="initialized && ((view == 'piston') || (view == 'settings'))" class="no-animate">
 	<div class="body container-fluid">
 		<div class="row">
-			<div class="sidebar no-ng-animate" ng-class="{ 'sidebar-collapsed': !!sidebarCollapsed }">
-				<span ng-click="toggleSidebar()" class="fa fa-caret-left collapse-control"></span>
+			<div id="dashboardSidebar" class="sidebar no-ng-animate" ng-class="{ 'sidebar-collapsed': sidebarCollapsed, 'allow-transition': completedInitialRender }" collapse-target collapse-class="">
 				<ul class="nav nav-sidebar">
 					<li class="logo"><img class="logo-sm" src="img/webCoRE-mark.svg" alt="webCoRE logo"><img class="logo-lg" src="img/webCoRE-text.svg" width="90%"></li>
 					<li><a href="" ng-click="newPiston();" class="newPiston" data-toggle="{{sidebarCollapsed ? 'tooltip' : ''}}" data-placement="right" data-title="New Piston">
@@ -157,7 +156,8 @@
 					</li>
 				</ul>-->
 			</div>
-			<div class="main no-ng-animate" ng-class="{ 'sidebar-collapsed': !!sidebarCollapsed }">
+			<div class="main no-ng-animate" ng-class="{ 'sidebar-collapsed': sidebarCollapsed, 'allow-transition': completedInitialRender }">
+				<span ng-click="toggleSidebar()" class="fa fa-caret-left collapse-control" collapse-control data-target="#dashboardSidebar"></span>
 				<div lonely ng-if="!loading && !instance.pistons.length">
 					<i class="fa fa-frown-o" aria-hidden="true"></i>
 					<div>It's kinda lonely in here...<br/>How about <a ng-click="newPiston();">creating a piston</a>?</div>
