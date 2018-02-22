@@ -831,8 +831,17 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 				}
 				data.endpoint = si.uri;
 				data.accessToken = si.accessToken;
+				dataService.deleteFromStore('dashboardErrorCount');
 				return data;	
-			}, function(response) {
+			}, function(error) {
+				var errorCount = dataService.loadFromStore('dashboardErrorCount') || 1;
+				if (errorCount >= 3) {
+					dataService.logout();
+					status('There was a problem loading the dashboard data, please reload the dashboard to reauthorize this browser');
+				} else {
+					status('There was a problem loading the dashboard data');
+				}
+				dataService.saveToStore('dashboardErrorCount', errorCount + 1);
 			});
     };
 
