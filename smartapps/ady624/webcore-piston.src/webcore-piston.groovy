@@ -4049,7 +4049,7 @@ private boolean valueWas(rtData, comparisonValue, rightValue, rightValue2, timeV
     def result = true
     long duration = 0
     for (state in states) {
-    	if (!("comp_$func"(rtData, [i: comparisonValue.i, v: [t: comparisonValue.v.t, v: state.value]], rightValue, rightValue2, timeValue))) break
+    	if (!("comp_$func"(rtData, [i: comparisonValue.i, v: [t: comparisonValue.v.t, v: cast(rtData, comparisonValue.v.t, state.value)]], rightValue, rightValue2, timeValue))) break
         duration += state.duration
     }
     if (!duration) return false
