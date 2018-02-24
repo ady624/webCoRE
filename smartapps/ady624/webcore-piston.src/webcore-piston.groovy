@@ -4049,11 +4049,13 @@ private boolean valueWas(rtData, comparisonValue, rightValue, rightValue2, timeV
     def result = true
     long duration = 0
     for (state in states) {
-    	if (!("comp_$func"(rtData, [i: comparisonValue.i, v: [t: comparisonValue.v.t, v: cast(rtData, comparisonValue.v.t, state.value)]], rightValue, rightValue2, timeValue))) break
+    	if (!("comp_$func"(rtData, [i: comparisonValue.i, v: [t: comparisonValue.v.t, v: cast(rtData, state.value, comparisonValue.v.t)]], rightValue, rightValue2, timeValue))) break
         duration += state.duration
     }
     if (!duration) return false
-    return (timeValue.f == 'l') ? duration < threshold : duration >= threshold
+    result = (timeValue.f == 'l') ? duration < threshold : duration >= threshold
+    debug "Duration ${duration}ms for ${func.replace('is_', 'was_')} ${timeValue.f == 'l' ? '<' : '>='} ${threshold}ms threshold = ${result}", rtData
+    return result
 }
 
 private boolean valueChanged(rtData, comparisonValue, timeValue) {
