@@ -1966,4 +1966,4 @@ if (!String.prototype.endsWith) {
 	};
 }
 
-version = function() { return 'v0.2.102.20180116'; };
+version = function() { return 'v0.3.000.20180224'; };
