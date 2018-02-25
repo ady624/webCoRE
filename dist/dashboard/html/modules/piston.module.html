@@ -1,28 +1,59 @@
 <status ng-if="status" ng-animate ng-bind-html="status" ng-click="setStatus()"></status>
-<logo>webCoRE</logo>
-<loader ng-if="loading" ng-animate>
-	<ul>
-		<li></li>
-		<li></li>
-		<li></li>
-		<li></li>
-	</ul>
-</loader>
+<logo ng-if="view != 'dashboard'"><img src="https://community.webcore.co/uploads/default/original/2X/d/d82aa5d0f719318d1f35bafdec06e2c8cf3c54be.svg"></logo>
+	<div id="preloader">
+  		<div id="loader"></div>
+	</div>
 <error ng-if="error" ng-animate><p ng-bind-html="error"></p><button class="btn btn-default" ng-click="home()">Go home</button></error>
-<nav ng-if="initialized" ng-animate class="navbar navbar-default">
+
+<!-- Start nav -->
+<nav ng-if="initialized" ng-animate class="navbar navbar-inverse navbar-fixed-top">
 	<div class="container-fluid">
-		<!-- Brand and toggle get grouped for better mobile display -->
+
+<!-- Brand section -->
+
 		<div class="navbar-header">
-			<button ng-if="mode=='edit'" type="button" class="navbar-toggle btn btn-default collapsed" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1" aria-expanded="false">
+			<button ng-if="mode=='edit'" id="navbar-btn" type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1" aria-expanded="false">
 				<span class="sr-only">Toggle navigation</span>
 				<span class="icon-bar"></span>
 				<span class="icon-bar"></span>
 				<span class="icon-bar"></span>
 			</button>
-			<div ng-if="mode=='view'" class="nav navbar-nav btn-group">
-				<span class="title btn btn-default" title="Back to piston list" ng-click="home()"><i class="fa fa-chevron-left" aria-hidden="true"></i>&nbsp;{{location.name}} \ {{instance.name}} ({{instance.coreVersion.split('.').splice(0,3).join('.')}})</span>
+			<button ng-if="mode=='view'" id="navbar-btn" type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar-view-collapse" aria-expanded="false">
+				<span class="sr-only">Toggle navigation</span>
+				<span class="icon-bar"></span>
+				<span class="icon-bar"></span>
+				<span class="icon-bar"></span>
+			</button>
+
+<!-- View mode -->
+
+			<div ng-if="mode=='view'" class="nav navbar-nav btn-group hidden-xs hidden-sm">
+				<span class="title btn" title="Back to piston list" ng-click="home()"><i class="fa fa-chevron-left" aria-hidden="true"></i>&nbsp;{{location.name}} \ {{instance.name}} ({{instance.coreVersion.split('.').splice(0,3).join('.')}})</span>
 			</div>
-			<div ng-if="mode=='edit'" class="nav navbar-nav btn-group">
+			<div ng-if="mode=='view'" class="nav navbar-nav btn-group hidden-md hidden-lg">
+					<span class="title btn" title="Back to piston list" ng-click="home()"><i class="fa fa-chevron-left" aria-hidden="true"></i>&nbsp;Back</span>
+			</div>
+			<div ng-if="mode=='view'" class="collapse navbar-collapse" id="navbar-view-collapse">
+       	<ul class="nav navbar-nav">
+        	<li class="dropdown">
+						<ul class="dropdown-menu">
+							<li class="dropdown"><a href="" ng-click="edit();" title="Edit the piston">Edit</a></li>
+							<li class="dropdown"><a href="" ng-click="test();" title="Test the piston">Test</a></li>
+             	<li class="dropdown"><a href="" ng-click="snapshot(true);" title="Take an anonymized snapshot of the piston"><i class="fa fa-camera" aria-hidden="true"></i> Anonymized Snapshot</a></li>
+       				<li class="dropdown"><a href="" ng-click="snapshot();" title="Take a snapshot of the piston"><i class="fa fa-camera" aria-hidden="true"></i> Snapshot</a></li>
+							<li class="dropdown"><a href="" ng-click="textSnapshot();" title="Copy piston to clipboard"><i class="fa fa-copy" aria-hidden="true"  title="Copy piston"></i> Copy Piston</a></li>
+							<li ng-if="trace && trace.points" class="{{view.trace ? 'active-tick' : ''}}"><a href="" ng-click="view.trace = !view.trace; toggleView(null);">Trace</a></li>
+							<li class="dropdown"><a href="" ng-click="deleteDialog();" title="Delete piston">Delete</a></li>
+						</ul>
+					</li>
+        </ul>
+			</div>
+
+<!-- End view mode -->
+
+<!-- Edit mode -->
+
+			<div ng-if="mode=='edit'" class="nav navbar-nav btn-group hidden-xxs">
 				<button class="btn btn-default {{view.variables ? 'active' : ''}}" ng-click="toggleView('variables');" title="Show variables"><i class="fa fa-subscript" aria-hidden="true"></i></button>
 				<button class="btn btn-default {{view.elseIfs ? 'active' : ''}}" ng-click="toggleView('elseIfs');" title="Show complex IFs"><i class="fa fa-code-fork" aria-hidden="true"></i></button>
 				<button class="btn btn-default {{view.restrictions ? 'active' : ''}}" ng-click="toggleView('restrictions');" title="Show restrictions"><i class="fa fa-filter" aria-hidden="true"></i></button>
@@ -37,16 +68,24 @@
 			</div>
 		</div>
 
-		<!-- Collect the nav links, forms, and other content for toggling -->
+<!-- Collect the nav links, forms, and other content for toggling -->
+
 		<div ng-if="mode=='edit'" class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
-			<div class="nav navbar-nav navbar-right btn-group">
-				<button ng-if="(mode=='edit') && !!meta.build" class="btn btn-warning" ng-click="cancel();">Cancel</button>
-				<button ng-if="mode=='edit'" class="btn btn-success" ng-click="save();">Save</button>
-			</div>
-			<ul ng-if="mode=='edit'" class="nav navbar-nav navbar-right">
-				<li class="dropdown">
-					<a class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false"><i class="fa fa-cog" aria-hidden="true"></i> Options<span class="caret"></span></a>
-					<ul class="dropdown-menu btn btn-default">
+
+			<ul class="nav navbar-nav navbar-right">
+			<li class="dropdown">
+				<a ng-if="(mode=='edit') && !!meta.build" ng-click="cancel();" role="button">Cancel</a>
+			</li>
+			<li class="dropdown">
+				<a ng-if="(mode=='edit')" ng-click="deleteDialog();" role="button">Delete</a>
+			</li>
+			<li class="dropdown">
+				<a ng-if="mode=='edit'" ng-click="save();" role="button">Save</a>
+
+
+			<li ng-if="mode=='edit'" class="dropdown">
+					<a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Options <span class="caret"></span></a>
+					<ul class="dropdown-menu">
 						<li class="{{view.variables ? 'active-tick' : ''}}" ng-click="toggleView('variables');"><a>Show variables</a>
 						</li>
 						<li class="{{view.elseIfs ? 'active-tick' : ''}}" ng-click="toggleView('elseIfs');"><a>Show complex IFs</a>
@@ -64,18 +103,15 @@
 						<li class="{{view.console ? 'active-tick' : ''}}" ng-click="toggleView('console');"><a>Show evaluation console</a>
 						</li>
 					</ul>
-				</li>
+
 			</ul>
-			<!--	  <form class="navbar-form navbar-left">
-		<div class="form-group">
-		  <input type="text" class="form-control" placeholder="Search">
 		</div>
-		<button type="submit" class="btn btn-default">Submit</button>
-	  </form>-->
-		</div>
-		<!-- /.navbar-collapse -->
 	</div>
 </nav>
+
+<!-- End nav -->
+
+
 <viewer ng-if="initialized" ng-animate options="{{viewerPiston.showOptions}}" mode="{{mode}}">
 	<div header ng-if="mode=='view'">
 		<div class="container">
@@ -86,40 +122,38 @@
 	</div>
 
 	<div class="container" ng-if="mode=='view'">
+		
+		<div warning ng-if="meta.active && !subscriptions.events && !schedules.length && !piston.o.des" class="alert alert-warning">This piston does not subscribe to any events. Unless executed by other means, it will never run on its own.</div>
+
+		<div class="text-right">
+			<span class="fa fa-caret-down collapse-control rotate-on-collapse" data-toggle="collapse" collapse-control data-target="#collapseCards" aria-expanded="true" small title="Hide/Show"></span>
+		</div>
+		
 		<div class="row">
-			<div class="row" ng-if="0==1">
-				<div class="col-md-12">
-					<div class="btn-group btn-group-justified" role="group">
-						<label class="btn btn-default" type="button">Pause</label>
-						<label class="btn btn-default" type="button" ng-click="edit();">Edit</label>
-						<label class="btn btn-default" type="button">Export</label>
-						<label class="btn btn-default" type="button">Backup</label>
-						<label class="btn btn-default" type="button">Restore</label>
-					</div>
-				</div>
-			</div>
-			<div warning ng-if="meta.active && !subscriptions.events && !schedules.length && !piston.o.des" class="alert alert-warning">This piston does not subscribe to any events. Unless executed by other means, it will never run on its own.</div>
-			<div class="row">
+			
+			<div class="collapse in" collapse-target id="collapseCards">
 				<div class="col-md-4">
-					<h2>Status</h2>
-					<div ng-if="meta.active">
-						<p>This piston is currently active and humming happily.</p>
-						<button class="btn btn-default" ng-click="pause();">Pause »</button>
-					</div>
-					<div ng-if="!meta.active">
-						<p>This piston is currently <span class="danger">PAUSED</span>. No actions will be performed by this piston until you resume it.</p>
-						<button class="btn btn-default" ng-click="resume();">Resume »</button>
-					</div>
-					<hr/>
-					<p>
-						<p>Piston category</p>
+					<div class="columnCards">
+						<h2>Status</h2>
+						<div ng-if="meta.active">
+							<p>This piston is currently active and humming happily.</p>
+							<button class="btn btn-default" ng-click="pause();">Pause »</button>
+						</div>
+						<div ng-if="!meta.active">
+							<p>This piston is currently <span class="danger">PAUSED</span>. No actions will be performed by this piston until you resume it.</p>
+							<button class="btn btn-default" ng-click="resume();">Resume »</button>
+						</div>
+						<hr/>
+						<p>Piston Category</p>
 						<div>
 							<select selectpicker ng-model="$parent.$parent.category" class="form-control" ng-change="setCategory()"><option ng-repeat="category in categories" value="{{category.i}}">{{category.n ? category.n : '(no name)'}}</option></select>
 						</div>
-					</p>
+					</div>
 				</div>
+
 				<div class="col-md-4">
-					<h2>Quick facts</h2>
+					<div class="columnCards">
+					<h2>Quick Facts</h2>
 					<p>Piston state: <span ng-bind-html="renderString(state.new)"></span></p>
 					<p>Last executed: {{lastExecuted ? utcToString(lastExecuted) : 'never'}}</p>
 					<p>Next scheduled: {{nextSchedule ? utcToString(nextSchedule) : 'never'}}</p>
@@ -128,40 +162,58 @@
 					<p>Memory used: {{memory ? memory : 'unknown'}}</p>
 					<p>External URL: <a href="{{endpoint}}" target="_blank">(click to open/execute)</a></p>
 				</div>
+				</div>
+
+
 				<div class="col-md-4">
-					<h2>Automatic backup</h2>
+					<div class="columnCards">
+
+					<h2>Automatic Backup</h2>
 					<div ng-if="meta.bin">
-						<p>Automatic backup is enabled for this piston.</p>
-						<p>{{mobile ? 'Touch' : 'Click'}} the box below to reveal your backup bin code. You should make a note of this code as you may use it later to restore a piston that you "mistakenly" deleted.</p>
+						<p> Automatic backup enabled. </p>
+						<p>{{mobile ? 'Touch' : 'Click'}} the box to reveal your backup bin code. Make a note of this code as you may use it later to restore a deleted piston.</p>
 						<p class="well bin animated" reveal="{{revealing}}" ng-click="revealBin();">{{meta.bin}}</p>
-						<p class="text-center"><b>Please do NOT share this code with anyone.</b></p>
+						<p class="text-center"><b>Do NOT share this code with anyone.</b></p>
 					</div>
 					<div ng-if="!meta.bin">
 						<p>You do not have automatic backup enabled for this piston.</p>
 						<button class="btn btn-default" ng-click="enableAutomaticBackup()">Enable automatic backup »</button>
+
 					</div>
 				</div>
 			</div>
+				</div>
+			</div>
+
+
+
 			<div class="row">
 				<div class="col-md-12">
-					<h2>Script <span small ng-click="hideScript = !hideScript">({{hideScript ? 'show' : 'hide'}})</span></h2>
-					<p ng-if="!hideScript">
-						<piston id="piston" ng-if="initialized" mode="{{mode}}" ng-repeat="piston in [piston]" data-nag-model="piston" ng-include="'piston'" trace="{{view.trace && (mode=='view') && !!trace && !!trace.points}}" no-animation context-menu="contextMenu()" context-menu-class="contextmenu"></piston>
-					</p>
-					<div ng-if="!hideScript">
-						<button class="btn btn-default" ng-click="edit();" title="Edit the piston">Edit »</button>
-						<button class="btn btn-warning" ng-click="test();" title="Test the piston">Test</button>
-						<button class="btn btn-success" ng-click="snapshot(true);" title="Take an anonymized snapshot of the piston"><i class="fa fa-camera" aria-hidden="true"></i></button>
-						<button class="btn btn-danger" ng-click="snapshot();" title="Take a snapshot of the piston"><i class="fa fa-camera" aria-hidden="true"></i></button>
-						<button class="btn btn-default" ng-click="textSnapshot();" title="Copy piston to clipboard"><i class="fa fa-copy" aria-hidden="true"></i></button>
-						<toggle ng-if="trace && trace.points" ng-model="view.trace" on="Trace" off="Trace" ng-click="toggleView(null)"></toggle>
-						<button class="btn btn-danger pull-right" ng-click="deleteDialog();">Delete »</button>
-					</div>
+					<span class="fa fa-caret-down pull-right collapse-control rotate-on-collapse" data-toggle="collapse" collapse-control data-target="#collapseScript" aria-expanded="true" small title="Hide/Show"></span>
+					<h3 class="pull-left">
+						Script 
+					</h3>
+						<div class="collapse navbar-collapse script" id="navbar-view-collapse">
+							<div ng-include="'piston-editor-buttons'"></div>
+						</div>
+
+						<div class="clearfix"></div>
+						<div class="collapse in" collapse-target id="collapseScript">
+							<piston id="piston" ng-if="initialized" mode="{{mode}}" ng-repeat="piston in [piston]" data-nag-model="piston" ng-include="'piston'" trace="{{view.trace && (mode=='view') && !!trace && !!trace.points}}" no-animation context-menu="contextMenu()" context-menu-class="contextmenu"></piston>
+							<div ng-include="'piston-editor-buttons'" class="hidden-xs"></div>
+						</div>
 				</div>
 			</div>
+
 			<div class="row">
+
 				<div class="col-md-12 col-lg-6">
-					<h2>Logs</h2>
+					<h3>
+						<span class="fa fa-caret-down pull-right collapse-control rotate-on-collapse" data-toggle="collapse" collapse-control data-target="#collapseLogs" aria-expanded="true" small title="Hide/Show"></span>
+						Logs
+					</h3>
+					<div class="collapse in" collapse-target id="collapseLogs">
+
 					<div class="logs">
 						<table class="table logs table-striped">
 							<thead>
@@ -169,7 +221,7 @@
 									<th>The log is empty</th>
 								</tr>
 							</thead>
-							<tbody>				
+							<tbody>
 								<tr ng-repeat="log in logs" log="{{log.c}}">
 									<td ng-if="log.t" colspan="2" class="hdr">{{utcToString(log.t) + ' +' + (log.t % 1000) + 'ms'}}</td>
 									<td ng-if-start="log.o != null">+{{log.o}}ms</td>
@@ -178,7 +230,7 @@
 							</tbody>
 						</table>
 					</div>
-					<div class="form-group">
+					<div class="form-group clearfix">
 						<button ng-if="logs && logs.length" class="btn btn-default" ng-click="clearLogs();" title="Clear the logs">Clear</button>
 						<select selectpicker class="selectpicker show-tick pull-right" data-style="btn-default" data-mobile="{{mobile}}" ng-change="setLoggingLevel($parent);" ng-model="$parent.$parent.logging">
 							<option value="" style="display:none" disabled>Nothing selected</option>
@@ -190,8 +242,18 @@
 						<span class="pull-right form-control-static">Logging level&nbsp;</span>
 					</div>
 				</div>
+				</div>
+
+
+
+
 				<div class="col-md-12 col-lg-6">
-					<h2>Variables</h2>
+					<h3>
+						<span class="fa fa-caret-down pull-right collapse-control rotate-on-collapse" data-toggle="collapse" collapse-control data-target="#collapseVars" aria-expanded="true" small title="Hide/Show"></span>
+						Variables
+					</h3>
+					<div class="collapse in" collapse-target id="collapseVars">
+
 					<div multicolumn>
 						<label var ng-if="piston && piston.v">Local variables</label>
 						<div ng-if="localVars" var ng-repeat="var in piston.v"><span><span class="vartype">{{var.t}}</span><span>{{var.n}}</span> <i class="clickable fa fa-pencil-square-o" aria-hidden="true" ng-if="!var.v && (var.t.substr(-1) != ']')" ng-click="editLocalVariable(var)"></i></span><span class="{{var.v == null ? 'notset' : ''}}" ng-bind-html="var.v ? renderOperand(var.v) : formatVariableValue(var, var.n)"></span></div>
@@ -204,9 +266,16 @@
 					</div>
 				</div>
 			</div>
-			<div class="row">				
+			</div>
+
+
+			<div class="row">
 				<div class="col-md-12">
-					<h2>Evaluation console</h2>
+					<h3>
+						<span class="fa fa-caret-down pull-right collapse-control rotate-on-collapse" data-toggle="collapse" collapse-control data-target="#collapseCons" aria-expanded="true" small title="Hide/Show"></span>
+						Evaluation Console
+					</h3>
+					<div class="collapse in" collapse-target id="collapseCons">
 					<console ng-if="initialized" mode="{{mode}}">
 						<label>Evaluation console</label>
 						<content>
@@ -221,17 +290,24 @@
 					</console>
 				</div>
 			</div>
+			</div>
 			<div class="row" ng-if="!mobile && stats && stats.timing && stats.timing.length">
 				<div class="col-md-12">
-					<h2>Statistics</h2>
+
+					<h3>
+						<span class="fa fa-caret-down pull-right collapse-control rotate-on-collapse" collapse-control data-toggle="collapse" data-target="#collapseStats" aria-expanded="true" small title="Hide/Show"></span>
+						Statistics
+					</h3>
+					<div class="collapse in" collapse-target id="collapseStats">
 					<canvas id="line" height="100" class="chart chart-line" chart-data="chart.data" chart-labels="chart.labels" chart-series="chart.series" chart-options="chart.options" chart-dataset-override="chart.datasetOverride" disabled-chart-click_ed="chart.onClick"></canvas>
 				</div>
+			</div>
 			</div>
 		</div>
 		<footer>
 			<p></p>
 		</footer>
-	</div>
+
 	<piston id="editor" console="{{view.console}}" ng-if="initialized && (mode=='edit')" mode="{{mode}}" ng-repeat="piston in [piston]" data-nag-model="piston" ng-include="'piston'" movable="{{(mode=='edit') && view.movable}}" context-menu="contextMenu()" context-menu-class="contextmenu"></piston>
 	<console ng-if="(mode == 'edit') && view.console && initialized" mode="{{mode}}">
 		<label>Evaluation console</label>
@@ -295,7 +371,17 @@
 	</toolbar>
 </viewer>
 
+<!-- Begin script -->
 
+<script type="text/ng-template" id="piston-editor-buttons">
+	<button class="btn btn-default" ng-click="edit();" title="Edit the piston">Edit</button>
+	<button class="btn btn-warning" ng-click="test();" title="Test the piston">Test</button>
+	<button class="btn btn-success" ng-click="snapshot(true);" title="Take an anonymized snapshot of the piston"><i class="fa fa-camera" aria-hidden="true"></i></button>
+	<button class="btn btn-danger" ng-click="snapshot();" title="Take a snapshot of the piston"><i class="fa fa-camera" aria-hidden="true"></i></button>
+	<button class="btn btn-default" ng-click="textSnapshot();" title="Copy piston to clipboard"><i class="fa fa-copy" aria-hidden="true"></i></button>
+	<toggle ng-if="trace && trace.points" ng-model="view.trace" on="Trace" off="Trace" ng-click="toggleView(null)"></toggle>
+	<button class="btn btn-danger" ng-click="deleteDialog();">Delete</button>
+</script>
 
 <script type="text/ng-template" id="dialog-captured-image">
 	<br/>
@@ -667,7 +753,7 @@
 			<event data-ng-repeat-start="event in collection.c" data-ng-include="'event'" dnd-nodrag dnd-draggable="event" dnd-nodrag dnd-type="'event'" dnd-moved="drag(collection.c, $index);" dnd-effect-allowed="copyMove"></event>
 			<line operator data-ng-repeat-end><span pun>or</span></line>
 			<line new data-ng-click="addEvent(collection)">+ add a new event</line>
-		</div>		
+		</div>
 	</dnd-nodrag>
 </script>
 <script type="text/ng-template" id="event">
@@ -679,7 +765,7 @@
 		<line cond ng-if="!event.c" ng-click="select(event, collection.c, 'event')">
 			<handle dnd-handle class="fa fa-sort"></handle><span ng-click="editEvent(event, collection.c);" ng-bind-html="event.$$html || (event.$$html = renderOperand(event.lo))"></span><span ng-if="view.trace && (mode=='view')" nul> /* #{{event.$}} */</span>
 		</line>
-		</div>	
+		</div>
 	</dnd-nodrag>
 </script>
 
@@ -705,7 +791,7 @@
 			<condition ng-if-start="(collection.t != 'group') && !collection.n" data-ng-repeat-start="condition in collection.c" data-ng-include="'condition'" dnd-nodrag data-nag-model="collection" dnd-draggable="condition" dnd-nodrag dnd-type="'condition'" dnd-moved="drag(collection.c, $index);" dnd-effect-allowed="copyMove"></condition>
 			<line operator ng-if-end data-ng-repeat-end ng-click="select({t: 'group', c: collection.c, o: collection.o, n: collection.n},  null, 'conditions')"><span pun data-ng-click="editConditionGroup(collection, null, (collection.t == 'group' ? ($parent.$parent.parentCollection ? $parent.$parent.parentCollection.o : statement.o) : null));" ng-bind-html="renderGroupingMethod(collection, condition)">{{collection.o}}</span></line>
 			<line new ng-if="(collection.t != 'group') && !collection.n" data-ng-click="addCondition(collection, null, null, collection.o)">+ add a new condition</line>
-		</div>		
+		</div>
 	</dnd-nodrag>
 </script>
 <script type="text/ng-template" id="condition">
@@ -732,7 +818,7 @@
 			</container>
 			<line pun>}</line>
 		</container>
-		</div>	
+		</div>
 	</dnd-nodrag>
 </script>
 
@@ -759,7 +845,7 @@
 			<restriction ng-if-start="(collection.t != 'group') && !collection.rn" data-ng-repeat-start="restriction in collection.r" data-ng-include="'restriction'" dnd-nodrag data-nag-model="collection.r" dnd-draggable="restriction" dnd-nodrag dnd-type="'restriction'" dnd-moved="drag(collection.r, $index);" dnd-effect-allowed="copyMove"></restriction>
 			<line operator ng-if-end data-ng-repeat-end ng-click="select({t: 'group', c: collection.r, o: collection.ro, n: collection.rn}, null, 'restrictions')"><span pun data-ng-click="editRestrictionGroup(collection);">{{collection.rop}}</span></line>
 			<line new ng-if="(collection.t != 'group') && !collection.rn" data-ng-click="addRestriction(collection)">+ add a new restriction</line>
-		</div>		
+		</div>
 	</dnd-nodrag>
 </script>
 
@@ -773,7 +859,7 @@
 		<line cond ng-if="!restriction.r" ng-click="select(restriction, collection.r, 'restriction')">
 			<handle dnd-handle class="fa fa-sort"></handle><span ng-click="editRestriction(restriction, collection.r);" ng-bind-html="restriction.$$html || (restriction.$$html = renderComparison(restriction.lo, restriction.co, restriction.ro, restriction.ro2, restriction.to, restriction.to2))"></span><span ng-if="view.trace && (mode=='view')" nul> /* #{{restriction.$}} */</span>
 		</line>
-		</div>	
+		</div>
 	</dnd-nodrag>
 </script>
 
@@ -812,7 +898,7 @@
 <script type="text/ng-template" id="dialog-edit-statement">
 	<designer ng-if="designer.page==0">
 		<header>
-			<label>Add a new statement</label>
+			<h3>Add a new statement</h3>
 		</header>
 		<p ng-if="view.advancedStatements">Basic statements</p>
 		<div class="form-group">
@@ -855,8 +941,8 @@
 
 	<designer ng-if="designer.page==1">
 		<header>
-			<label ng-if="designer.$new">Add a new {{designer.type}}</label>
-			<label ng-if="!designer.$new">Edit {{designer.type}}</label>
+			<h3 ng-if="designer.$new">Add a new {{designer.type}}</h3>
+			<h3 ng-if="!designer.$new">Edit {{designer.type}}</h3>
 		</header>
 		<form name="form" novalidate>
 			<div class="form-group" ng-if="designer.type=='if'">
@@ -1171,7 +1257,7 @@
 <script type="text/ng-template" id="dialog-edit-event">
 	<designer>
 		<header>
-			<label >{{designer.$new ? 'Add' : 'Edit' }} an event</label>
+			<h3>{{designer.$new ? 'Add' : 'Edit' }} an event</h3>
 		</header>
 		<form>
 			<info ng-if="designer.type=='condition'">An event allows the execution of statements when certain devices' attributes change.</info>
@@ -1201,7 +1287,7 @@
 <script type="text/ng-template" id="dialog-edit-condition">
 	<designer ng-if="designer.page==0">
 		<header>
-			<label>Add a new condition</label>
+			<h3>Add a new condition</h3>
 		</header>
 		<form>
 			<div class="form-group">
@@ -1241,8 +1327,8 @@
 
 	<designer ng-if="designer.page==1">
 		<header>
-			<label ng-if="designer.$new">Add a new {{designer.type}}</label>
-			<label ng-if="!designer.$new">Edit {{designer.type}}</label>
+			<h3 ng-if="designer.$new">Add a new {{designer.type}}</h3>
+			<h3 ng-if="!designer.$new">Edit {{designer.type}}</h3>
 		</header>
 		<form>
 			<info ng-if="designer.type=='condition'">A condition allows for a single comparison to be made between two expressions.</info>
@@ -1342,7 +1428,7 @@
 <script type="text/ng-template" id="dialog-edit-condition-group">
 	<designer>
 		<header>
-			<label>Edit condition group</label>
+			<h3>Edit condition group</h3>
 		</header>
 		<form>
 			<div class="form-group">
@@ -1404,7 +1490,7 @@
 <script type="text/ng-template" id="dialog-edit-restriction">
 	<designer ng-if="designer.page==0">
 		<header>
-			<label>Add a new restriction</label>
+			<h3>Add a new restriction</h3>
 		</header>
 		<form>
 			<div class="form-group">
@@ -1444,8 +1530,8 @@
 	</designer>
 	<designer ng-if="designer.page==1">
 		<header>
-			<label ng-if="designer.$new">Add a new {{designer.type}}</label>
-			<label ng-if="!designer.$new">Edit {{designer.type}}</label>
+			<h3 ng-if="designer.$new">Add a new {{designer.type}}</h3>
+			<h3 ng-if="!designer.$new">Edit {{designer.type}}</h3>
 		</header>
 		<form>
 			<info ng-if="designer.type=='restriction'">A restriction allows for a single comparison to be made between two expressions.</info>
@@ -1495,7 +1581,7 @@
 <script type="text/ng-template" id="dialog-edit-restriction-group">
 	<designer>
 		<header>
-			<label>Edit restriction group</label>
+			<h3>Edit restriction group</h3>
 		</header>
 		<form>
 			<div class="form-group">
@@ -1539,8 +1625,8 @@
 <script type="text/ng-template" id="dialog-edit-case">
 	<designer>
 		<header>
-			<label ng-if="designer.$new">Add a new case</label>
-			<label ng-if="!designer.$new">Edit case</label>
+			<h3 ng-if="designer.$new">Add a new case</h3>
+			<h3 ng-if="!designer.$new">Edit case</h3>
 		</header>
 		<form>
 			<div class="form-group">
@@ -1595,7 +1681,7 @@
 			<operand ng-repeat="operand in [designer.comparison.right2]" ng-model="designer.comparison.right2" ng-include="'operand'"></operand>
 		</div>
 	</div>
-	<div ng-if="comparison.dataType != 'email'">	
+	<div ng-if="comparison.dataType != 'email'">
 	<div class="form-group" ng-if="!comparison.event && (comparison.parameterCount > 0)">
 		<label class="col-lg-12 no-padding">{{comparison.parameterCount == 1 ? 'Compare to' : 'Between...'}}<span class="error" ng-if="!designer.comparison.right.valid">{{designer.comparison.right.error}}<span ng-if="designer.comparison.right.expressionVar"> (<a ng-click="autoAddVariable(designer.comparison.right.expressionVar); validatecomparison.right(designer.comparison.right);">create it</a>)</span>&nbsp;<i class="fa fa-warning"></i></span></label>
 		<operand ng-repeat="operand in [designer.comparison.right]" ng-model="designer.comparison.right" ng-include="'operand'"></operand>
@@ -2004,7 +2090,7 @@
 <script type="text/ng-template" id="dialog-edit-task">
 	<designer ng-if="designer.page==0">
 		<header>
-			<label>Add a new task</label>
+			<h3>Add a new task</h3>
 		</header>
 		<form>
 			<div class="form-group">
@@ -2097,7 +2183,7 @@
 <script type="text/ng-template" id="dialog-edit-variable">
 	<designer ng-if="designer.page==0">
 		<header>
-			<label>{{designer.$new ? 'Add a new' : 'Edit'}} variable</label>
+			<h3>{{designer.$new ? 'Add a new' : 'Edit'}} variable</h3>
 		</header>
 		<form>
 			<div class="form-group">
@@ -2166,7 +2252,7 @@
 <script type="text/ng-template" id="dialog-edit-local-variable">
 	<designer>
 		<header>
-			<label>Edit the {{designer.name}} local variable</label>
+			<h3>Edit the {{designer.name}} local variable</h3>
 		</header>
 		<form>
 			<div class="form-group">
@@ -2186,7 +2272,7 @@
 <script type="text/ng-template" id="dialog-edit-global-variable">
 	<designer>
 		<header>
-			<label>{{designer.$new ? 'Add a new' : 'Edit'}} global variable</label>
+			<h3>{{designer.$new ? 'Add a new' : 'Edit'}} global variable</h3>
 		</header>
 		<form>
 			<div class="form-group">
@@ -2226,14 +2312,14 @@
 <script type="text/ng-template" id="dialog-del-piston">
 	<designer>
 		<header>
-			<label>Delete piston</label>
+			<h3>Delete piston</h3>
 		</header>
 		<form>
 			<div class="form-group">
 				<label>Are you sure you want to delete piston "{{meta.name}}"?</label>
 			</div>
 			<div ng-if="meta.bin" class="form-group">
-				<label>This is the last opportunity to save the backup bin code, just in case you decide you want this piston back later...</label> 
+				<label>This is the last opportunity to save the backup bin code, just in case you decide you want this piston back later...</label>
 				<div class="text-center"><p class="well bin animated" reveal="true">{{meta.bin}}</p></div>
 			</div>
 		</form>
@@ -2248,7 +2334,7 @@
 <script type="text/ng-template" id="dialog-edit-settings">
 	<designer>
 		<header>
-			<label>Piston settings</label>
+			<h3>Piston settings</h3>
 		</header>
 		<form>
 			<div class="form-group">
@@ -2266,7 +2352,7 @@
 					<option ng-value="1">Disabled</option>
 				</select>
 			</div>
-			
+
 			<div ng-if="designer.showAdvancedOptions" class="form-group">
 				<div class="form-group">
 					<label class="col-lg-12 no-padding">Piston execution parallelism</label>
@@ -2328,7 +2414,7 @@
 <script type="text/ng-template" id="dialog-choose-version">
 	<designer>
 		<header>
-			<label>A local, newer, version of this piston was found</label>
+			<h3>A local, newer, version of this piston was found</h3>
 		</header>
 		<form>
 			<div class="form-group">
@@ -2337,17 +2423,23 @@
 			</div>
 		</form>
 		<footer>
-			<button type="button" class="btn btn-success pull-right" ng-click="chooseVersion(true);">Use the locally saved version</button>
-			<button type="button" class="btn btn-danger" ng-click="chooseVersion(false);">Use the current version</button>
+			<div class="row text-center">
+				<div class="col-sm-6">
+					<button type="button" class="btn btn-danger" ng-click="chooseVersion(false);">Use the current version</button>
+				</div>
+				<div class="col-sm-6">
+					<button type="button" class="btn btn-success" ng-click="chooseVersion(true);">Use the locally saved version</button>
+				</div>
+			</div>
 		</footer>
-	</designer>	
+	</designer>
 </script>
 
 
 <script type="text/ng-template" id="dialog-rebuild-piston">
 	<designer>
 		<header>
-			<label>Rebuild piston items</label>
+			<h3>Rebuild piston items</h3>
 		</header>
 		<form>
 			<info>This piston is using some items that do not exist in your webCoRE instance. Let's replace them with items you do have. Please try and select an equivalent value for each item in the list below. If you skip any items, you will have to fix them by manually visiting that statement.</info>
@@ -2394,5 +2486,5 @@
 			<button type="button" class="btn btn-default" ng-click="closeDialog();">Ignore</button>
 			<button type="button" class="btn btn-info pull-right" ng-click="doRebuildPiston();">Continue</button>
 		</footer>
-	</designer>	
+	</designer>
 </script>

@@ -1,632 +1,655 @@
-	<status ng-if="status" ng-animate ng-bind-html="status" ng-click="setStatus()"></status>
-	<logo ng-if="view != 'dashboard'">webCoRE</logo>
-	<loader ng-if="loading">
-		<ul>
-			<li></li>
-			<li></li>
-			<li></li>
-			<li></li>
-		</ul>
-	</loader>
-	<nav ng-if="initialized && (view != 'dashboard')" class="navbar navbar-default navbar-fixed-top">
-      <div class="container-fluid">
-        <div class="navbar-header">
-          <button id="navbar-btn" type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
-            <span class="sr-only">Toggle navigation</span>
-            <span class="icon-bar"></span>
-            <span class="icon-bar"></span>
-            <span class="icon-bar"></span>
-          </button>
-          <a class="navbar-brand">{{location.name}} \ {{instance ? instance.name + ' (' + instance.coreVersion.split('.').splice(0,3).join('.') + ')' : 'loading...'}}</a>
-        </div>
-        <div id="navbar" class="navbar-collapse collapse">
-          	<ul class="nav navbar-nav navbar-left" ng-init="locations = listLocations()">
-               	<li class="dropdown">
-                    <a class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">{{location.name}} \ {{instance ? instance.name + ' (' + instance.coreVersion.split('.').splice(0,3).join('.') + ')' : 'loading...'}}<span class="caret"></span></a>
-                   	<ul class="dropdown-menu btn btn-default">
-                        <li role="separator" class="dropdown-header" ng-repeat-start="l in locations" ng-init="instances = listInstances(l.id)">{{l.name}}</li>
-                    	<li instance ng-repeat="i in instances" ng-repeat-end class="{{i.id == instance.id ? 'active-tick' : ''}}" ng-click="switchInstance(i.id);"><a>{{i.name}} ({{i.coreVersion.split('.').splice(0,3).join('.')}})</a></li>
-	            	</ul>
-            	</li>
+<status ng-if="status" ng-animate ng-bind-html="status" ng-click="setStatus()"></status>
+<logo ng-if="view != 'dashboard'"><img src="/img/webCoRE-text.svg"></logo>
+<div id="preloader">
+		<div id="loader"></div>
+</div>
+
+
+<!-- Start navigation -->
+<nav ng-if="initialized && (view != 'dashboard')" class="navbar navbar-inverse navbar-fixed-top">
+  <div class="container-fluid">
+
+<!-- Brand -->
+    <div class="navbar-header">
+      <button id="navbar-btn" type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+        <span class="sr-only">Toggle navigation</span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+      <a class="navbar-brand">{{location.name}} \ {{instance ? instance.name + ' (' + instance.coreVersion.split('.').splice(0,3).join('.') + ')' : 'loading...'}}</a>
+    </div>
+
+<!--External links // collapsed on xs-->
+	<ul class="nav navbar-nav navbar-right hidden-xs">
+			<li><a target="_blank" aria-haspopup="true" aria-expanded="false" href="https://www.paypal.me/ady624"><i class="fa fa-paypal" aria-hidden="true"></i>&nbsp;&nbsp;Donate</a></li>
+			<li><a target="_blank" aria-haspopup="true" aria-expanded="false" href="https://community.webcore.co"><i class="fa fa-comments" aria-hidden="true"></i>&nbsp;&nbsp;Forum</a></li>
+			<li><a target="_blank" aria-haspopup="true" aria-expanded="false" href="https://wiki.webcore.co"><i class="fa fa-book" aria-hidden="true"></i>&nbsp;&nbsp;Wiki</a></li>
+	</ul>
+
+<!-- Nav links and content -->
+    <div class="collapse navbar-collapse" id="navbar">
+      <ul class="nav navbar-nav" ng-init="locations = listLocations()">
+        <li class="dropdown"><a class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">{{location.name}} \ {{instance ? instance.name + ' (' + instance.coreVersion.split('.').splice(0,3).join('.') + ')' : 'loading...'}}<span class="caret"></span></a>
+            <ul class="dropdown-menu">
+              <li role="separator" class="dropdown-header" ng-repeat-start="l in locations" ng-init="instances = listInstances(l.id)">{{l.name}}</li>
+            	<li instance ng-repeat="i in instances" ng-repeat-end class="{{i.id == instance.id ? 'active-tick' : ''}}" ng-click="switchInstance(i.id);"><a>{{l.name}} \ {{i.name}} ({{i.coreVersion.split('.').splice(0,3).join('.')}})</a></li>
+            </ul>
+        </li>
 			</ul>
-                <ul class="nav navbar-nav navbar-right">
-					<li class="dropdown">
-                        <a target="_blank" href="https://community.webcore.co" class="" role="button" aria-haspopup="true" aria-expanded="false">Forum</a>
-					</li>
-					<li class="dropdown">
-                        <a target="_blank" href="https://wiki.webcore.co" class="" role="button" aria-haspopup="true" aria-expanded="false">Wiki</a>
-					</li>
-                    <li class="dropdown">
-                        <a id="options" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false"><i class="fa fa-cog" aria-hidden="true"></i> Options<span class="caret"></span></a>
-                        <ul class="dropdown-menu btn btn-default">
-							<li><a href="" ng-click="showDashboard();">Go to dashboard</a></li>
-							<li><a href="" ng-click="showFuelStreams();">View fuel streams</a></li>
-                            <li role="separator" class="divider"></li>
-                            <li ng-click="newPiston();"><a>Add a new piston</a></li>
-                            <li ng-if="instanceCount > 1" ng-click="movePiston();"><a>Move piston(s)</a></li>
-                            <li role="separator" class="divider"></li>
-                            <li><a href="register">Register another instance</a></li>
-                            <li role="separator" class="divider"></li>
-                            <li><a ng-click="showSettings()">Settings</a></li>
-                            <li role="separator" class="divider"></li>
-                            <li ng-click="logOut();"><a>Log out</a></li>
-                        </ul>
-                    </li>
-                </ul>
-        </div>
-      </div>
-    </nav>
+			<ul class="nav navbar-nav navbar-right hidden-sm hidden-md hidden-lg ">
+				<li class="dropdown">
+ 					<a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Options <span class="caret"></span></a>
+          <ul class="dropdown-menu">
+            <li><a href="#" ng-click="newPiston();"><i class="fa fa-plus" aria-hidden="true"></i>&nbsp;&nbsp;New Piston</a></li>
+						<li><a href="#" ng-click="showDashboard();"><i class="fa fa-th-list" aria-hidden="true"></i>&nbsp;&nbsp;Dashboard</a></li>
+						<li><a href="#" ng-click="showFuelStreams();"><i class="fa fa-area-chart" aria-hidden="true"></i>&nbsp;&nbsp;Fuel Streams</a></li>
+						<li><a href="" ng-click="backup();"><i class="fa fa-cloud-upload" aria-hidden="true"></i>&nbsp;&nbsp;Backup Piston(s)</a></li>
+            <li ng-if="instanceCount > 1"><a href="#" ng-click="movePiston();"><i class="fa fa-sort" aria-hidden="true"></i>Move Piston(s)</a></li>
+            <li><a href="register"><i class="fa fa-home" aria-hidden="true"></i>&nbsp;&nbsp;Register Instance</a></li>
+            <li><a href="#" ng-click="showSettings()"><i class="fa fa-wrench" aria-hidden="true"></i>&nbsp;&nbsp;Settings</a></li>
+						<li><a target="_blank" aria-haspopup="true" aria-expanded="false" href="https://www.paypal.me/ady624"><i class="fa fa-paypal" aria-hidden="true"></i>&nbsp;&nbsp;Donate</a></li>
+						<li><a target="_blank" aria-haspopup="true" aria-expanded="false" href="https://community.webcore.co"><i class="fa fa-comments" aria-hidden="true"></i>&nbsp;&nbsp;Forum</a></li>
+						<li><a target="_blank" aria-haspopup="true" aria-expanded="false" href="https://wiki.webcore.co"><i class="fa fa-book" aria-hidden="true"></i>&nbsp;&nbsp;Wiki</a></li>
+						<li><a href="#" ng-click="logOut();"><i class="fa fa-sign-out" aria-hidden="true"></i>&nbsp;&nbsp;Log Out</a></li>
+					</ul>
+				</li>
+			</ul>
+    </div>
+	</div>
+</nav>
+<!--End navigation-->
 
-
-	<viewer class="dashboard animated noPreventDefault {{dropDownMenu ? 'reveal' : ''}}" ng-if="initialized && (view == 'dashboard')">
-		<nav fixed class="navbar navbar-default navbar-fixed-topw" ng-if="initialized && (view == 'dashboard')">
-			<div class="container-fluid">
-				<ul class="nav navbar-nav navbar-right">
-					<li class="dropdown">
-						<a target="_blank" href="" class="" role="button" aria-haspopup="true" aria-expanded="false" ng-click="hideDashboard()">Close</a>
-					</li>
-				</ul>
-			</div>
-		</nav>
-		<tiles masonry='{"transitionDuration": "0s", "itemSelector": "tile"}' class="noPreventDefault" ng-wheel="onWheel($event)" ng-swipe-up="onSwipe($event, 'up')" ng-swipe-down="onSwipe($event, 'down')">
-			<tile ng-repeat="device in devices" class="col-lg-1 col-md-1 col-sm-2 col-xs-3 col-xxs-6" tile-height="{{determineDeviceType(device) == 'presenceSensor' ? 2 : 1}}">
-				<content>
-					<refresh ng-if="refreshing"><i class="fa fa-refresh fa-spin fa-3x fa-fw"></i></refresh>
-					<device type="{{device.t}}" dev-data="device.data" ng-style="!!device.data.color ? {'text-shadow': '0px 0px 150px ' + device.data.color} : {}">
-						<level ng-if="device.data.level != null"></level>
-						<power ng-if="device.data.power != null"></power>
-						<battery ng-if="device.data.battery != null" level="{{getBatteryLevel(device.data.battery)}}" data-toggle="tooltip" title="{{device.data.battery}}% left"></battery>
-						<temperature ng-if="device.data.temperature != null">{{device.data.temperature}}°{{location.temperatureScale}}</temperature>
-					</device>
-					<label>{{device.n}}</label>
+<viewer class="dashboard animated noPreventDefault {{dropDownMenu ? 'reveal' : ''}}" ng-if="initialized && (view == 'dashboard')">
+	<nav fixed class="navbar navbar-default navbar-fixed-topw" ng-if="initialized && (view == 'dashboard')">
+		<div class="container-fluid">
+			<ul class="nav navbar-nav navbar-right">
+				<li class="dropdown">
+					<a target="_blank" href="" class="" role="button" aria-haspopup="true" aria-expanded="false" ng-click="hideDashboard()">Close</a>
+				</li>
+			</ul>
+		</div>
+	</nav>
+	<tiles masonry='{"transitionDuration": "0s", "itemSelector": "tile"}' class="noPreventDefault" ng-wheel="onWheel($event)" ng-swipe-up="onSwipe($event, 'up')" ng-swipe-down="onSwipe($event, 'down')">
+		<tile ng-repeat="device in devices" class="col-lg-1 col-md-1 col-sm-2 col-xs-3 col-xxs-6" tile-height="{{determineDeviceType(device) == 'presenceSensor' ? 2 : 1}}">
+			<content>
+				<refresh ng-if="refreshing"><i class="fa fa-refresh fa-spin fa-3x fa-fw"></i></refresh>
+				<device type="{{device.t}}" dev-data="device.data" ng-style="!!device.data.color ? {'text-shadow': '0px 0px 150px ' + device.data.color} : {}">
+					<level ng-if="device.data.level != null"></level>
+					<power ng-if="device.data.power != null"></power>
+					<battery ng-if="device.data.battery != null" level="{{getBatteryLevel(device.data.battery)}}" data-toggle="tooltip" title="{{device.data.battery}}% left"></battery>
+					<temperature ng-if="device.data.temperature != null">{{device.data.temperature}}°{{location.temperatureScale}}</temperature>
+				</device>
+				<label>{{device.n}}</label>
 <!--					<div ng-if="device.t == 'dimmer'">
-						<device dev-data="device.data" {{device.t}}></device>
-					</div>
-					<div ng-if="device.t == 'switch'">
-						<device switch switch="{{device.data.switch}}"></device>
-						show a switch
-						<div main >{{getDeviceAttribute(device, 'level')}}</div>
-					</div>-->
-				</content>
-			</tile>
-		</tiles>
-	</viewer>
+					<device dev-data="device.data" {{device.t}}></device>
+				</div>
+				<div ng-if="device.t == 'switch'">
+					<device switch switch="{{device.data.switch}}"></device>
+					show a switch
+					<div main >{{getDeviceAttribute(device, 'level')}}</div>
+				</div>-->
+			</content>
+		</tile>
+	</tiles>
+</viewer>
 
-	<viewer class="pistons" ng-if="initialized && ((view == 'piston') || (view == 'settings'))" class="no-animate">
-		<div class="body container-fluid">
-			<div class="row">
-				<div class="sidebar">
-					<ul class="nav nav-sidebar">
-						<li><a href="" ng-click="newPiston();">Add a new piston</a></li>
-						<li><a href="" ng-click="showDashboard();">Go to dashboard (beta)</a></li>
-						<li><a href="" ng-click="showFuelStreams();">View fuel streams (beta)</a></li>
-						<li><a href="" ng-click="backup();">Backup piston(s)</a></li>						
-						<li ng-if="instanceCount > 1"><a href="" ng-click="movePiston();">Move piston(s)</a></li>						
-						<li><a href="" ng-click="showSettings();">Settings</a></li>						
-						<li>
+<viewer class="pistons" ng-if="initialized && ((view == 'piston') || (view == 'settings'))" class="no-animate">
+	<div class="body container-fluid">
+		<div class="row">
+			<div id="dashboardSidebar" class="sidebar no-ng-animate" ng-class="{ 'sidebar-collapsed': sidebarCollapsed, 'allow-transition': completedInitialRender }" collapse-target collapse-class="">
+				<ul class="nav nav-sidebar">
+					<li class="logo"><img class="logo-sm" src="img/webCoRE-mark.svg" alt="webCoRE logo"><img class="logo-lg" src="img/webCoRE-text.svg" width="90%"></li>
+					<li><a href="" ng-click="newPiston();" class="newPiston" data-toggle="{{sidebarCollapsed ? 'tooltip' : ''}}" data-placement="right" data-title="New Piston">
+						<i class="fa fa-plus" aria-hidden="true"></i>&nbsp;&nbsp;New Piston
+					</a></li>
+					<li><a href="" ng-click="showDashboard();" class="dash" data-toggle="{{sidebarCollapsed ? 'tooltip' : ''}}" data-placement="right" data-title="Dashboard (beta)">
+						<i class="fa fa-th-list" aria-hidden="true"></i>&nbsp;&nbsp;Dashboard (beta)
+					</a></li>
+					<li><a href="" ng-click="showFuelStreams();" class="fuel" data-toggle="{{sidebarCollapsed ? 'tooltip' : ''}}" data-placement="right" data-title="Fuel Streams (beta)">
+						<i class="fa fa-area-chart" aria-hidden="true"></i>&nbsp;&nbsp;Fuel Streams (beta)
+					</a></li>
+					<li><a href="" ng-click="backup();" class="backup" data-toggle="{{sidebarCollapsed ? 'tooltip' : ''}}" data-placement="right" data-title="Backup Piston(s)">
+						<i class="fa fa-cloud-upload" aria-hidden="true"></i>&nbsp;&nbsp;Backup Piston(s)
+					</a></li>
+					<li><a href="register" class="register" data-toggle="{{sidebarCollapsed ? 'tooltip' : ''}}" data-placement="right" data-title="Register Instance">
+						<i class="fa fa-home" aria-hidden="true"></i>&nbsp;&nbsp;Register Instance
+					</a></li>
+					<li ng-if="instanceCount > 1"><a href="" ng-click="movePiston();" class="move" data-toggle="{{sidebarCollapsed ? 'tooltip' : ''}}" data-placement="right" data-title="Move Piston(s)">
+						<i class="fa fa-sort" aria-hidden="true"></i>&nbsp;&nbsp;Move Piston(s)
+					</a></li>
+					<li><a href="" ng-click="showSettings();" class="settings" data-toggle="{{sidebarCollapsed ? 'tooltip' : ''}}" data-placement="right" data-title="Settings">
+						<i class="fa fa-wrench" aria-hidden="true"></i>&nbsp;&nbsp;Settings
+					</a></li>
+					<li>
+					<li><a href="#" ng-click="logOut();" class="logout" data-toggle="{{sidebarCollapsed ? 'tooltip' : ''}}" data-placement="right" data-title="Log Out">
+						<i class="fa fa-sign-out" aria-hidden="true"></i>&nbsp;&nbsp;Log Out
+					</a></li>
+					<li class="text-center">
+						
 <!-- dashboard (sidebar) -->
 <ins class="adsbygoogle"
-     style="display:inline-block;width:120px;height:600px;padding: 20px;"
-     data-ad-client="ca-pub-4643048739403893"
-     data-ad-slot="8683068091" ng-init="initAds();"></ins>
-						</li>
-					</ul>
+   style="display:inline-block;width:120px;height:600px;padding: 20px;"
+   data-ad-client="ca-pub-4643048739403893"
+   data-ad-slot="8683068091" ng-init="initAds();"></ins>
+					</li>
+				</ul>
 <!--					<ul class="nav nav-sidebar">
-						<center>Advertisements</center>-->
-						<!--<script type="text/javascript-lazy" src="//z-na.amazon-adsystem.com/widgets/onejs?MarketPlace=US&adInstanceId=1c018b1f-0af0-4396-a510-867f9bdae50d"></script>-->
+					<center>Advertisements</center>-->
+					<!--<script type="text/javascript-lazy" src="//z-na.amazon-adsystem.com/widgets/onejs?MarketPlace=US&adInstanceId=1c018b1f-0af0-4396-a510-867f9bdae50d"></script>-->
 <!--						<iframe src="//rcm-na.amazon-adsystem.com/e/cm?o=1&p=14&l=ur1&category=amzn_echo_launch_0517&banner=1VRDQYTTFJR83DYHRCG2&f=ifr&linkID=b9437932eb682e58cc516ab0f63bda57&t=ady624-20&tracking_id=ady624-20" width="160" height="600" scrolling="no" border="0" marginwidth="0" style="border:none;" frameborder="0"></iframe>-->
-						<!--<iframe src="//rcm-na.amazon-adsystem.com/e/cm?o=1&p=14&l=ur1&category=amzn_echo_mday_0517&banner=17WAKG9NQNN6YESN1S02&f=ifr&linkID=80d8b4dcce012e37bcee6ce2077e497e&t=ady624-20&tracking_id=ady624-20" width="160" height="600" scrolling="no" border="0" marginwidth="0" style="border:none;" frameborder="0"></iframe>-->
-						<!--<iframe src="//rcm-na.amazon-adsystem.com/e/cm?o=1&p=14&l=ur1&category=electronics&f=ifr&linkID=f56f8ea9e47ad145c3d72a56e98399b8&t=ady624-20&tracking_id=ady624-20" width="160" height="600" scrolling="no" border="0" marginwidth="0" style="border:none;" frameborder="0"></iframe>-->
+					<!--<iframe src="//rcm-na.amazon-adsystem.com/e/cm?o=1&p=14&l=ur1&category=amzn_echo_mday_0517&banner=17WAKG9NQNN6YESN1S02&f=ifr&linkID=80d8b4dcce012e37bcee6ce2077e497e&t=ady624-20&tracking_id=ady624-20" width="160" height="600" scrolling="no" border="0" marginwidth="0" style="border:none;" frameborder="0"></iframe>-->
+					<!--<iframe src="//rcm-na.amazon-adsystem.com/e/cm?o=1&p=14&l=ur1&category=electronics&f=ifr&linkID=f56f8ea9e47ad145c3d72a56e98399b8&t=ady624-20&tracking_id=ady624-20" width="160" height="600" scrolling="no" border="0" marginwidth="0" style="border:none;" frameborder="0"></iframe>-->
 <!--						<div id="chitikaAdBlock-0" ng-init="initAds();"></div>-->
-                        <!--ads-->
+                      <!--ads-->
 <!--                        <script type="text/javascript" src="//cdn.chitika.net/getads.js" async></script>-->
 <!--					</ul>-->
 
 <!--					<ul class="socialmedia">
-						<li>
-							<a href="https://twitter.com/ady624/lists/webcore" target="webCoRE:twitter"><i class="fa fa-twitter" aria-hidden="true"></i></a>
-							<a href="https://www.facebook.com/groups/1023785497757470" target="webCoRE:fb"><i class="fa fa-facebook" aria-hidden="true"></i></a>
-					        <div class="fb-like" data-href="https://dashboard.webcore.co" data-layout="button_count" data-action="like" data-size="small" data-show-faces="false" data-share="false" ng-init="initSocialMedia()"></div>
-						</li>
-						<li>					
-					        <div class="fb-like" data-href="https://dashboard.webcore.co" data-layout="button_count" data-action="recommend" data-size="small" data-show-faces="false" data-share="false" ng-init="initSocialMedia()"></div>
-						</li>
-					</ul>-->
+					<li>
+						<a href="https://twitter.com/ady624/lists/webcore" target="webCoRE:twitter"><i class="fa fa-twitter" aria-hidden="true"></i></a>
+						<a href="https://www.facebook.com/groups/1023785497757470" target="webCoRE:fb"><i class="fa fa-facebook" aria-hidden="true"></i></a>
+				        <div class="fb-like" data-href="https://dashboard.webcore.co" data-layout="button_count" data-action="like" data-size="small" data-show-faces="false" data-share="false" ng-init="initSocialMedia()"></div>
+					</li>
+					<li>
+				        <div class="fb-like" data-href="https://dashboard.webcore.co" data-layout="button_count" data-action="recommend" data-size="small" data-show-faces="false" data-share="false" ng-init="initSocialMedia()"></div>
+					</li>
+				</ul>-->
+			</div>
+			<div class="main no-ng-animate" ng-class="{ 'sidebar-collapsed': sidebarCollapsed, 'allow-transition': completedInitialRender }">
+				<span ng-click="toggleSidebar()" class="fa fa-caret-left collapse-control" collapse-control data-target="#dashboardSidebar"></span>
+				<div lonely ng-if="!loading && !instance.pistons.length">
+					<i class="fa fa-frown-o" aria-hidden="true"></i>
+					<div>It's kinda lonely in here...<br/>How about <a ng-click="newPiston();">creating a piston</a>?</div>
 				</div>
-				<div class="main">
-					<div lonely ng-if="!loading && !instance.pistons.length">
-						<i class="fa fa-frown-o" aria-hidden="true"></i>
-						<div>It's kinda lonely in here...<br/>How about <a ng-click="newPiston();">creating a piston</a>?</div>
-					</div>
-					<!--<div class="alert alert-warning" ng-if="devices && (devices.length > 50)">It is recommended that the list of available devices does not exceed 50 items. You have selected a total of {{devices.length}} available devices for this instance. While not a problem, you may experience slower start-up times for your pistons. If you do, please consider breaking this instance into at least two instances and group the pistons in such a way that each instance requires less than 50 available devices. Multpile instances can safely share the same device.</div>-->
-					<div class="table-responsive no-animate topinfo" ng-if="instance">
-						<hub ng-repeat="hub in location.hubs" ng-if="hub.physical" power-source="{{hub.powerSource}}"><span>{{hub.name}}</span><span fw>{{hub.firmware}}</span></hub>
-						<location-mode data-toggle="tooltip" title="Location mode is {{getLocationMode()}}">{{getLocationMode()}}</location-mode>
-						<shm-mode data-toggle="tooltip" title="Smart Home Monitor is {{getSHMModeName()}}" ng-if="location.shm" alert="{{location.incidents && (location.incidents.length > 0)}}" mode="{{location.shm}}">{{getSHMModeName()}}</shm-mode>
-						<incident ng-repeat="incident in location.incidents" source-type="{{incident.sourceType}}" ng-bind-html="renderIncident(incident)"></incident>
-					</div>
-					<div class="no-animate alert alert-warning" ng-if="instance && permanentStatus" role="alert" ng-bind-html="permanentStatus"></div>
-					<div class="table-responsive no-animate" ng-repeat="category in categories" ng-if="instance && category.p && category.p.length && (category.t != 'h')">
-						<label ng-if="category.n">{{category.n}} ({{category.p.length}})</label>
-						<table class="table table-striped" ng-if="(category.t == 'd') || (category.t == 'dt') || (category.t == 'dm') || (category.t == 'dl')">
-							<tbody>
-								<tr ng-repeat="piston in category.p" active="true" ng-if="piston.meta && piston.meta.a" data-toggle="tooltip" title="{{piston.meta.t ? 'Executed ' + timeSince(piston.meta.t) : 'Never executed'}}">
-									<td ng-click="openPiston(piston.id);"><span><i star class="fa fa-circle" ng-style="{opacity: piston.opacity}" aria-hidden="true"></i>{{piston.name}}<span state ng-bind-html="renderString(piston.meta.s.new)"></span><!--<span ng-if="piston.meta.s && piston.meta.s.new" state="{{piston.meta.s.new}}">{{piston.meta.s.new}}</span>--></span></td>
-									<td ng-click="openPiston(piston.id);" dur class="col-md-1 text-right">{{piston.meta.n ? timeCounter(piston.meta.n) : ''}}</td>
-									<td ng-if="!mobile" opt><i class="fa fa-ellipsis-v" aria-hidden="true"></i><actions class="animated"><action ng-click="pausePiston(piston.id);" data-toggle="tooltip" title="Pause piston">Pause</action><action ng-click="testPiston(piston.id);" data-toggle="tooltip" title="Test piston">Test</action><action ng-click="openPiston(piston.id);" data-toggle="tooltip" title="View/Edit piston">View</action></actions></td>
-									
-								</tr>
-							</tbody>
-						</table>
-						<ptiles ng-if="(category.t == 't') || (category.t == 'm') || (category.t == 'l') || (category.t == 'dt') || (category.t == 'dm') || (category.t == 'dl') || (category.t == 'td') || (category.t == 'md') || (category.t == 'ld')">
-							<ptilegroup ng-repeat="piston in category.p" ng-if="piston.meta && piston.meta.a">
-								<ptile ng-repeat="index in range(16) track by $index" class="{{category.t.indexOf('l') >= 0 ? 'large' : (category.t.indexOf('m') >= 0 ? 'medium' : '')}}" ng-if="piston.meta.s['i' + ($index + 1)] || piston.meta.s['t' + ($index + 1)]" ng-init="meta=getTileMeta(piston, $index);" ng-click="clickPistonTile($event, piston, ($index + 1));" data-toggle="tooltip" title="{{renderString(piston.meta.s.new)}}" ng-style="{color: piston.meta.s['c' + ($index + 1)], backgroundColor: piston.meta.s['b' + ($index + 1)]}" class="{{piston.meta.s['f' + ($index + 1)] ? 'blink' : ''}}" type="{{meta.type ? meta.type : ''}}" ng-attr-wide="{{!!meta && !!meta.options && (meta.options.wide == '1') ? '' : undefined}}">
-									<div ng-if-start="!meta.type" title data-fittext data-fittext-max="{{category.t.indexOf('l') >= 0 ? 24 : (category.t.indexOf('m') >= 0 ? 18 : 12)}}" ng-model="piston.meta.s" ng-bind-html="piston.meta.s['i' + ($index + 1)] ? renderString(piston.meta.s['i' + ($index + 1)]) : '--'"></div>
-									<div data-fittext data-fittext-max="{{category.t.indexOf('l') >= 0 ? 72 : (category.t.indexOf('m') >= 0 ? 54 : 36)}}" ng-model="piston.meta.s" ng-bind-html="piston.meta.s['t' + ($index + 1)] ? renderString(piston.meta.s['t' + ($index + 1)]) : '--'"></div>
-									<div ng-if-end title data-fittext data-fittext-max="{{category.t.indexOf('l') >= 0 ? 24 : (category.t.indexOf('m') >= 0 ? 18 : 12)}}" ng-model="piston.meta.s" ng-bind-html="piston.meta.s['o' + ($index + 1)] ? renderString(piston.meta.s['o' + ($index + 1)]) : (piston.meta.n ? timeCounter(piston.meta.n) : ' ')"></div>
-									<div ng-if="meta.type == 'gauge'" google-chart chart="getGaugeChart(piston, $index, meta)"></div>
-									<video ng-if="(meta.type == 'video') && !!meta.options && !!meta.options.src" class="{{meta.className}}" ng-attr-controls="{{meta.options.controls == '0' ? undefined : ''}}" ng-attr-autoplay="{{meta.options.autoplay == '1' ? '' : undefined}}" ng-attr-loop="{{meta.options.loop == '1' ? '' : undefined}}" ng-attr-muted="{{meta.options.muted == '1' ? '' : undefined}}">
-										<source ng-src="{{meta.options.src}}"  />
-									</video>
-									<img ng-if="(meta.type == 'image') && !!meta.options && !!meta.options.src" class="{{meta.className}}" ng-src="{{meta.options.src}}" ng-attr-refresh="{{!!meta.options.refresh ? meta.options.refresh : undefined}}" on-refresh="refreshImage"/>
-								</ptile>
-							</ptilegroup>
-						</ptiles>
-						<table class="table table-striped" ng-if="(category.t == 'td') || (category.t == 'tm') || (category.t == 'tl')">
-							<tbody>
-								<tr ng-repeat="piston in category.p" active="true" ng-if="piston.meta && piston.meta.a" data-toggle="tooltip" title="{{piston.meta.t ? 'Executed ' + timeSince(piston.meta.t) : 'Never executed'}}">
-									<td ng-click="openPiston(piston.id);"><span><i star class="fa fa-circle" ng-style="{opacity: piston.opacity}" aria-hidden="true"></i>{{piston.name}}<span state ng-bind-html="renderString(piston.meta.s.new)"></span><!--<span ng-if="piston.meta.s && piston.meta.s.new" state="{{piston.meta.s.new}}">{{piston.meta.s.new}}</span>--></span></td>
-									<td ng-click="openPiston(piston.id);" dur class="col-md-1 text-right">{{piston.meta.n ? timeCounter(piston.meta.n) : ''}}</td>
-									<td ng-if="!mobile" opt><i class="fa fa-ellipsis-v" aria-hidden="true"></i><actions class="animated"><action ng-click="pausePiston(piston.id);" data-toggle="tooltip" title="Pause piston">Pause</action><action ng-click="testPiston(piston.id);" data-toggle="tooltip" title="Test piston">Test</action><action ng-click="openPiston(piston.id);" data-toggle="tooltip" title="View/Edit piston">View</action></actions></td>
-									
-								</tr>
-							</tbody>
-						</table>
-					</div>
-					<div class="table-responsive no-animate" ng-if="instance && pausedPistons.length && !instance.settings.hidePP">
-						<label>Paused pistons ({{pausedPistons.length}})</label>
-						<table class="table table-striped">
-							<tbody>
-								<tr ng-repeat="piston in pausedPistons"  active="false" ng-if="!piston.meta || !piston.meta.a" data-toggle="tooltip" title="{{piston.meta.t ? 'Paused on ' + utcToString(piston.meta.t) : ''}}">
-									<td ng-click="openPiston(piston.id);"><span>{{piston.name}}</span></td>
-									<td ng-click="openPiston(piston.id);" class="col-md-1 text-right">{{piston.meta.n ? timeCounter(piston.meta.n) : ''}}</td>
-									<td ng-if="!mobile" opt><i class="fa fa-ellipsis-v" aria-hidden="true"></i><actions class="animated"><action ng-click="resumePiston(piston.id);" data-toggle="tooltip" title="Resume piston">Resume</action><action ng-click="testPiston(piston.id);" data-toggle="tooltip" title="Test piston">Test</action><action ng-click="openPiston(piston.id);" data-toggle="tooltip" title="View/Edit piston">View</action></actions></td>
-								</tr>
-							</tbody>
-						</table>
-					</div>
+				<!--<div class="alert alert-warning" ng-if="devices && (devices.length > 50)">It is recommended that the list of available devices does not exceed 50 items. You have selected a total of {{devices.length}} available devices for this instance. While not a problem, you may experience slower start-up times for your pistons. If you do, please consider breaking this instance into at least two instances and group the pistons in such a way that each instance requires less than 50 available devices. Multpile instances can safely share the same device.</div>-->
+				<div class="table-responsive no-animate topinfo" ng-if="instance">
+					<hub ng-repeat="hub in location.hubs" ng-if="hub.physical" power-source="{{hub.powerSource}}"><span>{{hub.name}}</span><span fw>{{hub.firmware}}</span></hub>
+					<location-mode data-toggle="tooltip" title="Location mode is {{getLocationMode()}}">{{getLocationMode()}}</location-mode>
+					<shm-mode data-toggle="tooltip" title="Smart Home Monitor is {{getSHMModeName()}}" ng-if="location.shm" alert="{{location.incidents && (location.incidents.length > 0)}}" mode="{{location.shm}}">{{getSHMModeName()}}</shm-mode>
+					<incident ng-repeat="incident in location.incidents" source-type="{{incident.sourceType}}" ng-bind-html="renderIncident(incident)"></incident>
+				</div>
+				<div class="no-animate alert alert-warning" ng-if="instance && permanentStatus" role="alert" ng-bind-html="permanentStatus"></div>
+				<div class="table-responsive no-animate" ng-repeat="category in categories" ng-if="instance && category.p && category.p.length && (category.t != 'h')">
+					<label ng-if="category.n">{{category.n}} ({{category.p.length}})</label>
+					<table class="table" ng-if="(category.t == 'd') || (category.t == 'dt') || (category.t == 'dm') || (category.t == 'dl')">
+						<tbody>
+							<tr ng-repeat="piston in category.p" active="true" ng-if="piston.meta && piston.meta.a" data-toggle="tooltip" title="{{piston.meta.t ? 'Executed ' + timeSince(piston.meta.t) : 'Never executed'}}">
+								<td ng-click="openPiston(piston.id);"><span><i star class="fa fa-circle" ng-style="{opacity: piston.opacity}" aria-hidden="true"></i>{{piston.name}}<span state ng-bind-html="renderString(piston.meta.s.new)"></span><!--<span ng-if="piston.meta.s && piston.meta.s.new" state="{{piston.meta.s.new}}">{{piston.meta.s.new}}</span>--></span></td>
+								<td ng-click="openPiston(piston.id);" dur class="col-md-1 text-right">{{piston.meta.n ? timeCounter(piston.meta.n) : ''}}</td>
+								<td ng-if="!mobile" opt><i class="fa fa-ellipsis-v" aria-hidden="true"></i><actions class="animated"><action ng-click="pausePiston(piston.id);" data-toggle="tooltip" title="Pause piston">Pause</action><action ng-click="testPiston(piston.id);" data-toggle="tooltip" title="Test piston">Test</action><action ng-click="openPiston(piston.id);" data-toggle="tooltip" title="View/Edit piston">View</action></actions></td>
+
+							</tr>
+						</tbody>
+					</table>
+					<ptiles ng-if="(category.t == 't') || (category.t == 'm') || (category.t == 'l') || (category.t == 'dt') || (category.t == 'dm') || (category.t == 'dl') || (category.t == 'td') || (category.t == 'md') || (category.t == 'ld')">
+						<ptilegroup ng-repeat="piston in category.p" ng-if="piston.meta && piston.meta.a">
+							<ptile ng-repeat="index in range(16) track by $index" class="{{category.t.indexOf('l') >= 0 ? 'large' : (category.t.indexOf('m') >= 0 ? 'medium' : '')}}" ng-if="piston.meta.s['i' + ($index + 1)] || piston.meta.s['t' + ($index + 1)]" ng-init="meta=getTileMeta(piston, $index);" ng-click="clickPistonTile($event, piston, ($index + 1));" data-toggle="tooltip" title="{{renderString(piston.meta.s.new)}}" ng-style="{color: piston.meta.s['c' + ($index + 1)], backgroundColor: piston.meta.s['b' + ($index + 1)]}" class="{{piston.meta.s['f' + ($index + 1)] ? 'blink' : ''}}" type="{{meta.type ? meta.type : ''}}" ng-attr-wide="{{!!meta && !!meta.options && (meta.options.wide == '1') ? '' : undefined}}">
+								<div ng-if-start="!meta.type" title data-fittext data-fittext-max="{{category.t.indexOf('l') >= 0 ? 24 : (category.t.indexOf('m') >= 0 ? 18 : 12)}}" ng-model="piston.meta.s" ng-bind-html="piston.meta.s['i' + ($index + 1)] ? renderString(piston.meta.s['i' + ($index + 1)]) : '--'"></div>
+								<div data-fittext data-fittext-max="{{category.t.indexOf('l') >= 0 ? 72 : (category.t.indexOf('m') >= 0 ? 54 : 36)}}" ng-model="piston.meta.s" ng-bind-html="piston.meta.s['t' + ($index + 1)] ? renderString(piston.meta.s['t' + ($index + 1)]) : '--'"></div>
+								<div ng-if-end title data-fittext data-fittext-max="{{category.t.indexOf('l') >= 0 ? 24 : (category.t.indexOf('m') >= 0 ? 18 : 12)}}" ng-model="piston.meta.s" ng-bind-html="piston.meta.s['o' + ($index + 1)] ? renderString(piston.meta.s['o' + ($index + 1)]) : (piston.meta.n ? timeCounter(piston.meta.n) : ' ')"></div>
+								<div ng-if="meta.type == 'gauge'" google-chart chart="getGaugeChart(piston, $index, meta)"></div>
+								<video ng-if="(meta.type == 'video') && !!meta.options && !!meta.options.src" class="{{meta.className}}" ng-attr-controls="{{meta.options.controls == '0' ? undefined : ''}}" ng-attr-autoplay="{{meta.options.autoplay == '1' ? '' : undefined}}" ng-attr-loop="{{meta.options.loop == '1' ? '' : undefined}}" ng-attr-muted="{{meta.options.muted == '1' ? '' : undefined}}">
+									<source ng-src="{{meta.options.src}}"  />
+								</video>
+								<img ng-if="(meta.type == 'image') && !!meta.options && !!meta.options.src" class="{{meta.className}}" ng-src="{{meta.options.src}}" ng-attr-refresh="{{!!meta.options.refresh ? meta.options.refresh : undefined}}" on-refresh="refreshImage"/>
+							</ptile>
+						</ptilegroup>
+					</ptiles>
+					<table class="table" ng-if="(category.t == 'td') || (category.t == 'tm') || (category.t == 'tl')">
+						<tbody>
+							<tr ng-repeat="piston in category.p" active="true" ng-if="piston.meta && piston.meta.a" data-toggle="tooltip" title="{{piston.meta.t ? 'Executed ' + timeSince(piston.meta.t) : 'Never executed'}}">
+								<td ng-click="openPiston(piston.id);"><span><i star class="fa fa-circle" ng-style="{opacity: piston.opacity}" aria-hidden="true"></i>{{piston.name}}<span state ng-bind-html="renderString(piston.meta.s.new)"></span><!--<span ng-if="piston.meta.s && piston.meta.s.new" state="{{piston.meta.s.new}}">{{piston.meta.s.new}}</span>--></span></td>
+								<td ng-click="openPiston(piston.id);" dur class="col-md-1 text-right">{{piston.meta.n ? timeCounter(piston.meta.n) : ''}}</td>
+								<td ng-if="!mobile" opt><i class="fa fa-ellipsis-v" aria-hidden="true"></i><actions class="animated"><action ng-click="pausePiston(piston.id);" data-toggle="tooltip" title="Pause piston">Pause</action><action ng-click="testPiston(piston.id);" data-toggle="tooltip" title="Test piston">Test</action><action ng-click="openPiston(piston.id);" data-toggle="tooltip" title="View/Edit piston">View</action></actions></td>
+
+							</tr>
+						</tbody>
+					</table>
+				</div>
+				<div class="table-responsive no-animate" ng-if="instance && pausedPistons.length && !instance.settings.hidePP">
+					<label>Paused pistons ({{pausedPistons.length}})</label>
+					<table class="table table-striped">
+						<tbody>
+							<tr ng-repeat="piston in pausedPistons"  active="false" ng-if="!piston.meta || !piston.meta.a" data-toggle="tooltip" title="{{piston.meta.t ? 'Paused on ' + utcToString(piston.meta.t) : ''}}">
+								<td ng-click="openPiston(piston.id);"><span>{{piston.name}}</span></td>
+								<td ng-click="openPiston(piston.id);" class="col-md-1 text-right">{{piston.meta.n ? timeCounter(piston.meta.n) : ''}}</td>
+								<td ng-if="!mobile" opt><i class="fa fa-ellipsis-v" aria-hidden="true"></i><actions class="animated"><action ng-click="resumePiston(piston.id);" data-toggle="tooltip" title="Resume piston">Resume</action><action ng-click="testPiston(piston.id);" data-toggle="tooltip" title="Test piston">Test</action><action ng-click="openPiston(piston.id);" data-toggle="tooltip" title="View/Edit piston">View</action></actions></td>
+							</tr>
+						</tbody>
+					</table>
 				</div>
 			</div>
 		</div>
-	</viewer>
+	</div>
+</viewer>
 
-	<viewer class="settings" ng-if="initialized && (view == 'settings')" class="no-animate">
-		<label class="header">Settings</label>
+<viewer class="settings no-animate" ng-if="initialized && (view == 'settings')">
+	<label class="header">Settings</label>
 
 
 
-<div class="container">	
-	<ul  class="nav nav-pills">
-	<li class="active"><a data-target="#places" data-toggle="tab">Places</a>
-	    </li>
+<div class="container">
+<ul  class="nav nav-pills">
+<li class="active"><a data-target="#places" data-toggle="tab">Places</a>
+    </li>
 <!--	    <li class="">
-        <a data-target="#general" data-toggle="tab">General</a>
-	    </li>-->
-	    <li><a data-target="#categories" data-toggle="tab">Categories</a>
-	    </li>
-	    <li><a data-target="#integrations" data-toggle="tab">Integrations</a>
-	    </li>
-	</ul>
+      <a data-target="#general" data-toggle="tab">General</a>
+    </li>-->
+    <li><a data-target="#categories" data-toggle="tab">Categories</a>
+    </li>
+    <li><a data-target="#integrations" data-toggle="tab">Integrations</a>
+    </li>
+</ul>
 
-	    <div class="tab-content clearfix">
-	      <div class="tab-pane" id="general">
-		Nothing here yet.
-		</div>
-		<div class="tab-pane" id="categories">
+    <div class="tab-content clearfix">
+      <div class="tab-pane" id="general">
+	Nothing here yet.
+	</div>
+	<div class="tab-pane" id="categories">
 
-					<div class="form-group row" ng-repeat="category in settings.categories">
-						<div class="col-xs-7">
-							<input type="text" ng-model="category.n" class="form-control col-sm-4" placeholder="Category name"/>
-						</div>
-						<div class="col-xs-2">
-							<select class="form-control col-sm-4" ng-model="category.t"><option value="d">Details</option><option value="t">Tiles</option><option value="m">Medium Tiles</option><option value="l">Large Tiles</option><option value="dt">Details/Tiles</option><option value="dm">Details/Medium Tiles</option><option value="dl">Details/Large Tiles</option><option value="td">Tiles/Details</option><option value="md">Medium Tiles/Details</option><option value="ld">Large Tiles/Details</option><option value="h">Hidden</option></select>
-						</div>
-						<div class="col-xs-1">
-							<i class="fa fa-chevron-up catop" ng-if="$index > 0" ng-click="moveCategoryUp($index)"></i>
-						</div>
-						<div class="col-xs-1">
-							<i class="fa fa-chevron-down catop" ng-if="$index < settings.categories.length - 1" ng-click="moveCategoryDown($index)"></i>
-						</div>
-						<div class="col-xs-1">
-							<i class="fa fa-close catop" ng-click="deleteCategory($index)"></i>
-						</div>
+				<div class="form-group row" ng-repeat="category in settings.categories">
+					<div class="col-xs-7">
+						<input type="text" ng-model="category.n" class="form-control col-sm-4" placeholder="Category name"/>
 					</div>
-					<div class="">
-						<label class="form-check-label"><input type="checkbox" class="form-check-input" ng-model="settings.hidePP"/> Hide paused pistons</label>
-						<button ng-click="addCategory()" class="btn btn-info pull-right">Add category</button>
+					<div class="col-xs-2">
+						<select class="form-control col-sm-4" ng-model="category.t"><option value="d">Details</option><option value="t">Tiles</option><option value="m">Medium Tiles</option><option value="l">Large Tiles</option><option value="dt">Details/Tiles</option><option value="dm">Details/Medium Tiles</option><option value="dl">Details/Large Tiles</option><option value="td">Tiles/Details</option><option value="md">Medium Tiles/Details</option><option value="ld">Large Tiles/Details</option><option value="h">Hidden</option></select>
 					</div>
-
-		</div>
-        <div class="tab-pane" id="integrations">
-				<panel name="IFTTT">
-					<p><a target="_blank" href="https://www.ifttt.com">IFTTT</a> is a free web-based service that people use to create chains of simple conditional statements, called applets. An applet is triggered by changes that occur within other web services such as Gmail, Facebook, Instagram, or Pinterest. IFTTT is an initialism for If This Then That<sup><a target="_blank" href="https://en.wikipedia.org/wiki/IFTTT">[wikipedia]</a></sup>.</p>
-					<p>webCoRE can send events to IFTTT's <a target="_blank" href="https://ifttt.com/maker_webhooks">Maker Webhooks channel</a>. Please sign in into your IFTTT account and go to the Maker Webhooks channel's <a target="_blank" href="https://ifttt.com/services/maker_webhooks/settings">settings</a> to enable it and generate a webhooks URL. Copy the provided URL and paste it below:</p>
-						<div class="form-group row">
-							<label class="control-label col-sm-3">IFTTT Maker Webhooks URL</label>
-							<div class="col-sm-9">
-								<input type="text" class="form-control" ng-model="settings.ifttt_url">
-							</div>
-						</div>
-				</panel>
-				<panel name="LIFX">
-					<p><a target="_blank" href="https://www.lifx.com">LIFX</a> LIFX (pronounced Life-X) is a line of energy-efficient, multi-color, Wi-Fi enabled LED light bulbs that can be controlled via a Wi-Fi equipped device such as a smartphone or smartwatch. LIFX bulbs are equipped with a Wi-Fi microcontroller that uses master/slave concept. The master light bulb connects to the router via 802.11b/802.11g/802.11n and then to all the other LIFX bulbs in the house via a low power IPv6 802.15.4 mesh network<sup><a target="_blank" href="https://en.wikipedia.org/wiki/LIFX">[wikipedia]</a></sup>.</p>
-					<p>webCoRE can currently list and activate LIFX scenes. Please visit your <a target="_blank" href="https://cloud.lifx.com">LIFX cloud account</a> and go to Settings under your account. Generate a new token and copy it, then paste it into the field below:</p>
-						<div class="form-group row">
-							<label class="control-label col-sm-3">LIFX Access Token</label>
-							<div class="col-sm-9">
-								<input type="text" class="form-control" ng-model="settings.lifx_token">
-							</div>
-						</div>
-				</panel>
-				<panel name="Executing pistons">
-					<p>webCoRE accepts external requests from other services via its <b>execute</b> endpoint. Data can be passed to webCoRE in the form of a query string, POST FORM data, or POST JSON data. Please set the Content-Type header to <i>application/json</i> if planning on sending JSON data in the POST body.</p>
-					<p><b>NOTE:</b> Please replace the :pistonId: portion with the actual ID of the piston you are trying to execute. Please note the piston has to be part of the instance you are calling with this endpoint. The piston ID can be found in the address bar when viewing the IP and is enclosed in between : characters. Please include those characters in the endpoint.</p>
-					<p>While not recommended, you can also use the piston name instead of a piston ID. Simply replace :pistonId: with the piston name, but be careful to URL encode the name. Typically, all spaces become %20</p>
-						<div class="form-group row">
-							<label class="control-label col-sm-3">webCoRE Execute Endpoint</label>
-							<div class="col-sm-9">
-								<input type="text" class="form-control" ng-model="endpoint" readonly>
-							</div>
-						</div>
-				</panel>
-
+					<div class="col-xs-1">
+						<i class="fa fa-chevron-up catop" ng-if="$index > 0" ng-click="moveCategoryUp($index)"></i>
+					</div>
+					<div class="col-xs-1">
+						<i class="fa fa-chevron-down catop" ng-if="$index < settings.categories.length - 1" ng-click="moveCategoryDown($index)"></i>
+					</div>
+					<div class="col-xs-1">
+						<i class="fa fa-close catop" ng-click="deleteCategory($index)"></i>
+					</div>
+				</div>
+				<div class="">
+					<label class="form-check-label"><input type="checkbox" class="form-check-input" ng-model="settings.hidePP"/> Hide paused pistons</label>
+					<button ng-click="addCategory()" class="btn btn-info pull-right">Add category</button>
+				</div>
 
 	</div>
-	<div class="tab-pane active form-horizontal" id="places">
-		<div ng-repeat="place in settings.places" class="place" ng-click="editPlace(place)">
-		    <footer><i ng-if="!!place.h" class="fa fa-home" aria-hidden="true"></i>{{place.n}}</footer>
-		    <ng-map center="{{place.p}}" zoom="14" mayTypeId="TERRAIN" controls="false" disable-default-u-i="true" pan-control="false" zoom-control="false" scale-control="false">
-		    <marker position="{{place.p}}" draggable="false""></marker>
-		    <shape name="circle" editable="false" draggable="false"
-		      stroke-color="#00CCFF"
-		      stroke-opacity="0.8"
-		      stroke-weight="2"
-		      fill-color="#00CCFF"
-		      fill-opacity="0.35"
-		      center="{{place.p}}"
-		      radius="{{place.i}}">
-		    </shape>
-		    <shape name="circle" editable="false" draggable="false"
-		      stroke-color="#CCC"
-		      stroke-opacity="0.8"
-		      stroke-weight="2"
-		      fill-color="#CCC"
-		      fill-opacity="0.35"
-		      center="{{place.p}}"
-		      radius="{{place.o}}">
-		    </shape>
-		  </ng-map>
-		</div><div ng-if="!!settings.places.length && isAppHosted && !presenceSensorId" class="place device" ng-click="registerPresenceSensor()"><i class="fa fa-map-marker" aria-hidden="true"></i><footer>Setup sensor</footer></div><div ng-if="settings.places.length < 10" class="place new" ng-click="addPlace()"></div>
-	</div>
-    </div>
-		<form class="form-horizontal">
-			<div class="nav-pills-footer">
-				<button class="btn btn-danger" ng-click="hideSettings()">Cancel</button>
-				<button class="btn btn-success pull-right" ng-click="saveSettings()">Apply</button>
-			</div>
-		</form>
+      <div class="tab-pane" id="integrations">
+			<panel name="IFTTT">
+				<p><a target="_blank" href="https://www.ifttt.com">IFTTT</a> is a free web-based service that people use to create chains of simple conditional statements, called applets. An applet is triggered by changes that occur within other web services such as Gmail, Facebook, Instagram, or Pinterest. IFTTT is an initialism for If This Then That<sup><a target="_blank" href="https://en.wikipedia.org/wiki/IFTTT">[wikipedia]</a></sup>.</p>
+				<p>webCoRE can send events to IFTTT's <a target="_blank" href="https://ifttt.com/maker_webhooks">Maker Webhooks channel</a>. Please sign in into your IFTTT account and go to the Maker Webhooks channel's <a target="_blank" href="https://ifttt.com/services/maker_webhooks/settings">settings</a> to enable it and generate a webhooks URL. Copy the provided URL and paste it below:</p>
+					<div class="form-group row">
+						<label class="control-label col-sm-3">IFTTT Maker Webhooks URL</label>
+						<div class="col-sm-9">
+							<input type="text" class="form-control" ng-model="settings.ifttt_url">
+						</div>
+					</div>
+			</panel>
+			<panel name="LIFX">
+				<p><a target="_blank" href="https://www.lifx.com">LIFX</a> LIFX (pronounced Life-X) is a line of energy-efficient, multi-color, Wi-Fi enabled LED light bulbs that can be controlled via a Wi-Fi equipped device such as a smartphone or smartwatch. LIFX bulbs are equipped with a Wi-Fi microcontroller that uses master/slave concept. The master light bulb connects to the router via 802.11b/802.11g/802.11n and then to all the other LIFX bulbs in the house via a low power IPv6 802.15.4 mesh network<sup><a target="_blank" href="https://en.wikipedia.org/wiki/LIFX">[wikipedia]</a></sup>.</p>
+				<p>webCoRE can currently list and activate LIFX scenes. Please visit your <a target="_blank" href="https://cloud.lifx.com">LIFX cloud account</a> and go to Settings under your account. Generate a new token and copy it, then paste it into the field below:</p>
+					<div class="form-group row">
+						<label class="control-label col-sm-3">LIFX Access Token</label>
+						<div class="col-sm-9">
+							<input type="text" class="form-control" ng-model="settings.lifx_token">
+						</div>
+					</div>
+			</panel>
+			<panel name="Executing pistons">
+				<p>webCoRE accepts external requests from other services via its <b>execute</b> endpoint. Data can be passed to webCoRE in the form of a query string, POST FORM data, or POST JSON data. Please set the Content-Type header to <i>application/json</i> if planning on sending JSON data in the POST body.</p>
+				<p><b>NOTE:</b> Please replace the :pistonId: portion with the actual ID of the piston you are trying to execute. Please note the piston has to be part of the instance you are calling with this endpoint. The piston ID can be found in the address bar when viewing the IP and is enclosed in between : characters. Please include those characters in the endpoint.</p>
+				<p>While not recommended, you can also use the piston name instead of a piston ID. Simply replace :pistonId: with the piston name, but be careful to URL encode the name. Typically, all spaces become %20</p>
+					<div class="form-group row">
+						<label class="control-label col-sm-3">webCoRE Execute Endpoint</label>
+						<div class="col-sm-9">
+							<input type="text" class="form-control" ng-model="endpoint" readonly>
+						</div>
+					</div>
+			</panel>
 
 
+</div>
+<div class="tab-pane active form-horizontal" id="places">
+	<div ng-repeat="place in settings.places" class="place" ng-click="editPlace(place)">
+	    <footer><i ng-if="!!place.h" class="fa fa-home" aria-hidden="true"></i>{{place.n}}</footer>
+	    <ng-map center="{{place.p}}" zoom="14" mayTypeId="TERRAIN" controls="false" disable-default-u-i="true" pan-control="false" zoom-control="false" scale-control="false">
+	    <marker position="{{place.p}}" draggable="false"></marker>
+	    <shape name="circle" editable="false" draggable="false"
+	      stroke-color="#00CCFF"
+	      stroke-opacity="0.8"
+	      stroke-weight="2"
+	      fill-color="#00CCFF"
+	      fill-opacity="0.35"
+	      center="{{place.p}}"
+	      radius="{{place.i}}">
+	    </shape>
+	    <shape name="circle" editable="false" draggable="false"
+	      stroke-color="#CCC"
+	      stroke-opacity="0.8"
+	      stroke-weight="2"
+	      fill-color="#CCC"
+	      fill-opacity="0.35"
+	      center="{{place.p}}"
+	      radius="{{place.o}}">
+	    </shape>
+	  </ng-map>
+	</div><div ng-if="!!settings.places.length && isAppHosted && !presenceSensorId" class="place device" ng-click="registerPresenceSensor()"><i class="fa fa-map-marker" aria-hidden="true"></i><footer>Setup sensor</footer></div><div ng-if="settings.places.length < 10" class="place new" ng-click="addPlace()"></div>
+</div>
   </div>
+	<form class="form-horizontal">
+		<div class="nav-pills-footer">
+			<button class="btn btn-danger" ng-click="hideSettings()">Cancel</button>
+			<button class="btn btn-success pull-right" ng-click="saveSettings()">Apply</button>
+		</div>
+	</form>
+
+
+</div>
 
 
 
-	</viewer>
+</viewer>
 
 
 
 <script type="text/ng-template" id="dialog-auth">
-	<designer>
-	    <header>
-    	     <label>Authentication Required</label>
-	     </header>
-	     <form>
-    	     <div class="form-group">
-        	     <label for="pin">Please enter the password for <b>{{designer.sender}}</b></label>
-    	         <input type="password" class="form-control" ng-model="designer.password" />
-	         </div>
-	     </form>
+<designer>
+    <header>
+  	     <h3>Authentication Required</h3>
+     </header>
+     <form>
+  	     <div class="form-group">
+      	     <label for="pin">Please enter the password for <b>{{designer.sender}}</b></label>
+  	         <input type="password" class="form-control" ng-model="designer.password" />
+         </div>
+     </form>
 
-        <footer>
-            <button type="button" class="btn btn-info pull-right" ng-disabled="!designer.password" ng-click="authenticate();">Authenticate</button>
-            <button type="button" class="btn btn-default" ng-click="closeDialog();">Cancel</button>
-        </footer>
-    </designer>
+      <footer>
+          <button type="button" class="btn btn-info pull-right" ng-disabled="!designer.password" ng-click="authenticate();">Authenticate</button>
+          <button type="button" class="btn btn-default" ng-click="closeDialog();">Cancel</button>
+      </footer>
+  </designer>
 
 </script>
 
 
 
 <script type="text/ng-template" id="dialog-del-instance">
-	<designer>
-	    <header>
-         <label>Unresponsive CoRE instance</label>
-     </header>
-     <form>
-         <div class="form-group">
-             <label for="pin">The instance you are trying to access is unresponsive. This might be a temporary issue, or it might have been deleted from your account. If you did remove it, please press the Delete button below.</label>
-         </div>
-     </form>
+<designer>
+    <header>
+       <h3>Unresponsive CoRE instance</h3>
+   </header>
+   <form>
+       <div class="form-group">
+           <label for="pin">The instance you are trying to access is unresponsive. This might be a temporary issue, or it might have been deleted from your account. If you did remove it, please press the Delete button below.</label>
+       </div>
+   </form>
 
-        <footer>
-            <button type="button" class="btn btn-danger pull-right" ng-click="deleteInstance();">Delete</button>
-            <button type="button" class="btn btn-default" ng-click="closeDialog();">Cancel</button>
-        </footer>
-    </designer>
+      <footer>
+          <button type="button" class="btn btn-danger pull-right" ng-click="deleteInstance();">Delete</button>
+          <button type="button" class="btn btn-default" ng-click="closeDialog();">Cancel</button>
+      </footer>
+  </designer>
 
 </script>
 
 
 <script type="text/ng-template" id="dialog-add-piston">
-	<designer ng-if="designer.page==0">
-        <header>
-            <label>Create a new piston</label>
-            <span>Please select one of the methods below</span>
-        </header>
-        <items>
-            <item ng-repeat="item in designer.items" type="{{item.type}}" class="fa fa-{{item.icon}} {{item.cssClass}}" caption="{{item.name}}" ng-click="setDesignerType(item.type)"></item>
-        </items>
-	</designer>
-	<designer ng-if="designer.page==1">
-        <header ng-if="designer.type=='blank'">
-            <label>Create a new blank piston</label>
-            <span>You are about to create a new piston from scratch. Yey! Click Create to get started.</span>
-        </header>
-        <header ng-if="designer.type=='duplicate'">
-            <label>Create a duplicate piston</label>
-            <span>You are about to create a duplicate piston. Select the source piston below and click Create to get started.</span>
-        </header>
-        <header ng-if="designer.type=='template'">
-            <label>Create new piston from a template</label>
-            <span>You wanted to create a new piston from a template. The bad news is, there are no templates yet :( But the good news is, you can start one from scratch. Yey! Click Next to get started.</span>
-        </header>
-        <header ng-if="designer.type=='restore'">
-            <label>Restore a piston</label>
-            <span>Please enter the backup bin code below and click Create to get started.</span>
-            <p><b>NOTE:</b> Only backup bin codes created by your account are supported. All others will generate an empty piston.</p>
-        </header>
-        <header ng-if="designer.type=='import'">
-            <label>Import a new piston</label>
-            <span>You wanted to import a new piston. The bad news is, there is no way yet :( But the good news is, you can start one from scratch. Yey! Click Next to get started.</span>
-        </header>
-        <form>
-            <div class="form-group">
-                <div class="form-table input-group">
-		            <label for="author">Author</label>
-                    <input class="form-control"  id="author" ng-model="designer.author" type="text" />
-                </div>
-            </div>
-            <div class="form-group">
-                <div class="form-table input-group">
-		            <label for="name">Piston name</label>
-                    <input class="form-control"  id="name" ng-model="designer.name" type="text" />
-                </div>
-            </div>
-			<div class="form-group" ng-if="designer.type=='duplicate'">
-				<label for="piston">Select the piston you want to duplicate</label>
-				<select id="piston" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-default" ng-model="designer.piston" data-mobile="{{mobile}}" ng-init="instances = listAllInstances()">
-					<optgroup ng-repeat="i in instances" label="{{i.name}}">
-	                	<option ng-repeat="p in i.pistons" value="{{p.id}}">{{p.name}}</option>
-					</optgroup>
-					<option style="display:none" value="">Nothing selected...</option>
-				</select>
+<designer ng-if="designer.page==0">
+      <header>
+          <h3>Create a new piston</h3>
+          <span>Please select one of the methods below</span>
+      </header>
+      <items>
+           <item ng-repeat="item in designer.items" type="{{item.type}}" class="btn btn-block btn-lg {{item.cssClass}}" ng-click="setDesignerType(item.type)">
+             <i class="fa fa-lg fa-{{item.icon}}"></i>
+             {{item.name}}
+          </item>
+      </items>
+</designer>
+<designer ng-if="designer.page==1">
+      <header ng-if="designer.type=='blank'">
+          <h3>Create a new blank piston</h3>
+          <span>You are about to create a new piston from scratch. Yey! Click Create to get started.</span>
+      </header>
+      <header ng-if="designer.type=='duplicate'">
+          <h3>Create a duplicate piston</h3>
+          <span>You are about to create a duplicate piston. Select the source piston below and click Create to get started.</span>
+      </header>
+      <header ng-if="designer.type=='template'">
+          <h3>Create new piston from a template</h3>
+          <span>You wanted to create a new piston from a template. The bad news is, there are no templates yet :( But the good news is, you can start one from scratch. Yey! Click Next to get started.</span>
+      </header>
+      <header ng-if="designer.type=='restore'">
+          <h3>Restore a piston</h3>
+          <span>Please enter the backup bin code below and click Create to get started.</span>
+          <p><b>NOTE:</b> Only backup bin codes created by your account are supported. All others will generate an empty piston.</p>
+      </header>
+      <header ng-if="designer.type=='import'">
+          <h3>Import a new piston</h3>
+          <span>You wanted to import a new piston. The bad news is, there is no way yet :( But the good news is, you can start one from scratch. Yey! Click Next to get started.</span>
+      </header>
+      <form>
+          <div class="form-group">
+	            <label for="author">Author</label>
+                  <input class="form-control"  id="author" ng-model="designer.author" type="text" />
+          </div>
+          <div class="form-group">
+	            <label for="name">Piston name</label>
+                  <input class="form-control"  id="name" ng-model="designer.name" type="text" />
+          </div>
+		<div class="form-group" ng-if="designer.type=='duplicate'">
+			<label for="piston">Select the piston you want to duplicate</label>
+			<select id="piston" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-default" ng-model="designer.piston" data-mobile="{{mobile}}" ng-init="instances = listAllInstances()">
+				<optgroup ng-repeat="i in instances" label="{{i.name}}">
+                	<option ng-repeat="p in i.pistons" value="{{p.id}}">{{p.name}}</option>
+				</optgroup>
+				<option style="display:none" value="">Nothing selected...</option>
+			</select>
+		</div>
+
+
+		<div class="form-group" ng-if="designer.type=='restore'">
+          	<label for="pin">Please enter the backup bin code to restore from</label>
+           	<input type="text" class="form-control" ng-model="designer.bin" max-length="8"/>
+		</div>
+
+          <div class="divider disclaimer {{designer.disclaimer ? '' : 'collapsed'}}" data-toggle="collapse" data-target="#disclaimer" collapsed-title="Disclaimer (click here to show)" expanded-title="Disclaimer" aria-expanded="{{designer.disclaimer}}"></div>
+          <div id="disclaimer" class="form-group collapse {{designer.disclaimer ? '' : 'collapsed'}}">
+              <p>By using the automatic backup feature, you understand that CoRE uses <a href="http://www.myjson.com" target="_blank">myjson.com</a> as a data store.</p>
+			<p>While CoRE is making all efforts to ensure your data's safety, you need to be aware that all data stored on myjson.com is PUBLIC and can be read by anyone. To protect your privacy, your backup data is encrypted using AES with a 256 key generated from an account-level secret before being sent to myjson.com. These backups are only decryptable by any of your account's CoRE instances, they cannot be decrypted by someone else's CoRE instance.</p>
+			<p>The author of CoRE is not responsible for the data you store with myjson.com and cannot guarantee this data can never be decrypted by anyone else. Steps have been made, however, to minimize the information that is stored in such backups:</p>
+			<div>
+				<label>WHAT IS NOT INCLUDED IN THE DATA:</label>
+				<ul>
+					<li>Any SmartThings GUIDs - these are identifiers used by SmartThings to reference your devices, modes, contacts, etc. CoRE hashes them into unique codes that are only understandable by CoRE.</li>
+					<li>Any security access tokens used by CoRE to communicate with SmartThings</li>
+				</ul>
 			</div>
-
-
-			<div class="form-group" ng-if="designer.type=='restore'">
-            	<label for="pin">Please enter the backup bin code to restore from</label>
-             	<input type="text" class="form-control" ng-model="designer.bin" max-length="8"/>
+			<div class="danger">
+				<label>WHAT IS INCLUDED IN THE DATA:</label>
+				<ul>
+					<li>Any URLs you manually enter into HTTP requests used by the piston to communicate with outside services.</li>
+					<li>Any phone numbers you manually enter into SMS notifications.</li>
+					<li>Any parameter data you manually enter into fields.</li>
+					<li>Any and all descriptions you enter while editing the piston. Make sure you do not store sensitive information in these descriptions.</li>
+				</ul>
 			</div>
+			<p>By enabling the automatic backup feature below, you agree that you understand the above and will use this service sensibly.</p>
+          </div>
+          <div class="form-group input-group">
+              <span for="backup" class="form-control btn-default left">Automatic backup</span>
+			<toggle id="backup" ng-model="designer.backup" class="btn btn-default input-group-addon" on="yes" off="no"></toggle>
+          </div>
+          <div class="divider" data-toggle="collapse" data-target="#advopt" collapsed-title="Show Advanced Options" expanded-title="Hide Advanced Options" aria-expanded="false"></div>
+          <div id="advopt" class="form-group collapse">
+              <label for="descriptionInput">Description (optional)</label>
+              <textarea type="text" id="descriptionInput" class="form-control" placeholder="Description for this statement" ng-model="designer.description"></textarea>
+          </div>
+      </form>
 
-            <div class="divider disclaimer {{designer.disclaimer ? '' : 'collapsed'}}" data-toggle="collapse" data-target="#disclaimer" collapsed-title="Disclaimer (click here to show)" expanded-title="Disclaimer" aria-expanded="{{designer.disclaimer}}"></div>
-            <div id="disclaimer" class="form-group collapse {{designer.disclaimer ? '' : 'collapsed'}}">
-                <p>By using the automatic backup feature, you understand that CoRE uses <a href="http://www.myjson.com" target="_blank">myjson.com</a> as a data store.</p>
-				<p>While CoRE is making all efforts to ensure your data's safety, you need to be aware that all data stored on myjson.com is PUBLIC and can be read by anyone. To protect your privacy, your backup data is encrypted using AES with a 256 key generated from an account-level secret before being sent to myjson.com. These backups are only decryptable by any of your account's CoRE instances, they cannot be decrypted by someone else's CoRE instance.</p>
-				<p>The author of CoRE is not responsible for the data you store with myjson.com and cannot guarantee this data can never be decrypted by anyone else. Steps have been made, however, to minimize the information that is stored in such backups:</p>
-				<div>
-					<label>WHAT IS NOT INCLUDED IN THE DATA:</label>
-					<ul>
-						<li>Any SmartThings GUIDs - these are identifiers used by SmartThings to reference your devices, modes, contacts, etc. CoRE hashes them into unique codes that are only understandable by CoRE.</li>
-						<li>Any security access tokens used by CoRE to communicate with SmartThings</li>
-					</ul>
-				</div>
-				<div class="danger">
-					<label>WHAT IS INCLUDED IN THE DATA:</label>
-					<ul>
-						<li>Any URLs you manually enter into HTTP requests used by the piston to communicate with outside services.</li>
-						<li>Any phone numbers you manually enter into SMS notifications.</li>
-						<li>Any parameter data you manually enter into fields.</li>
-						<li>Any and all descriptions you enter while editing the piston. Make sure you do not store sensitive information in these descriptions.</li>
-					</ul>
-				</div>
-				<p>By enabling the automatic backup feature below, you agree that you understand the above and will use this service sensibly.</p>
-            </div>
-            <div class="form-group input-group">
-                <span for="backup" class="form-control btn-default left">Automatic backup</span>
-				<toggle id="backup" ng-model="designer.backup" class="btn btn-default input-group-addon" on="yes" off="no"></toggle>
-            </div>
-            <div class="divider" data-toggle="collapse" data-target="#advopt" collapsed-title="Show Advanced Options" expanded-title="Hide Advanced Options" aria-expanded="false"></div>
-            <div id="advopt" class="form-group collapse">
-                <label for="descriptionInput">Description (optional)</label>
-                <textarea type="text" id="descriptionInput" class="form-control" placeholder="Description for this statement" ng-model="designer.description"></textarea>
-            </div>
-        </form>
-
-        <footer>
-            <button type="button" class="btn btn-info pull-right" ng-disabled="!designer.type || !designer.author || !designer.name || ((designer.type == 'duplicate') && !designer.piston) || ((designer.type == 'restore') && !designer.bin)" ng-click="createPiston();">Create</button>
-            <button type="button" class="btn btn-default" ng-click="prevPage();">Back</button>
-        </footer>
-    </designer>
+      <footer>
+          <button type="button" class="btn btn-info pull-right" ng-disabled="!designer.type || !designer.author || !designer.name || ((designer.type == 'duplicate') && !designer.piston) || ((designer.type == 'restore') && !designer.bin)" ng-click="createPiston();">Create</button>
+          <button type="button" class="btn btn-default" ng-click="prevPage();">Back</button>
+      </footer>
+  </designer>
 </script>
 
 
 
 
 <script type="text/ng-template" id="dialog-move-piston">
-	<designer>
-        <header>
-            <label>Move piston(s)</label>
-        </header>
-		<form>
-			<div class="form-group">
-				<label for="piston">Select the piston(s) you want to move</label>
-				<select id="piston" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-default" ng-model="designer.pistons" data-mobile="{{mobile}}" ng-init="instances = listAllInstances()" multiple>
-					<option style="display:none" value="">Nothing selected...</option>
-					<optgroup ng-repeat="i in instances" label="{{i.name}}">
-	                	<option ng-repeat="p in i.pistons" value="{{i.id}}{{p.id}}">{{p.name}}</option>
-					</optgroup>
-				</select>
-			</div>
+<designer>
+      <header>
+          <h3>Move piston(s)</h3>
+      </header>
+	<form>
+		<div class="form-group">
+			<label for="piston">Select the piston(s) you want to move</label>
+			<select id="piston" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-default" ng-model="designer.pistons" data-mobile="{{mobile}}" ng-init="instances = listAllInstances()" multiple>
+				<option style="display:none" value="">Nothing selected...</option>
+				<optgroup ng-repeat="i in instances" label="{{i.name}}">
+                	<option ng-repeat="p in i.pistons" value="{{i.id}}{{p.id}}">{{p.name}}</option>
+				</optgroup>
+			</select>
+		</div>
 
-			<div class="form-group">
-				<label for="piston">Select the destination instance</label>
-				<select id="piston" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-default" ng-model="designer.instance" data-mobile="{{mobile}}" ng-init="instances = listAllInstances()">
-					<option style="display:none" value="">Nothing selected...</option>
-					<option ng-repeat="i in instances" value="{{i.id}}">{{i.name}}</option>
-				</select>
-			</div>
-        </form>
+		<div class="form-group">
+			<label for="piston">Select the destination instance</label>
+			<select id="piston" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-default" ng-model="designer.instance" data-mobile="{{mobile}}" ng-init="instances = listAllInstances()">
+				<option style="display:none" value="">Nothing selected...</option>
+				<option ng-repeat="i in instances" value="{{i.id}}">{{i.name}}</option>
+			</select>
+		</div>
+      </form>
 
-        <footer>
-            <button type="button" class="btn btn-info pull-right" ng-disabled="!designer.pistons || !designer.pistons.length || !designer.instance" ng-click="movePistons();">Move</button>
-            <button type="button" class="btn btn-default" ng-click="closeDialog();">Cancel</button>
-        </footer>
-    </designer>
+      <footer>
+          <button type="button" class="btn btn-info pull-right" ng-disabled="!designer.pistons || !designer.pistons.length || !designer.instance" ng-click="movePistons();">Move</button>
+          <button type="button" class="btn btn-default" ng-click="closeDialog();">Cancel</button>
+      </footer>
+  </designer>
 </script>
 
 
 <script type="text/ng-template" id="dialog-backup-piston">
-	<designer>
-        <header>
-            <label>Backup piston(s)</label>
-        </header>
-		<form ng-if="designer.page==0">
-			<div class="form-group">
-				<label for="piston">Select the piston(s) you want to backup</label>
-				<select data-actions-box="true" id="piston" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-default" ng-model="designer.pistons" data-mobile="{{mobile}}" ng-init="instances = listAllInstances()" multiple>
-					<option style="display:none" value="" disabled>Nothing selected...</option>
-					<optgroup ng-repeat="i in instances" label="{{i.name}}">
-	                	<option ng-repeat="p in i.pistons" value="{{i.id}}{{p.id}}">{{p.name}}</option>
-					</optgroup>
-				</select>
+<designer>
+      <header>
+          <h3>Backup piston(s)</h3>
+      </header>
+	<form ng-if="designer.page==0">
+		<div class="form-group">
+			<label for="piston">Select the piston(s) you want to backup</label>
+			<select data-actions-box="true" id="piston" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-default" ng-model="designer.pistons" data-mobile="{{mobile}}" ng-init="instances = listAllInstances()" multiple>
+				<option style="display:none" value="" disabled>Nothing selected...</option>
+				<optgroup ng-repeat="i in instances" label="{{i.name}}">
+                	<option ng-repeat="p in i.pistons" value="{{i.id}}{{p.id}}">{{p.name}}</option>
+				</optgroup>
+			</select>
+		</div>
+      </form>
+	<form ng-if="designer.page==1">
+		<div class="form-group">
+			<label for="piston">Retrieving selected pistons, please wait...</label>
+			<div class="progress">
+				<div class="progress-bar" role="progressbar" aria-valuenow="1" aria-valuemin="0" aria-valuemax="{{designer.piston.length}}" style="width:{{100.0 * designer.progress / designer.pistons.length}}%">
+			    	<span>{{designer.progress}} of {{designer.pistons.length}}</span>
+				</div>
 			</div>
-        </form>
-		<form ng-if="designer.page==1">
-			<div class="form-group">
-				<label for="piston">Retrieving selected pistons, please wait...</label>
-				<div class="progress">
-					<div class="progress-bar" role="progressbar" aria-valuenow="1" aria-valuemin="0" aria-valuemax="{{designer.piston.length}}" style="width:{{100.0 * designer.progress / designer.pistons.length}}%">
-				    	<span>{{designer.progress}} of {{designer.pistons.length}}</span>
-					</div>
-				</div> 
-			</div>
-        </form>
-		<form ng-if="designer.page==2">
-			<div class="form-group">
-				<label>Please select a password to protect your backup...</label>
-				<input class="form-control" type="password" ng-model="designer.password"/>
-			</div>
-        </form>
-		<form ng-if="designer.page==3">
-			<div class="form-group">
-				<label for="piston">An error has occurred while retrieving backup...</label>
-				<div>Please navigate to each installed instance before attempting a backup to ensure you have a fresh list of existing pistons and that the security tokens are not expired, then try again.</div>
-			</div>
-        </form>
-        <footer>
-            <button ng-if="designer.page==0" type="button" class="btn btn-info pull-right" ng-disabled="!designer.pistons || !designer.pistons.length" ng-click="backupPistons();">Backup</button>
-            <button ng-if="designer.page==2" type="button" class="btn btn-info pull-right" ng-disabled="!designer.pistons || !designer.pistons.length" ng-click="saveBackup();">Save</button>
-            <button type="button" class="btn btn-default" ng-click="closeDialog();">Cancel</button>
-        </footer>
-    </designer>
+		</div>
+      </form>
+	<form ng-if="designer.page==2">
+		<div class="form-group">
+			<label>Please select a password to protect your backup...</label>
+			<input class="form-control" type="password" ng-model="designer.password"/>
+		</div>
+      </form>
+	<form ng-if="designer.page==3">
+		<div class="form-group">
+			<label for="piston">An error has occurred while retrieving backup...</label>
+			<div>Please navigate to each installed instance before attempting a backup to ensure you have a fresh list of existing pistons and that the security tokens are not expired, then try again.</div>
+		</div>
+      </form>
+      <footer>
+          <button ng-if="designer.page==0" type="button" class="btn btn-info pull-right" ng-disabled="!designer.pistons || !designer.pistons.length" ng-click="backupPistons();">Backup</button>
+          <button ng-if="designer.page==2" type="button" class="btn btn-info pull-right" ng-disabled="!designer.pistons || !designer.pistons.length" ng-click="saveBackup();">Save</button>
+          <button type="button" class="btn btn-default" ng-click="closeDialog();">Cancel</button>
+      </footer>
+  </designer>
 </script>
 
 
 <script type="text/ng-template" id="dialog-captured-image">
-	<dnd-nodrag>
-	    <br/>
-	    <center>Please tap and hold the picture below to save it to your Photo Gallery</center>
-	    <img id="capturedImage" src="{{capturedImage}}"/>
-	</dnd-nodrag>
+<dnd-nodrag>
+    <br/>
+    <center>Please tap and hold the picture below to save it to your Photo Gallery</center>
+    <img id="capturedImage" src="{{capturedImage}}"/>
+</dnd-nodrag>
 </script>
 
 
 
 
 <script type="text/ng-template" id="dialog-edit-place">
-    <designer>
-        <header>
-            <label>Edit place</label>
-        </header>
-	<form>
-	    <div class="form-group">
-		<label>Please enter a name for this place...</label>
-		<input class="form-control" type="text" ng-model="designer.name"/>
-	    </div>
-	</form>
-	<form>
-	    <label>Drag the marker to the center of the location and adjust the inner circle and outer circle to adjust sensitivity. Inner circle needs to be entered to arrive at a place, while the outer circle needs to be exited to leave a place</label>
-	    <ng-map ng-if="designer.showMap" center="{{designer.position}}" zoom="16" mayTypeId="TERRAIN" on-click="movePlace()">
-	        <marker position="{{designer.position}}" title="{{designer.name}}" draggable="true" on-dragend="movePlace()"></marker>
-	        <shape name="circle" editable="true" draggable="false" on-center_changed="movePlace('i')" on-radius_changed="movePlace('i')"
-	          stroke-color="#00CCFF"
-	          stroke-opacity="0.8"
-	          stroke-weight="2"
-	          fill-color="#00CCFF"
-	          fill-opacity="0.35"
-	          center="{{designer.position}}"
-	          radius="{{designer.inner}}">
-	        </shape>
-	        <shape name="circle" editable="true" draggable="false" on-center_changed="movePlace('o')" on-radius_changed="movePlace('o')"
-	          stroke-color="#CCC"
-	          stroke-opacity="0.8"
-	          stroke-weight="2"
-	          fill-color="#CCC"
-	          fill-opacity="0.35"
-	          center="{{designer.position}}"
-	          radius="{{designer.outer}}">
-	        </shape>
-	    </ng-map>
-	    <div class="form-control-static text-center">
-		Location is at {{designer.position[0].toFixed(6)}}°, {{designer.position[1].toFixed(6)}}°, arriving radius of {{designer.inner.toFixed(0)}}m, leaving radius of {{designer.outer.toFixed(0)}}m
-	    </div>
-        </form>
-        <footer>
-            <button type="button" class="btn btn-info pull-right" ng-disabled="!designer.name" ng-click="updatePlace();">Save</button>
-            <button type="button" class="btn btn-success pull-right" ng-if="!designer.home" ng-click="designer.home = true">Set as home</button>
-            <button type="button" class="btn btn-default" ng-click="closeDialog();">Cancel</button>
-            <button ng-if="!designer.$new" type="button" class="btn btn-danger" ng-click="deletePlace();">Delete</button>
-        </footer>
-    </designer>
+  <designer>
+      <header>
+          <h3>Edit place</h3>
+      </header>
+<form>
+    <div class="form-group">
+	<label>Please enter a name for this place...</label>
+	<input class="form-control" type="text" ng-model="designer.name"/>
+    </div>
+</form>
+<form>
+    <label>Drag the marker to the center of the location and adjust the inner circle and outer circle to adjust sensitivity. Inner circle needs to be entered to arrive at a place, while the outer circle needs to be exited to leave a place</label>
+    <ng-map ng-if="designer.showMap" center="{{designer.position}}" zoom="16" mayTypeId="TERRAIN" on-click="movePlace()">
+        <marker position="{{designer.position}}" title="{{designer.name}}" draggable="true" on-dragend="movePlace()"></marker>
+        <shape name="circle" editable="true" draggable="false" on-center_changed="movePlace('i')" on-radius_changed="movePlace('i')"
+          stroke-color="#00CCFF"
+          stroke-opacity="0.8"
+          stroke-weight="2"
+          fill-color="#00CCFF"
+          fill-opacity="0.35"
+          center="{{designer.position}}"
+          radius="{{designer.inner}}">
+        </shape>
+        <shape name="circle" editable="true" draggable="false" on-center_changed="movePlace('o')" on-radius_changed="movePlace('o')"
+          stroke-color="#CCC"
+          stroke-opacity="0.8"
+          stroke-weight="2"
+          fill-color="#CCC"
+          fill-opacity="0.35"
+          center="{{designer.position}}"
+          radius="{{designer.outer}}">
+        </shape>
+    </ng-map>
+    <div class="form-control-static text-center">
+	Location is at {{designer.position[0].toFixed(6)}}°, {{designer.position[1].toFixed(6)}}°, arriving radius of {{designer.inner.toFixed(0)}}m, leaving radius of {{designer.outer.toFixed(0)}}m
+    </div>
+      </form>
+      <footer>
+          <button type="button" class="btn btn-info pull-right" ng-disabled="!designer.name" ng-click="updatePlace();">Save</button>
+          <button type="button" class="btn btn-success pull-right" ng-if="!designer.home" ng-click="designer.home = true">Set as home</button>
+          <button type="button" class="btn btn-default" ng-click="closeDialog();">Cancel</button>
+          <button ng-if="!designer.$new" type="button" class="btn btn-danger" ng-click="deletePlace();">Delete</button>
+      </footer>
+  </designer>
 
 </script>
 
 
 <script type="text/ng-template" id="dialog-register-presence-sensor">
-    <designer>
-        <header>
-            <label>Register presence sensor</label>
-        </header>
-	<form>
-	    <div class="form-group">
-		<label>Please enter a name for this device...</label>
-		<input class="form-control" type="text" ng-model="designer.name"/>
-	    </div>
-	</form>
-        <footer>
-            <button type="button" class="btn btn-info pull-right" ng-disabled="!designer.name" ng-click="doRegisterPresenceSensor();">Save</button>
-            <button type="button" class="btn btn-default" ng-click="closeDialog();">Cancel</button>
-        </footer>
-    </designer>
+  <designer>
+      <header>
+          <h3>Register presence sensor</h3>
+      </header>
+<form>
+    <div class="form-group">
+	<label>Please enter a name for this device...</label>
+	<input class="form-control" type="text" ng-model="designer.name"/>
+    </div>
+</form>
+      <footer>
+          <button type="button" class="btn btn-info pull-right" ng-disabled="!designer.name" ng-click="doRegisterPresenceSensor();">Save</button>
+          <button type="button" class="btn btn-default" ng-click="closeDialog();">Cancel</button>
+      </footer>
+  </designer>
 
 </script>
