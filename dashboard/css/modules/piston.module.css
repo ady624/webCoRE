@@ -9,6 +9,7 @@ viewer[mode=view] {
 
 div[header] {
     margin: 0px -15px;
+    margin-bottom: 20px;
     background: #eee;
     border-bottom: solid 1px #ccc;
     padding: 0px;
@@ -16,6 +17,10 @@ div[header] {
 
 div[header] h2 {
 	margin: 16px 0px;
+}
+
+div .script {
+	padding: 20px 0px;
 }
 
 h2 > span[small] {
@@ -32,7 +37,7 @@ piston {
 	counter-reset: line;
     display: block;
     background: #fffcf0;
-    margin: 0px;
+    margin: 10px 0;
     color: #444;
     font-family: monospace;
     overflow: hidden;
@@ -40,7 +45,7 @@ piston {
 	z-index: 1;
 	overflow: hidden;
 	cursor: default;
-	border: solid 1px #ccc;
+	border: solid 1px #eee;
 }
 
 piston > gutter {
@@ -52,7 +57,6 @@ piston > gutter {
     border-right: solid 1px #ccc;
     z-index: 0;
     background: #f8f8f8;
-    box-shadow: inset 0 1px 0 rgba(255,255,255,.15),0 1px 5px rgba(0,0,0,.075);
 }
 
 piston > gutter:after {
@@ -76,7 +80,6 @@ piston tracer {
     width: 0px;
     background: #444;
     color: #fff;
-    box-shadow: inset 0 1px 0 rgba(255,255,255,.15),0 1px 5px rgba(0,0,0,.075);
 }
 
 
@@ -107,7 +110,7 @@ piston[movable=true] > gutter {
 }
 
 piston[movable=true] > gutter::after {
-	width: 28px;	
+	width: 28px;
 }
 
 piston[movable=true] content {
@@ -342,11 +345,6 @@ table[properties] tr td:last-child > * {
 table[properties] tr td:last-child > input {
 	padding: 0px 4px;
 }
-
-
-
-
-
 
 
 piston[printing] {
@@ -616,7 +614,7 @@ span[kwd] + task {
 span.hl.err,
 span.hl.err * {
 	background: #fcc !important;
-	color: #f00 !important;	
+	color: #f00 !important;
 }
 
 label[group] {
@@ -640,7 +638,7 @@ span.vartype {
 	float:left;
 	text-align: right;
 	line-height: 20px;;
-	width: 60px;	
+	width: 60px;
 	*/
 	color: #2b91af;
 	font-size: 0.75em;
@@ -650,7 +648,7 @@ span.vartype {
 
 span.varval {
 	float:right;
-	width: 60px;	
+	width: 60px;
 	color: #2b91af;
 	text-align: right;
 	font-size: 0.75em;
@@ -940,7 +938,7 @@ parameter[optional=true] label.control-label::after {
 [clipboard-item] [item] {
 	position: relative !important;
 	display:  block;
-	background: #fffcf0 !important;	
+	background: #fffcf0 !important;
 	border: solid 1px #ccc !important;
 	padding: 8px;
 }
@@ -1131,7 +1129,7 @@ div[items] div[item] item button {
 div[multicolumn] {
 	column-count: 2;
 	-webkit-column-count: 2;
-	-moz-column-count: 2;	
+	-moz-column-count: 2;
     -webkit-column-rule: solid 1px #eee; /* Chrome, Safari, Opera */
     -moz-column-rule:solid 1px #eee; /* Firefox */
     column-rule: solid 1px #eee;
@@ -1140,9 +1138,10 @@ div[multicolumn] {
     -ms-column-gap: 0px;
     -o-column-gap: 0px;
     column-gap: 0px;
-    border: solid 1px #ccc;
+    border: 1px solid #ccc;
     background: #f8f8f8;
 	padding-bottom: 8px;
+
 }
 
 
@@ -1248,7 +1247,7 @@ label[var] {
 }
 
 * + label[var] {
-	margin: 16px 0px 0px 0px;	
+	margin: 16px 0px 0px 0px;
 }
 
 div[novar] {
@@ -1292,7 +1291,7 @@ span.notset {
 
 
 badge {
-	display: inline;	
+	display: inline;
 	background: rgba(0, 0, 0, 0.1);
 	padding: 0px 4px;
 	border-radius: 8px;
@@ -1323,7 +1322,7 @@ textarea[ifttt] {
 
 
 .form-group label,
-[taskedit] label {	
+[taskedit] label {
 	display: block !important;
 }
 
@@ -1359,23 +1358,23 @@ piston[printing] dnd-nodrag[disabled] {
 
 
 dnd-nodrag[disabled] * {
-	color: rgba(0, 0, 0, 0.2) !important;	
+	color: rgba(0, 0, 0, 0.2) !important;
 	border-color: rgba(0, 0, 0, 0.05) !important;
 	font-style: italic;
 }
 
 
 
-@media only screen 
-  and (min-device-width: 320px) 
+@media only screen
+  and (min-device-width: 320px)
   and (max-device-width: 568px)
   and (-webkit-min-device-pixel-ratio: 2) {
 
 	piston:not([printing]) line,
 	piston:not([printing]) line * {
-		line-height: 44px !important;
-		min-height: 44px !important;
-		font-size: 16px;
+		line-height: 16px !important;
+		min-height: 22px !important;
+		font-size: 12px;
 	}
 
 	piston:not([printing]) line::after {
@@ -1391,6 +1390,10 @@ dnd-nodrag[disabled] * {
 	piston:not([printing]) statement async {
 		margin-top: 16px;
 	}
+
+	viewer {
+		padding: 0px 5px;
+	}
 }
 
 
@@ -1399,11 +1402,12 @@ dnd-nodrag[disabled] * {
 	div[items] div+div {
 		border-top: solid 1px #ccc;
 	}
-	
+
 	viewer[mode=edit] {
 		margin: 0px;
 		padding: 0px;
 		overflow-y: auto;
+		font-size: 10px;
 	}
 
 	piston[mode=edit] {
@@ -1423,7 +1427,7 @@ dnd-nodrag[disabled] * {
 	div[multicolumn] {
 		column-count: 1;
 		-webkit-column-count: 1;
-		-moz-column-count: 1;	
+		-moz-column-count: 1;
 	}
 
 	textarea[ifttt] {
@@ -1453,6 +1457,61 @@ dnd-nodrag[disabled] * {
 	div[multicolumn] {
 		column-count: 1;
 		-webkit-column-count: 1;
-		-moz-column-count: 1;	
+		-moz-column-count: 1;
 	}
+}
+
+.columnCards {
+    border: 1px solid #eee;
+    padding: 10px;
+    margin-bottom: 5px;
+}
+.columnCards h2 {
+	margin-top: 0;
+}
+
+@media only screen and (min-width: 992px) {
+	.columnCards {
+		min-height: 275px;
+	}
+}
+
+div[input] {
+    border-left: 4px solid transparent !important;
+    display: block !important;
+	clear: both !important;
+	border-bottom: solid 1px #ccc !important;
+    color: #9d9d9d !important;
+    padding: 5px !important;
+    font-size: 14px !important;
+    text-decoration: none !important;
+
+}
+
+div[input]:hover,
+div[input]:active,
+div[input]:focus {
+    padding: 5px !important;
+    border-left: 4px solid #15bfff !important;
+    background: #eee !important;
+    cursor: pointer !important;
+}
+
+
+.dropdown-trace{
+	margin: 0;
+  padding: 5px !important;
+	border-left: 4px solid transparent;
+	color: #9d9d9d;
+
+}
+
+.dropdown-trace:hover{
+  background-color: #eee;
+	border-left: 3px solid #15bfff;
+	cursor: pointer;
+}
+
+span[data-target="#collapseScript"][data-toggle="collapse"] {
+	margin-top: 15px;
 }

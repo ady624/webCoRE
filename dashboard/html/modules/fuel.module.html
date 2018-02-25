@@ -1,13 +1,8 @@
 <status ng-if="status" ng-animate ng-bind-html="status" ng-click="setStatus()"></status>
-<logo ng-if="view != 'dashboard'">webCoRE</logo>
-<loader ng-if="loading">
-	<ul>
-		<li></li>
-		<li></li>
-		<li></li>
-		<li></li>
-	</ul>
-</loader>
+<logo ng-if="view != 'dashboard'"><img src="https://community.webcore.co/uploads/default/original/2X/d/d82aa5d0f719318d1f35bafdec06e2c8cf3c54be.svg"></logo>
+	<div id="preloader">
+  		<div id="loader"></div>
+	</div>
 <viewer class="dashboard animated noPreventDefault" ng-if="initialized">
 	<div class="main">
 		<ul canisters>

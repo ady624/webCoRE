@@ -1,48 +1,56 @@
 <status ng-if="status" ng-animate ng-bind-html="status" ng-click="setStatus()"></status>
-<loader ng-if="loading" ng-animate>
-    <ul>
-        <li></li>
-        <li></li>
-        <li></li>
-        <li></li>
-    </ul>
-</loader>
-<div welcome>
-	<label>Welcome to webCoRE</label>
-	<div>
-		<p>To get started, please register a webCoRE instance by following the instructions below, or, if you have an account, please log in.</p>
-		<p class="alert alert-warning"><b>NOTE:</b> An account is not required to use webCoRE.</p>
-	</div>
-	<panel>
-		<div class="form-group">
-			<p>Please open the SmartThings app on your phone and go to the Automations tab, then select the SmartApps section and find the webCoRE instance you would like to register. Open it and click on <i>Register a browser</i>, then enter the provided code below, and click <i>Register</i> to continue.</p>
+
+<div class="container">
+	<div class="loginbox">
+		<img class="loginbox-logo" src="img/webCoRE-text.svg">
+	  <div id="instance">
+				<p>Enter your registration code from the webCoRE SmartApp to get started.</p>
+				<p><a target="_blank" href="https://wiki.webcore.co/#Opening_the_new_dashboard_from_your_phone">Need help finding your registration code?</a></p>
+				<div class="input-group input-group-lg">
+					<input name="code" class="form-control " type="text" maxlength="4" ng-model="code" />
+					<span class="input-group-btn">
+						<a ng-disabled="code.length != 4" ng-click="register();" href="#" class="btn btn-primary"><span class="fa fa-chevron-right" aria-hidden="true"></span></a>
+					</span>
+				</div>
 		</div>
-		<div class="form-group">
-			<label>Enter your code</label>
-			<input code class="form-control" type="text" maxlength="4" ng-model="code" />
+	  <div class="help-row">
+	      <a href="https://www.paypal.me/ady624" class="btn btn-primary"><i class="fa fa-paypal" aria-hidden="true"></i>
+	        Donate</a>
+	      <a href="https://wiki.webcore.co/" class="btn btn-primary"><i class="fa fa-book" aria-hidden="true"></i>
+	        Wiki</a>
+	      <a href="https://community.webcore.co/" class="btn btn-primary"><i class="fa fa-comments" aria-hidden="true"></i>
+	        Forum</a>
+	    </div>
 		</div>
-		<div class="form-group text-right">
-			<button class="btn btn-info" ng-disabled="code.length != 4" ng-click="register();">Register</button>
-		</div>
-	</panel>
-	<panel>
-		<div class="form-group">
-			<p>Please enter your login credentials below and click <i>Log in</i>. If you do not have an account, you can <a href="#">create one</a>.</p>
-		</div>
-		<div class="form-group">
-			<label>Username</label>
-			<input class="form-control" type="text" ng-model="username" />
-		</div>
-		<div class="form-group">
-			<label>Password</label>
-			<input class="form-control" type="password" ng-model="password" />
-		</div>
-		<div class="form-group text-right">
-			<button class="btn btn-info" ng-disabled="(username.length < 4) || (password.length < 8)" ng-click="setStatus('Sorry, account log in is not yet available');">Log in</button>
-		</div>
-	</panel>
-    <!--ads-->
-<!--	<div id="chitikaAdBlock-0" ng-init="initAds();"></div>
-    <script ng-if="showAds" type="text/javascript" src="//cdn.chitika.net/getads.js" async></script>-->
 </div>
 
+
+
+<!-- ACCOUNTS NOT CURRENTLY ACTIVE
+<ul  class="nav nav-pills">
+	<div login>
+			<li class="active"><a data-target="#instance" data-toggle="tab">Register Instance</a>
+	    </li>
+	    <li><a data-target="#account" data-toggle="tab">Login</a>
+	    </li>
+</ul>
+<div class="tab-pane" id="account">
+  <panel>
+	  <div class="form-group">
+		  <p>Accounts are not currently enabled.</p>
+		  <p>You do not need an account to use webCoRE. Please register an instance.</p>
+	  </div>
+	  <div class="form-group">
+		  <label>Username</label>
+		  <input login class="form-control" type="text" ng-model="username" disabled/>
+	  </div>
+	  <div class="form-group">
+		  <label>Password</label>
+		    <input login class="form-control" type="password" ng-model="password" disabled/>
+	  </div>
+	  <div class="form-group">
+		  <button class="btn btn-info" ng-disabled="(username.length < 4) || (password.length < 8)" ng-click="setStatus('Sorry, account log in is not yet available');">Log in</button>
+	  </div>
+  </panel>
+</div>
+-->

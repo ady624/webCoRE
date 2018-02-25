@@ -300,6 +300,37 @@ app.directive('title', function(){
     };
 });
 
+app.directive('collapseControl', ['dataService', function(dataService) {
+	return function(scope, element, attr) {
+		var id = (attr.target || attr.ariaControls || '').replace('#', '');
+		var wasCollapsed = dataService.isCollapsed(id);
+		
+    console.log(attr);
+		if (wasCollapsed && 'ariaExpanded' in attr) {
+			element.attr('aria-expanded', 'false');
+		}
+		
+		element.bind('click', function(event) {
+			var collapsed = dataService.isCollapsed(id);
+			dataService.setCollapsed(id, !collapsed);
+		});
+	};
+}]);
+
+app.directive('collapseTarget', ['dataService', function(dataService) {
+	return function(scope, element, attr) {
+		var id = attr.id || '';
+		var collapseClass = attr.collapseClass || 'in';
+		var collapsed = dataService.isCollapsed(id);
+		
+		if (collapsed) {
+			element.removeClass(collapseClass);
+		} else {
+			element.addClass(collapseClass);
+		}
+	};
+}]);
+
 app.filter('orderObjectBy', function() {
   return function(items, field, reverse) {
     var filtered = [];
@@ -316,7 +347,7 @@ app.filter('orderObjectBy', function() {
 
 
 
-var config = app.config(['$routeProvider', '$locationProvider', '$sceDelegateProvider', '$rootScopeProvider',  function ($routeProvider, $locationProvider, $sceDelegateProvider,  $rootScopeProvider) {
+var config = app.config(['$routeProvider', '$locationProvider', '$sceDelegateProvider', '$rootScopeProvider', '$animateProvider',  function ($routeProvider, $locationProvider, $sceDelegateProvider,  $rootScopeProvider, $animateProvider) {
 	$rootScopeProvider.digestTtl(10000); 
 	//$cfpLoadingBarProvider.includeSpinner = false;
     var ext = '.module.css';
@@ -324,6 +355,8 @@ var config = app.config(['$routeProvider', '$locationProvider', '$sceDelegatePro
         'self',
         cdn + '**'
     ]);
+    // Allow ng-animate to be disabled on certain elements
+    $animateProvider.classNameFilter(/^(?:(?!no-ng-animate).)*$/);
     $routeProvider.
     when('/', {
         templateUrl: cdn + theme + 'html/modules/dashboard.module.html?v=' + version(),
@@ -798,8 +831,17 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 				}
 				data.endpoint = si.uri;
 				data.accessToken = si.accessToken;
+				dataService.deleteFromStore('dashboardErrorCount');
 				return data;	
-			}, function(response) {
+			}, function(error) {
+				var errorCount = dataService.loadFromStore('dashboardErrorCount') || 1;
+				if (errorCount >= 3) {
+					dataService.logout();
+					status('There was a problem loading the dashboard data, please reload the dashboard to reauthorize this browser');
+				} else {
+					status('There was a problem loading the dashboard data');
+				}
+				dataService.saveToStore('dashboardErrorCount', errorCount + 1);
 			});
     };
 
@@ -1324,6 +1366,27 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 		}
 		return 'unknownDevice';
 	}
+  
+  dataService.getAllCollapsed = function() {
+		return dataService.loadFromStore('collapsed') || [];
+	}
+	
+	dataService.isCollapsed = function(id) {
+		return dataService.getAllCollapsed().indexOf(id) >= 0;
+	}
+	
+	dataService.setCollapsed = function(id, collapsed) {
+		var allCollapsed = dataService.getAllCollapsed();
+		var index = allCollapsed.indexOf(id);
+		
+		if (collapsed && index < 0) {
+			allCollapsed.push(id);
+		} else if (!collapsed && index >= 0) {
+			allCollapsed.splice(index, 1);
+		}
+		
+		dataService.saveToStore('collapsed', allCollapsed);
+	}
 
 
 	var initialize = function() {
@@ -1655,7 +1718,13 @@ function renderString($sce, value) {
                         if (classList == undefined) {
                             return '[' + result + ']';
                         }
-                        var cls = classList.trim().replace(/\s/g, ',').split(',');
+                        var cls = classList.trim();
+                        // Ensure that unencoded commas in URLs do not get split
+                        // into separate commands
+                        while (/(\bsrc=\S+),/.test(cls)) {
+                          cls = cls.replace(/(\bsrc=\S+),/, '$1:webCoRE-comma:');
+                        }
+                        cls = cls.replace(/\s+/g, ',').split(',');
                         var className = '';
                         var color = '';
 						var backColor='';
@@ -1690,7 +1759,7 @@ function renderString($sce, value) {
 									meta.type = 'video';
 									break;
                                 default:
-									if (/\d+(.\d+)?(x|em)/.test(cls[x])) {
+									if (/^\d+(\.\d+)?(x|em)/.test(cls[x])) {
 										fontSize = cls[x].replace('x', 'em');
 									} else if (cls[x].startsWith('b-')) {
 										backColor = cls[x].substr(2).replace(/[^#0-9a-z]/gi, '');
@@ -1701,7 +1770,7 @@ function renderString($sce, value) {
 									} else if (cls[x].indexOf('=') > 0) {
 										//options
 										var p = cls[x].indexOf('=');
-										meta.options[cls[x].substr(0, p)] = cls[x].substr(p + 1);
+										meta.options[cls[x].substr(0, p)] = cls[x].substr(p + 1).replace(/:webCoRE-comma:/g, ',');
 									} else {
 										color = cls[x].replace(/[^#0-9a-z]/gi, '');
 									}
@@ -1838,6 +1907,12 @@ function initBootstrapSelect() {
 	$('select').selectpicker();
 }
 
+// ios-drag-drop mishandles touches on mobile nav menus; stop propagation of the
+// touchstart event in nav menus before it bubbles up to the document level
+$(document.documentElement).on('touchstart', '.navbar-collapse *', function (e) { 
+  e.stopPropagation();
+});
+
 
 window.onerror = function myErrorHandler(errorMsg, url, lineNumber) {
     //alert("Error occured: " + errorMsg + ' at ' + url + ' line ' + lineNumber);//or any message
@@ -1891,4 +1966,4 @@ if (!String.prototype.endsWith) {
 	};
 }
 
-version = function() { return 'v0.2.102.20180116'; };
+version = function() { return 'v0.3.000.20180224'; };
