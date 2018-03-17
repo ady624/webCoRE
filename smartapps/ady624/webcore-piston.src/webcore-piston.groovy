@@ -5379,9 +5379,9 @@ private Map evaluateExpression(rtData, expression, dataType = null) {
                 }
 	           	//order of operations :D
                 idx = 0
-                //#2 	 !   !!   ~ 	Logical negation, logical double-negation and bitwise NOT unary operators
+                //#2 	 !   !!   ~   - 	Logical negation, logical double-negation, bitwise NOT, and numeric negation unary operators
                 for (item in items) {
-                	if (((item.o) == '!') || ((item.o) == '!!') || ((item.o) == '~')) break;
+                	if (((item.o) == '!') || ((item.o) == '!!') || ((item.o) == '~') || (item.t == null && item.o == '-')) break;
                     secondary = true
                     idx++
                 }
