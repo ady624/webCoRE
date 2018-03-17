@@ -657,6 +657,9 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 	}
 
 	dataService.logout = function() {
+		locations = {};
+		instances = {};
+		storage = {};
 		return localforage.clear();
 	}
 
