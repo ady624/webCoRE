@@ -93,6 +93,7 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 					$scope.dialogDeleteInstance(instance);
 				}
 			}, function(data) {
+				$scope.initialized = true;
 				$scope.render();
 				$timeout(function() {
 					$scope.completedInitialRender = true;
