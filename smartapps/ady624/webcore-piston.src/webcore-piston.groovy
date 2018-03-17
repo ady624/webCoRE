@@ -7453,7 +7453,10 @@ private localToUtcTime(dateOrTimeOrString) {
                     }
                     long time = timeToday(dateOrTimeOrString, tz).getTime()
                     //adjust for PM - timeToday has no clue....
-                    if (dateOrTimeOrString.trim().toLowerCase().endsWith('pm')) time += 43200000
+                    dateOrTimeOrString = dateOrTimeOrString.trim().toLowerCase()
+                    def twelve = dateOrTimeOrString.startsWith('12')
+                    if (twelve && dateOrTimeOrString.endsWith('am')) time -= 43200000
+                    if (!twelve && dateOrTimeOrString.endsWith('pm')) time += 43200000
                     return time
                 } catch (all3) {
                     return (new Date()).getTime()
