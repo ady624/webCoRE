@@ -354,17 +354,17 @@
     <header>
   	     <h3>Authentication Required</h3>
      </header>
-     <form>
+     <form ng-submit="authenticate()">
   	     <div class="form-group">
       	     <label for="pin">Please enter the password for <b>{{designer.sender}}</b></label>
   	         <input type="password" class="form-control" ng-model="designer.password" />
          </div>
-     </form>
 
       <footer>
-          <button type="button" class="btn btn-info pull-right" ng-disabled="!designer.password" ng-click="authenticate();">Authenticate</button>
+          <button type="submit" class="btn btn-info pull-right" ng-disabled="!designer.password">Authenticate</button>
           <button type="button" class="btn btn-default" ng-click="closeDialog();">Cancel</button>
       </footer>
+    </form>
   </designer>
 
 </script>
