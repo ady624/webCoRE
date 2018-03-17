@@ -11,7 +11,8 @@
 					<span class="input-group-btn">
 						<a ng-disabled="code.length != 4" ng-click="register();" href="#" class="btn btn-primary"><span class="fa fa-chevron-right" aria-hidden="true"></span></a>
 					</span>
-				</div>
+				</div><br />
+				<p class="text-center"><a ng-if="hasRegistered" ng-click="cancel()" class="btn btn-secondary">Cancel</a></p>
 		</div>
 	  <div class="help-row">
 	      <a href="https://www.paypal.me/ady624" class="btn btn-primary"><i class="fa fa-paypal" aria-hidden="true"></i>

@@ -2,6 +2,7 @@ config.controller('register', ['$scope', '$rootScope', 'dataService', '$timeout'
 	var tmrStatus = null;
 	$scope.loading = false;
 	$scope.code = '';
+	$scope.hasRegistered = dataService.listLocations().length > 0;
 
 	$scope.init = function() {
 	};
@@ -34,6 +35,9 @@ config.controller('register', ['$scope', '$rootScope', 'dataService', '$timeout'
 
 
 
+	$scope.cancel = function() {
+		$location.path('/');
+	};
 
 
     //init
