@@ -208,6 +208,33 @@ app.directive('tileHeight', function(){
 });
 
 
+app.directive('tileMeta', ['$parse', '$sce', function($parse, $sce) {
+  var directive = {
+      restrict: 'A',
+      scope: false,
+      link: function (scope, elem, attrs) {
+          function updateTileMeta() {
+              var pistonMeta = $parse(attrs.tileMeta)(scope);
+              var index = $parse(attrs.tileIndex)(scope) + 1;
+              var meta = renderString($sce, pistonMeta['t' + index]).meta;
+              if (!meta || !meta.type) {
+                meta = renderString($sce, pistonMeta['f' + index]).meta;
+              }
+              if (!meta || !meta.type) {
+                meta = renderString($sce, pistonMeta['i' + index]).meta;
+              }
+              scope.$parent.meta = meta;
+          }
+          
+          scope.$watchCollection(attrs.tileMeta, updateTileMeta);
+          scope.$watch(attrs.tileIndex, updateTileMeta);
+      }
+  };
+
+  return directive;
+}]);
+
+
 app.directive('help', ['$compile', function($compile) {
 	var directive = {
 		restrict: 'A',
