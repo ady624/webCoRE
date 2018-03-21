@@ -131,7 +131,7 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 			src = img.src;
 			img.osrc = src;
 		}
-		if (!src && (src.startsWith('{')) && (src.startsWith('%7B'))) return;
+		if (!src || src.startsWith('data:') || src.startsWith('{') || src.startsWith('%7B')) return;
 		var tmr = '_img_refresh_token_'
 		var p = src.indexOf(tmr);
 		if (p > 0) {
