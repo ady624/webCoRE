@@ -1,0 +1,6 @@
+{
+  "public": "dashboard",
+  "rewrites": [
+    { "source": "**/*", "destination": "/index.html" }
+  ]
+}

@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.3.000.20180224" }
+public static String version() { return "v0.3.104.20180323" }
 /*
+ *	03/23/2018 >>> v0.3.104.20180323 - BETA M3 - Fixed unexpected dashboard logouts, updating image urls in tiles, 12 am/pm in time(), unary negation following another operator
  *	02/24/2018 >>> v0.3.000.20180224 - BETA M3 - Dashboard redesign by @acd37, collapsible sidebar, fix "was" conditions on decimal attributes and log failures due to duration threshold
  *	01/16/2018 >>> v0.2.102.20180116 - BETA M2 - Fixed IE 11 script error, display of offset expression evaluation, blank device lists on piston restore, avoid error and log a warning when ST sunrise/sunset is blank
  *	12/27/2017 >>> v0.2.101.20171227 - BETA M2 - Fixed 172.x.x.x web requests thanks to @tbam, fixed array subscripting with 0.0 decimal value as in a for loop using $index
@@ -5379,9 +5380,9 @@ private Map evaluateExpression(rtData, expression, dataType = null) {
                 }
 	           	//order of operations :D
                 idx = 0
-                //#2 	 !   !!   ~ 	Logical negation, logical double-negation and bitwise NOT unary operators
+                //#2 	 !   !!   ~   - 	Logical negation, logical double-negation, bitwise NOT, and numeric negation unary operators
                 for (item in items) {
-                	if (((item.o) == '!') || ((item.o) == '!!') || ((item.o) == '~')) break;
+                	if (((item.o) == '!') || ((item.o) == '!!') || ((item.o) == '~') || (item.t == null && item.o == '-')) break;
                     secondary = true
                     idx++
                 }
@@ -7453,7 +7454,10 @@ private localToUtcTime(dateOrTimeOrString) {
                     }
                     long time = timeToday(dateOrTimeOrString, tz).getTime()
                     //adjust for PM - timeToday has no clue....
-                    if (dateOrTimeOrString.trim().toLowerCase().endsWith('pm')) time += 43200000
+                    dateOrTimeOrString = dateOrTimeOrString.trim().toLowerCase()
+                    def twelve = dateOrTimeOrString.startsWith('12')
+                    if (twelve && dateOrTimeOrString.endsWith('am')) time -= 43200000
+                    if (!twelve && dateOrTimeOrString.endsWith('pm')) time += 43200000
                     return time
                 } catch (all3) {
                     return (new Date()).getTime()
