@@ -4,14 +4,17 @@
 	<div class="loginbox">
 		<img class="loginbox-logo" src="img/webCoRE-text.svg">
 	  <div id="instance">
+			<form ng-submit="register()">
 				<p>Enter your registration code from the webCoRE SmartApp to get started.</p>
 				<p><a target="_blank" href="https://wiki.webcore.co/#Opening_the_new_dashboard_from_your_phone">Need help finding your registration code?</a></p>
 				<div class="input-group input-group-lg">
 					<input name="code" class="form-control " type="text" maxlength="4" ng-model="code" />
 					<span class="input-group-btn">
-						<a ng-disabled="code.length != 4" ng-click="register();" href="#" class="btn btn-primary"><span class="fa fa-chevron-right" aria-hidden="true"></span></a>
+						<button type="submit" ng-disabled="code.length != 4" class="btn btn-primary"><span class="fa fa-chevron-right" aria-hidden="true"></span></button>
 					</span>
-				</div>
+				</div><br />
+				<p class="text-center"><a ng-if="hasRegistered" ng-click="cancel()" class="btn btn-secondary">Cancel</a></p>
+			</form>
 		</div>
 	  <div class="help-row">
 	      <a href="https://www.paypal.me/ady624" class="btn btn-primary"><i class="fa fa-paypal" aria-hidden="true"></i>
