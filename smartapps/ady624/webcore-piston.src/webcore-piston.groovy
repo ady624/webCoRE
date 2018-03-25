@@ -771,16 +771,16 @@ try {
     }
 }
 
+/*
 //new and improved timeout recovery management
 def timeoutRecoveryHandler_webCoRE(event) {
 	timeHandler([t:now()], true)
 }
+*/
 
-/*
 def timeRecoveryHandler(event) {
 	timeHandler(event, true)
 }
-*/
 
 def executeHandler(event) {
 	handleEvents([date: event.date, device: location, name: 'execute', value: event.value, jsonData: event.jsonData])
@@ -808,8 +808,8 @@ def handleEvents(event) {
     	return;
     }
     checkVersion(rtData)
-    setTimeoutRecoveryHandler('timeoutRecoveryHandler_webCoRE')
-	//runIn(30.toInteger(), timeRecoveryHandler)
+    //setTimeoutRecoveryHandler('timeoutRecoveryHandler_webCoRE')
+	runIn(30.toInteger(), timeRecoveryHandler)
     if (rtData.semaphoreDelay) {
     	warn "Piston waited at a semaphore for ${rtData.semaphoreDelay}ms", rtData
     }
