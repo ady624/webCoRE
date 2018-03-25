@@ -285,7 +285,7 @@ public static String version() { return "v0.3.104.20180323" }
 /*** webCoRE DEFINITION														***/
 /******************************************************************************/
 private static String handle() { return "webCoRE" }
-include 'asynchttp_v1'
+//include 'asynchttp_v1'
 definition(
     name: "${handle()} Piston",
     namespace: "ady624",
@@ -809,7 +809,7 @@ def handleEvents(event) {
     }
     checkVersion(rtData)
     setTimeoutRecoveryHandler('timeoutRecoveryHandler_webCoRE')
-	//runIn(30, timeRecoveryHandler)
+	//runIn(30.toInteger(), timeRecoveryHandler)
     if (rtData.semaphoreDelay) {
     	warn "Piston waited at a semaphore for ${rtData.semaphoreDelay}ms", rtData
     }
@@ -1134,7 +1134,7 @@ private processSchedules(rtData, scheduleJob = false) {
         	t = (t < 1 ? 1 : t)
         	rtData.stats.nextSchedule = next.t
         	if (rtData.logging) info "Setting up scheduled job for ${formatLocalTime(next.t)} (in ${t}s)" + (schedules.size() > 1 ? ', with ' + (schedules.size() - 1).toString() + ' more job' + (schedules.size() > 2 ? 's' : '') + ' pending' : ''), rtData
-        	runIn(t, timeHandler, [data: next])
+        	runIn(t.toInteger(), timeHandler, [data: next])
         	//runIn(t + 30, timeRecoveryHandler, [data: next])
     	} else {
 	    	rtData.stats.nextSchedule = 0
@@ -1653,7 +1653,7 @@ private Boolean executeTask(rtData, devices, statement, task, async) {
 	        return false
 	    } else {
 	        if (rtData.logging > 1) trace "Waiting for ${delay}ms", rtData
-	        pause(delay)
+	        pauseExecution(delay)
 	    }
 	}
 	tracePoint(rtData, "t:${task.$}", now() - t, delay)
@@ -1744,7 +1744,7 @@ private executePhysicalCommand(rtData, device, command, params = [], delay = nul
             error "Error while executing physical command $device.$command($params):", rtData, null, all
         }
         if (rtData.piston.o?.ced) {
-            pause(rtData.piston.o.ced)
+            pauseExecution(rtData.piston.o.ced)
             if (rtData.logging > 2) debug "Injected a ${rtData.piston.o.ced}ms delay after [$device].$command(${params ? "$params" : ''})", rtData
         }
     }
@@ -2886,9 +2886,9 @@ private long vcmd_wolRequest(rtData, device, params) {
 	def mac = params[0]
 	def secureCode = params[1]
 	mac = mac.replace(":", "").replace("-", "").replace(".", "").replace(" ", "").toLowerCase()
-	sendHubCommand(new physicalgraph.device.HubAction(
+	sendHubCommand(new hubitat.device.HubAction(
 		"wake on lan $mac",
-		physicalgraph.device.Protocol.LAN,
+		hubitat.device.Protocol.LAN,
 		null,
 		secureCode ? [secureCode: secureCode] : [:]
 	))
@@ -3151,7 +3151,7 @@ private long vcmd_lifxPulse(rtData, device, params) {
 }
 
 
-public localHttpRequestHandler(physicalgraph.device.HubResponse hubResponse) {
+public localHttpRequestHandler(hubitat.device.HubResponse hubResponse) {
 	def responseCode = ''
 	for (header in hubResponse.headers) {
     	if (header.key.startsWith('http')) {
@@ -3248,7 +3248,7 @@ private long vcmd_httpRequest(rtData, device, params) {
 				query: method == "GET" ? data : null, //thank you @destructure00
 				body: method != "GET" ? data : null //thank you @destructure00
 			]
-			sendHubCommand(new physicalgraph.device.HubAction(requestParams, null, [callback: localHttpRequestHandler]))
+			sendHubCommand(new hubitat.device.HubAction(requestParams, null, [callback: localHttpRequestHandler]))
             return 20000
 		} catch (all) {
 			error "Error executing internal web request: ", rtData, null, all
