@@ -332,7 +332,6 @@ app.directive('collapseControl', ['dataService', function(dataService) {
 		var id = (attr.target || attr.ariaControls || '').replace('#', '');
 		var wasCollapsed = dataService.isCollapsed(id);
 		
-    console.log(attr);
 		if (wasCollapsed && 'ariaExpanded' in attr) {
 			element.attr('aria-expanded', 'false');
 		}
@@ -370,6 +369,26 @@ app.filter('orderObjectBy', function() {
     if(reverse) filtered.reverse();
     return filtered;
   };
+});
+
+app.filter('dashify', function() {
+  return function(value) {
+    return dashify(value, { condense: true });
+  }
+});
+
+app.filter('uniqueDashify', function() {
+  var keyByUniqueValue = {};
+  return function(value, key) {
+    value = dashify(value, { condense: true });
+    var unique = value;
+    var i = 1;
+    while (unique in keyByUniqueValue && keyByUniqueValue[unique] !== key) {
+      unique = value + '-' + i++;
+    }
+    keyByUniqueValue[unique] = key;
+    return unique;
+  }
 });
 
 
