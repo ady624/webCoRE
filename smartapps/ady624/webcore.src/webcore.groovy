@@ -1029,7 +1029,7 @@ private api_intf_dashboard_piston_create() {
 	def result
     debug "Dashboard: Request received to generate a new piston name"
 	if (verifySecurityToken(params.token)) {
-    	def piston = addChildApp("ady624", "${handle()} Piston", params.name?:generatePistonName())
+    	def piston = addChildApp("ady624", "${handle()} Piston", params.name?:generatePistonName(), [:])
         if (params.author || params.bin) {
         	piston.config([bin: params.bin, author: params.author, initialVersion: version()])
         }
@@ -1247,7 +1247,7 @@ private api_intf_dashboard_piston_pause() {
 	if (verifySecurityToken(params.token)) {
 	    def piston = getChildApps().find{ hashId(it.id) == params.id };
 	    if (piston) {
-        	def rtData = piston.pause()
+        	def rtData = piston.pausePiston()
             updateRunTimeData(rtData)
             //update the state because it will overwrite the atomicState
             //state[piston.id] = state[piston.id]
@@ -1417,7 +1417,7 @@ private api_intf_dashboard_piston_delete() {
 	if (verifySecurityToken(params.token)) {
 	    def piston = getChildApps().find{ hashId(it.id) == params.id };
 	    if (piston) {
-        	app.deleteChildApp(piston);
+        	app.deleteChildApp(piston.id);
 			result = [status: "ST_SUCCESS"]
             state.remove(params.id)
             state.remove('sph${params.id}')
@@ -2105,7 +2105,7 @@ public void updateRunTimeData(data) {
 public pausePiston(pistonId) {
     def piston = getChildApps().find{ hashId(it.id) == pistonId };
 	if (piston) {
-		def rtData = piston.pause()
+		def rtData = piston.pausePiston()
 		updateRunTimeData(rtData)
     }
 }

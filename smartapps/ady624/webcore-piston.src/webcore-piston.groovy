@@ -604,7 +604,7 @@ def setBin(bin) {
     return [:]
 }
 
-Map pause() {
+Map pausePiston() {
 	state.active = false
     def rtData = getRunTimeData()
 	def msg = timer "Piston successfully stopped", null, -1
@@ -614,8 +614,8 @@ Map pause() {
     rtData.stats.nextSchedule = 0
     unsubscribe()
     unschedule()
-    app.updateSetting('dev', null)
-    app.updateSetting('contacts', null)
+    app.updateSetting('dev', (Map) null)
+    app.updateSetting('contacts', (Map) null)
     state.hash = null
     state.trace = [:]
     state.subscriptions = [:]
@@ -771,13 +771,6 @@ try {
     }
 }
 
-/*
-//new and improved timeout recovery management
-def timeoutRecoveryHandler_webCoRE(event) {
-	timeHandler([t:now()], true)
-}
-*/
-
 def timeRecoveryHandler(event) {
 	timeHandler(event, true)
 }
@@ -789,7 +782,7 @@ def executeHandler(event) {
 //entry point for all events
 def handleEvents(event) {
 	//cancel all pending jobs, we'll handle them later
-	//unschedule(timeHandler)
+	unschedule(timeHandler)
     if (!state.active) return
 	def startTime = now()
     state.lastExecuted = startTime
@@ -808,8 +801,7 @@ def handleEvents(event) {
     	return;
     }
     checkVersion(rtData)
-    //setTimeoutRecoveryHandler('timeoutRecoveryHandler_webCoRE')
-	runIn(30.toInteger(), timeRecoveryHandler)
+	runIn(30.toInteger(), timeRecoveryHandler)    
     if (rtData.semaphoreDelay) {
     	warn "Piston waited at a semaphore for ${rtData.semaphoreDelay}ms", rtData
     }
@@ -880,7 +872,7 @@ def handleEvents(event) {
         def delay = event.schedule.t - now()
         if (syncTime && (delay > 0)) {
         	if (rtData.logging > 2) debug "Fast executing schedules, waiting for ${delay}ms to sync up", rtData
-        	pause delay
+        	pauseExecution delay
         }
        	success = executeEvent(rtData, event)
         syncTime = true
@@ -1135,11 +1127,11 @@ private processSchedules(rtData, scheduleJob = false) {
         	rtData.stats.nextSchedule = next.t
         	if (rtData.logging) info "Setting up scheduled job for ${formatLocalTime(next.t)} (in ${t}s)" + (schedules.size() > 1 ? ', with ' + (schedules.size() - 1).toString() + ' more job' + (schedules.size() > 2 ? 's' : '') + ' pending' : ''), rtData
         	runIn(t.toInteger(), timeHandler, [data: next])
-        	//runIn(t + 30, timeRecoveryHandler, [data: next])
+            runIn((t+30).toInteger(), timeRecoveryHandler, [data: next])
     	} else {
 	    	rtData.stats.nextSchedule = 0
             //remove the recovery
-    		//unschedule(timeRecoveryHandler)
+    		unschedule(timeRecoveryHandler)
 	    }
     }
     if (rtData.piston.o?.pep) atomicState.schedules = schedules
