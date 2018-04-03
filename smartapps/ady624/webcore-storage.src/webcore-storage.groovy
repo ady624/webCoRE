@@ -185,7 +185,16 @@ def Map listAvailableContacts(raw = false) {
         if (raw) {
             contacts[contactId] = contact
         } else {
-            contacts[contactId] = [t: contact.name, f: contact.contact.firstName, l: contact.contact.lastName, p: "$contact".endsWith('PUSH')]
+            contacts[contactId] = [t: contact.name, f: '', l: '', p: false]
+            // Mitigate corrupt contacts in ST where the contact accessor and 
+            // toString() can both throw a NullPointerException
+            try {
+                contacts[contactId].p = "$contact".endsWith('PUSH')
+                contacts[contactId].f = contact.contact?.firstName
+                contacts[contactId].l = contact.contact?.lastName
+            } catch (e) {
+                log.warn "Your contacts list includes a corrupted entry"
+            }
         }
     }
     return contacts
