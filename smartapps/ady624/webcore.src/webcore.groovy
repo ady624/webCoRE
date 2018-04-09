@@ -1575,7 +1575,6 @@ def api_email() {
 private api_execute() {
 	def result = [:]
 	def data = [:]
-    log.debug request
     def remoteAddr = "UNKOWN" /*request.getHeader("X-FORWARDED-FOR") ?: request.getRemoteAddr()*/
     debug "Dashboard: Request received to execute a piston from IP $remoteAddr"
 	if (params) {
@@ -1705,6 +1704,7 @@ private getDashboardApp(install = false) {
     return dashboardApp
 }
 
+
 private String getDashboardInitUrl(register = false) {
 	def url = register ? getDashboardRegistrationUrl() : getDashboardUrl()
     if (!url) return null
@@ -1725,7 +1725,7 @@ public Map listAvailableDevices(raw = false, updateCache = false) {
 		if (raw) {
     		result = settings.findAll{ it.key.startsWith("dev:") }.collect{ it.value }.flatten().collectEntries{ dev -> [(hashId(dev.id, updateCache)): dev]}
     	} else {
-    		result = settings.findAll{ it.key.startsWith("dev:") }.collect{ it.value }.flatten().collectEntries{ dev -> [(hashId(dev.id, updateCache)): dev]}.collectEntries{ id, dev -> [ (id): [ n: dev.getDisplayName(), cn: dev.getCapabilities()*.name, a: dev.getSupportedAttributes().unique{ it.name }.collect{def x = [n: it.name, t: it.getDataType(), o: it.getValues()]; try {x.v = dev.currentValue(x.n);} catch(all) {}; x}, c: dev.getSupportedCommands().unique{ it.getName() }.collect{[n: it.getName(), p: it.getArguments()]} ]]}
+    		result = settings.findAll{ it.key.startsWith("dev:") }.collect{ it.value }.flatten().collectEntries{ dev -> [(hashId(dev.id, updateCache)): dev]}.collectEntries{ id, dev -> [ (id): [ n: dev.getDisplayName(), cn: dev.getCapabilities()*.name, a: dev.getSupportedAttributes().unique{ it.name }.collect{def x = [n: it.name, t: it.getDataType(), o: it.getValues()]; try {x.v = dev.currentValue(x.n);} catch(all) {}; x}, c: dev.getSupportedCommands().unique{ transformCommand(it) }.collect{[n: transformCommand(it), p: it.getArguments()]} ]]}
 		}
 	}
     List presenceDevices = getChildDevices()
@@ -1737,6 +1737,13 @@ public Map listAvailableDevices(raw = false, updateCache = false) {
 		}
     }
     return result
+}
+
+private def transformCommand(command){
+    if(command.getName() == "push" && (command.getArguments()?.size() ?: 0) == 0){
+     	return "pushMomentary"   
+    }
+    return command.getName()
 }
 
 private Map listAvailableContacts(raw = false, updateCache = false) {
@@ -2407,7 +2414,7 @@ private static Map capabilities() {
 		lock						: [ n: "Lock",							d: "electronic locks",				a: "lock",								c: ["lock", "unlock"],	s:"numberOfCodes,numCodes", i: "usedCode", 																									 								],
 		lockOnly					: [ n: "Lock Only",						d: "electronic locks (lock only)",	a: "lock",								c: ["lock"],																																														],
 		mediaController				: [ n: "Media Controller",				d: "media controllers",				a: "currentActivity",					c: ["startActivity", "getAllActivities", "getCurrentActivity"],																																		],
-		momentary					: [ n: "Momentary",						d: "momentary switches",													c: ["push"],																																														],
+		momentary					: [ n: "Momentary",						d: "momentary switches",													c: ["pushMomentary"],																																														],
 		motionSensor				: [ n: "Motion Sensor",					d: "motion sensors",				a: "motion",																																																								],
         musicPlayer					: [ n: "Music Player",					d: "music players",					a: "status",							c: ["mute", "nextTrack", "pause", "play", "playTrack", "previousTrack", "restoreTrack", "resumeTrack", "setLevel", "setTrack", "stop", "unmute"],													],
 		notification				: [ n: "Notification",					d: "notification devices",													c: ["deviceNotification"],																																											],
@@ -2594,6 +2601,7 @@ private static Map commands() {
 		presetPosition				: [ n: "Move to preset position",														a: "windowShade",					v: "partially open",																																],
 		previousTrack				: [ n: "Previous track",																																																														],
         push						: [ n: "Push",							d: "Push button {0}",							a: "pushed",												p:[[n: "Button #", t: "integer"]]																																																										],
+        pushMomentary				: [ n: "Push"																																																																						],
 		refresh						: [ n: "Refresh",					i: 'refresh',																																																											],
 		restoreTrack				: [ n: "Restore track...",				d: "Restore track <uri>{0}</uri>",																			p: [[n:"Track URL",t:"url"]],  																								],
 		resumeTrack					: [ n: "Resume track...",				d: "Resume track <uri>{0}</uri>",																			p: [[n:"Track URL",t:"url"]],  																								],
