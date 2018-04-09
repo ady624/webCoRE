@@ -4284,13 +4284,14 @@ private traverseExpressions(node, closure, param, parentNode = null) {
 }
 
 private getRoutineById(routineId) {
-	def routines = location.helloHome?.getPhrases()
+    return [ id : routineId ]
+	/*def routines = location.helloHome?.getPhrases()
     for(routine in routines) {
     	if (routine && routine?.label && (hashId(routine.id) == routineId)) {
     		return routine
         }
     }
-    return null
+    return null */
 }
 
 private void updateDeviceList(deviceIdList) {
@@ -4397,7 +4398,7 @@ private void subscribeAll(rtData) {
                             	def routine = getRoutineById(value.c)
                                 if (routine) {
 	                        		subscriptionId = "$deviceId${operand.v}${routine.id}"
-    	                        	attribute = "routineExecuted.${routine.id}"
+    	                        	attribute = "routineExecuted"
                                 }
                             }
                             break
