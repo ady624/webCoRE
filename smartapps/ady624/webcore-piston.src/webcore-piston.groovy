@@ -2362,7 +2362,7 @@ private long vcmd_setAlarmSystemStatus(rtData, device, params) {
 	def statusIdOrName = params[0]
     def status = rtData.virtualDevices['alarmSystemStatus']?.o?.find{ (it.key == statusIdOrName) || (it.value == statusIdOrName)}.collect{ [id: it.key, name: it.value] }
     if (status && status.size()) {
-	    sendLocationEvent(name: 'alarmSystemStatus', value: status[0].id)
+	    sendLocationEvent(name: 'hsmStatus', value: status[0].id)
     } else {
 	    error "Error setting SmartThings Home Monitor status. Status '$statusIdOrName' does not exist.", rtData
     }
@@ -3343,7 +3343,14 @@ private long vcmd_writeToFuelStream(rtData, device, params) {
     	],
         requestContentType: "application/json"
     ]
-    if (asynchttp_v1) asynchttp_v1.put(null, requestParams)
+    if (asynchttp_v1) {
+        asynchttp_v1.put(null, requestParams)
+    }
+    else {
+        httpPut(requestParams) {
+            
+        }
+    }
     return 0
 }
 
@@ -4394,12 +4401,15 @@ private void subscribeAll(rtData) {
                     def subscriptionId = null
                     def attribute = null
                     switch (operand.v) {
+                        case 'alarmSystemStatus':
+                        	subscriptionId = "$deviceId${operand.v}"
+                           	attribute = "hsmStatus"
+                        	break;
 						case 'time':
                         case 'date':
                         case 'datetime':
                         case 'mode':
                         case 'powerSource':
-                        case 'alarmSystemStatus':
                        		subscriptionId = "$deviceId${operand.v}"
                            	attribute = operand.v
                             break
@@ -4739,8 +4749,8 @@ private Map getDeviceAttribute(rtData, deviceId, attributeName, subDeviceIndex =
             	def mode = location.getCurrentMode();
             	return [t: 'string', v: hashId(mode.getId()), n: mode.getName()]
         	case 'alarmSystemStatus':
-				def v = hubUID ? 'off' : location.currentState("alarmSystemStatus")?.value
-                def n = hubUID ? 'Disarmed' : rtData.virtualDevices['alarmSystemStatus']?.o[v]
+				def v = rtData.hsmStatus
+                def n = rtData.virtualDevices['alarmSystemStatus']?.o[v]
 				return [t: 'string', v: v, n: n]
         }
         return [t: 'string', v: location.getName().toString()]
@@ -7657,7 +7667,13 @@ private log(message, rtData = null, shift = null, err = null, cmd = null, force 
         }
     }
   	if (hubUID) {
-    	log."$cmd" "$prefix $message"
+        if(err){
+            log."$cmd" "$prefix $message $err"
+        }
+        else {
+            log."$cmd" "$prefix $message"
+        }
+    	
     } else {
 		log."$cmd" "$prefix $message", err
     }
@@ -7873,7 +7889,7 @@ private static Map getSystemVariables() {
 		"\$iftttStatusCode": [t: "integer", v: null],
 		"\$iftttStatusOk": [t: "boolean", v: null],
 		"\$locationMode": [t: "string", d: true],
-		"\$shmStatus": [t: "string", d: true],
+		"\$hsmStatus": [t: "string", d: true],
         "\$version": [t: "string", d: true]
 	].sort{it.key}
 }
@@ -7926,7 +7942,7 @@ private getSystemVariableValue(rtData, name) {
 		case "\$randomSaturation": def result = getRandomValue("\$randomSaturation") ?: (int)Math.round(50 + 50 * Math.random()); setRandomValue("\$randomSaturation", result); return result
 		case "\$randomHue": def result = getRandomValue("\$randomHue") ?: (int)Math.round(360 * Math.random()); setRandomValue("\$randomHue", result); return result
   		case "\$locationMode": return location.getMode()
-		case "\$shmStatus": switch (hubUID ? 'off' : location.currentState("alarmSystemStatus")?.value) { case 'off': return 'Disarmed'; case 'stay': return 'Armed/Stay'; case 'away': return 'Armed/Away'; }; return null;
+		case "\$hsmStatus": switch (rtData.hsmStatus) { case 'disarmed': return 'Disarmed'; case 'armedHome': return 'Armed/Home'; case 'armedAway': return 'Armed/Away'; }; return null;
     }
 }
 

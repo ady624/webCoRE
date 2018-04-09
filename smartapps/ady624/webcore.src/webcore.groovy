@@ -892,6 +892,7 @@ private subscribeAll() {
 	subscribe(location, "echoSistant", echoSistantHandler)
     subscribe(location, "HubUpdated", hubUpdatedHandler, [filterEvents: false])
     subscribe(location, "summary", summaryHandler, [filterEvents: false])
+	subscribe(location, "hsmStatus", hsmHandler, [filterEvents: false])
     setPowerSource(getHub()?.isBatteryInUse() ? 'battery' : 'mains')
 }
 
@@ -975,7 +976,7 @@ private api_get_base_result(deviceVersion = 0, updateCache = false) {
             id: hashId(location.id, updateCache),
             mode: hashId(location.getCurrentMode().id, updateCache),
             modes: location.getModes().collect{ [id: hashId(it.id, updateCache), name: it.name ]},
-            shm: hubUID ? 'off' : location.currentState("alarmSystemStatus")?.value,
+					shm: transformHsmStatus(atomicState["hsmStatus"]),
             name: location.name,
             temperatureScale: location.getTemperatureScale(),
             timeZone: tz ? [
@@ -987,6 +988,22 @@ private api_get_base_result(deviceVersion = 0, updateCache = false) {
         ],
         now: now(),
     ]
+}
+
+private String transformHsmStatus(status){
+	switch(status){
+		case "disarmed":
+			return "off"
+			break;
+		case "armedHome":
+			return "stay"
+			break;
+		case "armedAway":
+			return "away"
+			break;
+		default:
+			return "Unknown"
+	}
 }
 
 private api_intf_dashboard_load() {
@@ -1051,7 +1068,6 @@ private api_intf_dashboard_piston_create() {
         if (params.author || params.bin) {
         	piston.config([bin: params.bin, author: params.author, initialVersion: version()])
         }
-      	if (hubUID) piston.installed()
         result = [status: "ST_SUCCESS", id: hashId(piston.id)]
 	} else {
     	result = api_get_error_result("ERR_INVALID_TOKEN")
@@ -1574,7 +1590,7 @@ def api_ifttt() {
     data.remoteAddr = remoteAddr
 	def eventName = params?.eventName
 	if (eventName) {
-		if (!hubUID) sendLocationEvent([name: "ifttt", value: eventName, isStateChange: true, linkText: "IFTTT event", descriptionText: "${handle()} has received an IFTTT event: $eventName", data: data])
+		sendLocationEvent([name: "ifttt", value: eventName, isStateChange: true, linkText: "IFTTT event", descriptionText: "${handle()} has received an IFTTT event: $eventName", data: data])
 	}
 	render contentType: "text/html", data: "<!DOCTYPE html><html lang=\"en\">Received event $eventName.<body></body></html>"
 }
@@ -1585,7 +1601,7 @@ def api_email() {
 	def from = data.from ?: ''
 	def pistonId = params?.pistonId
     if (pistonId) {
-		if (!hubUID) sendLocationEvent([name: "email", value: pistonId, isStateChange: true, linkText: "Email event", descriptionText: "${handle()} has received an email from $from", data: data])
+		sendLocationEvent([name: "email", value: pistonId, isStateChange: true, linkText: "Email event", descriptionText: "${handle()} has received an email from $from", data: data])
     }
 	render contentType: "text/plain", data: "OK"
 }
@@ -1608,7 +1624,7 @@ private api_execute() {
 	def pistonIdOrName = params?.pistonIdOrName
     def piston = getChildApps().find{ (it.label == pistonIdOrName) || (hashId(it.id) == pistonIdOrName) };
     if (piston) {
-    	if (!hubUID) sendLocationEvent(name: hashId(piston.id), value: remoteAddr, isStateChange: true, displayed: false, linkText: "Execute event", descriptionText: "External piston execute request from IP $remoteAddr", data: data)
+    	sendLocationEvent(name: hashId(piston.id), value: remoteAddr, isStateChange: true, displayed: false, linkText: "Execute event", descriptionText: "External piston execute request from IP $remoteAddr", data: data)
         result.result = 'OK'
 	} else {
     	result.result = 'ERROR'
@@ -1633,7 +1649,7 @@ def recoveryHandler() {
     if (failedPistons.size()) {
     	for (piston in failedPistons) {
 		    warn "Piston $piston.name was sent a recovery signal because it was ${now() - piston.meta.n}ms late"
-	    	if (!hubUID) sendLocationEvent(name: piston.id, value: 'recovery', isStateChange: true, displayed: false, linkText: "Recovery event", descriptionText: "Recovery event for piston $piston.name")
+	    	sendLocationEvent(name: piston.id, value: 'recovery', isStateChange: true, displayed: false, linkText: "Recovery event", descriptionText: "Recovery event for piston $piston.name")
 	    }
     }
 	if (state.version != version()) {
@@ -1805,7 +1821,7 @@ private setPowerSource(powerSource, atomic = true) {
     } else {
     	state.powerSource = powerSource
     }
-	if (!hubUID) sendLocationEvent([name: 'powerSource', value: powerSource, isStateChange: true, linkText: "webCoRE power source event", descriptionText: "${handle()} has detected a new power source: $powerSource"])
+	sendLocationEvent([name: 'powerSource', value: powerSource, isStateChange: true, linkText: "webCoRE power source event", descriptionText: "${handle()} has detected a new power source: $powerSource"])
 }
 
 private Map listAvailableVariables() {
@@ -1879,7 +1895,7 @@ private String generatePistonName() {
 }
 
 private ping() {
-	if (!hubUID) sendLocationEvent( [name: handle(), value: 'ping', isStateChange: true, displayed: false, linkText: "${handle()} ping reply", descriptionText: "${handle()} has received a ping reply and is replying with a pong", data: [id: hashId(app.id), name: app.label]] )
+	sendLocationEvent( [name: handle(), value: 'ping', isStateChange: true, displayed: false, linkText: "${handle()} ping reply", descriptionText: "${handle()} has received a ping reply and is replying with a pong", data: [id: hashId(app.id), name: app.label]] )
 }
 
 private getLogging() {
@@ -1960,7 +1976,8 @@ private registerInstance() {
     def pa = lpa.size()
     List lpd = pistons.findAll{ !it.a }.collect{ it.id }
     def pd = pistons.size() - pa
-	if (asynchttp_v1) asynchttp_v1.put(instanceRegistrationHandler, [
+    
+    def params = [
         uri: "https://api-${region}-${instanceId[32]}.webcore.co:9247",
         path: '/instance/register',
         headers: ['ST' : instanceId],
@@ -1976,7 +1993,15 @@ private registerInstance() {
             pd: pd,
             lpd: lpd.join(',')
     	]
-    ])
+    ]
+	if (asynchttp_v1)
+    {
+        asynchttp_v1.put(instanceRegistrationHandler, params)
+    }
+    else {
+        params << [contentType: 'text/plain']
+        httpPut(params) { res -> }
+    }   
 }
 
 private initSunriseAndSunset() {
@@ -2081,6 +2106,7 @@ public Map getRunTimeData(semaphore = null, fetchWrappers = false) {
         globalStore: state.store ?: [:],
         settings: state.settings ?: [:],
         lifx: state.lifx ?: [:],
+		hsmStatus: atomicState.hsmStatus,
         powerSource: state.powerSource ?: 'mains',
 		region: state.endpoint.contains('graph-eu') ? 'eu' : 'us',
         instanceId: hashId(app.id),
@@ -2180,11 +2206,11 @@ public executePiston(pistonId, data, source) {
 }
 
 private sendVariableEvent(variable) {
-	if (!hubUID) sendLocationEvent([name: variable.name.startsWith('@@') ? '@@' + handle() : hashId(app.id), value: variable.name, isStateChange: true, displayed: false, linkText: "${handle()} global variable ${variable.name} changed", descriptionText: "${handle()} global variable ${variable.name} changed", data: [id: hashId(app.id), name: app.label, event: 'variable', variable: variable]])
+	sendLocationEvent([name: variable.name.startsWith('@@') ? '@@' + handle() : hashId(app.id), value: variable.name, isStateChange: true, displayed: false, linkText: "${handle()} global variable ${variable.name} changed", descriptionText: "${handle()} global variable ${variable.name} changed", data: [id: hashId(app.id), name: app.label, event: 'variable', variable: variable]])
 }
 
 private broadcastPistonList() {
-    if (!hubUID) sendLocationEvent([name: handle(), value: 'pistonList', isStateChange: true, displayed: false, data: [id: hashId(app.id), name: app.label, pistons: getChildApps().findAll{ it.name == "${handle()} Piston" }.collect{[id: hashId(it.id), name: it.label]}]])
+    sendLocationEvent([name: handle(), value: 'pistonList', isStateChange: true, displayed: false, data: [id: hashId(app.id), name: app.label, pistons: getChildApps().findAll{ it.name == "${handle()} Piston" }.collect{[id: hashId(it.id), name: it.label]}]])
 }
 
 def webCoREHandler(event) {
@@ -2274,7 +2300,9 @@ def NewIncidentHandler(evt) {
 	//log.error "$evt.name >>> ${evt.jsonData}"
 }
 
-
+def hsmHandler(evt){
+	atomicState["hsmStatus"] = evt.value
+}
 
 def lifxHandler(response, cbkData) {
 	if ((response.status == 200)) {
@@ -2398,7 +2426,7 @@ private debug(message, shift = null, err = null, cmd = null) {
 	} else if (cmd == "warn") {
 		log.warn "$prefix$message", err
 	} else if (cmd == "error") {
-      if (hubUID) { log.error "$prefix$message" } else { log.error "$prefix$message", err }
+      if (hubUID) { log.error "$prefix$message $err" } else { log.error "$prefix$message", err }
 	} else {
 		log.debug "$prefix$message", err
 	}
@@ -3031,11 +3059,12 @@ private Map getLocationModeOptions(updateCache = false) {
 }
 private static Map getAlarmSystemStatusOptions() {
 	return [
-    	off:	"Disarmed",
-        stay: 	"Armed/Stay",
-        away:	"Armed/Away"
+		disarmed:	"Disarmed",
+		armedHome: 	"Armed/Home",
+		armedAway:	"Armed/Away"
     ]
 }
+
 
 private Map getRoutineOptions(updateCache = false) {
 	def routines = location.helloHome?.getPhrases()
@@ -3068,7 +3097,7 @@ private Map virtualDevices(updateCache = false) {
     	mode:				[ n: 'Location mode',				t: 'enum', 		o: getLocationModeOptions(updateCache),		x: true],
         tile:				[ n: 'Piston tile',					t: 'enum',		o: ['1':'1','2':'2','3':'3','4':'4','5':'5','6':'6','7':'7','8':'8','9':'9','10':'10','11':'11','12':'12','13':'13','14':'14','15':'15','16':'16'],		m: true	],
         routine:			[ n: 'Routine',						t: 'enum',		o: getRoutineOptions(updateCache),			m: true],
-    	alarmSystemStatus:	[ n: 'Smart Home Monitor status',	t: 'enum',		o: getAlarmSystemStatusOptions(),			x: true],
+    	alarmSystemStatus:	[ n: 'Home Security Monitor status',	t: 'enum',		o: getAlarmSystemStatusOptions(),			x: true],
     ]
 }
 public Map getColorByName(name){
