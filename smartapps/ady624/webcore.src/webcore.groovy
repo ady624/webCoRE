@@ -386,6 +386,11 @@ def pageMain() {
 				//trace "*** DO NOT SHARE THIS LINK WITH ANYONE *** Dashboard URL: ${getDashboardInitUrl()}"
 				href "", title: "Dashboard", style: "external", url: getDashboardInitUrl(), description: "Tap to open", image: "https://cdn.rawgit.com/ady624/${handle()}/master/resources/icons/dashboard.png", required: false
 				href "", title: "Register a browser", style: "embedded", url: getDashboardInitUrl(true), description: "Tap to open", image: "https://cdn.rawgit.com/ady624/${handle()}/master/resources/icons/browser-reg.png", required: false
+				input "customEndpoints", "bool", title: "Use custom endpoints?", default: false, required: true
+                input "customHubUrl", "string", title: "Custom hub url different from https://cloud.hubitat.com", default: null, required: false
+                input "customWebcoreInstanceUrl", "string", title: "Custom webcore instance url different from dashboard.webcore.co", default: null, required: false
+                paragraph "If you enter a custom url above you will have to use a different webcore instance from dashboard.webcore.co as they restrict their api to hubitat and smartthing's cloud"
+
 			}
 		}
 
@@ -808,6 +813,14 @@ def installed() {
 }
 
 def updated() {
+    if(state.accessToken){
+        if(customEndpoints && (customHubUrl ?: "") != ""){
+               state.endpoint = customServerUrl("?access_token=${state.accessToken}")
+        }
+        else {
+               state.endpoint = hubUID ? apiServerUrl("$hubUID/apps/${app.id}/?access_token=${state.accessToken}") : apiServerUrl("/api/token/${accessToken}/smartapps/installations/${app.id}/")
+        }
+    }
 	warn "Updating webCoRE ${version()}"
 	unsubscribe()
     unschedule()
@@ -850,7 +863,12 @@ private initializeWebCoREEndpoint() {
             try {
                 def accessToken = createAccessToken()
                 if (accessToken) {
-                    state.endpoint = hubUID ? apiServerUrl("$hubUID/apps/${app.id}/?access_token=${state.accessToken}") : apiServerUrl("/api/token/${accessToken}/smartapps/installations/${app.id}/")
+                    if(customEndpoints && (customHubUrl ?: "") != ""){
+                       state.endpoint = customServerUrl("?access_token=${state.accessToken}")
+                    }
+                    else {
+                       state.endpoint = hubUID ? apiServerUrl("$hubUID/apps/${app.id}/?access_token=${state.accessToken}") : apiServerUrl("/api/token/${accessToken}/smartapps/installations/${app.id}/")
+                    }
                 }
             } catch(e) {
                 state.endpoint = null
@@ -1704,11 +1722,28 @@ private getDashboardApp(install = false) {
     return dashboardApp
 }
 
+def customServerUrl(path){
+    path ?: ""
+    if(!path.startsWith("/")){
+        path = "/" + path
+    }
+       return customHubUrl + "/apps/api/" + app.id + path
+}
+
 
 private String getDashboardInitUrl(register = false) {
 	def url = register ? getDashboardRegistrationUrl() : getDashboardUrl()
     if (!url) return null
-    return url + (register ? "register/" : "init/") + (apiServerUrl("").replace("https://", '').replace(".api.smartthings.com", "").replace(":443", "").replace("/", "") + ((hubUID ?: state.accessToken) + app.id).replace("-", "") + (hubUID ? '/?access_token=' + state.accessToken : '')).bytes.encodeBase64()
+    if(customEndpoints && (customHubUrl ?: "") != ""){
+        return url + (register ? "register/" : "init/") +	(
+            customServerUrl('/?access_token=' + state.accessToken)
+        ).bytes.encodeBase64()
+    }
+    else {
+        return url + (register ? "register/" : "init/") + 
+         (apiServerUrl("").replace("https://", '').replace(".api.smartthings.com", "").replace(":443", "").replace("/", "") + 
+          	((hubUID ?: state.accessToken) + app.id).replace("-", "") + (hubUID ? '/?access_token=' + state.accessToken : '')).bytes.encodeBase64()
+    }
 }
 
 private String getDashboardRegistrationUrl() {
@@ -1980,7 +2015,13 @@ public Boolean isInstalled() {
 
 public String getDashboardUrl() {
 	if (!state.endpoint) return null
-	return "https://dashboard.${domain()}/"
+
+    if(customEndpoints && (customWebcoreInstanceUrl ?: "") != ""){
+        return customWebcoreInstanceUrl + "/"
+    }
+    else {
+       return "https://dashboard.${domain()}/"
+    }
 }
 
 public refreshDevices() {
