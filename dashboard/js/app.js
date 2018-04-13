@@ -803,7 +803,7 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 		if (!si || !si.token) {
 			if ((app.initialInstanceUri && app.initialInstanceUri.length) || (uri && uri.length)) {
 				uri = app.initialInstanceUri ? app.initialInstanceUri : uri;
-				if (!uri.startsWith('https://')) {
+				if (!uri.startsWith('https://') && !uri.startsWith('http://')) {
 					if (uri && (uri.indexOf('tat.comapi') > 0)) {
 						var parts = uri.split('api');
 						if (parts[1].length >= 33) {
