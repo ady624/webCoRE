@@ -2176,7 +2176,7 @@ private long cmd_setColorTemperature(rtData, device, params) {
 }
 
 private getColor(colorValue) {
-    def color = (colorValue == 'Random') ? colorUtil?.RANDOM : colorUtil?.findByName(colorValue)
+    def color = (colorValue == 'Random') ? (colorUtil?.RANDOM ?: parent.getRandomColor()) : (colorUtil?.findByName(colorValue) ?: parent.getColorByName(colorValue))
     if (color) {
 		color = [
         	hex: color.rgb,
@@ -7912,8 +7912,8 @@ private getSystemVariableValue(rtData, name) {
 		case "\$time": def t = localDate(); def h = t.hours; def m = t.minutes; return (h == 0 ? 12 : (h > 12 ? h - 12 : h)) + ":" + (m < 10 ? "0$m" : "$m") + " " + (h <12 ? "A.M." : "P.M.")
 		case "\$time24": def t = localDate(); def h = t.hours; def m = t.minutes; return h + ":" + (m < 10 ? "0$m" : "$m")
 		case "\$random": def result = getRandomValue("\$random") ?: (double)Math.random(); setRandomValue("\$random", result); return result
-		case "\$randomColor": def result = getRandomValue("\$randomColor") ?: colorUtil?.RANDOM?.rgb; setRandomValue("\$randomColor", result); return result
-		case "\$randomColorName": def result = getRandomValue("\$randomColorName") ?: colorUtil?.RANDOM?.name; setRandomValue("\$randomColorName", result); return result
+		case "\$randomColor": def result = getRandomValue("\$randomColor") ?: (colorUtil?.RANDOM ?: parent.getRandomColor())?.rgb; setRandomValue("\$randomColor", result); return result
+		case "\$randomColorName": def result = getRandomValue("\$randomColorName") ?: (colorUtil?.RANDOM ?: parent.getRandomColor())?.name; setRandomValue("\$randomColorName", result); return result
 		case "\$randomLevel": def result = getRandomValue("\$randomLevel") ?: (int)Math.round(100 * Math.random()); setRandomValue("\$randomLevel", result); return result
 		case "\$randomSaturation": def result = getRandomValue("\$randomSaturation") ?: (int)Math.round(50 + 50 * Math.random()); setRandomValue("\$randomSaturation", result); return result
 		case "\$randomHue": def result = getRandomValue("\$randomHue") ?: (int)Math.round(360 * Math.random()); setRandomValue("\$randomHue", result); return result
