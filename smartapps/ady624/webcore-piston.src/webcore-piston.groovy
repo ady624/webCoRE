@@ -823,8 +823,9 @@ def handleEvents(event) {
     }
     //process all time schedules in order
     def t = now()
-    while (success && (20000 + rtData.timestamp - now() > 15000)) {
-        //we only keep doing stuff if we haven't passed the 10s execution time mark
+    
+    while (success && (30000 + rtData.timestamp - now() > 10000)) { //allocate 30 seconds total execution time with max of 20 for schedule loop
+        //we only keep doing stuff if we haven't passed the 20s execution time mark
         def schedules = rtData.piston.o?.pep ? atomicState.schedules : state.schedules
         //anything less than 2 seconds in the future is considered due, we'll do some pause to sync with it
         //we're doing this because many times, the scheduler will run a job early, usually 0-1.5 seconds early...
@@ -832,7 +833,7 @@ def handleEvents(event) {
         if (event.name == 'wc_async_reply') {
         	event.schedule = schedules.sort{ it.t }.find{ it.d == event.value }
         } else {
-        	event = [date: event.date, device: location, name: 'time', value: now(), schedule: schedules.sort{ it.t }.find{ it.t < now() + 2000 }]
+        	event = [date: event.date, device: location, name: 'time', value: now(), schedule: schedules.sort{ it.t }.find{ it.t < now() + 3000 }]
        }
         if (!event.schedule) break
         long threshold = now() > event.schedule.t ? now() : event.schedule.t
@@ -1609,8 +1610,10 @@ private Boolean executeTask(rtData, devices, statement, task, async) {
         //ensure value type is successfuly passed through
 		params.push p
     }
-
-	def command = task.c == "pushMomentary" ? "push" : task.c	
+    
+    //handle duplicate command "push" which was replaced with fake command "pushMomentary"
+    def override =  rtData.commands.overrides.find { it.value.r == task.c }
+	def command = override ? override.value.c : task.c	
 
  	def vcmd = rtData.commands.virtual[command]
     long delay = 0
@@ -1634,12 +1637,13 @@ private Boolean executeTask(rtData, devices, statement, task, async) {
     //if we don't have to wait, we're home free
     if (delay) {
     	//get remaining piston time
-    	def timeLeft = 20000 + rtData.timestamp - now()
+    	def timeLeft = 30000 + rtData.timestamp - now()
         //negative delays force us to reschedule, no sleeping on this one
         boolean reschedule = (delay < 0)
         delay = reschedule ? -delay : delay
-    	//we're aiming at waking up with at least 10s left
-    	if (reschedule || (timeLeft - delay < 10000) || (delay >= 5000) || async) {
+    	//we're aiming at waking up with at least 3s left
+		//keep executing until we hit 3 seconds before the total execution time limit
+    	if (reschedule || (timeLeft - delay < 3000) || (delay >= 5000) || async) {
 	        //schedule a wake up
 	        if (rtData.logging > 1) trace "Requesting a wake up for ${formatLocalTime(now() + delay)} (in ${cast(rtData, delay / 1000, 'decimal')}s)", rtData
             tracePoint(rtData, "t:${task.$}", now() - t, -delay)
@@ -1670,6 +1674,10 @@ private long executeVirtualCommand(rtData, devices, command, params)
 }
 
 private executePhysicalCommand(rtData, device, command, params = [], delay = null, scheduleDevice = null, disableCommandOptimization = false) {
+	if(!!delay && !scheduleDevice){
+		//delay without schedules is not supported in hubitat
+		scheduleDevice = hashId(device.id)
+	}
 	if (!!delay && !!scheduleDevice) {
     	//we're using schedules instead
         def statement = rtData.currentAction
@@ -1716,7 +1724,7 @@ private executePhysicalCommand(rtData, device, command, params = [], delay = nul
             	msg.m = "Skipped execution of physical command [${device.label}].$command($params) because it would make no change to the device."
             } else {
                 if (params.size()) {
-                    if (delay) {
+                    if (delay) { //not supported
                         device."$command"((params as Object[]) + [delay: delay])
                         msg.m = "Executed physical command [${device.label}].$command($params, [delay: $delay])"
                     } else {
@@ -1724,7 +1732,7 @@ private executePhysicalCommand(rtData, device, command, params = [], delay = nul
                         msg.m = "Executed physical command [${device.label}].$command($params)"
                     }
                 } else {
-                    if (delay) {
+                    if (delay) { //not supported
                         device."$command"([delay: delay])
                         msg.m = "Executed physical command [${device.label}].$command([delay: $delay])"
                     } else {
@@ -2644,7 +2652,7 @@ private long vcmd_internal_fade(Map rtData, device, String command, int startLev
     return duration + 100
 }
 
-private long vcmd_flash(rtData, device, params) {
+private long vcmd_emulatedFlash(rtData, device, params) {
 	long onDuration = cast(rtData, params[0], 'long')
 	long offDuration = cast(rtData, params[1], 'long')
     int cycles = cast(rtData, params[2], 'integer')

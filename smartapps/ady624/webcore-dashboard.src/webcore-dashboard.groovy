@@ -155,9 +155,7 @@ private void broadcastEvent(deviceId, eventName, eventValue, eventTime) {
             headers: ['ST' : state.instanceId],
             body: [d: deviceId, n: eventName, v: eventValue, t: eventTime]
         ]
-        
-    log.trace(params)
-
+    
     httpPut(params){
         resp ->resp.data
         log.info("broadcastEvent response :: ${resp.data}") 

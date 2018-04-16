@@ -158,16 +158,18 @@ def initData(devices, contacts) {
 }
 
 def Map listAvailableDevices(raw = false) {
+    def overrides = commandOverrides()
 	if (raw) {
     	return settings.findAll{ it.key.startsWith("dev:") }.collect{ it.value }.flatten().collectEntries{ dev -> [(hashId(dev.id)): dev]}
     } else {
-    	return settings.findAll{ it.key.startsWith("dev:") }.collect{ it.value }.flatten().collectEntries{ dev -> [(hashId(dev.id)): dev]}.collectEntries{ id, dev -> [ (id): [ n: dev.getDisplayName(), cn: dev.getCapabilities()*.name, a: dev.getSupportedAttributes().unique{ it.name }.collect{def x = [n: it.name, t: it.getDataType(), o: it.getValues()]; try {x.v = dev.currentValue(x.n);} catch(all) {}; x}, c: dev.getSupportedCommands().unique{ transformCommand(it) }.collect{[n: transformCommand(it), p: it.getArguments()]} ]]}
+    	return settings.findAll{ it.key.startsWith("dev:") }.collect{ it.value }.flatten().collectEntries{ dev -> [(hashId(dev.id)): dev]}.collectEntries{ id, dev -> [ (id): [ n: dev.getDisplayName(), cn: dev.getCapabilities()*.name, a: dev.getSupportedAttributes().unique{ it.name }.collect{def x = [n: it.name, t: it.getDataType(), o: it.getValues()]; try {x.v = dev.currentValue(x.n);} catch(all) {}; x}, c: dev.getSupportedCommands().unique{ transformCommand(it, overrides) }.collect{[n: transformCommand(it, overrides), p: it.getArguments()]} ]]}
 	}
 }
 
-private def transformCommand(command){
-    if(command.getName() == "push" && (command.getArguments()?.size() ?: 0) == 0){
-     	return "pushMomentary"   
+private def transformCommand(command, overrides){
+    def override = overrides[command.getName()]
+    if(override && override.s == command.getArguments()?.toString()){
+    	return override.r;   
     }
     return command.getName()
 }
@@ -201,6 +203,12 @@ def Map listAvailableContacts(raw = false) {
 public String mem(showBytes = true) {
 	def bytes = state.toString().length()
 	return Math.round(100.00 * (bytes/ 100000.00)) + "%${showBytes ? " ($bytes bytes)" : ""}"
+}
+
+public Map commandOverrides(){
+	return [
+     	push : [c: "push", s: null , r: "pushMomentary"]  
+    ]
 }
 
 /******************************************************************************/

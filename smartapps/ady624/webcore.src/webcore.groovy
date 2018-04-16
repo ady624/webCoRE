@@ -1757,10 +1757,11 @@ public Map listAvailableDevices(raw = false, updateCache = false) {
     if (storageApp) {
     	result = storageApp.listAvailableDevices(raw)
 	} else {
+        def overrides = commandOverrides()
 		if (raw) {
     		result = settings.findAll{ it.key.startsWith("dev:") }.collect{ it.value }.flatten().collectEntries{ dev -> [(hashId(dev.id, updateCache)): dev]}
     	} else {
-    		result = settings.findAll{ it.key.startsWith("dev:") }.collect{ it.value }.flatten().collectEntries{ dev -> [(hashId(dev.id, updateCache)): dev]}.collectEntries{ id, dev -> [ (id): [ n: dev.getDisplayName(), cn: dev.getCapabilities()*.name, a: dev.getSupportedAttributes().unique{ it.name }.collect{def x = [n: it.name, t: it.getDataType(), o: it.getValues()]; try {x.v = dev.currentValue(x.n);} catch(all) {}; x}, c: dev.getSupportedCommands().unique{ transformCommand(it) }.collect{[n: transformCommand(it), p: it.getArguments()]} ]]}
+    		result = settings.findAll{ it.key.startsWith("dev:") }.collect{ it.value }.flatten().collectEntries{ dev -> [(hashId(dev.id, updateCache)): dev]}.collectEntries{ id, dev -> [ (id): [ n: dev.getDisplayName(), cn: dev.getCapabilities()*.name, a: dev.getSupportedAttributes().unique{ it.name }.collect{def x = [n: it.name, t: it.getDataType(), o: it.getValues()]; try {x.v = dev.currentValue(x.n);} catch(all) {}; x}, c: dev.getSupportedCommands().unique{ transformCommand(it, overrides) }.collect{[n: transformCommand(it, overrides), p: it.getArguments()]} ]]}
 		}
 	}
     List presenceDevices = getChildDevices()
@@ -1774,9 +1775,10 @@ public Map listAvailableDevices(raw = false, updateCache = false) {
     return result
 }
 
-private def transformCommand(command){
-    if(command.getName() == "push" && (command.getArguments()?.size() ?: 0) == 0){
-     	return "pushMomentary"   
+private def transformCommand(command, overrides){
+    def override = overrides[command.getName()]
+    if(override && override.s == command.getArguments()?.toString()){
+    	return override.r;   
     }
     return command.getName()
 }
@@ -2067,7 +2069,8 @@ public Map getRunTimeData(semaphore = null, fetchWrappers = false) {
         semaphoreDelay: semaphoreDelay,
 		commands: [
         	physical: commands(),
-			virtual: virtualCommands()
+			virtual: virtualCommands(),
+			overrides: commandOverrides()
 		],
         comparisons: comparisons(),
         coreVersion: version(),
@@ -2602,6 +2605,12 @@ private static Map attributes() {
 	]
 }
 
+public Map commandOverrides(){
+	return [
+     	push : [c: "push", s: null , r: "pushMomentary"]  
+    ]
+}
+
 private static Map commands() {
 	return [
 		auto						: [ n: "Set to Auto",																	a: "thermostatMode",				v: "auto",																																			],
@@ -2617,6 +2626,7 @@ private static Map commands() {
 		fanAuto						: [ n: "Set fan to Auto",																a: "thermostatFanMode",				v: "auto",																																			],
 		fanCirculate				: [ n: "Set fan to Circulate",															a: "thermostatFanMode",				v: "circulate",																																		],
 		fanOn						: [ n: "Set fan to On",																	a: "thermostatFanMode",				v: "on",																																			],
+  		flash						: [ n: "Flash",																	       																																															],
 		getAllActivities			: [ n: "Get all activities",																																																													],
 		getCurrentActivity			: [ n: "Get current activity",																																																													],
 		heat						: [ n: "Set to Heat",					i: 'fire',										a: "thermostatMode",				v: "heat",																																			],
@@ -2775,7 +2785,7 @@ private static Map virtualCommands() {
 		fadeSaturation				: [ n: "Fade saturation...",	 r: ["setSaturation"], 		i: "toggle-on",				d: "Fade saturation{0} to {1}% in {2}{3}",					p: [[n:"Starting saturation",t:"level",d:" from {v}%"],[n:"Final saturation",t:"level"],[n:"Duration",t:"duration"], [n:"Only if switch is...", t:"enum",o:["on","off"], d:" if already {v}"]],																],
 		fadeHue						: [ n: "Fade hue...",			 r: ["setHue"], 		i: "toggle-on",				d: "Fade hue{0} to {1}° in {2}{3}",								p: [[n:"Starting hue",t:"hue",d:" from {v}°"],[n:"Final hue",t:"hue"],[n:"Duration",t:"duration"], [n:"Only if switch is...", t:"enum",o:["on","off"], d:" if already {v}"]],																],
 		fadeColorTemperature		: [ n: "Fade color temperature...",		 r: ["setColorTemperature"], 		i: "toggle-on",				d: "Fade color temperature{0} to {1}°K in {2}{3}",									p: [[n:"Starting color temperature",t:"colorTemperature",d:" from {v}°K"],[n:"Final color temperature",t:"colorTemperature"],[n:"Duration",t:"duration"], [n:"Only if switch is...", t:"enum",o:["on","off"], d:" if already {v}"]],																],
-		flash						: [ n: "Flash...",	 r: ["on", "off"], 			i: "toggle-on",				d: "Flash on {0} / off {1} for {2} times{3}",							p: [[n:"On duration",t:"duration"],[n:"Off duration",t:"duration"],[n:"Number of flashes",t:"integer"], [n:"Only if switch is...", t:"enum",o:["on","off"], d:" if already {v}"]],																],
+		emulatedFlash				: [ n: "Flash...",	 r: ["on", "off"], 			i: "toggle-on",				d: "Flash on {0} / off {1} for {2} times{3}",							p: [[n:"On duration",t:"duration"],[n:"Off duration",t:"duration"],[n:"Number of flashes",t:"integer"], [n:"Only if switch is...", t:"enum",o:["on","off"], d:" if already {v}"]],																],
 		flashLevel					: [ n: "Flash (level)...",	 r: ["setLevel"], 			i: "toggle-on",		d: "Flash {0}% {1} / {2}% {3} for {4} times{5}",						p: [[n:"Level 1", t:"level"],[n:"Duration 1",t:"duration"],[n:"Level 2", t:"level"],[n:"Duration 2",t:"duration"],[n:"Number of flashes",t:"integer"], [n:"Only if switch is...", t:"enum",o:["on","off"], d:" if already {v}"]],																],
 		flashColor					: [ n: "Flash (color)...",	 r: ["setColor"], 			i: "toggle-on",		d: "Flash {0} {1} / {2} {3} for {4} times{5}",							p: [[n:"Color 1", t:"color"],[n:"Duration 1",t:"duration"],[n:"Color 2", t:"color"],[n:"Duration 2",t:"duration"],[n:"Number of flashes",t:"integer"], [n:"Only if switch is...", t:"enum",o:["on","off"], d:" if already {v}"]],																],
 		iftttMaker					: [ n: "Send an IFTTT Maker event...",	a: true,							d: "Send the {0} IFTTT Maker event{1}{2}{3}",							p: [[n:"Event", t:"text"], [n:"Value 1", t:"string", d:", passing value1 = '{v}'"], [n:"Value 2", t:"string", d:", passing value2 = '{v}'"], [n:"Value 3", t:"string", d:", passing value3 = '{v}'"]],				],
