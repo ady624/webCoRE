@@ -1999,8 +1999,8 @@ private registerInstance() {
         asynchttp_v1.put(instanceRegistrationHandler, params)
     }
     else {
-        params << [contentType: 'text/plain']
-        httpPut(params) { res -> }
+        //params << [contentType: 'text/plain']
+        //httpPut(params) { res -> }
     }   
 }
 

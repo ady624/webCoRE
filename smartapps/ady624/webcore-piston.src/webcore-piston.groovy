@@ -3347,9 +3347,9 @@ private long vcmd_writeToFuelStream(rtData, device, params) {
         asynchttp_v1.put(null, requestParams)
     }
     else {
-        httpPut(requestParams) {
+        //httpPut(requestParams) {
             
-        }
+        //}
     }
     return 0
 }
