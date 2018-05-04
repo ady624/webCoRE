@@ -205,7 +205,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		if ($scope.piston) $scope.loading = true;
 		dataService.getPiston($scope.pistonId).then(function (response) {
 			if ($scope.$$destroyed) return;
-			$scope.endpoint = data.endpoint + 'execute/' + $scope.pistonId;
+			$scope.endpoint = data.endpoint + 'execute/' + $scope.pistonId + '?access_token=' + si.accessToken;
 			try {
 				var showOptions = $scope.piston ? !!$scope.showOptions : false;
 				if (!response || !response.data || !response.data.piston) {
