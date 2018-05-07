@@ -1068,6 +1068,7 @@ private api_intf_dashboard_piston_create() {
         if (params.author || params.bin) {
         	piston.config([bin: params.bin, author: params.author, initialVersion: version()])
         }
+        if (hubUID) piston.installed()
         result = [status: "ST_SUCCESS", id: hashId(piston.id)]
 	} else {
     	result = api_get_error_result("ERR_INVALID_TOKEN")
