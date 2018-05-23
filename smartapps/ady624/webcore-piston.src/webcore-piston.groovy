@@ -887,12 +887,12 @@ def handleEvents(event) {
     if (rtData.currentEvent) {
     	try {
 		    def desc = 'webCore piston \'' + app.label + '\' was executed'
-    		sendLocationEvent(name: 'webCoRE', value: 'pistonExecuted', isStateChange: true, displayed: false, linkText: desc, descriptionText: desc, data: [
+    		/*sendLocationEvent(name: 'webCoRE', value: 'pistonExecuted', isStateChange: true, displayed: false, linkText: desc, descriptionText: desc, data: [
     			id: hashId(app.id),
 	        	name: app.label,
 	    	    event: [date: rtData.currentEvent.date, delay: rtData.currentEvent.delay, duration: now() - rtData.currentEvent.date, device: "$rtData.event.device", name: rtData.currentEvent.name, value: rtData.currentEvent.value, physical: rtData.currentEvent.physical, index: rtData.currentEvent.index],
     	    	state: [old: rtData.state.old, new: rtData.state.new]
-			])
+			]) */
 		} catch (all) {
         }
 	}
@@ -1807,9 +1807,9 @@ private scheduleTimer(rtData, timer, long lastRun = 0) {
 
 
     //switch to local date/times
-    time = utcToLocalTime(time)
-    long rightNow = utcToLocalTime(now())
-    lastRun = lastRun ? utcToLocalTime(lastRun) : rightNow
+    time = hubUID ? time : utcToLocalTime(time)
+    long rightNow = hubUID ? now() : utcToLocalTime(now())
+    lastRun = lastRun ? (hubUID ? lastRun : utcToLocalTime(lastRun)) : rightNow
     long nextSchedule = lastRun
 
     if (lastRun > rightNow) {
@@ -1925,7 +1925,7 @@ private scheduleTimer(rtData, timer, long lastRun = 0) {
 
     if (nextSchedule > lastRun) {
     	//convert back to UTC
-    	nextSchedule = localToUtcTime(nextSchedule)
+    	nextSchedule = hubUID ? nextSchedule : localToUtcTime(nextSchedule)
     	rtData.schedules.removeAll{ it.s == timer.$ }
         requestWakeUp(rtData, timer, [$: -1], nextSchedule)
     }
@@ -3236,7 +3236,7 @@ private long vcmd_httpRequest(rtData, device, params) {
 			data[variable] = getVariable(rtData, variable).v
 		}
     }
-	if (internal) {
+	if (internal && !hubUID) {
 		try {
 			if (rtData.logging > 2) debug "Sending internal web request to: $userPart$uri", rtData
             def ip = ((uri.indexOf("/") > 0) ? uri.substring(0, uri.indexOf("/")) : uri)
@@ -3265,6 +3265,7 @@ private long vcmd_httpRequest(rtData, device, params) {
 				requestContentType: (method != "GET") && (contentType == "JSON") ? "application/json" : "application/x-www-form-urlencoded",
 				body: method != "GET" ? data : null
 			]
+            
 			def func = ""
 			switch(method) {
 				case "GET":
@@ -3960,7 +3961,7 @@ private Boolean evaluateComparison(rtData, comparison, lo, ro = null, ro2 = null
                     	case 'time':
                         case 'date':
                         case 'datetime':
-							boolean pass = checkTimeRestrictions(rtData, lo.operand, utcToLocalTime(), 5, 1) == 0
+							boolean pass = checkTimeRestrictions(rtData, lo.operand, hubUID ? now() : utcToLocalTime(), 5, 1) == 0
                             if (rtData.logging > 2) debug "Time restriction check ${pass ? 'passed' : 'failed'}", rtData
                         	if (!pass) res = false;
                     }
@@ -7402,7 +7403,8 @@ private utcToLocalDate(dateOrTimeOrString = null) {
 		dateOrTimeOrString = now()
 	}
 	if (dateOrTimeOrString instanceof Long) {
-		return new Date(dateOrTimeOrString + (location.timeZone ? location.timeZone.getOffset(dateOrTimeOrString) : 0))
+		//ST the system time is UTC, hubitat is user's local timezone. No need to convert
+		return new Date(dateOrTimeOrString + ( (!hubUID && location.timeZone) ? location.timeZone.getOffset(dateOrTimeOrString) : 0))        
 	}
 	return null
 }
