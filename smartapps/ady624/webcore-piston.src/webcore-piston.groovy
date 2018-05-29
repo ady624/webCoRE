@@ -4425,7 +4425,7 @@ private void subscribeAll(rtData) {
                             break
                         case 'email':
                             subscriptionId = "$deviceId${operand.v}${hashId(app.id)}"
-                            attribute = "email.${hashId(app.id)}"
+                            attribute = "email"
                             break
                         case 'ifttt':
                         case 'askAlexa':
@@ -4434,14 +4434,14 @@ private void subscribeAll(rtData) {
                             	def options = rtData.virtualDevices[operand.v]?.o
                             	def item = options ? options[value.c] : value.c
                                 if (item) {
-	                        		subscriptionId = "$deviceId${operand.v}${item}"
-                                	attribute = "${operand.v}.${item}"
+                                    subscriptionId = "$deviceId${operand.v}${item}"
+                                	attribute = "${operand.v}"
                                     switch (operand.v) {
                                     	case 'askAlexa':
-                                        	attribute = "askAlexaMacro.${item}"
+                                        	attribute = "askAlexaMacro"
                                             break;
                                     	case 'echoSistant':
-                                        	attribute = "echoSistantProfile.${item}"
+                                        	attribute = "echoSistantProfile"
                                             break;
                                     }
                                 }

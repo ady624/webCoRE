@@ -787,7 +787,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 	$scope.getIFTTTUri = function(eventName) {
 		var uri = dataService.getApiUri();
 		if (!uri) return "An error has occurred retrieving the IFTTT Maker URL";
-		return uri + 'ifttt/' + eventName;
+		return uri + 'ifttt/' + eventName + '?access_token=' + si.accessToken;
 	}
 
 	$scope.toggleAdvancedOptions = function() {
