@@ -2945,6 +2945,7 @@ private static Map functions() {
         rangevalue		: [ t: "dynamic",	d: "rangeValue"		],
         rainbowvalue	: [ t: "string",	d: "rainbowValue"	],
         distance		: [ t: "decimal"						],
+        json		: [ t: "dynamic"						],
 	]
 }
 

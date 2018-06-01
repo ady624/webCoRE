@@ -7133,6 +7133,19 @@ private func_distance(rtData, params) {
 	return [t: 'decimal', v: dist]
 }
 
+/******************************************************************************/
+/*** json encodes data as a JSON string					***/
+/*** Usage: json(value[, pretty])									***/
+/******************************************************************************/
+private func_json(rtData, params) {
+	if (!params || !(params instanceof List) || (params.size() < 1) || (params.size() > 2)) {
+    	return [t: "error", v: "Invalid parameters. Expecting json(value[, format])"];
+    }
+    def builder = new groovy.json.JsonBuilder([params[0].v])
+    def op = params[1] ? 'toPrettyString' : 'toString'
+    def json = builder."${op}"()
+    return [t: 'string', v: json[1..-2].trim()]
+}
 
 /******************************************************************************/
 /*** 																		***/
