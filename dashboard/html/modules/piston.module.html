@@ -1916,6 +1916,17 @@
 						<option ng-repeat="color in db.colors.standard" ng-value="color.name" data-content="<span class='color' style='background: {{color.rgb}}'></span>{{color.name}}">{{color.name}}</option>
 					</select>
 				</div>
+				<div class="form-table input-group pull-left" ng-if="(operand.data.t=='s') && (operand.dataType == 'contenttype')" style="width:100%">
+					<select data-actions-box="true" selectpicker class="selectpicker show-tick" data-width="75%" data-style="btn-default" ng-model="operand.data.s" data-mobile="{{mobile}}" ng-change="validateOperand(operand)" required>
+						<option style="display:none" value="" disabled>Nothing selected</option>
+						<option>application/json</option>
+						<option>application/x-www-form-urlencoded</option>
+						<option>application/xml</option>
+						<option>text/csv</option>
+						<option>text/html</option>
+						<option>text/plain</option>						
+					</select>
+				</div>
 				<!-- argument -->
 				<div class="form-table input-group pull-left" ng-if="(operand.data.t=='u')" style="width:{{operand.dataType == 'duration' ? '75' : '100'}}%">
 					<input class="form-control" ng-model="operand.data.u" type="text" ng-change="validateOperand(operand)" required/>
