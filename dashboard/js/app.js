@@ -357,6 +357,33 @@ app.directive('collapseTarget', ['dataService', function(dataService) {
 	};
 }]);
 
+app.directive('taskedit', function() {
+	return {
+		restrict: 'A',
+		scope: false,
+		link: function(scope, elem, attr) {
+			// Custom visibility toggling for httpRequest parameters 
+			if (scope.designer && scope.designer.$task && scope.designer.$task.c === 'httpRequest') {
+				function toggleHttpRequestFields() {
+					var parameters = scope.designer.parameters;
+					var method = parameters[1].data.c; 
+					var requestBodyTypeOperand = parameters[2];
+					var sendVariablesOperand = parameters[3];
+					var requestBodyOperand = parameters[4];
+					var contentTypeOperand = parameters[5];
+					var custom = requestBodyTypeOperand.data.c === 'CUSTOM' && method !== 'GET';
+
+					requestBodyTypeOperand.hidden = method === 'GET';
+					sendVariablesOperand.hidden = custom;
+					contentTypeOperand.hidden = requestBodyOperand.hidden = !custom || method === 'GET';
+				}
+				scope.$watch('designer.parameters[1].data.c', toggleHttpRequestFields);
+				scope.$watch('designer.parameters[2].data.c', toggleHttpRequestFields);
+			}
+		}
+	};
+});
+
 app.filter('orderObjectBy', function() {
   return function(items, field, reverse) {
     var filtered = [];
