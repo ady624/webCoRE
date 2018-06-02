@@ -4070,7 +4070,22 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 			}
 			display += ')';
 		} else {
-			display = !command.d ? command.n : command.d.replace(/\{(\d)\}/g, function(match, text) {
+			var displayFormat = command.d;
+			if (task.c === 'httpRequest') {
+				var method = task.p[1].c;
+				var requestBodyType = task.p[2].c;
+				if (method === 'GET') {
+					// with data [variables]
+					displayFormat += ' with {3}';
+				} else if (requestBodyType === 'CUSTOM') {
+					// with data [request body] as type [content type]
+					displayFormat += ' with {4} {5}';
+				} else {
+					// with [rquest body type] encoded data [request body]
+					displayFormat += ' with {2} {3}';
+				}
+			}
+			display = !displayFormat ? command.n : displayFormat.replace(/\{(\d)\}/g, function(match, text) {
 				var idx = parseInt(text);
 				if ((idx < 0) || (!task.p) || (idx >= task.p.length))
 					return ' (?) ';
