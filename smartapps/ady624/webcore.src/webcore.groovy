@@ -2946,6 +2946,8 @@ private static Map functions() {
         rainbowvalue	: [ t: "string",	d: "rainbowValue"	],
         distance		: [ t: "decimal"						],
         json		: [ t: "dynamic"						],
+        urlencode		: [ t: "string",	d: "urlEncode"					],
+        encodeuricomponent		: [ t: "string",	d: "encodeURIComponent"					],
 	]
 }
 

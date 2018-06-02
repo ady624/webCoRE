@@ -7157,6 +7157,22 @@ private func_json(rtData, params) {
 }
 
 /******************************************************************************/
+/*** percent encodes data for use in a URL					***/
+/*** Usage: urlencode(value)									***/
+/******************************************************************************/
+private func_urlencode(rtData, params) {
+	if (!params || !(params instanceof List) || (params.size() != 1)) {
+    	return [t: "error", v: "Invalid parameters. Expecting urlencode(value])"];
+    }
+    // URLEncoder converts spaces to + which is then indistinguishable from any 
+    // actual + characters in the value. Match encodeURIComponent in ECMAScript
+    // which encodes "a+b c" as "a+b%20c" rather than URLEncoder's "a+b+c"
+    def value = (evaluateExpression(rtData, params[0], 'string').v ?: '').replaceAll('\\+', '__wc_plus__')
+    return [t: 'string', v: URLEncoder.encode(value, 'UTF-8').replaceAll('\\+', '%20').replaceAll('__wc_plus__', '+')]
+}
+private func_encodeuricomponent(rtData, params) { return func_urlencode(rtData, params); }
+
+/******************************************************************************/
 /*** 																		***/
 /*** COMMON PUBLISHED METHODS												***/
 /*** 																		***/
