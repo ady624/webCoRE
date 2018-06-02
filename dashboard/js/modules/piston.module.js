@@ -2175,6 +2175,20 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		$scope.doValidatePiston();
 	}
 
+	$scope.copyVariable = function(list, index) {
+		var variable = list[index];
+		for (var i = 0; i < list.length; i++) {
+			if (i !== index && list[i].n === variable.n) {
+				list[i].n = list[i].n.replace(/(?:_(\d+))?$/, function(m, number) {
+					return '_' + ((+number || 0) + 1);
+				});
+				break;
+			}
+		}
+		$scope.autoSave();
+		$scope.doValidatePiston();
+	}
+
 
 	$scope.setDesignerType = function(type) {
  		$scope.designer.type = type;
