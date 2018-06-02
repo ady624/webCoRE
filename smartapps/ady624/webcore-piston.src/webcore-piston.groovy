@@ -3196,9 +3196,16 @@ public localHttpRequestHandler(physicalgraph.device.HubResponse hubResponse) {
 private long vcmd_httpRequest(rtData, device, params) {
 	def uri = params[0].replace(" ", "%20")
 	def method = params[1]
-	def contentType = params[2]
+	def requestBodyType = params[2]
 	def variables = params[3]
-    def auth = params.size() > 4 ? params[4] : '';
+    def auth = null
+    if (params.size() == 5) {
+	    auth = params[4];
+    } else if (params.size() == 7) {
+        def requestBody = params[4]
+        def contentType = params[5]
+        auth = params[6];
+    }
     if (!uri) return false
 	def protocol = "https"
     def userPart = ""
@@ -3228,7 +3235,9 @@ private long vcmd_httpRequest(rtData, device, params) {
 		}
 	}
 	def data = null
-	if (variables instanceof List) {
+    if (requestBodyType == 'CUSTOM' && method != 'GET') {
+	    data = requestBody
+    } else if (variables instanceof List) {
     	for(variable in variables.findAll{ !!it }) {
         	data  = data ?: [:]
 			data[variable] = getVariable(rtData, variable).v
@@ -3260,7 +3269,7 @@ private long vcmd_httpRequest(rtData, device, params) {
 				uri:  "${protocol}://${userPart}${uri}",
 				query: method == "GET" ? data : null,
                 headers: (auth ? [Authorization: auth] : [:]),
-				requestContentType: (method != "GET") && (contentType == "JSON") ? "application/json" : "application/x-www-form-urlencoded",
+				requestContentType: (method == "GET") || (requestBodyType == "FORM") ? "application/x-www-form-urlencoded" : (requestBodyType == "JSON") ? "application/json" : contentType,
 				body: method != "GET" ? data : null
 			]
 			def func = ""
