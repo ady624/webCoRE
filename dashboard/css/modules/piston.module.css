@@ -710,7 +710,7 @@ piston[anonymized] span[eml]::before {
 
 piston[anonymized] span[uri]::before {
 	line-height: 17px !important;
-	content: '[https://webcore.co]';
+	content: '[https://anonymized.webcore.co]';
 	font-size: initial;
 }
 
