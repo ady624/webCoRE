@@ -2977,7 +2977,7 @@ private static Map getAlarmSystemStatusOptions() {
 }
 
 private Map getRoutineOptions(updateCache = false) {
-	def routines = location.helloHome?.getPhrases()
+	def routines = location.helloHome?.getPhrases().sort{ it?.label ?: '' }
     def result = [:]
     for(routine in routines) {
     	if (routine && routine?.label)
