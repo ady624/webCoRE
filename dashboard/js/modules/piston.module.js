@@ -3113,7 +3113,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 			} else {
 				operand.allowDevices = dataType == 'device';
 				operand.allowPhysical = (dataType != 'datetime') && (dataType != 'date') && (dataType != 'time') && (dataType != 'device') && (dataType != 'variable') && (!strict || (dataType != 'boolean')) && (dataType != 'duration');
-				operand.allowPreset = (!operand.event) && (dataType == 'datetime') || (dataType == 'time') || (dataType == 'color') || (dataType == 'contenttype');
+				operand.allowPreset = (!operand.event) && (dataType == 'datetime') || (dataType == 'time') || (dataType == 'color');
 				operand.allowVirtual = (dataType != 'datetime') && (dataType != 'date') && (dataType != 'time') && (dataType != 'device') && (dataType != 'variable') && (dataType != 'decimal') && (dataType != 'integer') && (dataType != 'number') && (dataType != 'boolean') && (dataType != 'enum') && (dataType != 'color') && (dataType != 'duration');
 				operand.allowVariable = (dataType != 'device' || ((dataType == 'device') && operand.multiple)) && (!strict || (dataType != 'boolean'));
 				operand.allowConstant = (!operand.event) && (dataType != 'device') && (dataType != 'variable');
@@ -3160,9 +3160,6 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 				case 'date':
 				case 'datetime':
 					operand.restrictType = 'datetime,datetime[],date,date[]';
-					break;
-				case 'contenttype':
-					operand.restrictType = 'string';
 					break;
 			}
 			operand.dataType = dataType;

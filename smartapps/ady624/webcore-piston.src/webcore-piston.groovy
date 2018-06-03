@@ -3199,11 +3199,13 @@ private long vcmd_httpRequest(rtData, device, params) {
 	def requestBodyType = params[2]
 	def variables = params[3]
     def auth = null
+    def requestBody = null
+    def contentType = null
     if (params.size() == 5) {
 	    auth = params[4];
     } else if (params.size() == 7) {
-        def requestBody = params[4]
-        def contentType = params[5]
+        requestBody = params[4]
+        contentType = params[5] ?: 'text/plain'
         auth = params[6];
     }
     if (!uri) return false
@@ -3269,7 +3271,7 @@ private long vcmd_httpRequest(rtData, device, params) {
 				uri:  "${protocol}://${userPart}${uri}",
 				query: method == "GET" ? data : null,
                 headers: (auth ? [Authorization: auth] : [:]),
-				requestContentType: (method == "GET") || (requestBodyType == "FORM") ? "application/x-www-form-urlencoded" : (requestBodyType == "JSON") ? "application/json" : contentType,
+				requestContentType: (method == "GET" || requestBodyType == "FORM") ? "application/x-www-form-urlencoded" : (requestBodyType == "JSON") ? "application/json" : contentType,
 				body: method != "GET" ? data : null
 			]
 			def func = ""
