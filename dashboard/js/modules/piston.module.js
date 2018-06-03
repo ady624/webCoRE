@@ -4089,14 +4089,14 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 				var method = task.p[1].c;
 				var requestBodyType = task.p[2].c;
 				if (method === 'GET') {
-					// with data [variables]
-					displayFormat += ' with {3}';
+					// with query [variables]
+					displayFormat += ' with query {3}';
 				} else if (requestBodyType === 'CUSTOM') {
 					// with data [request body] as type [content type]
-					displayFormat += ' with {4} {5}';
+					displayFormat += ' with {4} as type {5}';
 				} else {
-					// with [rquest body type] encoded data [request body]
-					displayFormat += ' with {2} {3}';
+					// with [request body type] encoded data [request body]
+					displayFormat += ' with {2} encoded {3}';
 				}
 			}
 			display = !displayFormat ? command.n : displayFormat.replace(/\{(\d)\}/g, function(match, text) {
