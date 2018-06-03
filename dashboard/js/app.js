@@ -362,24 +362,36 @@ app.directive('taskedit', function() {
 		restrict: 'A',
 		scope: false,
 		link: function(scope, elem, attr) {
-			// Custom visibility toggling for httpRequest parameters 
-			if (scope.designer && scope.designer.$task && scope.designer.$task.c === 'httpRequest') {
-				function toggleHttpRequestFields() {
-					var parameters = scope.designer.parameters;
-					var method = parameters[1].data.c; 
-					var requestBodyTypeOperand = parameters[2];
-					var sendVariablesOperand = parameters[3];
-					var requestBodyOperand = parameters[4];
-					var contentTypeOperand = parameters[5];
-					var custom = requestBodyTypeOperand.data.c === 'CUSTOM' && method !== 'GET';
-
-					requestBodyTypeOperand.hidden = method === 'GET';
-					sendVariablesOperand.hidden = custom;
-					contentTypeOperand.hidden = requestBodyOperand.hidden = !custom || method === 'GET';
+			var watchers = [];
+			function setupCommand(command) {
+				if (watchers.length > 0) {
+					for (var i = 0; i < watchers.length; i++) {
+						watchers[i]();
+					}
+					watchers = [];
 				}
-				scope.$watch('designer.parameters[1].data.c', toggleHttpRequestFields);
-				scope.$watch('designer.parameters[2].data.c', toggleHttpRequestFields);
+				// Custom visibility toggling for httpRequest parameters 
+				if (command === 'httpRequest') {
+					function toggleHttpRequestFields() {
+						var parameters = scope.designer.parameters;
+						var method = parameters[1].data.c; 
+						var requestBodyTypeOperand = parameters[2];
+						var sendVariablesOperand = parameters[3];
+						var requestBodyOperand = parameters[4];
+						var contentTypeOperand = parameters[5];
+						var custom = requestBodyTypeOperand.data.c === 'CUSTOM' && method !== 'GET';
+						
+						requestBodyTypeOperand.hidden = method === 'GET';
+						sendVariablesOperand.hidden = custom;
+						contentTypeOperand.hidden = requestBodyOperand.hidden = !custom || method === 'GET';
+					}
+					watchers.push(
+						scope.$watch('designer.parameters[1].data.c', toggleHttpRequestFields),
+						scope.$watch('designer.parameters[2].data.c', toggleHttpRequestFields)
+					);
+				}
 			}
+			scope.$watch('designer.command', setupCommand);
 		}
 	};
 });
