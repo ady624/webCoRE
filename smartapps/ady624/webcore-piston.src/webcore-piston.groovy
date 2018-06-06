@@ -3196,6 +3196,7 @@ public localHttpRequestHandler(physicalgraph.device.HubResponse hubResponse) {
 private long vcmd_httpRequest(rtData, device, params) {
 	def uri = params[0].replace(" ", "%20")
 	def method = params[1]
+	def useQueryString = method == 'GET' || method == 'DELETE' || method == 'HEAD'
 	def requestBodyType = params[2]
 	def variables = params[3]
     def auth = null
@@ -3237,7 +3238,7 @@ private long vcmd_httpRequest(rtData, device, params) {
 		}
 	}
 	def data = null
-    if (requestBodyType == 'CUSTOM' && method != 'GET') {
+    if (requestBodyType == 'CUSTOM' && !useQueryString) {
 	    data = requestBody
     } else if (variables instanceof List) {
     	for(variable in variables.findAll{ !!it }) {
@@ -3256,8 +3257,8 @@ private long vcmd_httpRequest(rtData, device, params) {
 				headers: [
 					HOST: userPart + ip,
 				] + (auth ? [Authorization: auth] : [:]),
-				query: method == "GET" ? data : null, //thank you @destructure00
-				body: method != "GET" ? data : null //thank you @destructure00
+				query: useQueryString ? data : null, //thank you @destructure00
+				body: useQueryString ? data : null //thank you @destructure00
 			]
 			sendHubCommand(new physicalgraph.device.HubAction(requestParams, null, [callback: localHttpRequestHandler]))
             return 20000
@@ -3269,10 +3270,10 @@ private long vcmd_httpRequest(rtData, device, params) {
 			if (rtData.logging > 2) debug "Sending external web request to: $uri", rtData
 			def requestParams = [
 				uri:  "${protocol}://${userPart}${uri}",
-				query: method == "GET" ? data : null,
+				query: useQueryString ? data : null,
                 headers: (auth ? [Authorization: auth] : [:]),
 				requestContentType: (method == "GET" || requestBodyType == "FORM") ? "application/x-www-form-urlencoded" : (requestBodyType == "JSON") ? "application/json" : contentType,
-				body: method != "GET" ? data : null
+				body: useQueryString ? data : null
 			]
 			def func = ""
 			switch(method) {

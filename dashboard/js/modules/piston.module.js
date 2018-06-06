@@ -4084,8 +4084,9 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 			var displayFormat = command.d;
 			if (task.c === 'httpRequest') {
 				var method = task.p[1].c;
+				var useQueryString = method === 'GET' || method === 'DELETE' || method === 'HEAD';
 				var requestBodyType = task.p[2].c;
-				if (method === 'GET') {
+				if (useQueryString) {
 					// with query [variables]
 					displayFormat += '[? with query {3}]';
 				} else if (requestBodyType === 'CUSTOM') {

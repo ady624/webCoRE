@@ -375,15 +375,16 @@ app.directive('taskedit', function() {
 					function toggleHttpRequestFields() {
 						var parameters = scope.designer.parameters;
 						var method = parameters[1].data.c; 
+						var useQueryString = method === 'GET' || method === 'DELETE' || method === 'HEAD';
 						var requestBodyTypeOperand = parameters[2];
 						var sendVariablesOperand = parameters[3];
 						var requestBodyOperand = parameters[4];
 						var contentTypeOperand = parameters[5];
-						var custom = requestBodyTypeOperand.data.c === 'CUSTOM' && method !== 'GET';
+						var custom = requestBodyTypeOperand.data.c === 'CUSTOM' && !useQueryString;
 						
-						requestBodyTypeOperand.hidden = method === 'GET';
+						requestBodyTypeOperand.hidden = useQueryString;
 						sendVariablesOperand.hidden = custom;
-						contentTypeOperand.hidden = requestBodyOperand.hidden = !custom || method === 'GET';
+						contentTypeOperand.hidden = requestBodyOperand.hidden = !custom || useQueryString;
 					}
 					watchers.push(
 						scope.$watch('designer.parameters[1].data.c', toggleHttpRequestFields),
