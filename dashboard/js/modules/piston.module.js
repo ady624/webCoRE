@@ -4087,16 +4087,16 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 				var requestBodyType = task.p[2].c;
 				if (method === 'GET') {
 					// with query [variables]
-					displayFormat += ' with query {3}';
+					displayFormat += '[? with query {3}]';
 				} else if (requestBodyType === 'CUSTOM') {
 					// with data [request body] as type [content type]
-					displayFormat += ' with {4} as type {5}';
+					displayFormat += '[? with {4}][? as type {5}]';
 				} else {
 					// with [request body type] encoded data [request body]
-					displayFormat += ' with {2} encoded {3}';
+					displayFormat += '[? with {2}][? encoded {3}]';
 				}
 			}
-			display = !displayFormat ? command.n : displayFormat.replace(/\{(\d)\}/g, function(match, text) {
+			display = !displayFormat ? command.n : displayFormat.replace(/(?:\[\?(.*?))?\{(\d)\}(?:\s*\])?/g, function(match, prefix, text) {
 				var idx = parseInt(text);
 				if ((idx < 0) || (!task.p) || (idx >= task.p.length))
 					return ' (?) ';
@@ -4116,7 +4116,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 				if (!!value && !!command.p[idx].d) {
 					value = (!!task.p[idx] && !!task.p[idx].t) ? command.p[idx].d.replace('{v}', value) : '';
 				}
-				return value;
+				return (value ? (prefix || '') : '') + value;
 			}).replace(/(\{T\})/g, '°' + $scope.location.temperatureScale);
 			var icon = command.i;
 			if (icon) display = '<span pun><i class="fa fa-' + icon + '" aria-hidden="true"></i></span> ' + display;
