@@ -3258,7 +3258,7 @@ private long vcmd_httpRequest(rtData, device, params) {
 					HOST: userPart + ip,
 				] + (auth ? [Authorization: auth] : [:]),
 				query: useQueryString ? data : null, //thank you @destructure00
-				body: useQueryString ? data : null //thank you @destructure00
+				body: !useQueryString ? data : null //thank you @destructure00
 			]
 			sendHubCommand(new physicalgraph.device.HubAction(requestParams, null, [callback: localHttpRequestHandler]))
             return 20000
@@ -3273,7 +3273,7 @@ private long vcmd_httpRequest(rtData, device, params) {
 				query: useQueryString ? data : null,
                 headers: (auth ? [Authorization: auth] : [:]),
 				requestContentType: (method == "GET" || requestBodyType == "FORM") ? "application/x-www-form-urlencoded" : (requestBodyType == "JSON") ? "application/json" : contentType,
-				body: useQueryString ? data : null
+				body: !useQueryString ? data : null
 			]
 			def func = ""
 			switch(method) {
