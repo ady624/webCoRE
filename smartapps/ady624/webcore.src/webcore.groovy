@@ -18,7 +18,7 @@
  *
  *  Version history
 */
-public static String version() { return "v0.3.105-beta.0" }
+public static String version() { return "v0.3.105-beta.1" }
 /*
  *	03/23/2018 >>> v0.3.104.20180323 - BETA M3 - Fixed unexpected dashboard logouts, updating image urls in tiles, 12 am/pm in time(), unary negation following another operator
  *	02/24/2018 >>> v0.3.000.20180224 - BETA M3 - Dashboard redesign by @acd37, collapsible sidebar, fix "was" conditions on decimal attributes and log failures due to duration threshold
