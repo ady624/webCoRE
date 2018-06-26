@@ -685,6 +685,17 @@ private getTemporaryRunTimeData() {
     ]
 }
 
+//atomic state performance is much worse in hubitat than in smartthings. Grab a cached version where possible
+private getCachedAtomicState(){
+    def atomStart = now()        
+    
+    atomicState.loadState()
+    def atomState = atomicState.@backingMap    
+    debug "Atomic state generated in ${now() - atomStart}ms", rtData
+    
+    return atomState
+}
+
 private getRunTimeData(rtData = null, semaphore = null, fetchWrappers = false) {
 	def n = now()
 	try {
@@ -704,7 +715,9 @@ private getRunTimeData(rtData = null, semaphore = null, fetchWrappers = false) {
         rtData.category = state.category;
 	    rtData.stats = [nextScheduled: 0]
 	    //we're reading the cache from atomicState because we might have waited at a semaphore
-	    rtData.cache = atomicState.cache ?: [:]
+        def atomState = getCachedAtomicState()        
+        
+	    rtData.cache = atomState.cache ?: [:]
 	    rtData.newCache = [:]
 	    rtData.schedules = []
 	    rtData.cancelations = [statements:[], conditions:[], all: false]
@@ -716,21 +729,22 @@ private getRunTimeData(rtData = null, semaphore = null, fetchWrappers = false) {
         rtData.locationModeId = hashId(location.getCurrentMode().id)
 	    //flow control
 	    //we're reading the old state from atomicState because we might have waited at a semaphore
-        def st = atomicState.state
+        
+        def st = atomState.state
         rtData.state = (st instanceof Map) ? st : [old: '', new: '']
 	    rtData.state.old = rtData.state.new;
-        rtData.store = atomicState.store ?: [:]
+        rtData.store = atomState.store ?: [:]
 	    rtData.statementLevel = 0;
 	    rtData.fastForwardTo = null
 	    rtData.break = false
         rtData.updateDevices = false
-        state.schedules = atomicState.schedules
+        state.schedules = atomState.schedules
         if (!fetchWrappers) {
         	rtData.devices = (settings.dev && (settings.dev instanceof List) ? settings.dev.collectEntries{[(hashId(it.id)): it]} : [:])
         	rtData.contacts = (settings.contacts && (settings.contacts instanceof List) ? settings.contacts.collectEntries{[(hashId(it.id)): it]} : [:])
-        }
+        }    
 	    rtData.systemVars = getSystemVariables()
-	    rtData.localVars = getLocalVariables(rtData, piston.v)
+	    rtData.localVars = getLocalVariables(rtData, piston.v, atomState)
 	} catch(all) {
     	error "Error while getting runtime data:", rtData, null, all
     }
@@ -801,7 +815,7 @@ def handleEvents(event) {
     	return;
     }
     checkVersion(rtData)
-	runIn(30.toInteger(), timeRecoveryHandler)    
+	runIn(45.toInteger(), timeRecoveryHandler)    
     if (rtData.semaphoreDelay) {
     	warn "Piston waited at a semaphore for ${rtData.semaphoreDelay}ms", rtData
     }
@@ -1128,7 +1142,7 @@ private processSchedules(rtData, scheduleJob = false) {
         	rtData.stats.nextSchedule = next.t
         	if (rtData.logging) info "Setting up scheduled job for ${formatLocalTime(next.t)} (in ${t}s)" + (schedules.size() > 1 ? ', with ' + (schedules.size() - 1).toString() + ' more job' + (schedules.size() > 2 ? 's' : '') + ' pending' : ''), rtData
         	runIn(t.toInteger(), timeHandler, [data: next])
-            runIn((t+30).toInteger(), timeRecoveryHandler, [data: next])
+            runIn((t+45).toInteger(), timeRecoveryHandler, [data: next])
     	} else {
 	    	rtData.stats.nextSchedule = 0
             //remove the recovery
@@ -1186,10 +1200,11 @@ private Boolean executeStatements(rtData, statements, async = false) {
     return true
 }
 
-private Boolean executeStatement(rtData, statement, async = false) {
+private Boolean executeStatement(rtData, statement, async = false) {    
 	//if rtData.fastForwardTo is a positive, non-zero number, we need to fast forward through all
     //branches until we find the task with an id equal to that number, then we play nicely after that
 	if (!statement) return false
+    //if (rtData.logging > 2) debug "Execute Statement ${statement.$}", rtData
     if (!rtData.fastForwardTo) {
     	switch (statement.tep) {
         	case 'c':
@@ -3638,8 +3653,12 @@ private evaluateOperand(rtData, node, operand, index = null, trigger = false, ne
 	        break;
 		case 'd': //devices
         	def deviceIds = []
+        	//def systemDeviceIds = getAllDeviceIds()
             for (d in expandDeviceList(rtData, operand.d)) {
-				if (getDevice(rtData, d)) deviceIds.push(d)
+				//if (getDevice(rtData, d)) deviceIds.push(d)
+                //if(systemDeviceIds.any { (d == hashId(it.id)) || (d == it.label) }) {
+                    deviceIds.push(d)
+                //}
             }
             /*
             for (d in rtData, operand.d) {
@@ -4697,13 +4716,21 @@ private sanitizeVariableName(name) {
 	name = name ? "$name".trim().replace(" ", "_") : null
 }
 
+/*
 private getDevice(rtData, idOrName) {
 	if (rtData.locationId == idOrName) return location
 	def device = rtData.devices[idOrName] ?: rtData.devices.find{ it.value.getDisplayName() == idOrName }?.value
     if (!device) {
-    	if (!rtData.allDevices) rtData.allDevices = parent.listAvailableDevices(true)
+        if (!rtData.allDevices) {
+            def start = now()
+            //rtData.allDevices = getAllDeviceIds().collect{ getDeviceById(it.id) }.flatten().collectEntries{ dev -> [(hashId(dev.id)): dev]}
+            //log.debug getAllDeviceIds()
+            rtData.allDevices = parent.listAvailableDevices(true)
+            if (rtData.logging > 2) debug "Grabbed parent devices in ${now() - start}ms", rtData
+        }
+        
         if (rtData.allDevices) {
-			def deviceMap = rtData.allDevices.find{ (idOrName == it.key) || (idOrName == it.value.getDisplayName()) }
+			def deviceMap = rtData.allDevices.find{ (idOrName == it.key) || (idOrName == it.value.getDisplayName()) }            
 	        if (deviceMap) {
             	rtData.updateDevices = true
             	rtData.devices[deviceMap.key] = deviceMap.value
@@ -4713,6 +4740,34 @@ private getDevice(rtData, idOrName) {
             error "Device ${idOrName} was not found. Please review your piston.", rtData
         }
     }
+    return device
+}*/
+
+private getDevice(rtData, idOrName) {
+    def start = now()
+	if (rtData.locationId == idOrName) return location
+	def device = rtData.devices[idOrName] ?: rtData.devices.find{ it.value.getDisplayName() == idOrName }?.value
+    if (!device) {
+        if (!rtData.allDevices) {
+            rtData.allDevices = [:]            
+        }         
+
+        def deviceMap = rtData.allDevices.find{ (idOrName == it.key) || (idOrName == it.value.getDisplayName()) }
+        if(!deviceMap){
+            def minDev = getAllDeviceIds().find { (idOrName == hashId(it.id)) || (idOrName == it.label) }
+            if(minDev){
+                rtData.allDevices[hashId(minDev.id)] = getDeviceById(minDev.id)
+                deviceMap = rtData.allDevices.find { it.key == hashId(minDev.id) }
+            }
+        }
+
+        if (deviceMap) {
+            rtData.updateDevices = true
+            rtData.devices[deviceMap.key] = deviceMap.value
+            device = deviceMap.value
+        }        
+    }
+    //if (rtData.logging > 2) debug "Device grabbed in  ${now() - start}ms", rtData
     return device
 }
 
@@ -7786,9 +7841,9 @@ private getNextNoonTime(rtData) {
     return localToUtcTime(rightNow - rightNow.mod(86400000) + 43200000)
 }
 
-private Map getLocalVariables(rtData, vars) {
+private Map getLocalVariables(rtData, vars, atomState) {
     rtData.localVars = [:]
-    def values = atomicState.vars
+    def values = atomState.vars
 	for (var in vars) {
     	def variable = [t: var.t, v: var.v ?: (var.t.endsWith(']') ? (values[var.n] instanceof Map ? values[var.n] : {}) : cast(rtData, values[var.n], var.t)), f: !!var.v] //f means fixed value - we won't save this to the state
         if (rtData && var.v && (var.a == 's') && !var.t.endsWith(']')) {

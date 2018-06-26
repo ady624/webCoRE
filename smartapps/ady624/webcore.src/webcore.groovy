@@ -1112,9 +1112,25 @@ private api_intf_dashboard_piston_get() {
 	} else {
     	result = api_get_error_result("ERR_INVALID_TOKEN")
     }
+    
     //for accuracy, use the time as close as possible to the render
     result.now = now()
-    render contentType: "application/javascript;charset=utf-8", data: "${params.callback}(${groovy.json.JsonOutput.toJson(result)})"
+    def jsonData = groovy.json.JsonOutput.toJson(result)
+    
+	//data saver for hubitat ~100K limit    
+    def responseLength = jsonData.getBytes("UTF-8").length
+    if(responseLength > 100 * 1024){ //these are loaded anyway right after loading the piston
+        log.warn "Trimming ${ (int)(responseLength/1024) }KB response to smaller size"
+        result.instance = null
+    	result.data.logs = []
+        result.data.stats.timing = [] 
+		//for accuracy, use the time as close as possible to the render
+        result.now = now()
+        jsonData = groovy.json.JsonOutput.toJson(result)
+    }    
+    
+    //log.debug "Trimmed resonse length: ${jsonData.getBytes("UTF-8").length}"        
+    render contentType: "application/javascript;charset=utf-8", data: "${params.callback}(${jsonData})"
 }
 
 
