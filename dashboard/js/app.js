@@ -332,7 +332,6 @@ app.directive('collapseControl', ['dataService', function(dataService) {
 		var id = (attr.target || attr.ariaControls || '').replace('#', '');
 		var wasCollapsed = dataService.isCollapsed(id);
 		
-    console.log(attr);
 		if (wasCollapsed && 'ariaExpanded' in attr) {
 			element.attr('aria-expanded', 'false');
 		}
@@ -358,6 +357,46 @@ app.directive('collapseTarget', ['dataService', function(dataService) {
 	};
 }]);
 
+app.directive('taskedit', function() {
+	return {
+		restrict: 'A',
+		scope: false,
+		link: function(scope, elem, attr) {
+			var watchers = [];
+			function setupCommand(command) {
+				if (watchers.length > 0) {
+					for (var i = 0; i < watchers.length; i++) {
+						watchers[i]();
+					}
+					watchers = [];
+				}
+				// Custom visibility toggling for httpRequest parameters 
+				if (command === 'httpRequest') {
+					function toggleHttpRequestFields() {
+						var parameters = scope.designer.parameters;
+						var method = parameters[1].data.c; 
+						var useQueryString = method === 'GET' || method === 'DELETE' || method === 'HEAD';
+						var requestBodyTypeOperand = parameters[2];
+						var sendVariablesOperand = parameters[3];
+						var requestBodyOperand = parameters[4];
+						var contentTypeOperand = parameters[5];
+						var custom = requestBodyTypeOperand.data.c === 'CUSTOM' && !useQueryString;
+						
+						requestBodyTypeOperand.hidden = useQueryString;
+						sendVariablesOperand.hidden = custom;
+						contentTypeOperand.hidden = requestBodyOperand.hidden = !custom || useQueryString;
+					}
+					watchers.push(
+						scope.$watch('designer.parameters[1].data.c', toggleHttpRequestFields),
+						scope.$watch('designer.parameters[2].data.c', toggleHttpRequestFields)
+					);
+				}
+			}
+			scope.$watch('designer.command', setupCommand);
+		}
+	};
+});
+
 app.filter('orderObjectBy', function() {
   return function(items, field, reverse) {
     var filtered = [];
@@ -370,6 +409,26 @@ app.filter('orderObjectBy', function() {
     if(reverse) filtered.reverse();
     return filtered;
   };
+});
+
+app.filter('dashify', function() {
+  return function(value) {
+    return dashify(value, { condense: true });
+  }
+});
+
+app.filter('uniqueDashify', function() {
+  var keyByUniqueValue = {};
+  return function(value, key) {
+    value = dashify(value, { condense: true });
+    var unique = value;
+    var i = 1;
+    while (unique in keyByUniqueValue && keyByUniqueValue[unique] !== key) {
+      unique = value + '-' + i++;
+    }
+    keyByUniqueValue[unique] = key;
+    return unique;
+  }
 });
 
 
@@ -1989,4 +2048,4 @@ if (!String.prototype.endsWith) {
 	};
 }
 
-version = function() { return 'v0.3.104.20180323'; };
+version = function() { return 'v0.3.105.20180628'; };
