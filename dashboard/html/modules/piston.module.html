@@ -1172,7 +1172,7 @@
 			<div ng-if="designer.showAdvancedOptions" class="form-group">
 				<div class="form-group">
 					<label for="descriptionInput">Description (optional)</label>
-					<textarea name="desc" type="text" id="descriptionInput" class="form-control" placeholder="Description for this statement" ng-model="designer.description"></textarea>
+					<textarea name="desc" type="text" id="descriptionInput" class="form-control" placeholder="Description for this statement" ng-model="designer.description" msd-elastic></textarea>
 				</div>
 				<div class="form-group" ng-if="designer.type != 'on'">
 					<label for="tep" help>Task Execution Policy</label>
@@ -1269,7 +1269,7 @@
 			<div ng-if="designer.showAdvancedOptions" class="form-group">
 				<div class="form-group">
 					<label for="descriptionInput">Description (optional)</label>
-					<textarea type="text" id="descriptionInput" class="form-control" placeholder="Description for this event" ng-model="designer.description"></textarea>
+					<textarea type="text" id="descriptionInput" class="form-control" placeholder="Description for this event" ng-model="designer.description" msd-elastic></textarea>
 				</div>
 			</div>
 
@@ -1409,7 +1409,7 @@
 				</div>
 				<div class="form-group">
 					<label for="descriptionInput">Description (optional)</label>
-					<textarea type="text" id="descriptionInput" class="form-control" placeholder="Description for this statement" ng-model="designer.description"></textarea>
+					<textarea type="text" id="descriptionInput" class="form-control" placeholder="Description for this statement" ng-model="designer.description" msd-elastic></textarea>
 				</div>
 			</div>
 
@@ -1458,7 +1458,7 @@
 			<div ng-if="designer.showAdvancedOptions" class="form-group">
 				<div class="form-group">
 					<label for="descriptionInput">Description (optional)</label>
-					<textarea type="text" id="descriptionInput" class="form-control" placeholder="Description for this statement" ng-model="designer.description"></textarea>
+					<textarea type="text" id="descriptionInput" class="form-control" placeholder="Description for this statement" ng-model="designer.description" msd-elastic></textarea>
 				</div>
 			</div>
 
@@ -1564,7 +1564,7 @@
 
 			<div ng-if="designer.showAdvancedOptions" class="form-group">
 				<label for="descriptionInput">Description (optional)</label>
-				<textarea type="text" id="descriptionInput" class="form-control" placeholder="Description for this statement" ng-model="designer.description"></textarea>
+				<textarea type="text" id="descriptionInput" class="form-control" placeholder="Description for this statement" ng-model="designer.description" msd-elastic></textarea>
 			</div>
 		</form>
 		<footer>
@@ -1611,7 +1611,7 @@
 			<div ng-if="designer.showAdvancedOptions" class="form-group">
 				<div class="form-group">
 					<label for="descriptionInput">Description (optional)</label>
-					<textarea type="text" id="descriptionInput" class="form-control" placeholder="Description for this statement" ng-model="designer.description"></textarea>
+					<textarea type="text" id="descriptionInput" class="form-control" placeholder="Description for this statement" ng-model="designer.description" msd-elastic></textarea>
 				</div>
 			</div>
 		</form>
@@ -1649,7 +1649,7 @@
 			</div>
 			<div ng-if="designer.showAdvancedOptions" class="form-group">
 				<label for="descriptionInput">Description (optional)</label>
-				<textarea type="text" id="descriptionInput" class="form-control" placeholder="Description for this statement" ng-model="designer.description"></textarea>
+				<textarea type="text" id="descriptionInput" class="form-control" placeholder="Description for this statement" ng-model="designer.description" msd-elastic></textarea>
 			</div>
 		</form>
 		<footer>
@@ -1714,7 +1714,7 @@
 	</div>
 	<div class="form-group" ng-if="!comparison.event && (comparison.left.data.t == 'v') && (comparison.left.data.v == 'ifttt')">
 		<label class="col-lg-12 no-padding">Use this URL in your IFTTT's Maker channel</label>
-		<textarea class="form-control" ifttt readonly value="test">{{getIFTTTUri(comparison.right.data.c)}}</textarea>
+		<textarea class="form-control" ifttt readonly value="test" msd-elastic>{{getIFTTTUri(comparison.right.data.c)}}</textarea>
 	</div>
 	<div class="form-group" ng-if="!comparison.event && (designer.comparison.left.data.t == 'v') && (designer.comparison.left.data.v == 'time')">
 		<label for="devicesInput">Only on these days of the week...</label>
@@ -1980,7 +1980,7 @@
 			</div>
 		</div>
 		<div ng-if="operand.data.t=='e'" class="form-group">
-			<textarea expression smart-area="operand.config" rows="5" class="form-control" id="leftItem" ng-model="operand.data.e" ng-change="validateOperand(operand)" spellcheck="false" ng-trim="true"></textarea>
+			<textarea expression smart-area="operand.config" rows="3" class="form-control" id="leftItem" ng-model="operand.data.e" ng-change="validateOperand(operand)" spellcheck="false" ng-trim="true" msd-elastic></textarea>
 		</div>
 	</div>
 	<div class="form-group" ng-if="(operand.data.t=='p') && operand.count && operand.showSubDevices">
@@ -2141,7 +2141,7 @@
 			</div>
 			<div ng-if="designer.showAdvancedOptions" class="form-group">
 				<label for="descriptionInput">Description (optional)</label>
-				<textarea type="text" id="descriptionInput" class="form-control" placeholder="Description for this statement" ng-model="designer.description"></textarea>
+				<textarea type="text" id="descriptionInput" class="form-control" placeholder="Description for this statement" ng-model="designer.description" msd-elastic></textarea>
 			</div>
 			<p ng-if-start="designer.clipboard.length">From clipboard</p>
 			<div class="form-group" ng-if-end>
@@ -2237,7 +2237,7 @@
 			</div>
 			<div ng-if="designer.showAdvancedOptions" class="form-group">
 				<label for="descriptionInput">Description (optional)</label>
-				<textarea type="text" id="descriptionInput" class="form-control" placeholder="Description for this statement" ng-model="designer.description"></textarea>
+				<textarea type="text" id="descriptionInput" class="form-control" placeholder="Description for this statement" ng-model="designer.description" msd-elastic></textarea>
 			</div>
 		</form>
 
@@ -2348,7 +2348,7 @@
 			</div>
 			<div class="form-group">
 				<label for="descriptionInput">Description (optional)</label>
-				<textarea type="text" id="descriptionInput" class="form-control" placeholder="Description for this statement" ng-model="designer.description"></textarea>
+				<textarea type="text" id="descriptionInput" class="form-control" placeholder="Description for this statement" ng-model="designer.description" msd-elastic></textarea>
 			</div>
 			<div class="form-group">
 				<label class="col-lg-12 no-padding">Automatic piston state</label>

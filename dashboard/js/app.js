@@ -1,4 +1,4 @@
-var app = angular.module('webCoRE', ['ng', 'ngRoute', 'ngSanitize', 'ngResource', 'ngDialog', 'ngAnimate', 'angular-svg-round-progressbar', 'angular-bootstrap-select', 'swipe', 'dndLists', 'ui.toggle', 'chart.js', 'smartArea', 'ui.bootstrap.contextMenu', 'ngFitText', 'googlechart', 'ngMap']);
+var app = angular.module('webCoRE', ['ng', 'ngRoute', 'ngSanitize', 'ngResource', 'ngDialog', 'ngAnimate', 'angular-svg-round-progressbar', 'angular-bootstrap-select', 'swipe', 'dndLists', 'ui.toggle', 'chart.js', 'smartArea', 'ui.bootstrap.contextMenu', 'ngFitText', 'googlechart', 'ngMap', 'monospaced.elastic']);
 //var cdn = 'https://core.homecloudhub.com/dashboard/';
 var cdn = '';
 var theme = '';
