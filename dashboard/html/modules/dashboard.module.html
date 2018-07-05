@@ -61,6 +61,8 @@
 <!--End navigation-->
 
 <viewer class="dashboard animated noPreventDefault {{dropDownMenu ? 'reveal' : ''}}" ng-if="initialized && (view == 'dashboard')">
+	<!-- Too big of a hassle to convert all these FA 4 pseudo elements to FA 5 -->
+	<link rel="stylesheet" ng-href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" type="text/css" />
 	<nav fixed class="navbar navbar-default navbar-fixed-topw" ng-if="initialized && (view == 'dashboard')">
 		<div class="container-fluid">
 			<ul class="nav navbar-nav navbar-right">
