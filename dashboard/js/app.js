@@ -2049,6 +2049,10 @@ if (document.selection) {
      document.execCommand("Copy");
 }}
 
+window.FontAwesomeConfig = {
+  autoReplaceSvg: 'nest',
+};
+
 // Polyfills
 if (!String.prototype.endsWith) {
 	String.prototype.endsWith = function(search, this_len) {
