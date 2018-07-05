@@ -1870,12 +1870,19 @@ function renderString($sce, value) {
             return result;
         }
 
-		meta.html = process(value).replace(/\:(fa[blrs5]?)([ -])([a-z0-9\-\s]*)\:/gi, function(match, prefix, union, classes) {
+		meta.html = process(value).replace(/\:(fa[blrs5]?)([ -])([a-z0-9\-\s.="']*)\:/gi, function(match, prefix, union, classes) {
+            var attributes = '';
             // Default deprecated fa5 prefix to solid weight
+            prefix = prefix.toLowerCase();
             prefix = prefix === 'fa5' ? 'fas' : prefix;
             // Support shorthand fas-stroopwafel for fas fa-stroopwafel
+            classes = classes.toLowerCase();
             classes = union === '-' ? 'fa-' + classes : classes;
-            return '<i class="' + prefix.toLowerCase() + ' ' + classes.toLowerCase() + '"></i>';
+            classes = classes.replace(/(data-fa.*?=(?:'.*?'|".*?"))\s*/gi, function(match) {
+                attributes += ' ' + match;
+                return '';
+            });
+            return '<i class="' + prefix.toLowerCase() + ' ' + classes.toLowerCase() + '"' + attributes + '></i>';
       }).replace(/\:wu-([a-k]|v[1-4])-([a-z0-9_\-]+)\:/gi, function(match) {
 			var iconSet = match[4];
 			if (iconSet == 'v') {
