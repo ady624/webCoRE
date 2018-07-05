@@ -1870,19 +1870,13 @@ function renderString($sce, value) {
             return result;
         }
 
-		meta.html = process(value).replace(/\:fa-([a-z0-9\-\s]*)\:/gi, function(match) {
-            return '<i class="fa ' + match.replace(/\:/g, '').toLowerCase() + '"></i>';
-        }).replace(/\:fa5-([a-z0-9\-\s]*)\:/gi, function(match) {
-            return '<i class="fa5 ' + match.replace(/\:/g, '').replace(/fa5\-/g, 'fa5-').toLowerCase() + '"></i>';
-        }).replace(/\:fal-([a-z0-9\-\s]*)\:/gi, function(match) {
-            return '<i class="fal ' + match.replace(/\:/g, '').replace(/fal\-/g, 'fa5-').toLowerCase() + '"></i>';
-        }).replace(/\:far-([a-z0-9\-\s]*)\:/gi, function(match) {
-            return '<i class="far ' + match.replace(/\:/g, '').replace(/far\-/g, 'fa5-').toLowerCase() + '"></i>';
-        }).replace(/\:fas-([a-z0-9\-\s]*)\:/gi, function(match) {
-            return '<i class="fas ' + match.replace(/\:/g, '').replace(/fas\-/g, 'fa5-').toLowerCase() + '"></i>';
-        }).replace(/\:fab-([a-z0-9\-\s]*)\:/gi, function(match) {
-            return '<i class="fab ' + match.replace(/\:/g, '').replace(/fab\-/g, 'fa5-').toLowerCase() + '"></i>';
-        }).replace(/\:wu-([a-k]|v[1-4])-([a-z0-9_\-]+)\:/gi, function(match) {
+		meta.html = process(value).replace(/\:(fa[blrs5]?)([ -])([a-z0-9\-\s]*)\:/gi, function(match, prefix, union, classes) {
+            // Default deprecated fa5 prefix to solid weight
+            prefix = prefix === 'fa5' ? 'fas' : prefix;
+            // Support shorthand fas-stroopwafel for fas fa-stroopwafel
+            classes = union === '-' ? 'fa-' + classes : classes;
+            return '<i class="' + prefix.toLowerCase() + ' ' + classes.toLowerCase() + '"></i>';
+      }).replace(/\:wu-([a-k]|v[1-4])-([a-z0-9_\-]+)\:/gi, function(match) {
 			var iconSet = match[4];
 			if (iconSet == 'v') {
 				iconSet += match[5];
