@@ -1806,13 +1806,18 @@ function renderString($sce, value) {
                         while (/(\bsrc=\S+),/.test(cls)) {
                           cls = cls.replace(/(\bsrc=\S+),/, '$1:webCoRE-comma:');
                         }
-                        cls = cls.replace(/\s+/g, ',').split(',');
+                        cls = cls.replace(/'.*? .*?'|".*? .*?"/g, function(match) {
+                            return match.replace(/\s+/g, ':webCoRE-space:');
+                        })
+                        cls = cls.split(/,|\s+/);
                         var className = '';
                         var color = '';
+						var attributes = '';
 						var backColor='';
 						var fontSize = '';
                         for (x in cls) {
 							if (!cls[x]) continue;
+                            cls[x] = cls[x].replace(/:webCoRE-comma:/g, ',').replace(/:webCoRE-space:/g, ' ');
                             switch (cls[x]) {
                                 case 'b': 
                                 case 'u':
@@ -1843,6 +1848,10 @@ function renderString($sce, value) {
                                 default:
 									if (/^\d+(\.\d+)?(x|em)/.test(cls[x])) {
 										fontSize = cls[x].replace('x', 'em');
+									} else if (cls[x].startsWith('fa-')) {
+										className += cls[x] + ' ';
+									} else if (cls[x].startsWith('data-fa-')) {
+										attributes += ' ' + cls[x];
 									} else if (cls[x].startsWith('b-')) {
 										backColor = cls[x].substr(2).replace(/[^#0-9a-z]/gi, '');
 									} else if (cls[x].startsWith('bk-') || cls[x].startsWith('bg-')) {
@@ -1852,16 +1861,17 @@ function renderString($sce, value) {
 									} else if (cls[x].indexOf('=') > 0) {
 										//options
 										var p = cls[x].indexOf('=');
-										meta.options[cls[x].substr(0, p)] = cls[x].substr(p + 1).replace(/:webCoRE-comma:/g, ',');
+										meta.options[cls[x].substr(0, p)] = cls[x].substr(p + 1);
 									} else {
 										color = cls[x].replace(/[^#0-9a-z]/gi, '');
 									}
                             }
                         }
+						meta.attributes = attributes;
 						meta.className = className;
 						meta.color = color;
 						meta.backColor = backColor;
-                        return '<span ' + (className ? 'class="' + className + '" ' : '') + (!!color || !!backColor || !!fontSize ? 'style="' + (color ? 'color: ' + color + ' !important;' : '') + ' ' + (backColor ? 'background-color: ' + backColor + ' !important;' : '') + ' ' + (fontSize ? 'font-size: ' + fontSize + ' !important;' : '') + '"' : '') + '>' + result + '</span>';
+                        return '<span ' + (className ? 'class="' + className + '" ' : '') + (!!color || !!backColor || !!fontSize ? 'style="' + (color ? 'color: ' + color + ' !important;' : '') + ' ' + (backColor ? 'background-color: ' + backColor + ' !important;' : '') + ' ' + (fontSize ? 'font-size: ' + fontSize + ' !important;' : '') + '"' : '') + attributes + '>' + result + '</span>';
                     default:
                         result += c;
                 }
