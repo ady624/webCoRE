@@ -175,7 +175,7 @@
 					<table class="table" ng-if="(category.t == 'd') || (category.t == 'dt') || (category.t == 'dm') || (category.t == 'dl')">
 						<tbody>
 							<tr ng-repeat="piston in category.p" active="true" ng-if="piston.meta && piston.meta.a" data-toggle="tooltip" title="{{piston.meta.t ? 'Executed ' + timeSince(piston.meta.t) : 'Never executed'}}">
-								<td ng-click="openPiston(piston.id);"><span><i star class="fa fa-circle" ng-style="{opacity: piston.opacity}" aria-hidden="true"></i>{{piston.name}}<span state ng-bind-html="renderString(piston.meta.s.new)"></span><!--<span ng-if="piston.meta.s && piston.meta.s.new" state="{{piston.meta.s.new}}">{{piston.meta.s.new}}</span>--></span></td>
+								<td ng-click="openPiston(piston.id);"><span><i star class="fas fa-circle fa-xs" ng-style="{opacity: piston.opacity}" aria-hidden="true"></i>{{piston.name}}<span state ng-bind-html="renderString(piston.meta.s.new)"></span><!--<span ng-if="piston.meta.s && piston.meta.s.new" state="{{piston.meta.s.new}}">{{piston.meta.s.new}}</span>--></span></td>
 								<td ng-click="openPiston(piston.id);" dur class="col-md-1 text-right">{{piston.meta.n ? timeCounter(piston.meta.n) : ''}}</td>
 								<td ng-if="!mobile" opt><i class="fa fa-ellipsis-v" aria-hidden="true"></i><actions class="animated"><action ng-click="pausePiston(piston.id);" data-toggle="tooltip" title="Pause piston">Pause</action><action ng-click="testPiston(piston.id);" data-toggle="tooltip" title="Test piston">Test</action><action ng-click="openPiston(piston.id);" data-toggle="tooltip" title="View/Edit piston">View</action></actions></td>
 
@@ -199,7 +199,7 @@
 					<table class="table" ng-if="(category.t == 'td') || (category.t == 'tm') || (category.t == 'tl')">
 						<tbody>
 							<tr ng-repeat="piston in category.p" active="true" ng-if="piston.meta && piston.meta.a" data-toggle="tooltip" title="{{piston.meta.t ? 'Executed ' + timeSince(piston.meta.t) : 'Never executed'}}">
-								<td ng-click="openPiston(piston.id);"><span><i star class="fa fa-circle" ng-style="{opacity: piston.opacity}" aria-hidden="true"></i>{{piston.name}}<span state ng-bind-html="renderString(piston.meta.s.new)"></span><!--<span ng-if="piston.meta.s && piston.meta.s.new" state="{{piston.meta.s.new}}">{{piston.meta.s.new}}</span>--></span></td>
+								<td ng-click="openPiston(piston.id);"><span><i star class="fas fa-circle fa-xs" ng-style="{opacity: piston.opacity}" aria-hidden="true"></i>{{piston.name}}<span state ng-bind-html="renderString(piston.meta.s.new)"></span><!--<span ng-if="piston.meta.s && piston.meta.s.new" state="{{piston.meta.s.new}}">{{piston.meta.s.new}}</span>--></span></td>
 								<td ng-click="openPiston(piston.id);" dur class="col-md-1 text-right">{{piston.meta.n ? timeCounter(piston.meta.n) : ''}}</td>
 								<td ng-if="!mobile" opt><i class="fa fa-ellipsis-v" aria-hidden="true"></i><actions class="animated"><action ng-click="pausePiston(piston.id);" data-toggle="tooltip" title="Pause piston">Pause</action><action ng-click="testPiston(piston.id);" data-toggle="tooltip" title="Test piston">Test</action><action ng-click="openPiston(piston.id);" data-toggle="tooltip" title="View/Edit piston">View</action></actions></td>
 
