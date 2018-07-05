@@ -22,7 +22,7 @@
 
 <!--External links // collapsed on xs-->
 	<ul class="nav navbar-nav navbar-right hidden-xs">
-			<li><a target="_blank" aria-haspopup="true" aria-expanded="false" href="https://www.paypal.me/ady624"><i class="fa fa-paypal" aria-hidden="true"></i>&nbsp;&nbsp;Donate</a></li>
+			<li><a target="_blank" aria-haspopup="true" aria-expanded="false" href="https://www.paypal.me/ady624"><i class="fab fa-paypal" aria-hidden="true"></i>&nbsp;&nbsp;Donate</a></li>
 			<li><a target="_blank" aria-haspopup="true" aria-expanded="false" href="https://community.webcore.co"><i class="fa fa-comments" aria-hidden="true"></i>&nbsp;&nbsp;Forum</a></li>
 			<li><a target="_blank" aria-haspopup="true" aria-expanded="false" href="https://wiki.webcore.co"><i class="fa fa-book" aria-hidden="true"></i>&nbsp;&nbsp;Wiki</a></li>
 	</ul>
@@ -42,16 +42,16 @@
  					<a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Options <span class="caret"></span></a>
           <ul class="dropdown-menu">
             <li><a href="#" ng-click="newPiston();"><i class="fa fa-plus" aria-hidden="true"></i>&nbsp;&nbsp;New Piston</a></li>
-						<li><a href="#" ng-click="showDashboard();"><i class="fa fa-th-list" aria-hidden="true"></i>&nbsp;&nbsp;Dashboard</a></li>
-						<li><a href="#" ng-click="showFuelStreams();"><i class="fa fa-area-chart" aria-hidden="true"></i>&nbsp;&nbsp;Fuel Streams</a></li>
-						<li><a href="" ng-click="backup();"><i class="fa fa-cloud-upload" aria-hidden="true"></i>&nbsp;&nbsp;Backup Piston(s)</a></li>
-            <li ng-if="instanceCount > 1"><a href="#" ng-click="movePiston();"><i class="fa fa-sort" aria-hidden="true"></i>Move Piston(s)</a></li>
-            <li><a href="register"><i class="fa fa-home" aria-hidden="true"></i>&nbsp;&nbsp;Register Instance</a></li>
-            <li><a href="#" ng-click="showSettings()"><i class="fa fa-wrench" aria-hidden="true"></i>&nbsp;&nbsp;Settings</a></li>
-						<li><a target="_blank" aria-haspopup="true" aria-expanded="false" href="https://www.paypal.me/ady624"><i class="fa fa-paypal" aria-hidden="true"></i>&nbsp;&nbsp;Donate</a></li>
-						<li><a target="_blank" aria-haspopup="true" aria-expanded="false" href="https://community.webcore.co"><i class="fa fa-comments" aria-hidden="true"></i>&nbsp;&nbsp;Forum</a></li>
-						<li><a target="_blank" aria-haspopup="true" aria-expanded="false" href="https://wiki.webcore.co"><i class="fa fa-book" aria-hidden="true"></i>&nbsp;&nbsp;Wiki</a></li>
-						<li><a href="#" ng-click="logOut();"><i class="fa fa-sign-out" aria-hidden="true"></i>&nbsp;&nbsp;Log Out</a></li>
+						<li><a href="#" ng-click="showDashboard();"><i class="fas fa-th-large" aria-hidden="true"></i>&nbsp;&nbsp;Dashboard</a></li>
+						<li><a href="#" ng-click="showFuelStreams();"><i class="fas fa-chart-area" aria-hidden="true"></i>&nbsp;&nbsp;Fuel Streams</a></li>
+						<li><a href="" ng-click="backup();"><i class="fas fa-cloud-upload" aria-hidden="true"></i>&nbsp;&nbsp;Backup Piston(s)</a></li>
+            <li ng-if="instanceCount > 1"><a href="#" ng-click="movePiston();"><i class="fas fa-sort" aria-hidden="true"></i>Move Piston(s)</a></li>
+            <li><a href="register"><i class="fas fa-home" aria-hidden="true"></i>&nbsp;&nbsp;Register Instance</a></li>
+            <li><a href="#" ng-click="showSettings()"><i class="fas fa-wrench" aria-hidden="true"></i>&nbsp;&nbsp;Settings</a></li>
+						<li><a target="_blank" aria-haspopup="true" aria-expanded="false" href="https://www.paypal.me/ady624"><i class="fab fa-paypal" aria-hidden="true"></i>&nbsp;&nbsp;Donate</a></li>
+						<li><a target="_blank" aria-haspopup="true" aria-expanded="false" href="https://community.webcore.co"><i class="fas fa-comments" aria-hidden="true"></i>&nbsp;&nbsp;Forum</a></li>
+						<li><a target="_blank" aria-haspopup="true" aria-expanded="false" href="https://wiki.webcore.co"><i class="fas fa-book" aria-hidden="true"></i>&nbsp;&nbsp;Wiki</a></li>
+						<li><a href="#" ng-click="logOut();"><i class="fas fa-sign-out" aria-hidden="true"></i>&nbsp;&nbsp;Log Out</a></li>
 					</ul>
 				</li>
 			</ul>
@@ -101,29 +101,29 @@
 				<ul class="nav nav-sidebar">
 					<li class="logo"><img class="logo-sm" src="img/webCoRE-mark.svg" alt="webCoRE logo"><img class="logo-lg" src="img/webCoRE-text.svg" width="90%"></li>
 					<li><a href="" ng-click="newPiston();" class="newPiston" data-toggle="{{sidebarCollapsed ? 'tooltip' : ''}}" data-placement="right" data-title="New Piston">
-						<i class="fa fa-plus" aria-hidden="true"></i>&nbsp;&nbsp;New Piston
+						<i class="fas fa-plus" aria-hidden="true"></i>&nbsp;&nbsp;New Piston
 					</a></li>
 					<li><a href="" ng-click="showDashboard();" class="dash" data-toggle="{{sidebarCollapsed ? 'tooltip' : ''}}" data-placement="right" data-title="Dashboard (beta)">
-						<i class="fa fa-th-list" aria-hidden="true"></i>&nbsp;&nbsp;Dashboard (beta)
+						<i class="fas fa-th-large" aria-hidden="true"></i>&nbsp;&nbsp;Dashboard (beta)
 					</a></li>
 					<li><a href="" ng-click="showFuelStreams();" class="fuel" data-toggle="{{sidebarCollapsed ? 'tooltip' : ''}}" data-placement="right" data-title="Fuel Streams (beta)">
-						<i class="fa fa-area-chart" aria-hidden="true"></i>&nbsp;&nbsp;Fuel Streams (beta)
+						<i class="fas fa-chart-area" aria-hidden="true"></i>&nbsp;&nbsp;Fuel Streams (beta)
 					</a></li>
 					<li><a href="" ng-click="backup();" class="backup" data-toggle="{{sidebarCollapsed ? 'tooltip' : ''}}" data-placement="right" data-title="Backup Piston(s)">
-						<i class="fa fa-cloud-upload" aria-hidden="true"></i>&nbsp;&nbsp;Backup Piston(s)
+						<i class="fas fa-cloud-upload" aria-hidden="true"></i>&nbsp;&nbsp;Backup Piston(s)
 					</a></li>
 					<li><a href="register" class="register" data-toggle="{{sidebarCollapsed ? 'tooltip' : ''}}" data-placement="right" data-title="Register Instance">
-						<i class="fa fa-home" aria-hidden="true"></i>&nbsp;&nbsp;Register Instance
+						<i class="fas fa-home" aria-hidden="true"></i>&nbsp;&nbsp;Register Instance
 					</a></li>
 					<li ng-if="instanceCount > 1"><a href="" ng-click="movePiston();" class="move" data-toggle="{{sidebarCollapsed ? 'tooltip' : ''}}" data-placement="right" data-title="Move Piston(s)">
-						<i class="fa fa-sort" aria-hidden="true"></i>&nbsp;&nbsp;Move Piston(s)
+						<i class="fas fa-sort" aria-hidden="true"></i>&nbsp;&nbsp;Move Piston(s)
 					</a></li>
 					<li><a href="" ng-click="showSettings();" class="settings" data-toggle="{{sidebarCollapsed ? 'tooltip' : ''}}" data-placement="right" data-title="Settings">
-						<i class="fa fa-wrench" aria-hidden="true"></i>&nbsp;&nbsp;Settings
+						<i class="fas fa-wrench" aria-hidden="true"></i>&nbsp;&nbsp;Settings
 					</a></li>
 					<li>
 					<li><a href="#" ng-click="logOut();" class="logout" data-toggle="{{sidebarCollapsed ? 'tooltip' : ''}}" data-placement="right" data-title="Log Out">
-						<i class="fa fa-sign-out" aria-hidden="true"></i>&nbsp;&nbsp;Log Out
+						<i class="fas fa-sign-out" aria-hidden="true"></i>&nbsp;&nbsp;Log Out
 					</a></li>
 					<li class="text-center">
 						
@@ -177,7 +177,7 @@
 							<tr ng-repeat="piston in category.p" active="true" ng-if="piston.meta && piston.meta.a" data-toggle="tooltip" title="{{piston.meta.t ? 'Executed ' + timeSince(piston.meta.t) : 'Never executed'}}">
 								<td ng-click="openPiston(piston.id);"><span><i star class="fas fa-circle fa-xs" ng-style="{opacity: piston.opacity}" aria-hidden="true"></i>{{piston.name}}<span state ng-bind-html="renderString(piston.meta.s.new)"></span><!--<span ng-if="piston.meta.s && piston.meta.s.new" state="{{piston.meta.s.new}}">{{piston.meta.s.new}}</span>--></span></td>
 								<td ng-click="openPiston(piston.id);" dur class="col-md-1 text-right">{{piston.meta.n ? timeCounter(piston.meta.n) : ''}}</td>
-								<td ng-if="!mobile" opt><i class="fa fa-ellipsis-v" aria-hidden="true"></i><actions class="animated"><action ng-click="pausePiston(piston.id);" data-toggle="tooltip" title="Pause piston">Pause</action><action ng-click="testPiston(piston.id);" data-toggle="tooltip" title="Test piston">Test</action><action ng-click="openPiston(piston.id);" data-toggle="tooltip" title="View/Edit piston">View</action></actions></td>
+								<td ng-if="!mobile" opt><i class="far fa-ellipsis-v" aria-hidden="true"></i><actions class="animated"><action ng-click="pausePiston(piston.id);" data-toggle="tooltip" title="Pause piston">Pause</action><action ng-click="testPiston(piston.id);" data-toggle="tooltip" title="Test piston">Test</action><action ng-click="openPiston(piston.id);" data-toggle="tooltip" title="View/Edit piston">View</action></actions></td>
 
 							</tr>
 						</tbody>
@@ -399,7 +399,7 @@
       </header>
       <items>
            <item ng-repeat="item in designer.items" type="{{item.type}}" class="btn btn-block btn-lg {{item.cssClass}}" ng-click="setDesignerType(item.type)">
-             <i class="fa fa-lg fa-{{item.icon}}"></i>
+             <i class="fal fa-lg fa-{{item.icon}}"></i>
              {{item.name}}
           </item>
       </items>

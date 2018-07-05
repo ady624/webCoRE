@@ -39,9 +39,9 @@
 						<ul class="dropdown-menu">
 							<li class="dropdown"><a href="" ng-click="edit();" title="Edit the piston">Edit</a></li>
 							<li class="dropdown"><a href="" ng-click="test();" title="Test the piston">Test</a></li>
-             	<li class="dropdown"><a href="" ng-click="snapshot(true);" title="Take an anonymized snapshot of the piston"><i class="fa fa-camera" aria-hidden="true"></i> Anonymized Snapshot</a></li>
-       				<li class="dropdown"><a href="" ng-click="snapshot();" title="Take a snapshot of the piston"><i class="fa fa-camera" aria-hidden="true"></i> Snapshot</a></li>
-							<li class="dropdown"><a href="" ng-click="textSnapshot();" title="Copy piston to clipboard"><i class="fa fa-copy" aria-hidden="true"  title="Copy piston"></i> Copy Piston</a></li>
+             	<li class="dropdown"><a href="" ng-click="snapshot(true);" title="Take an anonymized snapshot of the piston"><i class="fa fa-camera"></i> Anonymized Snapshot</a></li>
+       				<li class="dropdown"><a href="" ng-click="snapshot();" title="Take a snapshot of the piston"><i class="fa fa-camera"></i> Snapshot</a></li>
+							<li class="dropdown"><a href="" ng-click="textSnapshot();" title="Copy piston to clipboard"><i class="fal fa-copy"></i> Copy Piston</a></li>
 							<li ng-if="trace && trace.points" class="{{view.trace ? 'active-tick' : ''}}"><a href="" ng-click="view.trace = !view.trace; toggleView(null);">Trace</a></li>
 							<li class="dropdown"><a href="" ng-click="deleteDialog();" title="Delete piston">Delete</a></li>
 						</ul>
@@ -54,11 +54,11 @@
 <!-- Edit mode -->
 
 			<div ng-if="mode=='edit'" class="nav navbar-nav btn-group hidden-xxs">
-				<button class="btn btn-default {{view.variables ? 'active' : ''}}" ng-click="toggleView('variables');" title="Show variables"><i class="fa fa-subscript" aria-hidden="true"></i></button>
-				<button class="btn btn-default {{view.elseIfs ? 'active' : ''}}" ng-click="toggleView('elseIfs');" title="Show complex IFs"><i class="fa fa-code-fork" aria-hidden="true"></i></button>
-				<button class="btn btn-default {{view.restrictions ? 'active' : ''}}" ng-click="toggleView('restrictions');" title="Show restrictions"><i class="fa fa-filter" aria-hidden="true"></i></button>
-				<button class="btn btn-default {{view.movable ? 'active' : ''}}" ng-click="toggleView('movable');" title="Allow moving of items by drag & drop"><i class="fa fa-sort" aria-hidden="true"></i></button>
-				<button class="btn btn-default {{view.console ? 'active' : ''}}" ng-click="toggleView('console');" title="Show evaluation console"><i class="fa fa-terminal" aria-hidden="true"></i></button>
+				<button class="btn btn-default {{view.variables ? 'active' : ''}}" ng-click="toggleView('variables');" title="Show variables"><i class="far fa-superscript"></i></button>
+				<button class="btn btn-default {{view.elseIfs ? 'active' : ''}}" ng-click="toggleView('elseIfs');" title="Show complex IFs"><i class="far fa-code-branch"></i></button>
+				<button class="btn btn-default {{view.restrictions ? 'active' : ''}}" ng-click="toggleView('restrictions');" title="Show restrictions"><i class="fas fa-filter"></i></button>
+				<button class="btn btn-default {{view.movable ? 'active' : ''}}" ng-click="toggleView('movable');" title="Allow moving of items by drag & drop"><i class="fas fa-sort"></i></button>
+				<button class="btn btn-default {{view.console ? 'active' : ''}}" ng-click="toggleView('console');" title="Show evaluation console"><i class="fal fa-terminal"></i></button>
 			</div>
 			<div ng-if="mode=='edit'" class="nav navbar-nav btn-group">
 				<button class="btn btn-default" title="Undo" ng-click="undo();" ng-disabled="!stack || !stack.undo || !stack.undo.length"><i class="fa fa-undo" aria-hidden="true"></i>
@@ -126,7 +126,7 @@
 		<div warning ng-if="meta.active && !subscriptions.events && !schedules.length && !piston.o.des" class="alert alert-warning">This piston does not subscribe to any events. Unless executed by other means, it will never run on its own.</div>
 
 		<div class="text-right">
-			<span class="fa fa-caret-down collapse-control rotate-on-collapse" data-toggle="collapse" collapse-control data-target="#collapseCards" aria-expanded="true" small title="Hide/Show"></span>
+			<span class="fas fa-caret-down collapse-control rotate-on-collapse" data-toggle="collapse" collapse-control data-target="#collapseCards" aria-expanded="true" small title="Hide/Show"></span>
 		</div>
 		
 		<div class="row">
@@ -189,7 +189,7 @@
 
 			<div class="row">
 				<div class="col-md-12">
-					<span class="fa fa-caret-down pull-right collapse-control rotate-on-collapse" data-toggle="collapse" collapse-control data-target="#collapseScript" aria-expanded="true" small title="Hide/Show"></span>
+					<span class="fas fa-caret-down pull-right collapse-control rotate-on-collapse" data-toggle="collapse" collapse-control data-target="#collapseScript" aria-expanded="true" small title="Hide/Show"></span>
 					<h3 class="pull-left">
 						Script 
 					</h3>
@@ -209,7 +209,7 @@
 
 				<div class="col-md-12 col-lg-6">
 					<h3>
-						<span class="fa fa-caret-down pull-right collapse-control rotate-on-collapse" data-toggle="collapse" collapse-control data-target="#collapseLogs" aria-expanded="true" small title="Hide/Show"></span>
+						<span class="fas fa-caret-down pull-right collapse-control rotate-on-collapse" data-toggle="collapse" collapse-control data-target="#collapseLogs" aria-expanded="true" small title="Hide/Show"></span>
 						Logs
 					</h3>
 					<div class="collapse in" collapse-target id="collapseLogs">
@@ -249,7 +249,7 @@
 
 				<div class="col-md-12 col-lg-6">
 					<h3>
-						<span class="fa fa-caret-down pull-right collapse-control rotate-on-collapse" data-toggle="collapse" collapse-control data-target="#collapseVars" aria-expanded="true" small title="Hide/Show"></span>
+						<span class="fas fa-caret-down pull-right collapse-control rotate-on-collapse" data-toggle="collapse" collapse-control data-target="#collapseVars" aria-expanded="true" small title="Hide/Show"></span>
 						Variables
 					</h3>
 					<div class="collapse in" collapse-target id="collapseVars">
@@ -272,7 +272,7 @@
 			<div class="row">
 				<div class="col-md-12">
 					<h3>
-						<span class="fa fa-caret-down pull-right collapse-control rotate-on-collapse" data-toggle="collapse" collapse-control data-target="#collapseCons" aria-expanded="true" small title="Hide/Show"></span>
+						<span class="fas fa-caret-down pull-right collapse-control rotate-on-collapse" data-toggle="collapse" collapse-control data-target="#collapseCons" aria-expanded="true" small title="Hide/Show"></span>
 						Evaluation Console
 					</h3>
 					<div class="collapse in" collapse-target id="collapseCons">
@@ -295,7 +295,7 @@
 				<div class="col-md-12">
 
 					<h3>
-						<span class="fa fa-caret-down pull-right collapse-control rotate-on-collapse" collapse-control data-toggle="collapse" data-target="#collapseStats" aria-expanded="true" small title="Hide/Show"></span>
+						<span class="fas fa-caret-down pull-right collapse-control rotate-on-collapse" collapse-control data-toggle="collapse" data-target="#collapseStats" aria-expanded="true" small title="Hide/Show"></span>
 						Statistics
 					</h3>
 					<div class="collapse in" collapse-target id="collapseStats">
@@ -376,9 +376,9 @@
 <script type="text/ng-template" id="piston-editor-buttons">
 	<button class="btn btn-default" ng-click="edit();" title="Edit the piston">Edit</button>
 	<button class="btn btn-warning" ng-click="test();" title="Test the piston">Test</button>
-	<button class="btn btn-success" ng-click="snapshot(true);" title="Take an anonymized snapshot of the piston"><i class="fa fa-camera" aria-hidden="true"></i></button>
-	<button class="btn btn-danger" ng-click="snapshot();" title="Take a snapshot of the piston"><i class="fa fa-camera" aria-hidden="true"></i></button>
-	<button class="btn btn-default" ng-click="textSnapshot();" title="Copy piston to clipboard"><i class="fa fa-copy" aria-hidden="true"></i></button>
+	<button class="btn btn-success" ng-click="snapshot(true);" title="Take an anonymized snapshot of the piston"><i class="fas fa-camera" data-fa-transform="grow-4"></i></button>
+	<button class="btn btn-danger" ng-click="snapshot();" title="Take a snapshot of the piston"><i class="fas fa-camera" data-fa-transform="grow-4"></i></button>
+	<button class="btn btn-default" ng-click="textSnapshot();" title="Copy piston to clipboard"><i class="fal fa-copy" data-fa-transform="grow-4"></i></button>
 	<toggle ng-if="trace && trace.points" ng-model="view.trace" on="Trace" off="Trace" ng-click="toggleView(null)"></toggle>
 	<button class="btn btn-danger" ng-click="deleteDialog();">Delete</button>
 </script>
@@ -455,7 +455,7 @@
 			<div ng-repeat="variable in variables">
 				<line com ng-if="variable.z">/* {{variable.z}} */</line>
 				<line pun dnd-nodrag dnd-draggable="variable" dnd-type="'variable'" dnd-moved="drag(variables, $index);" dnd-copied="copyVariable(variables, $index)" dnd-effect-allowed="copyMove">
-					<handle dnd-handle class="fa fa-sort"></handle>
+					<handle dnd-handle class="fas fa-sort"></handle>
 					<span ng-click="editVariable(variable);" dnd-nodrag><span pun ng-if="(variable.a == 's') && (variable.v)">const&nbsp;</span><span typ>{{variable.t}}&nbsp;</span><span var>{{variable.n}}</span><span ng-if="variable.v" pun>&nbsp;=&nbsp;</span><span ng-if="variable.v" ng-bind-html="variable.$$html || (variable.$$html = renderOperand(variable.v))"></span><span pun>;</span><span ng-if="!variable.v" com sensitive>&nbsp;/* <span ng-bind-html="formatVariableValue(variable, variable.n)"></span> */</span></span>
 				</line>
 			</div>
@@ -469,7 +469,7 @@
 </script>
 <script type="text/ng-template" id="statement">
 	<dnd-nodrag ng-selected="selection == statement" ng-disabled="statement.di">
-		<async ng-if="(statement.a == '1')" class="fa fa-code-fork" title="This statement is executed asynchronously"></async>
+		<async ng-if="(statement.a == '1')" class="fa fa-code-branch" title="This statement is executed asynchronously"></async>
 		<bar ng-if="(statement.t!='action') || ((mode=='edit') && view.movable) || ((statement.d) && (statement.d.length)) || ((statement.r) && (statement.r.length)) || ((statement.k) && ((mode=='edit') || (statement.k.length>1)))" asynch="{{statement.a == '1'}}"></bar>
 <!--		<trace ng-if="(view.trace && (mode=='view') && trace && trace.points && trace.points['s:' + statement.$])"><span>+{{trace.points['s:' + statement.$].o}}ms</span><span dur>{{trace.points['s:' + statement.$].d}}ms</span></trace>-->
 		<trace ng-if="(view.trace && (mode=='view') && ((statement.t != 'action') || (statement.d && statement.d.length)) && trace && trace.points && trace.points['s:' + statement.$])"><span>+{{trace.points['s:' + statement.$].o}}ms</span><span ng-if="(trace.points['s:' + statement.$].v != null) && (trace.points['s:' + statement.$].v >= 0)" dur>{{trace.points['s:' + statement.$].d}}ms</span><span ng-if="(trace.points['s:' + statement.$].v == null) || (trace.points['s:' + statement.$].v < 0)" timer ok="{{(trace.points['s:' + statement.$].v == null) || (trace.t + trace.points['s:' + statement.$].o + trace.points['s:' + statement.$].d - trace.points['s:' + statement.$].v >= currentTime())}}">{{trace.points['s:' + statement.$].v == null ? '▼ ▼ ▼' : timeCounter(trace.t + trace.points['s:' + statement.$].o + trace.points['s:' + statement.$].d - trace.points['s:' + statement.$].v)}}</span></trace>
@@ -480,7 +480,7 @@
 			<line kwd ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)">only when</line>
 			<restrictions ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)" data-ng-repeat="collection in [statement]" data-ng-include="'restrictions'" dnd-nodrag data-nag-model="statement"></restrictions>
 			<line ng-if-start="((mode=='edit') && view.movable) || ((statement.d) && (statement.d.length)) || ((statement.r) && (statement.r.length)) || ((statement.k) && (statement.k.length==0))" kwd ng-click="select(statement, statements)">
-				<handle dnd-handle class="fa fa-sort"></handle><span ng-click="editStatement(statement, statements)" kwd>{{statement.a == '1' ? 'async ' : ''}}with</span>
+				<handle dnd-handle class="fas fa-sort"></handle><span ng-click="editStatement(statement, statements)" kwd>{{statement.a == '1' ? 'async ' : ''}}with</span>
 				<badge green ng-if="(statement.tep == 'c')" badge="C" title="Only execute on condition state change"></badge>
 				<badge green ng-if="(statement.tep == 'p')" badge="P" title="Only execute on piston state change"></badge>
 				<badge green ng-if="(statement.tep == 'b')" badge="C|P" title="Only execute on condition or piston state change"></badge>
@@ -507,7 +507,7 @@
 			<line kwd ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)">only when</line>
 			<restrictions ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)" data-ng-repeat="collection in [statement]" data-ng-include="'restrictions'" dnd-nodrag data-nag-model="statement"></restrictions>
 			<line kwd ng-click="select(statement, statements)">
-				<handle dnd-handle class="fa fa-sort"></handle><span ng-click="editStatement(statement, statements)" kwd>{{statement.a == '1' ? 'async ' : ''}}do</span>
+				<handle dnd-handle class="fas fa-sort"></handle><span ng-click="editStatement(statement, statements)" kwd>{{statement.a == '1' ? 'async ' : ''}}do</span>
 				<badge green ng-if="(statement.tep == 'c')" badge="C" title="Only execute on condition state change"></badge>
 				<badge green ng-if="(statement.tep == 'p')" badge="P" title="Only execute on piston state change"></badge>
 				<badge green ng-if="(statement.tep == 'b')" badge="C|P" title="Only execute on condition or piston state change"></badge>
@@ -529,7 +529,7 @@
 			<line kwd ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)">only when</line>
 			<restrictions ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)" data-ng-repeat="collection in [statement]" data-ng-include="'restrictions'" dnd-nodrag data-nag-model="statement"></restrictions>
 			<line kwd ng-click="select(statement, statements)">
-				<handle dnd-handle class="fa fa-sort"></handle><span ng-click="editStatement(statement, statements)" kwd>on events from</span>
+				<handle dnd-handle class="fas fa-sort"></handle><span ng-click="editStatement(statement, statements)" kwd>on events from</span>
 				<span ng-if="view.trace && (mode=='view')" nul> /* #{{statement.$}} */</span>
 			</line>
 			<events data-ng-repeat="collection in [statement]" data-ng-include="'events'" dnd-nodrag eval="{{statement && trace && trace.points && trace.points['c:' + statement.$] ? trace.points['c:' + statement.$].v : ''}}"></events>
@@ -545,7 +545,7 @@
 			<line kwd ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)">only when</line>
 			<restrictions ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)" data-ng-repeat="collection in [statement]" data-ng-include="'restrictions'" dnd-nodrag data-nag-model="statement"></restrictions>
 			<line kwd ng-click="select(statement, statements)">
-				<handle dnd-handle class="fa fa-sort"></handle><span ng-click="editStatement(statement, statements)" kwd>{{statement.a == '1' ? 'async ' : ''}}if</span>
+				<handle dnd-handle class="fas fa-sort"></handle><span ng-click="editStatement(statement, statements)" kwd>{{statement.a == '1' ? 'async ' : ''}}if</span>
 				<badge green ng-if="(statement.tep == 'c')" badge="C" title="Only execute on condition state change"></badge>
 				<badge green ng-if="(statement.tep == 'p')" badge="P" title="Only execute on piston state change"></badge>
 				<badge green ng-if="(statement.tep == 'b')" badge="C|P" title="Only execute on condition or piston state change"></badge>
@@ -578,7 +578,7 @@
 			<line kwd ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)">only when</line>
 			<restrictions ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)" data-ng-repeat="collection in [statement]" data-ng-include="'restrictions'" dnd-nodrag data-nag-model="statement"></restrictions>
 			<line kwd ng-click="select(statement, statements)">
-				<handle dnd-handle class="fa fa-sort"></handle><span ng-click="editStatement(statement, statements)" kwd>{{statement.a == '1' ? 'async ' : ''}}switch</span> <span pun>(</span><span ng-bind-html="statement.$$html || (statement.$$html = renderOperand(statement.lo))"></span><span pun>)</span><span pun title="Fall-through mode" ng-if="statement.ctp == 'e'"><i class="fa fa-sort-amount-asc" aria-hidden="true"></i></span>
+				<handle dnd-handle class="fas fa-sort"></handle><span ng-click="editStatement(statement, statements)" kwd>{{statement.a == '1' ? 'async ' : ''}}switch</span> <span pun>(</span><span ng-bind-html="statement.$$html || (statement.$$html = renderOperand(statement.lo))"></span><span pun>)</span><span pun title="Fall-through mode" ng-if="statement.ctp == 'e'"><i class="fas fa-sort-amount-asc" aria-hidden="true"></i></span>
 				<badge green ng-if="(statement.tep == 'c')" badge="C" title="Only execute on condition state change"></badge>
 				<badge green ng-if="(statement.tep == 'p')" badge="P" title="Only execute on piston state change"></badge>
 				<badge green ng-if="(statement.tep == 'b')" badge="C|P" title="Only execute on condition or piston state change"></badge>
@@ -611,7 +611,7 @@
 			<line kwd ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)">only when</line>
 			<restrictions ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)" data-ng-repeat="collection in [statement]" data-ng-include="'restrictions'" dnd-nodrag data-nag-model="statement"></restrictions>
 			<line kwd ng-click="select(statement, statements)">
-				<handle dnd-handle class="fa fa-sort"></handle><span ng-click="editStatement(statement, statements)" kwd>{{statement.a == '1' ? 'async ' : ''}}for</span> <span pun>(</span><span ng-bind-html="statement.$$html || (statement.$$html = renderForOperands(statement))"></span><span pun>)</span>
+				<handle dnd-handle class="fas fa-sort"></handle><span ng-click="editStatement(statement, statements)" kwd>{{statement.a == '1' ? 'async ' : ''}}for</span> <span pun>(</span><span ng-bind-html="statement.$$html || (statement.$$html = renderForOperands(statement))"></span><span pun>)</span>
 				<badge green ng-if="(statement.tep == 'c')" badge="C" title="Only execute on condition state change"></badge>
 				<badge green ng-if="(statement.tep == 'p')" badge="P" title="Only execute on piston state change"></badge>
 				<badge green ng-if="(statement.tep == 'b')" badge="C|P" title="Only execute on condition or piston state change"></badge>
@@ -633,7 +633,7 @@
 			<line kwd ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)">only when</line>
 			<restrictions ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)" data-ng-repeat="collection in [statement]" data-ng-include="'restrictions'" dnd-nodrag data-nag-model="statement"></restrictions>
 			<line kwd ng-click="select(statement, statements)">
-				<handle dnd-handle class="fa fa-sort"></handle><span ng-click="editStatement(statement, statements)" kwd>{{statement.a == '1' ? 'async ' : ''}}for each</span> <span pun>(</span><span ng-bind-html="statement.$$html || (statement.$$html = renderForEachOperands(statement))"></span><span pun>)</span>
+				<handle dnd-handle class="fas fa-sort"></handle><span ng-click="editStatement(statement, statements)" kwd>{{statement.a == '1' ? 'async ' : ''}}for each</span> <span pun>(</span><span ng-bind-html="statement.$$html || (statement.$$html = renderForEachOperands(statement))"></span><span pun>)</span>
 				<badge green ng-if="(statement.tep == 'c')" badge="C" title="Only execute on condition state change"></badge>
 				<badge green ng-if="(statement.tep == 'p')" badge="P" title="Only execute on piston state change"></badge>
 				<badge green ng-if="(statement.tep == 'b')" badge="C|P" title="Only execute on condition or piston state change"></badge>
@@ -655,7 +655,7 @@
 			<line kwd ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)">only when</line>
 			<restrictions ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)" data-ng-repeat="collection in [statement]" data-ng-include="'restrictions'" dnd-nodrag data-nag-model="statement"></restrictions>
 			<line kwd ng-click="select(statement, statements)">
-				<handle dnd-handle class="fa fa-sort"></handle><span ng-click="editStatement(statement, statements)" kwd>{{statement.a == '1' ? 'async ' : ''}}while</span>
+				<handle dnd-handle class="fas fa-sort"></handle><span ng-click="editStatement(statement, statements)" kwd>{{statement.a == '1' ? 'async ' : ''}}while</span>
 				<badge green ng-if="(statement.tep == 'c')" badge="C" title="Only execute on condition state change"></badge>
 				<badge green ng-if="(statement.tep == 'p')" badge="P" title="Only execute on piston state change"></badge>
 				<badge green ng-if="(statement.tep == 'b')" badge="C|P" title="Only execute on condition or piston state change"></badge>
@@ -678,7 +678,7 @@
 			<line kwd ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)">only when</line>
 			<restrictions ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)" data-ng-repeat="collection in [statement]" data-ng-include="'restrictions'" dnd-nodrag data-nag-model="statement"></restrictions>
 			<line ng-click="select(statement, statements)">
-				<handle dnd-handle class="fa fa-sort"></handle><span ng-click="editStatement(statement, statements)" kwd>{{statement.a == '1' ? 'async ' : ''}}repeat</span>
+				<handle dnd-handle class="fas fa-sort"></handle><span ng-click="editStatement(statement, statements)" kwd>{{statement.a == '1' ? 'async ' : ''}}repeat</span>
 				<badge green ng-if="(statement.tep == 'c')" badge="C" title="Only execute on condition state change"></badge>
 				<badge green ng-if="(statement.tep == 'p')" badge="P" title="Only execute on piston state change"></badge>
 				<badge green ng-if="(statement.tep == 'b')" badge="C|P" title="Only execute on condition or piston state change"></badge>
@@ -702,7 +702,7 @@
 			<line kwd ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)">only when</line>
 			<restrictions ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)" data-ng-repeat="collection in [statement]" data-ng-include="'restrictions'" dnd-nodrag data-nag-model="statement"></restrictions>
 			<line kwd ng-click="select(statement, statements)">
-				<handle dnd-handle class="fa fa-sort"></handle><span kwd ng-click="editStatement(statement, statements)">every</span> <span lit ng-click="editStatement(statement, statements)" ng-bind-html="renderTimer(statement);"></span>
+				<handle dnd-handle class="fas fa-sort"></handle><span kwd ng-click="editStatement(statement, statements)">every</span> <span lit ng-click="editStatement(statement, statements)" ng-bind-html="renderTimer(statement);"></span>
 				<badge green ng-if="(statement.tep == 'c')" badge="C" title="Only execute on condition state change"></badge>
 				<badge green ng-if="(statement.tep == 'p')" badge="P" title="Only execute on piston state change"></badge>
 				<badge green ng-if="(statement.tep == 'b')" badge="C|P" title="Only execute on condition or piston state change"></badge>
@@ -724,7 +724,7 @@
 			<line kwd ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)">only when</line>
 			<restrictions ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)" data-ng-repeat="collection in [statement]" data-ng-include="'restrictions'" dnd-nodrag data-nag-model="statement"></restrictions>
 			<line kwd ng-click="select(statement, statements)">
-				<handle dnd-handle class="fa fa-sort"></handle><span ng-click="editStatement(statement, statements)" kwd>break</span>
+				<handle dnd-handle class="fas fa-sort"></handle><span ng-click="editStatement(statement, statements)" kwd>break</span>
 				<span ng-if="view.trace && (mode=='view')" nul> /* #{{statement.$}} */</span>
 			</line>
 		</div>
@@ -736,7 +736,7 @@
 			<line kwd ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)">only when</line>
 			<restrictions ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)" data-ng-repeat="collection in [statement]" data-ng-include="'restrictions'" dnd-nodrag data-nag-model="statement"></restrictions>
 			<line kwd ng-click="select(statement, statements)">
-				<handle dnd-handle class="fa fa-sort"></handle><span kwd ng-click="editStatement(statement, statements)">exit</span> <span lit ng-bind-html="renderOperand(statement.lo)"></span><span kwd>;</span>
+				<handle dnd-handle class="fas fa-sort"></handle><span kwd ng-click="editStatement(statement, statements)">exit</span> <span lit ng-bind-html="renderOperand(statement.lo)"></span><span kwd>;</span>
 				<span ng-if="view.trace && (mode=='view')" nul> /* #{{statement.$}} */</span>
 			</line>
 		</div>
@@ -766,7 +766,7 @@
 		<subscription ng-if="(mode == 'view') && !!event.s" class="fa fa-bolt" title="This event subscribes to events"></subscription>
 		<line com ng-if="!event.c && !!event.z">/* {{event.z}} */</line>
 		<line cond ng-if="!event.c" ng-click="select(event, collection.c, 'event')">
-			<handle dnd-handle class="fa fa-sort"></handle><span ng-click="editEvent(event, collection.c);" ng-bind-html="event.$$html || (event.$$html = renderOperand(event.lo))"></span><span ng-if="view.trace && (mode=='view')" nul> /* #{{event.$}} */</span>
+			<handle dnd-handle class="fas fa-sort"></handle><span ng-click="editEvent(event, collection.c);" ng-bind-html="event.$$html || (event.$$html = renderOperand(event.lo))"></span><span ng-if="view.trace && (mode=='view')" nul> /* #{{event.$}} */</span>
 		</line>
 		</div>
 	</dnd-nodrag>
@@ -805,12 +805,12 @@
 		<conditions ng-if="condition.c" ng-repeat="collection in [condition]" data-ng-include="'conditions'" dnd-nodrag data-nag-model="condition" dnd-draggable="condition" dnd-type="'condition'" dnd-moved="drag(collection.c, $index);" dnd-effect-allowed="copyMove" eval="{{collection && trace && trace.points && trace.points['c:' + collection.$] ? trace.points['c:' + collection.$].v : ''}}"></conditions>
 		<line com ng-if="!condition.c && !!condition.z">/* {{condition.z}} */</line>
 		<line cond ng-if="!condition.c" ng-click="select(condition, collection.c, 'condition')">
-			<handle dnd-handle class="fa fa-sort"></handle><span ng-click="editCondition(condition, collection.c, null, null, collection.o);" ng-bind-html="condition.$$html || (condition.$$html = renderComparison(condition.lo, condition.co, condition.ro, condition.ro2, condition.to, condition.to2))"></span><span ng-if="view.trace && (mode=='view')" nul> /* #{{condition.$}} */</span>
+			<handle dnd-handle class="fas fa-sort"></handle><span ng-click="editCondition(condition, collection.c, null, null, collection.o);" ng-bind-html="condition.$$html || (condition.$$html = renderComparison(condition.lo, condition.co, condition.ro, condition.ro2, condition.to, condition.to2))"></span><span ng-if="view.trace && (mode=='view')" nul> /* #{{condition.$}} */</span>
 			<badge blue ng-if="condition.sm == 'always'" badge="+" title="Always subscribe"></badge>
 			<badge red ng-if="condition.sm == 'never'" badge="-" title="Never subscribe"></badge>
 		</line>
-		<line ng-if="!condition.c && !!condition.lo && (condition.lo.t == 'p') && !!condition.lo.dm" pun>&nbsp;&nbsp;<i class="fa fa-subscript" aria-hidden="true"></i> save matching devices to <span var>{{'{' + condition.lo.dm + '}'}}</span></line>
-		<line ng-if="!condition.c && !!condition.lo && (condition.lo.t == 'p') && !!condition.lo.dn" pun>&nbsp;&nbsp;<i class="fa fa-subscript" aria-hidden="true"></i> save non-matching devices to <span var>{{'{' + condition.lo.dn + '}'}}</span></line>
+		<line ng-if="!condition.c && !!condition.lo && (condition.lo.t == 'p') && !!condition.lo.dm" pun>&nbsp;&nbsp;<i class="far fa-subscript" aria-hidden="true"></i> save matching devices to <span var>{{'{' + condition.lo.dm + '}'}}</span></line>
+		<line ng-if="!condition.c && !!condition.lo && (condition.lo.t == 'p') && !!condition.lo.dn" pun>&nbsp;&nbsp;<i class="far fa-subscript" aria-hidden="true"></i> save non-matching devices to <span var>{{'{' + condition.lo.dn + '}'}}</span></line>
 		<container ng-if="((mode=='edit') && view.whens) || (condition.ts && condition.ts.length) || (condition.fs && condition.fs.length)">
 			<line pun>{</line>
 			<container>
@@ -860,7 +860,7 @@
 		<restrictions ng-if="restriction.r" data-ng-repeat="collection in [restriction]" data-ng-include="'restrictions'" dnd-nodrag data-nag-model="restriction" dnd-draggable="restriction" dnd-type="'restriction'" dnd-moved="drag(collection.r, $index);" dnd-effect-allowed="copyMove" eval="{{collection && trace && trace.points && trace.points['c:' + collection.$] ? trace.points['c:' + collection.$].v : ''}}"></restrictions>
 		<line com ng-if="!restriction.r && !!restriction.z">/* {{restriction.z}} */</line>
 		<line cond ng-if="!restriction.r" ng-click="select(restriction, collection.r, 'restriction')">
-			<handle dnd-handle class="fa fa-sort"></handle><span ng-click="editRestriction(restriction, collection.r);" ng-bind-html="restriction.$$html || (restriction.$$html = renderComparison(restriction.lo, restriction.co, restriction.ro, restriction.ro2, restriction.to, restriction.to2))"></span><span ng-if="view.trace && (mode=='view')" nul> /* #{{restriction.$}} */</span>
+			<handle dnd-handle class="fas fa-sort"></handle><span ng-click="editRestriction(restriction, collection.r);" ng-bind-html="restriction.$$html || (restriction.$$html = renderComparison(restriction.lo, restriction.co, restriction.ro, restriction.ro2, restriction.to, restriction.to2))"></span><span ng-if="view.trace && (mode=='view')" nul> /* #{{restriction.$}} */</span>
 		</line>
 		</div>
 	</dnd-nodrag>
@@ -881,7 +881,7 @@
 			<trace ng-if="(view.trace && (mode=='view') && trace && trace.points && trace.points['t:' + task.$])"><span>+{{trace.points['t:' + task.$].o}}ms</span><span ng-if="(trace.points['t:' + task.$].v != null) && (trace.points['t:' + task.$].v >= 0)" dur>{{trace.points['t:' + task.$].d}}ms</span><span ng-if="(trace.points['t:' + task.$].v == null) || (trace.points['t:' + task.$].v < 0)" timer ok="{{(trace.points['t:' + task.$].v == null) || (trace.t + trace.points['t:' + task.$].o + trace.points['t:' + task.$].d - trace.points['t:' + task.$].v >= currentTime())}}">{{trace.points['t:' + task.$].v == null ? '▼ ▼ ▼' : timeCounter(trace.t + trace.points['t:' + task.$].o + trace.points['t:' + task.$].d - trace.points['t:' + task.$].v)}}</span></trace>
 			<line com ng-if="task.z">/* {{task.z}} */</line>
 			<line ng-click="select(task, tasks ? tasks : statement.k, 'task')">
-				<handle dnd-handle class="fa fa-sort"></handle>
+				<handle dnd-handle class="fas fa-sort"></handle>
 				<span kwd data-ng-if="(mode=='edit') && !(((statement.d) && (statement.d.length)) || ((statement.r) && (statement.r.length)) || ((statement.k) && (statement.k.length==0)))" ng-click="editStatement(statement, statements)">do</span>
 				<span tsk single="{{(mode != 'edit') && !(((statement.d) && (statement.d.length)) || ((statement.r) && (statement.r.length)) || ((statement.k) && (statement.k.length!=1)))}}" ng-click="editTask(task, statement);" ng-bind-html="task.$$html || (task.$$html = renderTask(task))"></span>
 				<span ng-if="view.trace && (mode=='view')" nul> /* #{{task.$}} */</span>
@@ -908,7 +908,7 @@
 			<div items class="row">
             	<div item class="col-sm-4" ng-repeat="item in designer.items.simple">
 					<item class="alert alert-{{item.cssClass}}">
-	                    <div class="title"><span class="fa fa-{{item.icon}}"></span><span help="{{item.name}}"> {{item.name}}</span></div>
+	                    <div class="title"><span class="fas fa-{{item.icon}}"></span><span help="{{item.name}}"> {{item.name}}</span></div>
 	                    <p>{{item.description}}</p>
 	                   	<button class="btn btn-{{item.cssClass}}" ng-click="setDesignerType(item.type, true);">Add {{item.button}}</button>
 					</item>
@@ -920,7 +920,7 @@
 			<div items class="row">
             	<div item class="col-sm-4" ng-repeat="item in designer.items.advanced">
 					<item class="alert alert-{{item.cssClass}}">
-	                    <div class="title"><span class="fa fa-{{item.icon}}"></span><span help="{{item.name}}"> {{item.name}}</span></div>
+	                    <div class="title"><span class="fas fa-{{item.icon}}"></span><span help="{{item.name}}"> {{item.name}}</span></div>
 	                    <p>{{item.description}}</p>
 	                    <button class="btn btn-{{item.cssClass}}" ng-click="setDesignerType(item.type, true);">Add {{item.button}}</button>
 					</item>

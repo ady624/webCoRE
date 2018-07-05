@@ -1217,7 +1217,7 @@ li[instance] {
     z-index: 2;
     border-top-right-radius: 50%;
     border-bottom-right-radius: 50%;
-    padding: 8px;
+    padding: 6px;
     padding-left: 7px;
   }
   .main > .collapse-control:hover {
