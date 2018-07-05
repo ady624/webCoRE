@@ -75,7 +75,7 @@
 	<tiles masonry='{"transitionDuration": "0s", "itemSelector": "tile"}' class="noPreventDefault" ng-wheel="onWheel($event)" ng-swipe-up="onSwipe($event, 'up')" ng-swipe-down="onSwipe($event, 'down')">
 		<tile ng-repeat="device in devices" class="col-lg-1 col-md-1 col-sm-2 col-xs-3 col-xxs-6" tile-height="{{determineDeviceType(device) == 'presenceSensor' ? 2 : 1}}">
 			<content>
-				<refresh ng-if="refreshing"><i class="fa fa-refresh fa-spin fa-3x fa-fw"></i></refresh>
+				<refresh ng-if="refreshing"><i class="fas fa-sync fa-spin fa-3x fa-fw"></i></refresh>
 				<device type="{{device.t}}" dev-data="device.data" ng-style="!!device.data.color ? {'text-shadow': '0px 0px 150px ' + device.data.color} : {}">
 					<level ng-if="device.data.level != null"></level>
 					<power ng-if="device.data.power != null"></power>
@@ -150,7 +150,7 @@
 <!--					<ul class="socialmedia">
 					<li>
 						<a href="https://twitter.com/ady624/lists/webcore" target="webCoRE:twitter"><i class="fa fa-twitter" aria-hidden="true"></i></a>
-						<a href="https://www.facebook.com/groups/1023785497757470" target="webCoRE:fb"><i class="fa fa-facebook" aria-hidden="true"></i></a>
+						<a href="https://www.facebook.com/groups/1023785497757470" target="webCoRE:fb"><i class="fab fa-facebook" aria-hidden="true"></i></a>
 				        <div class="fb-like" data-href="https://dashboard.webcore.co" data-layout="button_count" data-action="like" data-size="small" data-show-faces="false" data-share="false" ng-init="initSocialMedia()"></div>
 					</li>
 					<li>
@@ -161,7 +161,7 @@
 			<div class="main no-ng-animate" ng-class="{ 'sidebar-collapsed': sidebarCollapsed, 'allow-transition': completedInitialRender }">
 				<span ng-click="toggleSidebar()" class="fa fa-caret-left collapse-control" collapse-control data-target="#dashboardSidebar"></span>
 				<div lonely ng-if="!loading && !instance.pistons.length">
-					<i class="fa fa-frown-o" aria-hidden="true"></i>
+					<i class="far fa-frown" aria-hidden="true"></i>
 					<div>It's kinda lonely in here...<br/>How about <a ng-click="newPiston();">creating a piston</a>?</div>
 				</div>
 				<!--<div class="alert alert-warning" ng-if="devices && (devices.length > 50)">It is recommended that the list of available devices does not exceed 50 items. You have selected a total of {{devices.length}} available devices for this instance. While not a problem, you may experience slower start-up times for your pistons. If you do, please consider breaking this instance into at least two instances and group the pistons in such a way that each instance requires less than 50 available devices. Multpile instances can safely share the same device.</div>-->
@@ -264,7 +264,7 @@
 						<i class="fa fa-chevron-down catop" ng-if="$index < settings.categories.length - 1" ng-click="moveCategoryDown($index)"></i>
 					</div>
 					<div class="col-xs-1">
-						<i class="fa fa-close catop" ng-click="deleteCategory($index)"></i>
+						<i class="fas fa-times catop" ng-click="deleteCategory($index)"></i>
 					</div>
 				</div>
 				<div class="">
@@ -332,7 +332,7 @@
 	      radius="{{place.o}}">
 	    </shape>
 	  </ng-map>
-	</div><div ng-if="!!settings.places.length && isAppHosted && !presenceSensorId" class="place device" ng-click="registerPresenceSensor()"><i class="fa fa-map-marker" aria-hidden="true"></i><footer>Setup sensor</footer></div><div ng-if="settings.places.length < 10" class="place new" ng-click="addPlace()"></div>
+	</div><div ng-if="!!settings.places.length && isAppHosted && !presenceSensorId" class="place device" ng-click="registerPresenceSensor()"><i class="fas fa-map-marker-alt" aria-hidden="true"></i><footer>Setup sensor</footer></div><div ng-if="settings.places.length < 10" class="place new" ng-click="addPlace()"></div>
 </div>
   </div>
 	<form class="form-horizontal">

@@ -1060,18 +1060,18 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		window.designer = $scope.designer;
 		$scope.designer.items = {
 			simple: [
-				{ type: 'if', name: 'If Block', icon: 'code-fork', cssClass: 'info', description: 'An if block allows the piston to execute different actions depending on the truth result of a comparison or set of comparisons', button: 'an if' },
+				{ type: 'if', name: 'If Block', icon: 'code-branch', cssClass: 'info', description: 'An if block allows the piston to execute different actions depending on the truth result of a comparison or set of comparisons', button: 'an if' },
 				{ type: 'action', name: 'Action', icon: 'code', cssClass: 'success', description: 'An action allows the piston to control devices and execute tasks', button: 'an action' },
-				{ type: 'every', name: 'Timer', icon: 'clock-o', cssClass: 'warning', description: 'A timer will trigger execution of the piston at set time intervals', button: 'a timer' }
+				{ type: 'every', name: 'Timer', icon: 'clock', iconStyle: 'r', cssClass: 'warning', description: 'A timer will trigger execution of the piston at set time intervals', button: 'a timer' }
 			],
 			advanced: [
-				{ type: 'switch', name: 'Switch', icon: 'code-fork', cssClass: 'info', description: 'A switch statement compares an operand against a set of values and executes statements corresponding to those matches', button: 'a switch' },
+				{ type: 'switch', name: 'Switch', icon: 'code-branch', cssClass: 'info', description: 'A switch statement compares an operand against a set of values and executes statements corresponding to those matches', button: 'a switch' },
 				{ type: 'do', name: 'Do Block', icon: 'code', cssClass: 'success', description: 'A do block can help organize several statements into a single block', button: 'a do block' },
-				{ type: 'on', name: 'On event', icon: 'code-fork', cssClass: 'warning', description: 'An on event executes its statements only when certain events happen', button: 'an on event' },
-				{ type: 'for', name: 'For Loop', icon: 'circle-o-notch', cssClass: 'warning', description: 'A for loop executes the same statements for a set number of iteration cycles', button: 'a for loop' },
-				{ type: 'each', name: 'For Each Loop', icon: 'circle-o-notch', cssClass: 'warning', description: 'An each loop executes the same statements for each device in a device list', button: 'a for each loop' },
-				{ type: 'while', name: 'While Loop', icon: 'circle-o-notch', cssClass: 'warning', description: 'A while loop executes the same statements for as long as a condition is met', button: 'a while loop' },
-				{ type: 'repeat', name: 'Repeat Loop', icon: 'circle-o-notch', cssClass: 'warning', description: 'A repeat loop executes the same statements until a condition is met', button: 'a repeat loop' },
+				{ type: 'on', name: 'On event', icon: 'code-branch', cssClass: 'warning', description: 'An on event executes its statements only when certain events happen', button: 'an on event' },
+				{ type: 'for', name: 'For Loop', icon: 'circle-notch', cssClass: 'warning', description: 'A for loop executes the same statements for a set number of iteration cycles', button: 'a for loop' },
+				{ type: 'each', name: 'For Each Loop', icon: 'circle-notch', cssClass: 'warning', description: 'An each loop executes the same statements for each device in a device list', button: 'a for each loop' },
+				{ type: 'while', name: 'While Loop', icon: 'circle-notch', cssClass: 'warning', description: 'A while loop executes the same statements for as long as a condition is met', button: 'a while loop' },
+				{ type: 'repeat', name: 'Repeat Loop', icon: 'circle-notch', cssClass: 'warning', description: 'A repeat loop executes the same statements until a condition is met', button: 'a repeat loop' },
 				{ type: 'break', name: 'Break', icon: 'ban', cssClass: 'danger', description: 'A break allows the interruption of the inner most switch, for loop, for each loop, while loop, or repeat loop', button: 'a break' },
 				{ type: 'exit', name: 'Exit', icon: 'ban', cssClass: 'danger', description: 'An exit interrupts the piston execution and exits immediately', button: 'an exit' }
 			]
@@ -1480,7 +1480,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		window.designer = $scope.designer;
 		$scope.designer.items = [
 			{ type: 'condition', name: 'Condition', icon: 'code', cssClass: 'btn-info' },
-			{ type: 'group', name: 'Group', icon: 'code-fork', cssClass: 'btn-warning' },
+			{ type: 'group', name: 'Group', icon: 'code-branch', cssClass: 'btn-warning' },
 		];
 
 
@@ -1700,7 +1700,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
         window.designer = $scope.designer;
         $scope.designer.items = [
             { type: 'restriction', name: 'Restriction', icon: 'code', cssClass: 'btn-info' },
-            { type: 'group', name: 'Group', icon: 'code-fork', cssClass: 'btn-warning' },
+            { type: 'group', name: 'Group', icon: 'code-branch', cssClass: 'btn-warning' },
         ];
 
 
@@ -4120,7 +4120,8 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 				return (value ? (prefix || '') : '') + value;
 			}).replace(/(\{T\})/g, '°' + $scope.location.temperatureScale);
 			var icon = command.i;
-			if (icon) display = '<span pun><i class="fa fa-' + icon + '" aria-hidden="true"></i></span> ' + display;
+			var iconStyle = command.is || 's';
+			if (icon) display = '<span pun><i class="fa' + iconStyle + ' fa-' + icon + '" aria-hidden="true"></i></span> ' + display;
 		}
 		if (task.m) {
 			display += ' <span pun><i>(only while ' + $scope.buildLocationModeNameList(task.m) + ')</i></span>';

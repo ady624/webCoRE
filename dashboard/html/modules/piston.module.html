@@ -63,7 +63,7 @@
 			<div ng-if="mode=='edit'" class="nav navbar-nav btn-group">
 				<button class="btn btn-default" title="Undo" ng-click="undo();" ng-disabled="!stack || !stack.undo || !stack.undo.length"><i class="fa fa-undo" aria-hidden="true"></i>
 				</button>
-				<button class="btn btn-default" title="Redo" ng-click="redo();" ng-disabled="!stack || !stack.redo || !stack.redo.length"><i class="fa fa-repeat" aria-hidden="true"></i>
+				<button class="btn btn-default" title="Redo" ng-click="redo();" ng-disabled="!stack || !stack.redo || !stack.redo.length"><i class="fas fa-redo" aria-hidden="true"></i>
 				</button>
 			</div>
 		</div>
@@ -256,7 +256,7 @@
 
 					<div multicolumn>
 						<label var ng-if="piston && piston.v">Local variables</label>
-						<div ng-if="localVars" var ng-repeat="var in piston.v"><span><span class="vartype">{{var.t}}</span><span>{{var.n}}</span> <i class="clickable fa fa-pencil-square-o" aria-hidden="true" ng-if="!var.v && (var.t.substr(-1) != ']')" ng-click="editLocalVariable(var)"></i></span><span class="{{var.v == null ? 'notset' : ''}}" ng-bind-html="var.v ? renderOperand(var.v) : formatVariableValue(var, var.n)"></span></div>
+						<div ng-if="localVars" var ng-repeat="var in piston.v"><span><span class="vartype">{{var.t}}</span><span>{{var.n}}</span> <i class="clickable far fa-edit" aria-hidden="true" ng-if="!var.v && (var.t.substr(-1) != ']')" ng-click="editLocalVariable(var)"></i></span><span class="{{var.v == null ? 'notset' : ''}}" ng-bind-html="var.v ? renderOperand(var.v) : formatVariableValue(var, var.n)"></span></div>
 						<div novar>(no variables defined)</div>
 						<label var ng-if="globalVars">Global variables</label>
 						<div ng-if="globalVars" var ng-repeat="(name, var) in globalVars"><span><span class="vartype">{{var.t}}</span><span>{{name}}</span></span><span class="{{var.v == null ? 'notset' : ''}}" ng-bind-html="formatVariableValue(var)"></span></div>
@@ -908,7 +908,7 @@
 			<div items class="row">
             	<div item class="col-sm-4" ng-repeat="item in designer.items.simple">
 					<item class="alert alert-{{item.cssClass}}">
-	                    <div class="title"><span class="fas fa-{{item.icon}}"></span><span help="{{item.name}}"> {{item.name}}</span></div>
+	                    <div class="title"><span class="fa{{item.iconStyle || 's'}} fa-{{item.icon}}"></span><span help="{{item.name}}"> {{item.name}}</span></div>
 	                    <p>{{item.description}}</p>
 	                   	<button class="btn btn-{{item.cssClass}}" ng-click="setDesignerType(item.type, true);">Add {{item.button}}</button>
 					</item>
@@ -920,7 +920,7 @@
 			<div items class="row">
             	<div item class="col-sm-4" ng-repeat="item in designer.items.advanced">
 					<item class="alert alert-{{item.cssClass}}">
-	                    <div class="title"><span class="fas fa-{{item.icon}}"></span><span help="{{item.name}}"> {{item.name}}</span></div>
+	                    <div class="title"><span class="fa{{item.iconStyle || 's'}} fa-{{item.icon}}"></span><span help="{{item.name}}"> {{item.name}}</span></div>
 	                    <p>{{item.description}}</p>
 	                    <button class="btn btn-{{item.cssClass}}" ng-click="setDesignerType(item.type, true);">Add {{item.button}}</button>
 					</item>
@@ -969,7 +969,7 @@
 			</div>
 			<div class="form-group" ng-if="designer.type=='switch'">
 				<info>A SWITCH block is a decisional block designed to compare an expression against a list of possible values and execute actions depending on their matching.</info>
-				<label class="col-lg-12 no-padding">Expression<span class="error" ng-if="!designer.operand.valid">{{designer.operand.error}}<span ng-if="designer.operand.expressionVar"> (<a ng-click="autoAddVariable(designer.operand.expressionVar); validateOperand(designer.operand);">create it</a>)</span>&nbsp;<i class="fa fa-warning"></i></span></label>
+				<label class="col-lg-12 no-padding">Expression<span class="error" ng-if="!designer.operand.valid">{{designer.operand.error}}<span ng-if="designer.operand.expressionVar"> (<a ng-click="autoAddVariable(designer.operand.expressionVar); validateOperand(designer.operand);">create it</a>)</span>&nbsp;<i class="fas fa-exclamation-triangle"></i></span></label>
 				<operand ng-repeat="operand in [designer.operand]" ng-model="designer.operand" ng-include="'operand'"></operand>
 			</div>
 			<div class="form-group" ng-if="designer.type=='while'">
@@ -981,15 +981,15 @@
 			<div class="form-group" ng-if="designer.type=='for'">
 				<info>A FOR loop is an iteration block that allows you to repeat the same action for a preset number of times, also known as iterations. You can optionally use a counter variable that will be updated to reflect the current iteration index. The system variable <i>$index</i> is also providing that same value. When nesting for loops, $index contains the index for the inner-most loop.</info>
 				<div class="form-group">
-					<label class="col-lg-12 no-padding">Start value<span class="error" ng-if="!designer.operand.valid">{{designer.operand.error}}<span ng-if="designer.operand.expressionVar"> (<a ng-click="autoAddVariable(designer.operand.expressionVar); validateOperand(designer.operand);">create it</a>)</span>&nbsp;<i class="fa fa-warning"></i></span></label>
+					<label class="col-lg-12 no-padding">Start value<span class="error" ng-if="!designer.operand.valid">{{designer.operand.error}}<span ng-if="designer.operand.expressionVar"> (<a ng-click="autoAddVariable(designer.operand.expressionVar); validateOperand(designer.operand);">create it</a>)</span>&nbsp;<i class="fas fa-exclamation-triangle"></i></span></label>
 					<operand ng-repeat="operand in [designer.operand]" ng-model="designer.operand" ng-include="'operand'"></operand>
 				</div>
 				<div class="form-group">
-					<label class="col-lg-12 no-padding">End value<span class="error" ng-if="!designer.operand2.valid">{{designer.operand2.error}}<span ng-if="designer.operand2.expressionVar"> (<a ng-click="autoAddVariable(designer.operand2.expressionVar); validateOperand(designer.operand2);">create it</a>)</span>&nbsp;<i class="fa fa-warning"></i></span></label>
+					<label class="col-lg-12 no-padding">End value<span class="error" ng-if="!designer.operand2.valid">{{designer.operand2.error}}<span ng-if="designer.operand2.expressionVar"> (<a ng-click="autoAddVariable(designer.operand2.expressionVar); validateOperand(designer.operand2);">create it</a>)</span>&nbsp;<i class="fas fa-exclamation-triangle"></i></span></label>
 					<operand ng-repeat="operand in [designer.operand2]" ng-model="designer.operand2" ng-include="'operand'"></operand>
 				</div>
 				<div class="form-group">
-					<label class="col-lg-12 no-padding">Step<span class="error" ng-if="!designer.operand3.valid">{{designer.operand3.error}}<span ng-if="designer.operand3.expressionVar"> (<a ng-click="autoAddVariable(designer.operand3.expressionVar); validateOperand(designer.operand3);">create it</a>)</span>&nbsp;<i class="fa fa-warning"></i></span></label>
+					<label class="col-lg-12 no-padding">Step<span class="error" ng-if="!designer.operand3.valid">{{designer.operand3.error}}<span ng-if="designer.operand3.expressionVar"> (<a ng-click="autoAddVariable(designer.operand3.expressionVar); validateOperand(designer.operand3);">create it</a>)</span>&nbsp;<i class="fas fa-exclamation-triangle"></i></span></label>
 					<operand ng-repeat="operand in [designer.operand3]" ng-model="designer.operand3" ng-include="'operand'"></operand>
 				</div>
 				<div class="form-group">
@@ -1024,13 +1024,13 @@
 					</div>
 				</div>
 				<div class="form-group">
-					<label class="col-lg-12 no-padding">List of devices<span class="error" ng-if="!designer.operand.valid">{{designer.operand.error}}<span ng-if="designer.operand.expressionVar"> (<a ng-click="autoAddVariable(designer.operand.expressionVar); validateOperand(designer.operand);">create it</a>)</span>&nbsp;<i class="fa fa-warning"></i></span></label>
+					<label class="col-lg-12 no-padding">List of devices<span class="error" ng-if="!designer.operand.valid">{{designer.operand.error}}<span ng-if="designer.operand.expressionVar"> (<a ng-click="autoAddVariable(designer.operand.expressionVar); validateOperand(designer.operand);">create it</a>)</span>&nbsp;<i class="fas fa-exclamation-triangle"></i></span></label>
 					<operand ng-repeat="operand in [designer.operand]" ng-model="designer.operand" ng-include="'operand'"></operand>
 				</div>
 			</div>
 			<div class="form-group" ng-if="designer.type=='exit'">
 				<info>Return causes the piston to end the evaluation stage and set the piston state to the value provided.</info>
-				<label class="col-lg-12 no-padding">New piston state<span class="error" ng-if="!designer.operand.valid">{{designer.operand.error}}<span ng-if="designer.operand.expressionVar"> (<a ng-click="autoAddVariable(designer.operand.expressionVar); validateOperand(designer.operand);">create it</a>)</span>&nbsp;<i class="fa fa-warning"></i></span></label>
+				<label class="col-lg-12 no-padding">New piston state<span class="error" ng-if="!designer.operand.valid">{{designer.operand.error}}<span ng-if="designer.operand.expressionVar"> (<a ng-click="autoAddVariable(designer.operand.expressionVar); validateOperand(designer.operand);">create it</a>)</span>&nbsp;<i class="fas fa-exclamation-triangle"></i></span></label>
 				<operand ng-repeat="operand in [designer.operand]" ng-model="designer.operand" ng-include="'operand'"></operand>
 			</div>
 			<div class="form-group" ng-if="designer.type=='do'">
@@ -1358,7 +1358,7 @@
 				</div>
 			</div>
 			<div class="form-group" ng-if="designer.followedBy">
-				<label class="col-lg-12 no-padding">Within...<span class="error" ng-if="!designer.comparison.within.valid">{{designer.comparison.within.error}}<span ng-if="designer.comparison.within.expressionVar"> (<a ng-click="autoAddVariable(designer.comparison.within.expressionVar); validateOperand(designer.comparison.left);">create it</a>)</span>&nbsp;<i class="fa fa-warning"></i></span></label>
+				<label class="col-lg-12 no-padding">Within...<span class="error" ng-if="!designer.comparison.within.valid">{{designer.comparison.within.error}}<span ng-if="designer.comparison.within.expressionVar"> (<a ng-click="autoAddVariable(designer.comparison.within.expressionVar); validateOperand(designer.comparison.left);">create it</a>)</span>&nbsp;<i class="fas fa-exclamation-triangle"></i></span></label>
 				<operand ng-repeat="operand in [designer.comparison.within]" ng-model="designer.comparison.within" ng-include="'operand'"></operand>
 			</div>
 			<div class="form-group" ng-if="designer.followedBy" ng-if-end>
@@ -1464,7 +1464,7 @@
 
 
 			<div class="form-group" ng-if="designer.followedBy">
-				<label class="col-lg-12 no-padding">Within...<span class="error" ng-if="!designer.within.valid">{{designer.within.error}}<span ng-if="designer.within.expressionVar"> (<a ng-click="autoAddVariable(designer.within.expressionVar); validateOperand(designer.within);">create it</a>)</span>&nbsp;<i class="fa fa-warning"></i></span></label>
+				<label class="col-lg-12 no-padding">Within...<span class="error" ng-if="!designer.within.valid">{{designer.within.error}}<span ng-if="designer.within.expressionVar"> (<a ng-click="autoAddVariable(designer.within.expressionVar); validateOperand(designer.within);">create it</a>)</span>&nbsp;<i class="fas fa-exclamation-triangle"></i></span></label>
 				<operand ng-repeat="operand in [designer.within]" ng-model="designer.within" ng-include="'operand'"></operand>
 			</div>
 			<div class="form-group" ng-if="designer.followedBy">
@@ -1502,7 +1502,7 @@
 				<div items class="row">
 					<div item class="col-sm-6">
 						<item>
-							<div class="alert alert-info"><span class="fa fa-question-circle-o"></span><span> Restriction</span></div>
+							<div class="alert alert-info"><span class="far fa-question-circle"></span><span> Restriction</span></div>
 							<p>A restriction is a single comparison between two or more operands, the basic building block of a decisional statement</p>
 							<div class="text-center"><button class="btn btn-info" ng-click="setDesignerType('restriction', true);">Add a restriction</button></div>
 						</item>
@@ -1665,7 +1665,7 @@
 
 <script type="text/ng-template" id="comparison">
 	<div class="form-group">
-		<label class="col-lg-12 no-padding">{{comparison.event ? 'What event to expect' : 'What to compare'}}<span class="error" ng-if="!designer.comparison.left.valid">{{designer.comparison.left.error}}<span ng-if="designer.comparison.left.expressionVar"> (<a ng-click="autoAddVariable(designer.comparison.left.expressionVar); validateOperand(designer.comparison.left);">create it</a>)</span>&nbsp;<i class="fa fa-warning"></i></span></label>
+		<label class="col-lg-12 no-padding">{{comparison.event ? 'What event to expect' : 'What to compare'}}<span class="error" ng-if="!designer.comparison.left.valid">{{designer.comparison.left.error}}<span ng-if="designer.comparison.left.expressionVar"> (<a ng-click="autoAddVariable(designer.comparison.left.expressionVar); validateOperand(designer.comparison.left);">create it</a>)</span>&nbsp;<i class="fas fa-exclamation-triangle"></i></span></label>
 		<operand ng-repeat="operand in [designer.comparison.left]" ng-model="designer.comparison.left" ng-include="'operand'"></operand>
 	</div>
 	<div ng-if="!comparison.event" class="form-group {{comparison.operatorValid ? '' : 'has-error'}}">
@@ -1676,33 +1676,33 @@
 	</div>
 	<div ng-if="comparison.dataType == 'email'">
 		<div class="form-group">
-			<label class="col-lg-12 no-padding">From<span class="error" ng-if="!designer.comparison.right.valid">{{designer.comparison.right.error}}<span ng-if="designer.comparison.right.expressionVar"> (<a ng-click="autoAddVariable(designer.comparison.right.expressionVar); validatecomparison.right(designer.comparison.right);">create it</a>)</span>&nbsp;<i class="fa fa-warning"></i></span></label>
+			<label class="col-lg-12 no-padding">From<span class="error" ng-if="!designer.comparison.right.valid">{{designer.comparison.right.error}}<span ng-if="designer.comparison.right.expressionVar"> (<a ng-click="autoAddVariable(designer.comparison.right.expressionVar); validatecomparison.right(designer.comparison.right);">create it</a>)</span>&nbsp;<i class="fas fa-exclamation-triangle"></i></span></label>
 			<operand ng-repeat="operand in [designer.comparison.right]" ng-model="designer.comparison.left" ng-include="'operand'"></operand>
 		</div>
 		<div class="form-group">
-			<label class="col-lg-12 no-padding">Message<span class="error" ng-if="!designer.comparison.right2.valid">{{designer.comparison.right2.error}}<span ng-if="designer.comparison.right2.expressionVar"> (<a ng-click="autoAddVariable(designer.comparison.right2.expressionVar); validatecomparison.right2(designer.comparison.right2);">create it</a>)</span>&nbsp;<i class="fa fa-warning"></i></span></label>
+			<label class="col-lg-12 no-padding">Message<span class="error" ng-if="!designer.comparison.right2.valid">{{designer.comparison.right2.error}}<span ng-if="designer.comparison.right2.expressionVar"> (<a ng-click="autoAddVariable(designer.comparison.right2.expressionVar); validatecomparison.right2(designer.comparison.right2);">create it</a>)</span>&nbsp;<i class="fas fa-exclamation-triangle"></i></span></label>
 			<operand ng-repeat="operand in [designer.comparison.right2]" ng-model="designer.comparison.right2" ng-include="'operand'"></operand>
 		</div>
 	</div>
 	<div ng-if="comparison.dataType != 'email'">
 	<div class="form-group" ng-if="!comparison.event && (comparison.parameterCount > 0)">
-		<label class="col-lg-12 no-padding">{{comparison.parameterCount == 1 ? 'Compare to' : 'Between...'}}<span class="error" ng-if="!designer.comparison.right.valid">{{designer.comparison.right.error}}<span ng-if="designer.comparison.right.expressionVar"> (<a ng-click="autoAddVariable(designer.comparison.right.expressionVar); validatecomparison.right(designer.comparison.right);">create it</a>)</span>&nbsp;<i class="fa fa-warning"></i></span></label>
+		<label class="col-lg-12 no-padding">{{comparison.parameterCount == 1 ? 'Compare to' : 'Between...'}}<span class="error" ng-if="!designer.comparison.right.valid">{{designer.comparison.right.error}}<span ng-if="designer.comparison.right.expressionVar"> (<a ng-click="autoAddVariable(designer.comparison.right.expressionVar); validatecomparison.right(designer.comparison.right);">create it</a>)</span>&nbsp;<i class="fas fa-exclamation-triangle"></i></span></label>
 		<operand ng-repeat="operand in [designer.comparison.right]" ng-model="designer.comparison.right" ng-include="'operand'"></operand>
 	</div>
 	<div class="form-group" ng-if="!comparison.event && (comparison.parameterCount > 0) && (designer.comparison.left.selectedDataType=='time') && (designer.comparison.right.data.t != 'c')">
-		<label class="col-lg-12 no-padding">With offset...<span class="error" ng-if="!designer.comparison.right.valid">{{designer.comparison.time.error}}<span ng-if="designer.comparison.time.expressionVar"> (<a ng-click="autoAddVariable(designer.comparison.time.expressionVar); validatecomparison.right(designer.comparison.time);">create it</a>)</span>&nbsp;<i class="fa fa-warning"></i></span></label>
+		<label class="col-lg-12 no-padding">With offset...<span class="error" ng-if="!designer.comparison.right.valid">{{designer.comparison.time.error}}<span ng-if="designer.comparison.time.expressionVar"> (<a ng-click="autoAddVariable(designer.comparison.time.expressionVar); validatecomparison.right(designer.comparison.time);">create it</a>)</span>&nbsp;<i class="fas fa-exclamation-triangle"></i></span></label>
 		<operand ng-repeat="operand in [designer.comparison.time]" ng-model="deisgner.comparison.time" ng-include="'operand'"></operand>
 	</div>
 	<div class="form-group" ng-if="!comparison.event && (comparison.parameterCount > 1)">
-		<label class="col-lg-12 no-padding">...and...<span class="error" ng-if="!designer.comparison.right2.valid">{{designer.comparison.right2.error}}<span ng-if="designer.comparison.right2.expressionVar"> (<a ng-click="autoAddVariable(designer.comparison.right2.expressionVar); validatecomparison.right2(designer.comparison.right2);">create it</a>)</span>&nbsp;<i class="fa fa-warning"></i></span></label>
+		<label class="col-lg-12 no-padding">...and...<span class="error" ng-if="!designer.comparison.right2.valid">{{designer.comparison.right2.error}}<span ng-if="designer.comparison.right2.expressionVar"> (<a ng-click="autoAddVariable(designer.comparison.right2.expressionVar); validatecomparison.right2(designer.comparison.right2);">create it</a>)</span>&nbsp;<i class="fas fa-exclamation-triangle"></i></span></label>
 		<operand ng-repeat="operand in [designer.comparison.right2]" ng-model="designer.comparison.right2" ng-include="'operand'"></operand>
 	</div>
 	<div class="form-group" ng-if="!comparison.event && (comparison.parameterCount > 1) && (designer.comparison.left.selectedDataType=='time') && (designer.comparison.right2.data.t != 'c')">
-		<label class="col-lg-12 no-padding">With offset...<span class="error" ng-if="!designer.comparison.right.valid">{{designer.comparison.time2.error}}<span ng-if="designer.comparison.time2.expressionVar"> (<a ng-click="autoAddVariable(designer.comparison.time2.expressionVar); validatecomparison.right(designer.comparison.time2);">create it</a>)</span>&nbsp;<i class="fa fa-warning"></i></span></label>
+		<label class="col-lg-12 no-padding">With offset...<span class="error" ng-if="!designer.comparison.right.valid">{{designer.comparison.time2.error}}<span ng-if="designer.comparison.time2.expressionVar"> (<a ng-click="autoAddVariable(designer.comparison.time2.expressionVar); validatecomparison.right(designer.comparison.time2);">create it</a>)</span>&nbsp;<i class="fas fa-exclamation-triangle"></i></span></label>
 		<operand ng-repeat="operand in [designer.comparison.time2]" ng-model="deisgner.comparison.time2" ng-include="'operand'"></operand>
 	</div>
 	<div class="form-group" ng-if="!comparison.event && comparison.timed">
-		<label class="col-lg-12 no-padding">{{comparison.timed == 1 ? 'In the last...' : 'For...'}}<span class="error" ng-if="!designer.comparison.time.valid">{{designer.comparison.time.error}}<span ng-if="designer.comparison.time.expressionVar"> (<a ng-click="autoAddVariable(designer.comparison.time.expressionVar); validatecomparison.time(designer.comparison.time);">create it</a>)</span>&nbsp;<i class="fa fa-warning"></i></span></label>
+		<label class="col-lg-12 no-padding">{{comparison.timed == 1 ? 'In the last...' : 'For...'}}<span class="error" ng-if="!designer.comparison.time.valid">{{designer.comparison.time.error}}<span ng-if="designer.comparison.time.expressionVar"> (<a ng-click="autoAddVariable(designer.comparison.time.expressionVar); validatecomparison.time(designer.comparison.time);">create it</a>)</span>&nbsp;<i class="fas fa-exclamation-triangle"></i></span></label>
 		<div class="form-group" ng-if="comparison.timed == 2">
 			<select data-actions-box="true" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-warning" ng-model="comparison.time.data.f" data-mobile="{{mobile}}" ng-change="validateComparison(comparison)">
 				<option style="display:none" value="" disabled>Select an option...</option>
@@ -1763,7 +1763,7 @@
 	</div>
 
 	<div class="form-group" ng-if="designer.followedBy">
-		<label class="col-lg-12 no-padding">Within...<span class="error" ng-if="!designer.comparison.within.valid">{{designer.comparison.within.error}}<span ng-if="designer.comparison.within.expressionVar"> (<a ng-click="autoAddVariable(designer.comparison.within.expressionVar); validateOperand(designer.comparison.left);">create it</a>)</span>&nbsp;<i class="fa fa-warning"></i></span></label>
+		<label class="col-lg-12 no-padding">Within...<span class="error" ng-if="!designer.comparison.within.valid">{{designer.comparison.within.error}}<span ng-if="designer.comparison.within.expressionVar"> (<a ng-click="autoAddVariable(designer.comparison.within.expressionVar); validateOperand(designer.comparison.left);">create it</a>)</span>&nbsp;<i class="fas fa-exclamation-triangle"></i></span></label>
 		<operand ng-repeat="operand in [designer.comparison.within]" ng-model="designer.comparison.within" ng-include="'operand'"></operand>
 	</div>
 	<div class="form-group" ng-if="designer.followedBy">
@@ -1781,7 +1781,7 @@
 <script type="text/ng-template" id="operand">
 	<div class="form-group" nag-init="validateOperand(operand);">
 <!--
-		<label class="col-lg-12 no-padding"><span class="error" ng-if="!operand.valid">{{operand.error}}<span ng-if="operand.expressionVar"> (<a ng-click="autoAddVariable(operand.expressionVar); validateOperand(operand);">create it</a>)</span>&nbsp;<i class="fa fa-warning"></i></span></label>
+		<label class="col-lg-12 no-padding"><span class="error" ng-if="!operand.valid">{{operand.error}}<span ng-if="operand.expressionVar"> (<a ng-click="autoAddVariable(operand.expressionVar); validateOperand(operand);">create it</a>)</span>&nbsp;<i class="fas fa-exclamation-triangle"></i></span></label>
 -->
 		<div class="form-group" ng-if="(!operand.event) && (operand.data.t=='p') && (operand.data.d) && ((operand.data.d.length> 1) || ((operand.data.d.length == 1) && !operand.data.d[0].startsWith(':'))) && (!operand.disableAggregation)">
 			<select data-actions-box="true" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-warning" ng-model="operand.data.g" data-mobile="{{mobile}}" ng-change="validateOperand(operand)">
@@ -2122,7 +2122,7 @@
 					</select>
 				</div>
 				<div ng-repeat="operand in designer.parameters" ng-hide="operand.hidden">
-					<label class="col-lg-12 no-padding">{{operand.name}}{{operand.optional ? ' (optional)' : ''}}<span class="error" ng-if="!operand.valid">{{operand.error}}<span ng-if="operand.expressionVar"> (<a ng-click="autoAddVariable(operand.expressionVar); validateOperand(operand);">create it</a>)</span>&nbsp;<i class="fa fa-warning"></i></span></label>
+					<label class="col-lg-12 no-padding">{{operand.name}}{{operand.optional ? ' (optional)' : ''}}<span class="error" ng-if="!operand.valid">{{operand.error}}<span ng-if="operand.expressionVar"> (<a ng-click="autoAddVariable(operand.expressionVar); validateOperand(operand);">create it</a>)</span>&nbsp;<i class="fas fa-exclamation-triangle"></i></span></label>
 					<div class="alert alert-warning" ng-if="operand.warn">{{operand.warn}}</div>
 					<parameter ng-include="'operand'" ng-model="operand"></parameter>
 				</div>
@@ -2222,7 +2222,7 @@
 				</div>
 			</div>
 			<div class="form-group" ng-if="designer.operand.dataType && !designer.operand.dataType.endsWith(']')">
-				<label class="col-lg-12 no-padding">Initial value (optional)<span class="error" ng-if="!designer.operand.valid">{{designer.operand.error}}<span ng-if="designer.operand.expressionVar"> (<a ng-click="autoAddVariable(designer.operand.expressionVar); validateOperand(designer.operand);">create it</a>)</span>&nbsp;<i class="fa fa-warning"></i></span></label>
+				<label class="col-lg-12 no-padding">Initial value (optional)<span class="error" ng-if="!designer.operand.valid">{{designer.operand.error}}<span ng-if="designer.operand.expressionVar"> (<a ng-click="autoAddVariable(designer.operand.expressionVar); validateOperand(designer.operand);">create it</a>)</span>&nbsp;<i class="fas fa-exclamation-triangle"></i></span></label>
 				<operand ng-repeat="operand in [designer.operand]" ng-model="designer.operand" ng-include="'operand'"></operand>
 			</div>
 			<div class="form-group" ng-if="(designer.operand.data.t != '') && designer.operand.dataType && !designer.operand.dataType.endsWith(']')">
