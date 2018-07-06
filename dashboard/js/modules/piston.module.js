@@ -2154,6 +2154,22 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		}
 		return {v:'', t:''};
 	}
+	
+	var attributeIcons = {
+		battery: {
+			0: 'battery-empty',
+			1: 'battery-quarter',
+			2: 'battery-half',
+			3: 'battery-three-quarters',
+			4: 'battery-full',
+		},
+		motion: 'exchange-alt',
+		presence: 'child',
+		'switch': {
+			'on': 'toggle-on',
+			'off': 'toggle-off',
+		}
+	};
 
 	$scope.renderDevice = function(device) {
 //		var result = '<div class="col-sm-7">' + device.n + '</div><div class="col-sm-1">1</div>' + '<div class="col-sm-1">2</div>' + '<div class="col-sm-1">3</div>' + '<div class="col-sm-1">4</div>' + '<div class="col-sm-1">5</div>';
@@ -2163,7 +2179,19 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		var result = '<div col>' + device.n + '</div>';
 		for (a in attributes) {
 			var value = $scope.getDeviceAttributeValue(device, attributes[a]);
-			result += '<div col ' + attributes[a] + '="' + value.v + '" title="' + value.t + '"></div>';
+			var icon = attributeIcons[attributes[a]];
+			result += '<div col ' + attributes[a] + '="' + value.v + '" title="' + value.t + '">'
+			if (value.v !== '') {
+				if (icon && typeof icon !== 'string') {
+					icon = icon[value.v];
+				}
+				if (icon) {
+					result += '<i class="fas fa-' + icon + '"></i>';
+				} else {
+					result += value.v;
+				}
+			}
+			result += '</div>';
 		}
 //<div col ' + sSwitch + '> </div>' + '<div col motion="' + $scope.getDeviceAttributeValue(device, 'motion') + '"> </div>' + '<div col>3</div>' + '<div col>4</div>' + '<div col>5</div>';
 		return $sce.trustAsHtml(result);

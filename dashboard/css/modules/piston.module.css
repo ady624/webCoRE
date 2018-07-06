@@ -1165,75 +1165,25 @@ div[dev] div[col]+div[col] {
 	width: 8%;
 	height: 17px;
 	text-align: center;
-	font-family: FontAwesome;
 }
 
-div[dev] div[col][switch="off"]::before {
-    content: "\f204";
-    color: #ccc;
-}
-
-div[dev] div[col][switch="on"]::before {
-    content: "\f205";
+div[dev] div[col][battery="0"],
+div[dev] div[col][battery="1"],
+div[dev] div[col][motion="active"],
+div[dev] div[col][presence="present"],
+div[dev] div[col][switch="on"],
+div[dev] div[col][temperature] {
     color: #444;
 }
 
-div[dev] div[col][presence="not present"]::before {
-    content: "\f1ae";
-    color: #ddd;
+div[dev] div[col][battery="2"],
+div[dev] div[col][battery="3"],
+div[dev] div[col][battery="4"],
+div[dev] div[col][motion="inactive"],
+div[dev] div[col][presence="not present"],
+div[dev] div[col][switch="off"] {
+    color: #999;
 }
-
-div[dev] div[col][presence="present"]::before {
-    content: "\f1ae";
-    color: #444;
-}
-
-div[dev] div[col][motion="inactive"]::before {
-    content: "\f0ec";
-    color: #ddd;
-}
-
-div[dev] div[col][motion="active"]::before {
-    content: "\f0ec";
-    color: #444;
-}
-
-div[dev] div[col][battery="0"]::before {
-    content: "\f244";
-    color: #444;
-}
-
-div[dev] div[col][battery="1"]::before {
-    content: "\f243";
-    color: #444;
-}
-
-div[dev] div[col][battery="2"]::before {
-    content: "\f242";
-    color: #ddd;
-}
-
-div[dev] div[col][battery="3"]::before {
-    content: "\f241";
-    color: #ddd;
-}
-
-div[dev] div[col][battery="4"]::before {
-    content: "\f240";
-    color: #ddd;
-}
-
-div[dev] div[col][temperature]::before {
-    content: attr(temperature);
-    color: #ccc;
-}
-
-
-div[dev] div[col][temperature=""]::before {
-    content: "";
-}
-
-
 
 label[var] {
 	display: block;
