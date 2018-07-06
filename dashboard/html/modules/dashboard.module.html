@@ -44,14 +44,14 @@
             <li><a href="#" ng-click="newPiston();"><i class="fa fa-plus" aria-hidden="true"></i>&nbsp;&nbsp;New Piston</a></li>
 						<li><a href="#" ng-click="showDashboard();"><i class="fas fa-th-large" aria-hidden="true"></i>&nbsp;&nbsp;Dashboard</a></li>
 						<li><a href="#" ng-click="showFuelStreams();"><i class="fas fa-chart-area" aria-hidden="true"></i>&nbsp;&nbsp;Fuel Streams</a></li>
-						<li><a href="" ng-click="backup();"><i class="fas fa-cloud-upload" aria-hidden="true"></i>&nbsp;&nbsp;Backup Piston(s)</a></li>
+						<li><a href="" ng-click="backup();"><i class="fas fa-cloud-upload-alt" aria-hidden="true"></i>&nbsp;&nbsp;Backup Piston(s)</a></li>
             <li ng-if="instanceCount > 1"><a href="#" ng-click="movePiston();"><i class="fas fa-sort" aria-hidden="true"></i>Move Piston(s)</a></li>
             <li><a href="register"><i class="fas fa-home" aria-hidden="true"></i>&nbsp;&nbsp;Register Instance</a></li>
             <li><a href="#" ng-click="showSettings()"><i class="fas fa-wrench" aria-hidden="true"></i>&nbsp;&nbsp;Settings</a></li>
 						<li><a target="_blank" aria-haspopup="true" aria-expanded="false" href="https://www.paypal.me/ady624"><i class="fab fa-paypal" aria-hidden="true"></i>&nbsp;&nbsp;Donate</a></li>
 						<li><a target="_blank" aria-haspopup="true" aria-expanded="false" href="https://community.webcore.co"><i class="fas fa-comments" aria-hidden="true"></i>&nbsp;&nbsp;Forum</a></li>
 						<li><a target="_blank" aria-haspopup="true" aria-expanded="false" href="https://wiki.webcore.co"><i class="fas fa-book" aria-hidden="true"></i>&nbsp;&nbsp;Wiki</a></li>
-						<li><a href="#" ng-click="logOut();"><i class="fas fa-sign-out" aria-hidden="true"></i>&nbsp;&nbsp;Log Out</a></li>
+						<li><a href="#" ng-click="logOut();"><i class="fas fa-sign-out-alt" aria-hidden="true"></i>&nbsp;&nbsp;Log Out</a></li>
 					</ul>
 				</li>
 			</ul>
@@ -112,7 +112,7 @@
 						<i class="fas fa-chart-area" aria-hidden="true"></i>&nbsp;&nbsp;Fuel Streams (beta)
 					</a></li>
 					<li><a href="" ng-click="backup();" class="backup" data-toggle="{{sidebarCollapsed ? 'tooltip' : ''}}" data-placement="right" data-title="Backup Piston(s)">
-						<i class="fas fa-cloud-upload" aria-hidden="true"></i>&nbsp;&nbsp;Backup Piston(s)
+						<i class="fas fa-cloud-upload-alt" aria-hidden="true"></i>&nbsp;&nbsp;Backup Piston(s)
 					</a></li>
 					<li><a href="register" class="register" data-toggle="{{sidebarCollapsed ? 'tooltip' : ''}}" data-placement="right" data-title="Register Instance">
 						<i class="fas fa-home" aria-hidden="true"></i>&nbsp;&nbsp;Register Instance
@@ -125,7 +125,7 @@
 					</a></li>
 					<li>
 					<li><a href="#" ng-click="logOut();" class="logout" data-toggle="{{sidebarCollapsed ? 'tooltip' : ''}}" data-placement="right" data-title="Log Out">
-						<i class="fas fa-sign-out" aria-hidden="true"></i>&nbsp;&nbsp;Log Out
+						<i class="fas fa-sign-out-alt" aria-hidden="true"></i>&nbsp;&nbsp;Log Out
 					</a></li>
 					<li class="text-center">
 						
@@ -166,7 +166,7 @@
 				</div>
 				<!--<div class="alert alert-warning" ng-if="devices && (devices.length > 50)">It is recommended that the list of available devices does not exceed 50 items. You have selected a total of {{devices.length}} available devices for this instance. While not a problem, you may experience slower start-up times for your pistons. If you do, please consider breaking this instance into at least two instances and group the pistons in such a way that each instance requires less than 50 available devices. Multpile instances can safely share the same device.</div>-->
 				<div class="table-responsive no-animate topinfo" ng-if="instance">
-					<hub ng-repeat="hub in location.hubs" ng-if="hub.physical" power-source="{{hub.powerSource}}"><i class="fas fa-battery-full" ng-if="hub.powerSource !== 'battery'"></i><span>{{hub.name}}</span><span fw>{{hub.firmware}}</span></hub>
+					<hub ng-repeat="hub in location.hubs" ng-if="hub.physical" power-source="{{hub.powerSource}}"><i class="fas fa-battery-full" ng-if="hub.powerSource === 'battery'"></i><span>{{hub.name}}</span><span fw>{{hub.firmware}}</span></hub>
 					<location-mode data-toggle="tooltip" title="Location mode is {{getLocationMode()}}">{{getLocationMode()}}</location-mode>
 					<shm-mode data-toggle="tooltip" title="Smart Home Monitor is {{getSHMModeName()}}" ng-if="location.shm" alert="{{location.incidents && (location.incidents.length > 0)}}" mode="{{location.shm}}">{{getSHMModeName()}}</shm-mode>
 					<incident ng-repeat="incident in location.incidents" source-type="{{incident.sourceType}}" ng-bind-html="renderIncident(incident)"></incident>

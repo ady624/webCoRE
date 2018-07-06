@@ -4148,7 +4148,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 				return (value ? (prefix || '') : '') + value;
 			}).replace(/(\{T\})/g, '°' + $scope.location.temperatureScale);
 			var icon = command.i;
-			var iconStyle = command.is || 's';
+			var iconStyle = (window.fontAwesomePro && command.is) || 's';
 			if (icon) display = '<span pun><i class="fa' + iconStyle + ' fa-' + icon + '" aria-hidden="true"></i></span> ' + display;
 		}
 		if (task.m) {

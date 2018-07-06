@@ -2053,6 +2053,46 @@ window.FontAwesomeConfig = {
   autoReplaceSvg: 'nest',
 };
 
+var fontAwesomePro = true;
+
+function loadFontAwesomeFallback() {
+  fontAwesomePro = false;
+  $('head script[src*="pro.fontawesome"]').each(function() {
+    $(this).remove().clone()
+      .attr({
+        src: this.src.replace('pro', 'use'),
+      }).removeAttr('onerror')
+      .appendTo('head');
+  });
+}
+
+
+// Map .far to .fas free icons when Pro is not available
+app.directive('far', function() {
+	var directive = {
+		restrict: 'C',
+		link: function(scope, element) {
+			if (!fontAwesomePro) {
+				element.toggleClass('far fas');
+			}
+		}
+	};
+	return directive;
+});
+
+// Map .fal to .fas free icons when Pro is not available
+app.directive('fal', function() {
+	var directive = {
+		restrict: 'C',
+		link: function(scope, element) {
+			if (!fontAwesomePro) {
+				element.toggleClass('fal fas');
+			}
+		}
+	};
+	return directive;
+});
+
 // Polyfills
 if (!String.prototype.endsWith) {
 	String.prototype.endsWith = function(search, this_len) {
