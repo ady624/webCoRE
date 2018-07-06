@@ -485,9 +485,7 @@ hub > span[fw] {
 	color: #ccc;
 }
 
-hub[power-source=battery]::before {
-	font-family: FontAwesome;
-	content: "\f240";
+hub[power-source=battery] > .fa {
 	color: red;
 }
 

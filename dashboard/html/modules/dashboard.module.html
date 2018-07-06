@@ -166,7 +166,7 @@
 				</div>
 				<!--<div class="alert alert-warning" ng-if="devices && (devices.length > 50)">It is recommended that the list of available devices does not exceed 50 items. You have selected a total of {{devices.length}} available devices for this instance. While not a problem, you may experience slower start-up times for your pistons. If you do, please consider breaking this instance into at least two instances and group the pistons in such a way that each instance requires less than 50 available devices. Multpile instances can safely share the same device.</div>-->
 				<div class="table-responsive no-animate topinfo" ng-if="instance">
-					<hub ng-repeat="hub in location.hubs" ng-if="hub.physical" power-source="{{hub.powerSource}}"><span>{{hub.name}}</span><span fw>{{hub.firmware}}</span></hub>
+					<hub ng-repeat="hub in location.hubs" ng-if="hub.physical" power-source="{{hub.powerSource}}"><i class="fas fa-battery-full" ng-if="hub.powerSource !== 'battery'"></i><span>{{hub.name}}</span><span fw>{{hub.firmware}}</span></hub>
 					<location-mode data-toggle="tooltip" title="Location mode is {{getLocationMode()}}">{{getLocationMode()}}</location-mode>
 					<shm-mode data-toggle="tooltip" title="Smart Home Monitor is {{getSHMModeName()}}" ng-if="location.shm" alert="{{location.incidents && (location.incidents.length > 0)}}" mode="{{location.shm}}">{{getSHMModeName()}}</shm-mode>
 					<incident ng-repeat="incident in location.incidents" source-type="{{incident.sourceType}}" ng-bind-html="renderIncident(incident)"></incident>
