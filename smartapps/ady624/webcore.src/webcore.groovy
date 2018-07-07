@@ -18,7 +18,7 @@
  *
  *  Version history
 */
-public static String version() { return "v0.3.105.20180628" }
+public static String version() { return "v0.3.106-alpha.1" }
 /*
  *	06/28/2018 >>> v0.3.105.20180628 - BETA M3 - Reorder variables, collapse fuel streams, custom web request body, json and urlEncode functions
  *	03/23/2018 >>> v0.3.104.20180323 - BETA M3 - Fixed unexpected dashboard logouts, updating image urls in tiles, 12 am/pm in time(), unary negation following another operator
