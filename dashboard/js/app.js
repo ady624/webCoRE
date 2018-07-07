@@ -1852,12 +1852,10 @@ function renderString($sce, value) {
 										className += cls[x] + ' ';
 									} else if (cls[x].startsWith('data-fa-')) {
 										attributes += ' ' + cls[x];
-									} else if (cls[x].startsWith('b-')) {
-										backColor = cls[x].substr(2).replace(/[^#0-9a-z]/gi, '');
-									} else if (cls[x].startsWith('bk-') || cls[x].startsWith('bg-')) {
-										backColor = cls[x].substr(3).replace(/[^#0-9a-z]/gi, '');
-									} else if (cls[x].startsWith('back-')) {
-										backColor = cls[x].substr(5).replace(/[^#0-9a-z]/gi, '');
+									} else if (cls[x].startsWith('color-')) {
+										color = cls[x].substr(6);
+									} else if (/^(b|bg|bk|back)-/.test(cls[x])) {
+										backColor = cls[x].replace(/^(b|bg|bk|back)-/, '');
 									} else if (cls[x].indexOf('=') > 0) {
 										//options
 										var p = cls[x].indexOf('=');
