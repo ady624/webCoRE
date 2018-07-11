@@ -28,10 +28,10 @@
 <!-- View mode -->
 
 			<div ng-if="mode=='view'" class="nav navbar-nav btn-group hidden-xs hidden-sm">
-				<span class="title btn" title="Back to piston list" ng-click="home()"><i class="fa fa-chevron-left" aria-hidden="true"></i>&nbsp;{{location.name}} \ {{instance.name}} ({{instance.coreVersion.split('.').splice(0,3).join('.')}})</span>
+				<span class="title btn" title="Back to piston list" ng-click="home()"><i class="fa fa-chevron-left"></i>&nbsp;{{location.name}} \ {{instance.name}} ({{instance.coreVersion.split('.').splice(0,3).join('.')}})</span>
 			</div>
 			<div ng-if="mode=='view'" class="nav navbar-nav btn-group hidden-md hidden-lg">
-					<span class="title btn" title="Back to piston list" ng-click="home()"><i class="fa fa-chevron-left" aria-hidden="true"></i>&nbsp;Back</span>
+					<span class="title btn" title="Back to piston list" ng-click="home()"><i class="fa fa-chevron-left"></i>&nbsp;Back</span>
 			</div>
 			<div ng-if="mode=='view'" class="collapse navbar-collapse" id="navbar-view-collapse">
        	<ul class="nav navbar-nav">
@@ -61,9 +61,9 @@
 				<button class="btn btn-default {{view.console ? 'active' : ''}}" ng-click="toggleView('console');" title="Show evaluation console"><i class="fal fa-terminal"></i></button>
 			</div>
 			<div ng-if="mode=='edit'" class="nav navbar-nav btn-group">
-				<button class="btn btn-default" title="Undo" ng-click="undo();" ng-disabled="!stack || !stack.undo || !stack.undo.length"><i class="fa fa-undo" aria-hidden="true"></i>
+				<button class="btn btn-default" title="Undo" ng-click="undo();" ng-disabled="!stack || !stack.undo || !stack.undo.length"><i class="fa fa-undo"></i>
 				</button>
-				<button class="btn btn-default" title="Redo" ng-click="redo();" ng-disabled="!stack || !stack.redo || !stack.redo.length"><i class="fas fa-redo" aria-hidden="true"></i>
+				<button class="btn btn-default" title="Redo" ng-click="redo();" ng-disabled="!stack || !stack.redo || !stack.redo.length"><i class="fas fa-redo"></i>
 				</button>
 			</div>
 		</div>
@@ -578,7 +578,7 @@
 			<line kwd ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)">only when</line>
 			<restrictions ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)" data-ng-repeat="collection in [statement]" data-ng-include="'restrictions'" dnd-nodrag data-nag-model="statement"></restrictions>
 			<line kwd ng-click="select(statement, statements)">
-				<handle dnd-handle class="fas fa-sort"></handle><span ng-click="editStatement(statement, statements)" kwd>{{statement.a == '1' ? 'async ' : ''}}switch</span> <span pun>(</span><span ng-bind-html="statement.$$html || (statement.$$html = renderOperand(statement.lo))"></span><span pun>)</span><span pun title="Fall-through mode" ng-if="statement.ctp == 'e'"><i class="fas fa-sort-amount-asc" aria-hidden="true"></i></span>
+				<handle dnd-handle class="fas fa-sort"></handle><span ng-click="editStatement(statement, statements)" kwd>{{statement.a == '1' ? 'async ' : ''}}switch</span> <span pun>(</span><span ng-bind-html="statement.$$html || (statement.$$html = renderOperand(statement.lo))"></span><span pun>)</span><span pun title="Fall-through mode" ng-if="statement.ctp == 'e'"><i class="fas fa-sort-amount-asc"></i></span>
 				<badge green ng-if="(statement.tep == 'c')" badge="C" title="Only execute on condition state change"></badge>
 				<badge green ng-if="(statement.tep == 'p')" badge="P" title="Only execute on piston state change"></badge>
 				<badge green ng-if="(statement.tep == 'b')" badge="C|P" title="Only execute on condition or piston state change"></badge>
@@ -809,8 +809,8 @@
 			<badge blue ng-if="condition.sm == 'always'" badge="+" title="Always subscribe"></badge>
 			<badge red ng-if="condition.sm == 'never'" badge="-" title="Never subscribe"></badge>
 		</line>
-		<line ng-if="!condition.c && !!condition.lo && (condition.lo.t == 'p') && !!condition.lo.dm" pun>&nbsp;&nbsp;<i class="far fa-subscript" aria-hidden="true"></i> save matching devices to <span var>{{'{' + condition.lo.dm + '}'}}</span></line>
-		<line ng-if="!condition.c && !!condition.lo && (condition.lo.t == 'p') && !!condition.lo.dn" pun>&nbsp;&nbsp;<i class="far fa-subscript" aria-hidden="true"></i> save non-matching devices to <span var>{{'{' + condition.lo.dn + '}'}}</span></line>
+		<line ng-if="!condition.c && !!condition.lo && (condition.lo.t == 'p') && !!condition.lo.dm" pun>&nbsp;&nbsp;<i class="far fa-subscript"></i> save matching devices to <span var>{{'{' + condition.lo.dm + '}'}}</span></line>
+		<line ng-if="!condition.c && !!condition.lo && (condition.lo.t == 'p') && !!condition.lo.dn" pun>&nbsp;&nbsp;<i class="far fa-subscript"></i> save non-matching devices to <span var>{{'{' + condition.lo.dn + '}'}}</span></line>
 		<container ng-if="((mode=='edit') && view.whens) || (condition.ts && condition.ts.length) || (condition.fs && condition.fs.length)">
 			<line pun>{</line>
 			<container>

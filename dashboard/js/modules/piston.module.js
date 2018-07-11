@@ -4149,7 +4149,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 			}).replace(/(\{T\})/g, '°' + $scope.location.temperatureScale);
 			var icon = command.i;
 			var iconStyle = (window.fontAwesomePro && command.is) || 's';
-			if (icon) display = '<span pun><i class="fa' + iconStyle + ' fa-' + icon + '" aria-hidden="true"></i></span> ' + display;
+			if (icon) display = '<span pun><i class="fa' + iconStyle + ' fa-' + icon + '"></i></span> ' + display;
 		}
 		if (task.m) {
 			display += ' <span pun><i>(only while ' + $scope.buildLocationModeNameList(task.m) + ')</i></span>';
