@@ -16,7 +16,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-public static String version() { return "v0.3.104.20180323" }
+public static String version() { return "v0.3.105.20180628" }
 /******************************************************************************/
 /*** webCoRE DEFINITION														***/
 /******************************************************************************/
@@ -194,7 +194,16 @@ def Map listAvailableContacts(raw = false) {
         if (raw) {
             contacts[contactId] = contact
         } else {
-            contacts[contactId] = [t: contact.name, f: contact.contact.firstName, l: contact.contact.lastName, p: "$contact".endsWith('PUSH')]
+            contacts[contactId] = [t: contact.name, f: '', l: '', p: false]
+            // Mitigate corrupt contacts in ST where the contact accessor and 
+            // toString() can both throw a NullPointerException
+            try {
+                contacts[contactId].p = "$contact".endsWith('PUSH')
+                contacts[contactId].f = contact.contact?.firstName
+                contacts[contactId].l = contact.contact?.lastName
+            } catch (e) {
+                log.warn "Your contacts list includes a corrupted entry"
+            }
         }
     }
     return contacts

@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.3.104.20180323" }
+public static String version() { return "v0.3.105.20180628" }
 /*
+ *	06/28/2018 >>> v0.3.105.20180628 - BETA M3 - Reorder variables, collapse fuel streams, custom web request body, json and urlEncode functions
  *	03/23/2018 >>> v0.3.104.20180323 - BETA M3 - Fixed unexpected dashboard logouts, updating image urls in tiles, 12 am/pm in time(), unary negation following another operator
  *	02/24/2018 >>> v0.3.000.20180224 - BETA M3 - Dashboard redesign by @acd37, collapsible sidebar, fix "was" conditions on decimal attributes and log failures due to duration threshold
  *	01/16/2018 >>> v0.2.102.20180116 - BETA M2 - Fixed IE 11 script error, display of offset expression evaluation, blank device lists on piston restore, avoid error and log a warning when ST sunrise/sunset is blank
@@ -2810,7 +2811,7 @@ private static Map virtualCommands() {
 		sendSMSNotification			: [ n: "Send SMS notification...",	a: true,	i: "commenting-o",			d: "Send SMS notification \"{0}\" to {1}{2}",							p: [[n:"Message", t:"string"],[n:"Phone number",t:"phone"],[n:"Store in Messages", t:"boolean", d:" and store in Messages", s:1]],	],
 		sendNotificationToContacts	: [ n: "Send notification to contacts...",a: true,i: "commenting-o",		d: "Send notification \"{0}\" to {1}{2}",								p: [[n:"Message", t:"string"],[n:"Contacts",t:"contacts"],[n:"Store in Messages", t:"boolean", d:" and store in Messages", s:1]],	],
 		log							: [ n: "Log to console...",			a: true,	i: "bug",					d: "Log {0} \"{1}\"{2}",												p: [[n:"Log type", t:"enum", o:["info","trace","debug","warn","error"]],[n:"Message",t:"string"],[n:"Store in Messages", t:"boolean", d:" and store in Messages", s:1]],	],
-		httpRequest					: [ n: "Make a web request",		a: true, 	i: "anchor",				d: "Make a {1} request to {0} with type {2}{3}",				        p: [[n:"URL", t:"uri"],[n:"Method", t:"enum", o:["GET","POST","PUT","DELETE","HEAD"]],[n:"Content Type", t:"enum", o:["JSON","FORM"]],[n:"Send variables", t:"variables", d:" and data {v}"],[n:"Authorization header", t:"string", d:"{v}"]],	],
+		httpRequest					: [ n: "Make a web request",		a: true, 	i: "anchor",				d: "Make a {1} request to {0}",				        p: [[n:"URL", t:"uri"],[n:"Method", t:"enum", o:["GET","POST","PUT","DELETE","HEAD"]],[n:"Request body type", t:"enum", o:["JSON","FORM","CUSTOM"]],[n:"Send variables", t:"variables", d:"data {v}"],[n:"Request body", t:"string", d:"data {v}"],[n:"Request content type", t:"enum", o:["text/plain","text/html","application/json","application/x-www-form-urlencoded","application/xml"]],[n:"Authorization header", t:"string", d:"{v}"]],	],
         setVariable					: [ n: "Set variable...",			a: true,	i: "superscript",			d: "Set variable {0} = {1}",											p: [[n:"Variable",t:"variable"],[n:"Value", t:"dynamic"]],	],
         setState					: [ n: "Set piston state...",		a: true,	i: "superscript",			d: "Set piston state to \"{0}\"",										p: [[n:"State",t:"string"]],	],
         setTileColor				: [ n: "Set piston tile colors...",	a: true,	i: "superscript",			d: "Set piston tile #{0} colors to {1} over {2}{3}",					p: [[n:"Tile Index",t:"enum",o:tileIndexes],[n:"Text Color",t:"color"],[n:"Background Color",t:"color"],[n:"Flash mode",t:"boolean",d:" (flashing)"]],	],
@@ -3057,6 +3058,9 @@ private static Map functions() {
         rangevalue		: [ t: "dynamic",	d: "rangeValue"		],
         rainbowvalue	: [ t: "string",	d: "rainbowValue"	],
         distance		: [ t: "decimal"						],
+        json		: [ t: "dynamic"						],
+        urlencode		: [ t: "string",	d: "urlEncode"					],
+        encodeuricomponent		: [ t: "string",	d: "encodeURIComponent"					],
 	]
 }
 
@@ -3087,7 +3091,7 @@ private static Map getAlarmSystemStatusOptions() {
 
 
 private Map getRoutineOptions(updateCache = false) {
-	def routines = location.helloHome?.getPhrases()
+	def routines = location.helloHome?.getPhrases().sort{ it?.label ?: '' }
     def result = [:]
     for(routine in routines) {
     	if (routine && routine?.label)
