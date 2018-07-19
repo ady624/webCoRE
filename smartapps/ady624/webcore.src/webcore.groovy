@@ -386,11 +386,13 @@ def pageMain() {
 				//trace "*** DO NOT SHARE THIS LINK WITH ANYONE *** Dashboard URL: ${getDashboardInitUrl()}"
 				href "", title: "Dashboard", style: "external", url: getDashboardInitUrl(), description: "Tap to open", image: "https://cdn.rawgit.com/ady624/${handle()}/master/resources/icons/dashboard.png", required: false
 				href "", title: "Register a browser", style: "embedded", url: getDashboardInitUrl(true), description: "Tap to open", image: "https://cdn.rawgit.com/ady624/${handle()}/master/resources/icons/browser-reg.png", required: false
-				input "customEndpoints", "bool", title: "Use custom endpoints?", default: false, required: true
-                input "customHubUrl", "string", title: "Custom hub url different from https://cloud.hubitat.com", default: null, required: false
-                input "customWebcoreInstanceUrl", "string", title: "Custom webcore instance url different from dashboard.webcore.co", default: null, required: false
-                paragraph "If you enter a custom url above you will have to use a different webcore instance from dashboard.webcore.co as they restrict their api to hubitat and smartthing's cloud"
+				input "customEndpoints", "bool", submitOnChange: true, title: "Use custom endpoints?", default: false, required: true
 
+                if(customEndpoints){
+                 	input "customHubUrl", "string", title: "Custom hub url different from https://cloud.hubitat.com", default: null, required: false
+                	input "customWebcoreInstanceUrl", "string", title: "Custom webcore instance url different from dashboard.webcore.co", default: null, required: false   
+                    paragraph "If you enter a custom url above you will have to use a different webcore instance from dashboard.webcore.co as they restrict their api to hubitat and smartthing's cloud"
+                }
 			}
 		}
 
@@ -1112,22 +1114,23 @@ private api_intf_dashboard_piston_get() {
 	} else {
     	result = api_get_error_result("ERR_INVALID_TOKEN")
     }
-    
     //for accuracy, use the time as close as possible to the render
     result.now = now()
     def jsonData = groovy.json.JsonOutput.toJson(result)
     
-	//data saver for hubitat ~100K limit    
-    def responseLength = jsonData.getBytes("UTF-8").length
-    if(responseLength > 100 * 1024){ //these are loaded anyway right after loading the piston
-        log.warn "Trimming ${ (int)(responseLength/1024) }KB response to smaller size"
-        result.instance = null
-    	result.data.logs = []
-        result.data.stats.timing = [] 
-		//for accuracy, use the time as close as possible to the render
-        result.now = now()
-        jsonData = groovy.json.JsonOutput.toJson(result)
-    }    
+    if(!customEndpoints || (customHubUrl ?: "") == ""){
+        //data saver for hubitat ~100K limit    
+        def responseLength = jsonData.getBytes("UTF-8").length
+        if(responseLength > 100 * 1024){ //these are loaded anyway right after loading the piston
+            log.warn "Trimming ${ (int)(responseLength/1024) }KB response to smaller size"
+            result.instance = null
+            result.data.logs = []
+            result.data.stats.timing = [] 
+            //for accuracy, use the time as close as possible to the render
+            result.now = now()
+            jsonData = groovy.json.JsonOutput.toJson(result)
+        } 
+    }	   
     
     //log.debug "Trimmed resonse length: ${jsonData.getBytes("UTF-8").length}"        
     render contentType: "application/javascript;charset=utf-8", data: "${params.callback}(${jsonData})"

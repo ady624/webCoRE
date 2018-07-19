@@ -156,10 +156,7 @@ private void broadcastEvent(deviceId, eventName, eventValue, eventTime) {
             body: [d: deviceId, n: eventName, v: eventValue, t: eventTime]
         ]
     
-    httpPut(params){
-        resp ->resp.data
-        log.info("broadcastEvent response :: ${resp.data}") 
-    }
+    asynchttpPut((String)null, params)
     
     /*
     asynchttp_v1.put(null, [

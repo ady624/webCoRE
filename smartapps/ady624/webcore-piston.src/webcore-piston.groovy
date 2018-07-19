@@ -691,7 +691,7 @@ private getCachedAtomicState(){
     
     atomicState.loadState()
     def atomState = atomicState.@backingMap    
-    debug "Atomic state generated in ${now() - atomStart}ms", rtData
+    //debug "Atomic state generated in ${now() - atomStart}ms", rtData
     
     return atomState
 }
