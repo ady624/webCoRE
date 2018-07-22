@@ -2061,7 +2061,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		$scope.designer.$new = variableName ? false : true;
 		$scope.designer.name = variableName ? '' + variableName : '@';
 		$scope.designer.type = variable.t;
-		$scope.designer.operand = {data: {t: !variable.v ? '' : ( variable.t == 'device' ? 'd' : 'c'), c:variable.v, d: variable.v}, multiple: false, dataType: variable.t, optional: true, onlyAllowConstants: true}
+		$scope.designer.operand = {data: {t: (variable.v == null || variable.v == undefined) ? '' : ( variable.t == 'device' ? 'd' : 'c'), c: variable.v, d: variable.v}, multiple: false, dataType: variable.t, optional: true, onlyAllowConstants: true}
 		window.designer = $scope.designer;
 		window.scope = $scope;
 		$scope.validateOperand($scope.designer.operand);
@@ -3203,6 +3203,8 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 				break;
 			case 'bool':
 			case 'boolean':
+				// Require string format to match the options
+				if ((operand.data.t == 'c') && (typeof operand.data.c == 'boolean')) operand.data.c += '';
 				operand.options = ['false', 'true'];
 				break;
 			case 'mode':
