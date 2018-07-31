@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.3.105.20180628" }
+public static String version() { return "v0.3.106.20180731" }
 /*
+ *	07/31/2018 >>> v0.3.106.20180731 - BETA M3 - Contact Book removal support
  *	06/28/2018 >>> v0.3.105.20180628 - BETA M3 - Reorder variables, collapse fuel streams, custom web request body, json and urlEncode functions
  *	03/23/2018 >>> v0.3.104.20180323 - BETA M3 - Fixed unexpected dashboard logouts, updating image urls in tiles, 12 am/pm in time(), unary negation following another operator
  *	02/24/2018 >>> v0.3.000.20180224 - BETA M3 - Dashboard redesign by @acd37, collapsible sidebar, fix "was" conditions on decimal attributes and log failures due to duration threshold
@@ -309,7 +310,6 @@ preferences {
 	page(name: "pageInitializeDashboard")
 	page(name: "pageFinishInstall")
 	page(name: "pageSelectDevices")
-	page(name: "pageSelectContacts")
 	page(name: "pageSettings")
     page(name: "pageChangePassword")
     page(name: "pageSavePassword")
@@ -512,7 +512,7 @@ private pageEngineBlock() {
 
 private pageSelectDevices() {
 	state.deviceVersion = now().toString()
-	dynamicPage(name: "pageSelectDevices", title: "", nextPage: state.installed ? null : (location.getContactBookEnabled() ? "pageSelectContacts" : "pageFinishInstall")) {
+	dynamicPage(name: "pageSelectDevices", title: "", nextPage: state.installed ? null : "pageFinishInstall") {
 		section() {
 			paragraph "${state.installed ? "Select the devices you want ${handle()} to have access to." : "Great, now let's select some devices."}"
             paragraph "It is a good idea to only select the devices you plan on using with ${handle()} pistons. Pistons will only have access to the devices you selected."
@@ -543,26 +543,6 @@ private pageSelectDevices() {
 	}
 }
 
-private pageSelectContacts() {
-	state.deviceVersion = now().toString()
-	dynamicPage(name: "pageSelectContacts", title: "", nextPage: state.installed ? null : "pageFinishInstall") {
-		section() {
-			paragraph "${state.installed ? "Select the contacts you want ${handle()} to have access to." : "Great, now let's select some contacts."}"
-        }
-        if (!state.installed) {
-        	section (Note) {
-            	paragraph "Remember, you can always come back to ${handle()} and add or remove contacts as needed.", required: true
-            }
-        	section() {
-            	paragraph "So go ahead, select a few contacts, then tap Next"
-            }
-        }
-        section () {
-			input "contacts", "contact", multiple: true, title: "Which contacts", required: false
-		}
-	}
-}
-
 private pageFinishInstall() {
 	initTokens()
 	dynamicPage(name: "pageFinishInstall", title: "", install: true) {
@@ -588,19 +568,12 @@ def pageSettings() {
 
         def storageApp = getStorageApp()
         if (storageApp) {
-			section("Available devices and contacts") {
-	        	app([title: 'Available devices and contacts', multiple: false, install: true, uninstall: false], 'storage', 'ady624', "${handle()} Storage")
+			section("Available devices") {
+	        	app([title: 'Available devices', multiple: false, install: true, uninstall: false], 'storage', 'ady624', "${handle()} Storage")
 	        }
 		} else {
 			section("Available devices") {
 				href "pageSelectDevices", title: "Available devices", description: "Tap here to select which devices are available to pistons"
-			}
-			section("Available contacts") {
-				if (location.getContactBookEnabled()) {
-					href "pageSelectContacts", title: "Available contacts", description: "Tap here to select which contacts are available to pistons"
-				} else {
-    	        	paragraph "Your contact book is not enabled."
-        	    }
 			}
 		}
 /*		section("Integrations") {
@@ -621,6 +594,7 @@ def pageSettings() {
 
 		section(title: "Maintenance") {
 			paragraph "Memory usage is at ${mem()}", required: false
+			input "redirectContactBook", "bool", title: "Redirect all Contact Book requests as PUSH notifications", description: "SmartThings has removed the Contact Book feature and as a result, all uses of Contact Book are by default ignored. By enabling this option, you will get all the existing Contact Book uses fall back onto the PUSH notification system, possibly allowing other people to receive these notifications.", defaultValue: false, required: true
 			input "disabled", "bool", title: "Disable all pistons", description: "Disable all pistons belonging to this instance", defaultValue: false, required: false
 			href "pageRebuildCache", title: "Clean up and rebuild data cache", description: "Tap here to change your clean up and rebuild your data cache"
 		}
@@ -950,7 +924,7 @@ private api_get_base_result(deviceVersion = 0, updateCache = false) {
             lifx: state.lifx ?: [:],
             virtualDevices: virtualDevices(updateCache),
             globalVars: listAvailableVariables(),
-        ] + (sendDevices ? [contacts: listAvailableContacts(false, updateCache), devices: listAvailableDevices(false, updateCache)] : [:]),
+        ] + (sendDevices ? [contacts: [:], devices: listAvailableDevices(false, updateCache)] : [:]),
         location: [
             contactBookEnabled: location.getContactBookEnabled(),
             hubs: location.getHubs().collect{ [id: hashId(it.id, updateCache), name: it.name, firmware: hubUID ? 'unknown' : it.getFirmwareVersionString(), physical: it.getType().toString().contains('PHYSICAL'), powerSource: it.isBatteryInUse() ? 'battery' : 'mains' ]},
@@ -1739,21 +1713,6 @@ public Map listAvailableDevices(raw = false, updateCache = false) {
     return result
 }
 
-private Map listAvailableContacts(raw = false, updateCache = false) {
-	def storageApp = getStorageApp()
-    if (storageApp) return storageApp.listAvailableContacts(raw)
-    def contacts = [:]
-    for(contact in settings.contacts) {
-        def contactId = hashId(contact.id, updateCache);
-        if (raw) {
-            contacts[contactId] = contact
-        } else {
-            contacts[contactId] = [t: contact.name, f: contact.contact.firstName, l: contact.contact.lastName, p: "$contact".endsWith('PUSH')]
-        }
-    }
-    return contacts
-}
-
 private setPowerSource(powerSource, atomic = true) {
 	if (state.powerSource == powerSource) return
     if (atomic) {
@@ -2023,7 +1982,7 @@ public Map getRunTimeData(semaphore = null, fetchWrappers = false) {
 		],
         comparisons: comparisons(),
         coreVersion: version(),
-    	contacts: (!!fetchWrappers ? (storageApp ? storageApp.listAvailableContacts(true) : listAvailableContacts(true)) : [:]),
+    	contacts: [:],
     	devices: (!!fetchWrappers ? (storageApp ? storageApp.listAvailableDevices(true) : listAvailableDevices(true)) : [:]),
         virtualDevices: virtualDevices(),
         globalVars: listAvailableVariables(),
@@ -2036,7 +1995,8 @@ public Map getRunTimeData(semaphore = null, fetchWrappers = false) {
         sunTimes: getSunTimes(),
         started: startTime,
         ended: now(),
-        generatedIn: now() - startTime
+        generatedIn: now() - startTime,
+        redirectContactBook: settings.redirectContactBook
     ]
 }
 

@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.3.105.20180628" }
+public static String version() { return "v0.3.106.20180731" }
 /*
+ *	07/31/2018 >>> v0.3.106.20180731 - BETA M3 - Contact Book removal support
  *	06/28/2018 >>> v0.3.105.20180628 - BETA M3 - Reorder variables, collapse fuel streams, custom web request body, json and urlEncode functions
  *	03/23/2018 >>> v0.3.104.20180323 - BETA M3 - Fixed unexpected dashboard logouts, updating image urls in tiles, 12 am/pm in time(), unary negation following another operator
  *	02/24/2018 >>> v0.3.000.20180224 - BETA M3 - Dashboard redesign by @acd37, collapsible sidebar, fix "was" conditions on decimal attributes and log failures due to duration threshold
@@ -2782,18 +2783,11 @@ private long vcmd_sendSMSNotification(rtData, device, params) {
 }
 
 private long vcmd_sendNotificationToContacts(rtData, device, params) {
+	// Contact Book has been disabled and we're falling back onto PUSH notifications, if the option is enabled in the SmartApp's settings
+    if (!rtData.redirectContactBook) return 0
 	def message = params[0]
-    List contacts = (params[1] instanceof List ? params[1] : params[1].toString().tokenize(',')).unique();
-	List recipients = rtData.contacts.findAll{ it.key in contacts }.collect{ it.value }
-    if (recipients.size()) {
-        if (recipients && recipients.size()) {
-			def save = !!params[2]
-			sendNotificationToContacts(message, recipients, [event: save, view: [name: "webCoRE", data: [:]]])
-        }
-	} else {
-    	error "Invalid list of contacts: ${params[1]}", rtData
-    }
-    return 0
+    def save = !!params[2]
+    return vcmd_sendPushNotification(rtData, devices, [message, save])
 }
 
 
