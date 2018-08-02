@@ -949,6 +949,15 @@ private api_get_error_result(error) {
     ]
 }
 
+private getFirmwareVersion(){
+    try{
+        return location.getHubs().collectEntries {[it.id, it.getFirmwareVersionString()]}
+    }
+    catch(e){
+     	return location.getHubs().collectEntries {[it.id, "< 1.1.2.112"]}  
+    }
+}
+
 private api_get_base_result(deviceVersion = 0, updateCache = false) {
 	def tz = location.getTimeZone()
     def currentDeviceVersion = state.deviceVersion
@@ -974,12 +983,12 @@ private api_get_base_result(deviceVersion = 0, updateCache = false) {
         ] + (sendDevices ? [contacts: listAvailableContacts(false, updateCache), devices: listAvailableDevices(false, updateCache)] : [:]),
         location: [
             contactBookEnabled: location.getContactBookEnabled(),
-            hubs: location.getHubs().collect{ [id: hashId(it.id, updateCache), name: it.name, firmware: hubUID ? 'unknown' : it.getFirmwareVersionString(), physical: it.getType().toString().contains('PHYSICAL'), powerSource: it.isBatteryInUse() ? 'battery' : 'mains' ]},
+            hubs: location.getHubs().collect{ [id: hashId(it.id, updateCache), name: it.name, firmware: getFirmwareVersion()[it.id], physical: it.getType().toString().contains('PHYSICAL'), powerSource: it.isBatteryInUse() ? 'battery' : 'mains' ]},
             incidents: hubUID ? [] : location.activeIncidents.collect{[date: it.date.time, title: it.getTitle(), message: it.getMessage(), args: it.getMessageArgs(), sourceType: it.getSourceType()]}.findAll{ it.date >= incidentThreshold },
             id: hashId(location.id, updateCache),
             mode: hashId(location.getCurrentMode().id, updateCache),
             modes: location.getModes().collect{ [id: hashId(it.id, updateCache), name: it.name ]},
-					shm: transformHsmStatus(atomicState["hsmStatus"]),
+			shm: transformHsmStatus(state.hsmStatus),
             name: location.name,
             temperatureScale: location.getTemperatureScale(),
             timeZone: tz ? [
@@ -996,6 +1005,7 @@ private api_get_base_result(deviceVersion = 0, updateCache = false) {
 private String transformHsmStatus(status){
 	switch(status){
 		case "disarmed":
+        case "allDisarmed":
 			return "off"
 			break;
 		case "armedHome":
@@ -2127,7 +2137,7 @@ public Map getRunTimeData(semaphore = null, fetchWrappers = false) {
         globalStore: state.store ?: [:],
         settings: state.settings ?: [:],
         lifx: state.lifx ?: [:],
-		hsmStatus: atomicState.hsmStatus,
+		hsmStatus: state.hsmStatus,
         powerSource: state.powerSource ?: 'mains',
 		region: state.endpoint.contains('graph-eu') ? 'eu' : 'us',
         instanceId: hashId(app.id),
@@ -2322,7 +2332,7 @@ def NewIncidentHandler(evt) {
 }
 
 def hsmHandler(evt){
-	atomicState["hsmStatus"] = evt.value
+	state.hsmStatus = evt.value
 }
 
 def lifxHandler(response, cbkData) {
@@ -3082,10 +3092,24 @@ private Map getLocationModeOptions(updateCache = false) {
 	return result
 }
 private static Map getAlarmSystemStatusOptions() {
-	return [
-		disarmed:	"Disarmed",
-		armedHome: 	"Armed/Home",
-		armedAway:	"Armed/Away"
+	return [    
+        armAll:			"Arm All",
+        armRules: 		"Arm Monitor Rules",        
+		armHome: 		"Arm Home",
+		armAway:		"Arm Away", 
+        disarmAll:		"Disarm All",
+        disarmRules: 	"Disarm Monitor Rules",        
+		disarm:			"Disarm",
+       	cancelAlerts:	"Cancel Alerts"       
+    ]
+}
+
+private static Map getAlarmSystemAlertOptions() {
+	return [    
+    	intrusion:	"Intrusion",
+        smoke:		"Smoke",
+        water:		"Water",
+        rule:		"Rule"
     ]
 }
 
@@ -3121,7 +3145,8 @@ private Map virtualDevices(updateCache = false) {
     	mode:				[ n: 'Location mode',				t: 'enum', 		o: getLocationModeOptions(updateCache),		x: true],
         tile:				[ n: 'Piston tile',					t: 'enum',		o: ['1':'1','2':'2','3':'3','4':'4','5':'5','6':'6','7':'7','8':'8','9':'9','10':'10','11':'11','12':'12','13':'13','14':'14','15':'15','16':'16'],		m: true	],
         routine:			[ n: 'Routine',						t: 'enum',		o: getRoutineOptions(updateCache),			m: true],
-    	alarmSystemStatus:	[ n: 'Home Security Monitor status',	t: 'enum',		o: getAlarmSystemStatusOptions(),			x: true],
+    	alarmSystemStatus:	[ n: 'Hubitat Safety Monitor status',	t: 'enum',		o: getAlarmSystemStatusOptions(),			x: true],
+        alarmSystemAlert: 	[ n: 'Hubitat Safety Monitor alert',t: 'enum',		o: getAlarmSystemAlertOptions(), m: true]
     ]
 }
 public Map getColorByName(name){

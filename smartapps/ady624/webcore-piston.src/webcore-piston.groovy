@@ -690,11 +690,15 @@ private getTemporaryRunTimeData() {
 private getCachedAtomicState(){
     def atomStart = now()        
     
-    atomicState.loadState()
-    def atomState = atomicState.@backingMap    
+    try{
+        atomicState.loadState()
+    	def atomState = atomicState.@backingMap  
+        return atomState
+    }
+    catch(e){
+     	return atomicState
+    }      
     //debug "Atomic state generated in ${now() - atomStart}ms", rtData
-    
-    return atomState
 }
 
 private getRunTimeData(rtData = null, semaphore = null, fetchWrappers = false) {
@@ -943,6 +947,7 @@ private Boolean executeEvent(rtData, event) {
             device: srcEvent ? srcEvent.device : hashId((event.device?:location).id),
             name: srcEvent ? srcEvent.name : event.name,
             value: srcEvent ? srcEvent.value : event.value,
+            descriptionText: srcEvent ? srcEvent.descriptionText : event.descriptionText,
             unit: srcEvent ? srcEvent.unit : event.unit,
             physical: srcEvent ? srcEvent.physical : !!event.physical,
             index: index
@@ -963,6 +968,7 @@ private Boolean executeEvent(rtData, event) {
         setSystemVariableValue(rtData, '$previousEventDevice', [rtData.previousEvent?.device])
         setSystemVariableValue(rtData, '$previousEventDeviceIndex', rtData.previousEvent?.index ?: 0)
         setSystemVariableValue(rtData, '$previousEventAttribute', rtData.previousEvent?.name ?: '')
+        setSystemVariableValue(rtData, '$previousEventDescription', rtData.currentEvent.descriptionText ?: '')
         setSystemVariableValue(rtData, '$previousEventValue', rtData.previousEvent?.value ?: '')
         setSystemVariableValue(rtData, '$previousEventUnit', rtData.previousEvent?.unit ?: '')
         setSystemVariableValue(rtData, '$previousEventDevicePhysical', !!rtData.previousEvent?.physical)
@@ -972,6 +978,7 @@ private Boolean executeEvent(rtData, event) {
         setSystemVariableValue(rtData, '$currentEventDevice', [rtData.currentEvent?.device])
         setSystemVariableValue(rtData, '$currentEventDeviceIndex', (rtData.currentEvent.index != '') && (rtData.currentEvent.index != null) ? rtData.currentEvent.index : 0)
         setSystemVariableValue(rtData, '$currentEventAttribute', rtData.currentEvent.name ?: '')
+        setSystemVariableValue(rtData, '$currentEventDescription', rtData.currentEvent.descriptionText ?: '')
         setSystemVariableValue(rtData, '$currentEventValue', rtData.currentEvent.value ?: '')
         setSystemVariableValue(rtData, '$currentEventUnit', rtData.currentEvent.unit ?: '')
         setSystemVariableValue(rtData, '$currentEventDevicePhysical', !!rtData.currentEvent.physical)
@@ -2378,7 +2385,7 @@ private long vcmd_setAlarmSystemStatus(rtData, device, params) {
 	def statusIdOrName = params[0]
     def status = rtData.virtualDevices['alarmSystemStatus']?.o?.find{ (it.key == statusIdOrName) || (it.value == statusIdOrName)}.collect{ [id: it.key, name: it.value] }
     if (status && status.size()) {
-	    sendLocationEvent(name: 'hsmStatus', value: status[0].id)
+	    sendLocationEvent(name: 'hsmSetArm', value: status[0].id)
     } else {
 	    error "Error setting SmartThings Home Monitor status. Status '$statusIdOrName' does not exist.", rtData
     }
@@ -3696,6 +3703,9 @@ private evaluateOperand(rtData, node, operand, index = null, trigger = false, ne
             	case 'alarmSystemStatus':
                 	values = [[i: "${node?.$}:v", v:getDeviceAttribute(rtData, rtData.locationId, operand.v)]];
                     break;
+                case 'alarmSystemAlert':
+                	values = [[i: "${node?.$}:v", v:[t: 'string', v: (rtData.event.name == 'hsmAlert' ? rtData.event.value : null)]]]
+                    break;
             	case 'powerSource':
                 	values = [[i: "${node?.$}:v", v:[t: 'enum', v:rtData.powerSource]]];
                     break;
@@ -4438,6 +4448,10 @@ private void subscribeAll(rtData) {
                         	subscriptionId = "$deviceId${operand.v}"
                            	attribute = "hsmStatus"
                         	break;
+                        case 'alarmSystemAlert':
+                        	subscriptionId = "$deviceId${operand.v}"
+                           	attribute = "hsmAlert"
+                        	break;
 						case 'time':
                         case 'date':
                         case 'datetime':
@@ -4818,7 +4832,7 @@ private Map getDeviceAttribute(rtData, deviceId, attributeName, subDeviceIndex =
             	def mode = location.getCurrentMode();
             	return [t: 'string', v: hashId(mode.getId()), n: mode.getName()]
         	case 'alarmSystemStatus':
-				def v = rtData.hsmStatus
+				def v = location.hsmStatus ?: rtData.hsmStatus
                 def n = rtData.virtualDevices['alarmSystemStatus']?.o[v]
 				return [t: 'string', v: v, n: n]
         }
@@ -7916,6 +7930,7 @@ private static Map getSystemVariables() {
         '$incidents': [t: "dynamic", d: true],
         '$shmTripped': [t: "boolean", d: true],
 		"\$currentEventAttribute": [t: "string", v: null],
+        "\$currentEventDescription": [t: "string", v: null],
 		"\$currentEventDate": [t: "datetime", v: null],
 		"\$currentEventDelay": [t: "integer", v: null],
 		"\$currentEventDevice": [t: "device", v: null],
@@ -8041,7 +8056,8 @@ private getSystemVariableValue(rtData, name) {
 		case "\$randomSaturation": def result = getRandomValue("\$randomSaturation") ?: (int)Math.round(50 + 50 * Math.random()); setRandomValue("\$randomSaturation", result); return result
 		case "\$randomHue": def result = getRandomValue("\$randomHue") ?: (int)Math.round(360 * Math.random()); setRandomValue("\$randomHue", result); return result
   		case "\$locationMode": return location.getMode()
-		case "\$hsmStatus": switch (rtData.hsmStatus) { case 'disarmed': return 'Disarmed'; case 'armedHome': return 'Armed/Home'; case 'armedAway': return 'Armed/Away'; }; return null;
+		//case "\$hsmStatus": switch (location.hsmStatus ?: rtData.hsmStatus) { case 'allDisarmed' : return 'All Disarmed'; case 'disarmed': return 'Disarmed'; case 'armedHome': return 'Armed/Home'; case 'armedAway': return 'Armed/Away'; }; return null;
+        case "\$hsmStatus": return location.hsmStatus ?: rtData.hsmStatus
     }
 }
 
