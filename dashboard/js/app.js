@@ -2048,4 +2048,4 @@ if (!String.prototype.endsWith) {
 	};
 }
 
-version = function() { return 'v0.3.105.20180628'; };
+version = function() { return 'v0.3.106.20180731'; };

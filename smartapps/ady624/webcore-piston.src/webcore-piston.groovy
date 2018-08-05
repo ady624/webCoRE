@@ -402,6 +402,10 @@ def pageClearAll() {
 /*** 																		***/
 /******************************************************************************/
 
+def isInstalled(){
+ 	return !!state.created   
+}
+
 def installed() {
    	state.created = now()
     state.modified = now()
@@ -1745,23 +1749,23 @@ private executePhysicalCommand(rtData, device, command, params = [], delay = nul
             }
             //if we're skipping, we already have a message
             if (skip) {
-            	msg.m = "Skipped execution of physical command [${device.label}].$command($params) because it would make no change to the device."
+            	msg.m = "Skipped execution of physical command [${device.label ?: device.name}].$command($params) because it would make no change to the device."
             } else {
                 if (params.size()) {
                     if (delay) { //not supported
                         device."$command"((params as Object[]) + [delay: delay])
-                        msg.m = "Executed physical command [${device.label}].$command($params, [delay: $delay])"
+                        msg.m = "Executed physical command [${device.label ?: device.name}].$command($params, [delay: $delay])"
                     } else {
                         device."$command"(params as Object[])
-                        msg.m = "Executed physical command [${device.label}].$command($params)"
+                        msg.m = "Executed physical command [${device.label ?: device.name}].$command($params)"
                     }
                 } else {
                     if (delay) { //not supported
                         device."$command"([delay: delay])
-                        msg.m = "Executed physical command [${device.label}].$command([delay: $delay])"
+                        msg.m = "Executed physical command [${device.label ?: device.name}].$command([delay: $delay])"
                     } else {
                         device."$command"()
-                        msg.m = "Executed physical command [${device.label}].$command()"
+                        msg.m = "Executed physical command [${device.label ?: device.name}].$command()"
                     }
                 }
             }
