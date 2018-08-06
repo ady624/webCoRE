@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.3.106.20180731" }
+public static String version() { return "v0.3.107.20180806" }
 /*
+ *	08/06/2018 >>> v0.3.107.20180806 - BETA M3 - Font Awesome 5 icons, expanding textareas to fix expression scrolling, boolean date and datetime global variable editor fixes
  *	07/31/2018 >>> v0.3.106.20180731 - BETA M3 - Contact Book removal support
  *	06/28/2018 >>> v0.3.105.20180628 - BETA M3 - Reorder variables, collapse fuel streams, custom web request body, json and urlEncode functions
  *	03/23/2018 >>> v0.3.104.20180323 - BETA M3 - Fixed unexpected dashboard logouts, updating image urls in tiles, 12 am/pm in time(), unary negation following another operator
