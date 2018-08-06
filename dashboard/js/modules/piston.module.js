@@ -4691,6 +4691,37 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 			$timeout(function() {
 				var width = piston.clientWidth + 10;
 				var height = piston.clientHeight + (anonymize ? 0 : 64) + 10;
+				// html2canvas cannot render SVGs; rasterize all icons to canvas first
+				var $svgs = $(piston).find('svg');
+				$svgs.each(function() {
+					var $svg = $(this);
+					// Size the canvas to match the actual icon rather than the svg
+					var iconWidth = $svg.find('path').width();
+					var iconHeight = $svg.find('path').height();
+					// Allow canvg to read the inherited color from style.color
+					$svg.css('color', $svg.css('color'));
+					var $canvas = $('<canvas class="snapshotSvgCanvas"></canvas>').attr({
+						width: iconWidth * 2,
+						height: iconHeight * 2
+					});
+					xml = (new XMLSerializer()).serializeToString(this);
+					// Avoid error in IE 
+					xml = xml.replace(/xmlns=\"http:\/\/www\.w3\.org\/2000\/svg\"/, '');
+					canvg($canvas[0], xml, { ignoreDimensions: true });
+					$svg.css('color', '');
+					// Align the canvas within the svg element bounds
+					var paddingX = ($svg.width() - iconWidth) / 2;
+					var paddingY = ($svg.height() - iconHeight) / 2;
+					$canvas.css({
+						width: iconWidth,
+						height: iconHeight,
+						paddingBottom: paddingY,
+						paddingLeft: paddingX,
+						paddingRight: paddingX,
+						paddingTop: paddingY,
+					});
+					$svg.hide().after($canvas).next();
+				});
 				html2canvas(piston, {width: width, height: height, counter: counter}).then(function(canvas) {
 					$scope.loading = false;
 					var reader = new window.FileReader();
@@ -4710,6 +4741,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 				});
 				piston.removeAttribute('printing');
 				piston.removeAttribute('anonymized');
+				$svgs.show().next('.snapshotSvgCanvas').remove();
 				delete($scope.view.exportBin);
 				$animate.enabled(true);
 			}, 1, false);
