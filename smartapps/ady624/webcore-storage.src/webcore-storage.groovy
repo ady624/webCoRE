@@ -16,7 +16,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-public static String version() { return "v0.3.105.20180628" }
+public static String version() { return "v0.3.106.20180731" }
 /******************************************************************************/
 /*** webCoRE DEFINITION														***/
 /******************************************************************************/
@@ -38,7 +38,6 @@ preferences {
 	//UI pages
 	page(name: "pageSettings")
 	page(name: "pageSelectDevices")
-	page(name: "pageSelectContacts")
 }
 
 
@@ -61,14 +60,6 @@ def pageSettings() {
         } else {
             section("Available devices") {
                 href "pageSelectDevices", title: "Available devices", description: "Tap here to select which devices are available to pistons"
-            }
-
-            section("Available contacts") {
-                if (location.getContactBookEnabled()) {
-                    href "pageSelectContacts", title: "Available contacts", description: "Tap here to select which contacts are available to pistons"
-                } else {
-                    paragraph "Your contact book is not enabled."
-                }
             }
         }
 	}
@@ -97,19 +88,6 @@ private pageSelectDevices() {
 		}
 	}
 }
-
-private pageSelectContacts() {
-	parent.refreshDevices()
-	dynamicPage(name: "pageSelectContacts", title: "") {
-		section() {
-			paragraph "Select the contacts you want ${handle()} to have access to."
-        }
-        section () {
-			input "contacts", "contact", multiple: true, title: "Which contacts", required: false, submitOnChange: true
-		}
-	}
-}
-
 
 
 /******************************************************************************/
@@ -152,9 +130,6 @@ def initData(devices, contacts) {
 	        }
 	    }
 	}
-    if (contacts) {
-    	app.updateSetting('contacts', [type: 'contact', value: contacts.collect{ it.id }])
-    }
 }
 
 def Map listAvailableDevices(raw = false) {
@@ -176,28 +151,6 @@ def Map getDashboardData() {
 			return [ (it) : value]
 	    }]
     }
-}
-
-def Map listAvailableContacts(raw = false) {
-    def contacts = [:]
-    for(contact in settings.contacts) {
-        def contactId = hashId(contact.id);
-        if (raw) {
-            contacts[contactId] = contact
-        } else {
-            contacts[contactId] = [t: contact.name, f: '', l: '', p: false]
-            // Mitigate corrupt contacts in ST where the contact accessor and 
-            // toString() can both throw a NullPointerException
-            try {
-                contacts[contactId].p = "$contact".endsWith('PUSH')
-                contacts[contactId].f = contact.contact?.firstName
-                contacts[contactId].l = contact.contact?.lastName
-            } catch (e) {
-                log.warn "Your contacts list includes a corrupted entry"
-            }
-        }
-    }
-    return contacts
 }
 
 public String mem(showBytes = true) {
