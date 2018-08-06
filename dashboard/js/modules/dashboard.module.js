@@ -665,8 +665,8 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 	            { type: 'blank', name: 'Create a blank piston', icon: 'code', cssClass: 'wide btn-default' },
 	            { type: 'duplicate', name: 'Create a duplicate piston', icon: 'code', cssClass: 'wide btn-info' },
     	        // { type: 'template', name: 'Create a piston from a template', icon: 'code', cssClass: 'wide btn-success' },
-        	    { type: 'restore', name: 'Restore a piston using a backup code', icon: 'code', cssClass: 'wide btn-warning' },
-        	    { type: 'import', name: 'Import a piston from an external source', icon: 'code', cssClass: 'wide btn-danger' },
+        	    { type: 'restore', name: 'Restore a piston using a backup code', icon: 'code', cssClass: 'wide btn-success' },
+        	    { type: 'import', name: 'Import a piston from a backup file', icon: 'code', cssClass: 'wide btn-warning' },
 	        ];
     	    $scope.designer.dialog = ngDialog.open({
         	    template: 'dialog-add-piston',
@@ -676,7 +676,18 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
         	    scope: $scope
 	        });
 		});
+		
+		localforage.getItem('import').then(function(importedPistons) {
+			$scope.importedPistons = importedPistons;
+		});
     };
+		
+	$scope.restoreImportedPiston = function(data) {
+		$scope.designer.name = data.meta.name;
+		$scope.designer.author = data.meta.author;
+		$scope.designer.piston = data.meta.id;
+		return $scope.createPiston();
+	}
 
 
 	$scope.backup = function() {
@@ -881,6 +892,29 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
             $scope.designer.page--;
         }
     }
+		
+	$scope.loadBackupFile = function() {
+		var uploadField = angular.element('#backupFile')[0];
+		var file = uploadField.files[0];
+		var reader = new window.FileReader();
+		reader.onload = function(e) {
+			var encrypted = e.target.result;
+			if (encrypted) {
+				var data;
+				var password;
+				do {
+					password = prompt('Backup file password');
+					data = dataService.decryptBackup(encrypted, password);
+				} while (password !== null && !data);
+				
+				if (data) {
+					localforage.setItem('import', data);
+					$scope.importedPistons = data;
+				}
+			}
+		};
+		reader.readAsText(file);
+	};
 
 
 	$scope.getOpacity = function(time) {
