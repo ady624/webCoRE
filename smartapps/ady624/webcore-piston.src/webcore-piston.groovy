@@ -2388,7 +2388,7 @@ private long vcmd_setLocationMode(rtData, device, params) {
 
 private long vcmd_setAlarmSystemStatus(rtData, device, params) {
 	def statusIdOrName = params[0]
-    def status = rtData.virtualDevices['alarmSystemStatus']?.o?.find{ (it.key == statusIdOrName) || (it.value == statusIdOrName)}.collect{ [id: it.key, name: it.value] }
+    def status = rtData.virtualDevices['alarmSystemStatus']?.ac?.find{ (it.key == statusIdOrName) || (it.value == statusIdOrName)}.collect{ [id: it.key, name: it.value] }
     if (status && status.size()) {
 	    sendLocationEvent(name: 'hsmSetArm', value: status[0].id)
     } else {
@@ -3704,6 +3704,9 @@ private evaluateOperand(rtData, node, operand, index = null, trigger = false, ne
                 case 'alarmSystemAlert':
                 	values = [[i: "${node?.$}:v", v:[t: 'string', v: (rtData.event.name == 'hsmAlert' ? rtData.event.value : null)]]]
                     break;
+                case 'alarmSystemEvent':
+                	values = [[i: "${node?.$}:v", v:[t: 'string', v: (rtData.event.name == 'hsmSetArm' ? rtData.event.value : null)]]]
+                    break;
             	case 'powerSource':
                 	values = [[i: "${node?.$}:v", v:[t: 'enum', v:rtData.powerSource]]];
                     break;
@@ -4449,6 +4452,10 @@ private void subscribeAll(rtData) {
                         case 'alarmSystemAlert':
                         	subscriptionId = "$deviceId${operand.v}"
                            	attribute = "hsmAlert"
+                        	break;
+                        case 'alarmSystemEvent':
+                        	subscriptionId = "$deviceId${operand.v}"
+                           	attribute = "hsmSetArm"
                         	break;
 						case 'time':
                         case 'date':

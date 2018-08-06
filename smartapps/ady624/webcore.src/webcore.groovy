@@ -2792,7 +2792,7 @@ private static Map virtualCommands() {
         setTile						: [ n: "Set piston tile...",		a: true,	i: "superscript",			d: "Set piston tile #{0} title  to \"{1}\", text to \"{2}\", footer to \"{3}\", and colors to {4} over {5}{6}",		p: [[n:"Tile Index",t:"enum",o:tileIndexes],[n:"Title",t:"string"],[n:"Text",t:"string"],[n:"Footer",t:"string"],[n:"Text Color",t:"color"],[n:"Background Color",t:"color"],[n:"Flash mode",t:"boolean",d:" (flashing)"]],	],
         clearTile					: [ n: "Clear piston tile...",		a: true,	i: "superscript",			d: "Clear piston tile #{0}",											p: [[n:"Tile Index",t:"enum",o:tileIndexes]],	],
 		setLocationMode				: [ n: "Set location mode...",		a: true,	i: "", 						d: "Set location mode to {0}", 											p: [[n:"Mode",t:"mode"]],																														],
-		setAlarmSystemStatus		: [ n: "Set Smart Home Monitor status...",	a: true, i: "",					d: "Set Smart Home Monitor status to {0}",								p: [[n:"Status", t:"alarmSystemStatus"]],																										],
+		setAlarmSystemStatus		: [ n: "Set Hubitat Safety Monitor status...",	a: true, i: "",				d: "Set Hubitat Safety Monitor status to {0}",							p: [[n:"Status", t:"enum", o: getAlarmSystemStatusActions().collect {[n: it.value, v: it.key]}]],																										],
 		sendEmail					: [ n: "Send email...",				a: true,	i: "envelope", 				d: "Send email with subject \"{1}\" to {0}", 							p: [[n:"Recipient",t:"email"],[n:"Subject",t:"string"],[n:"Message body",t:"string"]],																							],
         wolRequest					: [ n: "Wake a LAN device", 		a: true,	i: "", 						d: "Wake LAN device at address {0}{1}",									p: [[n:"MAC address",t:"string"],[n:"Secure code",t:"string",d:" with secure code {v}"]],	],
 		adjustLevel					: [ n: "Adjust level...",	 r: ["setLevel"], 	i: "toggle-on",				d: "Adjust level by {0}%{1}",											p: [[n:"Adjustment",t:"integer",r:[-100,100]], [n:"Only if switch is...", t:"enum",o:["on","off"], d:" if already {v}"]],																],
@@ -3052,7 +3052,7 @@ private Map getLocationModeOptions(updateCache = false) {
 	}
 	return result
 }
-private static Map getAlarmSystemStatusOptions() {
+private static Map getAlarmSystemStatusActions() {
 	return [    
         armAll:			"Arm All",
         armRules: 		"Arm Monitor Rules",        
@@ -3062,6 +3062,15 @@ private static Map getAlarmSystemStatusOptions() {
         disarmRules: 	"Disarm Monitor Rules",        
 		disarm:			"Disarm",
        	cancelAlerts:	"Cancel Alerts"       
+    ]
+}
+
+private static Map getAlarmSystemStatusOptions() {
+	return [    
+        armedAway:		"Armed Away",
+        armedHome: 		"Armed Home",        
+        disarmed: 		"Disarmed",
+		allDisarmed:	"All Disarmed"  
     ]
 }
 
@@ -3106,8 +3115,10 @@ private Map virtualDevices(updateCache = false) {
     	mode:				[ n: 'Location mode',				t: 'enum', 		o: getLocationModeOptions(updateCache),		x: true],
         tile:				[ n: 'Piston tile',					t: 'enum',		o: ['1':'1','2':'2','3':'3','4':'4','5':'5','6':'6','7':'7','8':'8','9':'9','10':'10','11':'11','12':'12','13':'13','14':'14','15':'15','16':'16'],		m: true	],
         routine:			[ n: 'Routine',						t: 'enum',		o: getRoutineOptions(updateCache),			m: true],
-    	alarmSystemStatus:	[ n: 'Hubitat Safety Monitor status',	t: 'enum',		o: getAlarmSystemStatusOptions(),			x: true],
-        alarmSystemAlert: 	[ n: 'Hubitat Safety Monitor alert',t: 'enum',		o: getAlarmSystemAlertOptions(), m: true]
+    	alarmSystemStatus:	[ n: 'Hubitat Safety Monitor status',t: 'enum',		o: getAlarmSystemStatusOptions(), ac: getAlarmSystemStatusActions(),			x: true],
+        //this one can be confusing to users so it's been commented out. It can subscribe to hsmSetArm, but the safety monitor doesn't actually send these events themselves, only other apps
+        //alarmSystemEvent:	[ n: 'Hubitat Safety Monitor event',t: 'enum',		o: getAlarmSystemStatusActions(),			m: true],
+        alarmSystemAlert: 	[ n: 'Hubitat Safety Monitor alert',t: 'enum',		o: getAlarmSystemAlertOptions(),			m: true]
     ]
 }
 public Map getColorByName(name){
