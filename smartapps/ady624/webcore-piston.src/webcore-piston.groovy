@@ -3707,6 +3707,9 @@ private evaluateOperand(rtData, node, operand, index = null, trigger = false, ne
                 case 'alarmSystemEvent':
                 	values = [[i: "${node?.$}:v", v:[t: 'string', v: (rtData.event.name == 'hsmSetArm' ? rtData.event.value : null)]]]
                     break;
+                case 'alarmSystemRule':
+                	values = [[i: "${node?.$}:v", v:[t: 'string', v: (rtData.event.name == 'hsmRules' ? rtData.event.value : null)]]]
+                    break;
             	case 'powerSource':
                 	values = [[i: "${node?.$}:v", v:[t: 'enum', v:rtData.powerSource]]];
                     break;
@@ -4456,6 +4459,10 @@ private void subscribeAll(rtData) {
                         case 'alarmSystemEvent':
                         	subscriptionId = "$deviceId${operand.v}"
                            	attribute = "hsmSetArm"
+                        	break;
+                        case 'alarmSystemRule':
+                        	subscriptionId = "$deviceId${operand.v}"
+                           	attribute = "hsmRules"
                         	break;
 						case 'time':
                         case 'date':

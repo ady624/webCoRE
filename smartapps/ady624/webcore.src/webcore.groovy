@@ -3083,6 +3083,13 @@ private static Map getAlarmSystemAlertOptions() {
     ]
 }
 
+private static Map getAlarmSystemRuleOptions() {
+	return [    
+    	armedRule: 		"Armed Rule",
+        disarmedRule: 	"Disarmed Rule"
+    ]
+}
+
 
 private Map getRoutineOptions(updateCache = false) {
 	def routines = location.helloHome?.getPhrases()?.sort{ it?.label ?: '' }
@@ -3118,7 +3125,8 @@ private Map virtualDevices(updateCache = false) {
     	alarmSystemStatus:	[ n: 'Hubitat Safety Monitor status',t: 'enum',		o: getAlarmSystemStatusOptions(), ac: getAlarmSystemStatusActions(),			x: true],
         //this one can be confusing to users so it's been commented out. It can subscribe to hsmSetArm, but the safety monitor doesn't actually send these events themselves, only other apps
         //alarmSystemEvent:	[ n: 'Hubitat Safety Monitor event',t: 'enum',		o: getAlarmSystemStatusActions(),			m: true],
-        alarmSystemAlert: 	[ n: 'Hubitat Safety Monitor alert',t: 'enum',		o: getAlarmSystemAlertOptions(),			m: true]
+        alarmSystemAlert: 	[ n: 'Hubitat Safety Monitor alert',t: 'enum',		o: getAlarmSystemAlertOptions(),			m: true],
+        alarmSystemRule: 	[ n: 'Hubitat Safety Monitor rule',t: 'enum',		o: getAlarmSystemRuleOptions(),			m: true]
     ]
 }
 public Map getColorByName(name){
