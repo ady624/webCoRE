@@ -1143,10 +1143,6 @@ li[instance] {
   font-size: 15px;
   margin-top: -1px;
 }
-.sidebar .nav-sidebar > li > a > .fa {
-  width: 20px;
-  text-align: center;
-}
 
 .nav-sidebar .logo {
   position: relative;
@@ -1217,7 +1213,7 @@ li[instance] {
     z-index: 2;
     border-top-right-radius: 50%;
     border-bottom-right-radius: 50%;
-    padding: 8px;
+    padding: 6px;
     padding-left: 7px;
   }
   .main > .collapse-control:hover {
@@ -1254,10 +1250,10 @@ li[instance] {
     padding: 15px;
   }
 
-  .sidebar.allow-transition .nav-sidebar > li > a > .fa {
+  .sidebar.allow-transition .nav-sidebar > li > a > i > svg {
     transition: all 0.25s ease-out;
   }
-  .sidebar.sidebar-collapsed .nav-sidebar > li > a > .fa {
+  .sidebar.sidebar-collapsed .nav-sidebar > li > a > i > svg {
     transform: scale(1.3);
     width: 30px;
     padding-right: 10px;

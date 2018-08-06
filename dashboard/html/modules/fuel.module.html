@@ -11,13 +11,13 @@
 			</div>
 			<li canister ng-repeat="canister in canisters" ng-class="'canister-' + canister | uniqueDashify:$index">
 				<label ng-click="selectCanister(canister);">
-					<span class="fa fa-caret-down collapse-control rotate-on-collapse pull-right" data-toggle="collapse" collapse-control data-target="#{{'collapse-' + canister | uniqueDashify:$index}}" aria-expanded="true" title="Hide/Show"></span>
+					<span class="fas fa-caret-down collapse-control rotate-on-collapse pull-right" data-toggle="collapse" collapse-control data-target="#{{'collapse-' + canister | uniqueDashify:$index}}" aria-expanded="true" title="Hide/Show"></span>
 					{{canister ? canister : 'Uncategorized'}}
 				</label>
 				<div collapse-target ng-attr-id="{{'collapse' + canister | uniqueDashify:$index}}" class="collapse in">
 					<ul fuelStreams>
 						<li ng-repeat="fuelStream in fuelStreams" ng-if="fuelStream.c == canister" ng-selected="!!fuelStream.selected" ng-class="'fuel-stream-' + (fuelStream.n | dashify)">
-							<label ng-click="selectFuelStream(fuelStream);"><i class="fa fa-{{fuelStream.selected ? 'check-' : ''}}square-o" ng-click="toggleFuelStream(fuelStream); $event.stopPropagation();"></i> {{fuelStream.n}}<created>{{utcToString(fuelStream.t)}}</created></label>
+							<label ng-click="selectFuelStream(fuelStream);"><span ng-click="toggleFuelStream(fuelStream); $event.stopPropagation();"><i class="fas fa-check-square no-ng-animate" ng-if="fuelStream.selected"></i> <i class="far fa-square no-ng-animate" ng-if="!fuelStream.selected"></i></span> {{fuelStream.n}}<created>{{utcToString(fuelStream.t)}}</created></label>
 						</li>
 					</ul>
 				</div>
