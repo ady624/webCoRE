@@ -340,12 +340,9 @@ tr[active=false] {
 	font-weight: 300;
 }
 
-td i[star] {
-	display: inline-block;
+td svg[star] {
 	color: #15bfff;
-	font-size: 8px;
-	margin-top: -4px;
-	padding: 1em 4px 0px 0px;
+	margin: 4px 4px 0px 0px;
 	vertical-align: top;
 }
 
@@ -488,9 +485,7 @@ hub > span[fw] {
 	color: #ccc;
 }
 
-hub[power-source=battery]::before {
-	font-family: FontAwesome;
-	content: "\f240";
+hub[power-source=battery] > .fa {
 	color: red;
 }
 

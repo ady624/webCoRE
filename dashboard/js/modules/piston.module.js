@@ -1060,18 +1060,18 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		window.designer = $scope.designer;
 		$scope.designer.items = {
 			simple: [
-				{ type: 'if', name: 'If Block', icon: 'code-fork', cssClass: 'info', description: 'An if block allows the piston to execute different actions depending on the truth result of a comparison or set of comparisons', button: 'an if' },
+				{ type: 'if', name: 'If Block', icon: 'code-branch', cssClass: 'info', description: 'An if block allows the piston to execute different actions depending on the truth result of a comparison or set of comparisons', button: 'an if' },
 				{ type: 'action', name: 'Action', icon: 'code', cssClass: 'success', description: 'An action allows the piston to control devices and execute tasks', button: 'an action' },
-				{ type: 'every', name: 'Timer', icon: 'clock-o', cssClass: 'warning', description: 'A timer will trigger execution of the piston at set time intervals', button: 'a timer' }
+				{ type: 'every', name: 'Timer', icon: 'clock', iconStyle: 'r', cssClass: 'warning', description: 'A timer will trigger execution of the piston at set time intervals', button: 'a timer' }
 			],
 			advanced: [
-				{ type: 'switch', name: 'Switch', icon: 'code-fork', cssClass: 'info', description: 'A switch statement compares an operand against a set of values and executes statements corresponding to those matches', button: 'a switch' },
+				{ type: 'switch', name: 'Switch', icon: 'code-branch', cssClass: 'info', description: 'A switch statement compares an operand against a set of values and executes statements corresponding to those matches', button: 'a switch' },
 				{ type: 'do', name: 'Do Block', icon: 'code', cssClass: 'success', description: 'A do block can help organize several statements into a single block', button: 'a do block' },
-				{ type: 'on', name: 'On event', icon: 'code-fork', cssClass: 'warning', description: 'An on event executes its statements only when certain events happen', button: 'an on event' },
-				{ type: 'for', name: 'For Loop', icon: 'circle-o-notch', cssClass: 'warning', description: 'A for loop executes the same statements for a set number of iteration cycles', button: 'a for loop' },
-				{ type: 'each', name: 'For Each Loop', icon: 'circle-o-notch', cssClass: 'warning', description: 'An each loop executes the same statements for each device in a device list', button: 'a for each loop' },
-				{ type: 'while', name: 'While Loop', icon: 'circle-o-notch', cssClass: 'warning', description: 'A while loop executes the same statements for as long as a condition is met', button: 'a while loop' },
-				{ type: 'repeat', name: 'Repeat Loop', icon: 'circle-o-notch', cssClass: 'warning', description: 'A repeat loop executes the same statements until a condition is met', button: 'a repeat loop' },
+				{ type: 'on', name: 'On event', icon: 'code-branch', cssClass: 'warning', description: 'An on event executes its statements only when certain events happen', button: 'an on event' },
+				{ type: 'for', name: 'For Loop', icon: 'circle-notch', cssClass: 'warning', description: 'A for loop executes the same statements for a set number of iteration cycles', button: 'a for loop' },
+				{ type: 'each', name: 'For Each Loop', icon: 'circle-notch', cssClass: 'warning', description: 'An each loop executes the same statements for each device in a device list', button: 'a for each loop' },
+				{ type: 'while', name: 'While Loop', icon: 'circle-notch', cssClass: 'warning', description: 'A while loop executes the same statements for as long as a condition is met', button: 'a while loop' },
+				{ type: 'repeat', name: 'Repeat Loop', icon: 'circle-notch', cssClass: 'warning', description: 'A repeat loop executes the same statements until a condition is met', button: 'a repeat loop' },
 				{ type: 'break', name: 'Break', icon: 'ban', cssClass: 'danger', description: 'A break allows the interruption of the inner most switch, for loop, for each loop, while loop, or repeat loop', button: 'a break' },
 				{ type: 'exit', name: 'Exit', icon: 'ban', cssClass: 'danger', description: 'An exit interrupts the piston execution and exits immediately', button: 'an exit' }
 			]
@@ -1480,7 +1480,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		window.designer = $scope.designer;
 		$scope.designer.items = [
 			{ type: 'condition', name: 'Condition', icon: 'code', cssClass: 'btn-info' },
-			{ type: 'group', name: 'Group', icon: 'code-fork', cssClass: 'btn-warning' },
+			{ type: 'group', name: 'Group', icon: 'code-branch', cssClass: 'btn-warning' },
 		];
 
 
@@ -1700,7 +1700,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
         window.designer = $scope.designer;
         $scope.designer.items = [
             { type: 'restriction', name: 'Restriction', icon: 'code', cssClass: 'btn-info' },
-            { type: 'group', name: 'Group', icon: 'code-fork', cssClass: 'btn-warning' },
+            { type: 'group', name: 'Group', icon: 'code-branch', cssClass: 'btn-warning' },
         ];
 
 
@@ -2061,7 +2061,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		$scope.designer.$new = variableName ? false : true;
 		$scope.designer.name = variableName ? '' + variableName : '@';
 		$scope.designer.type = variable.t;
-		$scope.designer.operand = {data: {t: !variable.v ? '' : ( variable.t == 'device' ? 'd' : 'c'), c:variable.v, d: variable.v}, multiple: false, dataType: variable.t, optional: true, onlyAllowConstants: true}
+		$scope.designer.operand = {data: {t: (variable.v == null || variable.v == undefined) ? '' : ( variable.t == 'device' ? 'd' : 'c'), c: variable.v, d: variable.v, vt: variable.t}, multiple: false, dataType: variable.t, optional: true, onlyAllowConstants: true}
 		window.designer = $scope.designer;
 		window.scope = $scope;
 		$scope.validateOperand($scope.designer.operand);
@@ -2154,6 +2154,22 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		}
 		return {v:'', t:''};
 	}
+	
+	var attributeIcons = {
+		battery: {
+			0: 'battery-empty',
+			1: 'battery-quarter',
+			2: 'battery-half',
+			3: 'battery-three-quarters',
+			4: 'battery-full',
+		},
+		motion: 'exchange-alt',
+		presence: 'child',
+		'switch': {
+			'on': 'toggle-on',
+			'off': 'toggle-off',
+		}
+	};
 
 	$scope.renderDevice = function(device) {
 //		var result = '<div class="col-sm-7">' + device.n + '</div><div class="col-sm-1">1</div>' + '<div class="col-sm-1">2</div>' + '<div class="col-sm-1">3</div>' + '<div class="col-sm-1">4</div>' + '<div class="col-sm-1">5</div>';
@@ -2163,7 +2179,19 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		var result = '<div col>' + device.n + '</div>';
 		for (a in attributes) {
 			var value = $scope.getDeviceAttributeValue(device, attributes[a]);
-			result += '<div col ' + attributes[a] + '="' + value.v + '" title="' + value.t + '"></div>';
+			var icon = attributeIcons[attributes[a]];
+			result += '<div col ' + attributes[a] + '="' + value.v + '" title="' + value.t + '">'
+			if (value.v !== '') {
+				if (icon && typeof icon !== 'string') {
+					icon = icon[value.v];
+				}
+				if (icon) {
+					result += '<i class="fas fa-' + icon + '"></i>';
+				} else {
+					result += value.v;
+				}
+			}
+			result += '</div>';
 		}
 //<div col ' + sSwitch + '> </div>' + '<div col motion="' + $scope.getDeviceAttributeValue(device, 'motion') + '"> </div>' + '<div col>3</div>' + '<div col>4</div>' + '<div col>5</div>';
 		return $sce.trustAsHtml(result);
@@ -3175,6 +3203,8 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 				break;
 			case 'bool':
 			case 'boolean':
+				// Require string format to match the options
+				if ((operand.data.t == 'c') && (typeof operand.data.c == 'boolean')) operand.data.c += '';
 				operand.options = ['false', 'true'];
 				break;
 			case 'mode':
@@ -4120,7 +4150,8 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 				return (value ? (prefix || '') : '') + value;
 			}).replace(/(\{T\})/g, '°' + $scope.location.temperatureScale);
 			var icon = command.i;
-			if (icon) display = '<span pun><i class="fa fa-' + icon + '" aria-hidden="true"></i></span> ' + display;
+			var iconStyle = (window.fontAwesomePro && command.is) || 's';
+			if (icon) display = '<span pun><i class="fa' + iconStyle + ' fa-' + icon + '"></i></span> ' + display;
 		}
 		if (task.m) {
 			display += ' <span pun><i>(only while ' + $scope.buildLocationModeNameList(task.m) + ')</i></span>';
@@ -4660,6 +4691,37 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 			$timeout(function() {
 				var width = piston.clientWidth + 10;
 				var height = piston.clientHeight + (anonymize ? 0 : 64) + 10;
+				// html2canvas cannot render SVGs; rasterize all icons to canvas first
+				var $svgs = $(piston).find('svg');
+				$svgs.each(function() {
+					var $svg = $(this);
+					// Size the canvas to match the actual icon rather than the svg
+					var iconWidth = $svg.find('path').width();
+					var iconHeight = $svg.find('path').height();
+					// Allow canvg to read the inherited color from style.color
+					$svg.css('color', $svg.css('color'));
+					var $canvas = $('<canvas class="snapshotSvgCanvas"></canvas>').attr({
+						width: iconWidth * 2,
+						height: iconHeight * 2
+					});
+					xml = (new XMLSerializer()).serializeToString(this);
+					// Avoid error in IE 
+					xml = xml.replace(/xmlns=\"http:\/\/www\.w3\.org\/2000\/svg\"/, '');
+					canvg($canvas[0], xml, { ignoreDimensions: true });
+					$svg.css('color', '');
+					// Align the canvas within the svg element bounds
+					var paddingX = ($svg.width() - iconWidth) / 2;
+					var paddingY = ($svg.height() - iconHeight) / 2;
+					$canvas.css({
+						width: iconWidth,
+						height: iconHeight,
+						paddingBottom: paddingY,
+						paddingLeft: paddingX,
+						paddingRight: paddingX,
+						paddingTop: paddingY,
+					});
+					$svg.hide().after($canvas).next();
+				});
 				html2canvas(piston, {width: width, height: height, counter: counter}).then(function(canvas) {
 					$scope.loading = false;
 					var reader = new window.FileReader();
@@ -4679,6 +4741,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 				});
 				piston.removeAttribute('printing');
 				piston.removeAttribute('anonymized');
+				$svgs.show().next('.snapshotSvgCanvas').remove();
 				delete($scope.view.exportBin);
 				$animate.enabled(true);
 			}, 1, false);
