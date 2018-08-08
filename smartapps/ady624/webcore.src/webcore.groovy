@@ -1110,8 +1110,8 @@ private api_intf_dashboard_piston_get() {
         if(responseLength > 100 * 1024){ //these are loaded anyway right after loading the piston
             log.warn "Trimming ${ (int)(responseLength/1024) }KB response to smaller size"
             result.instance = null
-            result.data.logs = []
-            result.data.stats.timing = [] 
+            result.data?.logs = []
+            result.data?.stats?.timing = [] 
             //for accuracy, use the time as close as possible to the render
             result.now = now()
             jsonData = groovy.json.JsonOutput.toJson(result)
