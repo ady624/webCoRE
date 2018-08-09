@@ -37,13 +37,13 @@
        	<ul class="nav navbar-nav">
         	<li class="dropdown">
 						<ul class="dropdown-menu">
-							<li class="dropdown"><a href="" ng-click="edit();" title="Edit the piston">Edit</a></li>
-							<li class="dropdown"><a href="" ng-click="test();" title="Test the piston">Test</a></li>
-             	<li class="dropdown"><a href="" ng-click="snapshot(true);" title="Take an anonymized snapshot of the piston"><i class="fa fa-camera"></i> Anonymized Snapshot</a></li>
-       				<li class="dropdown"><a href="" ng-click="snapshot();" title="Take a snapshot of the piston"><i class="fa fa-camera"></i> Snapshot</a></li>
-							<li class="dropdown"><a href="" ng-click="textSnapshot();" title="Copy piston to clipboard"><i class="fal fa-copy"></i> Copy Piston</a></li>
-							<li ng-if="trace && trace.points" class="{{view.trace ? 'active-tick' : ''}}"><a href="" ng-click="view.trace = !view.trace; toggleView(null);">Trace</a></li>
-							<li class="dropdown"><a href="" ng-click="deleteDialog();" title="Delete piston">Delete</a></li>
+							<li class="dropdown"><a href="" ng-click="edit();" title="Edit the piston"><i class="fas fa-pencil fa-lg fa-fw"></i> Edit</a></li>
+							<li class="dropdown"><a href="" ng-click="test();" title="Test the piston"><i class="fas fa-play-circle fa-lg fa-fw"></i> Test</a></li>
+							<li class="dropdown"><a href="" ng-click="snapshot(true);" title="Take an anonymized snapshot of the piston"><i class="fas fa-camera fa-lg fa-fw"></i> Anonymized Snapshot</a></li>
+							<li class="dropdown"><a href="" ng-click="snapshot();" title="Take a snapshot of the piston"><i class="fas fa-camera fa-lg fa-fw"></i> Snapshot</a></li>
+							<li class="dropdown"><a href="" ng-click="textSnapshot();" title="Copy piston to clipboard"><i class="fal fa-copy fa-lg fa-fw"></i> Copy Piston</a></li>
+							<li ng-if="trace && trace.points"><a href="" ng-click="view.trace = !view.trace; toggleView(null);"><i ng-if="view.trace" class="far fa-check-square fa-lg fa-fw no-ng-animate"></i><i ng-if="!view.trace" class="far fa-square fa-lg fa-fw no-ng-animate"></i> Trace</a></li>
+							<li class="dropdown"><a href="" ng-click="deleteDialog();" title="Delete piston"><i class="fal fa-times fa-lg fa-fw"></i> Delete</a></li>
 						</ul>
 					</li>
         </ul>
