@@ -2062,12 +2062,6 @@ if (document.selection) {
      document.execCommand("Copy");
 }}
 
-window.FontAwesomeConfig = {
-  autoReplaceSvg: 'nest',
-};
-
-var fontAwesomePro = true;
-
 function loadFontAwesomeFallback() {
   fontAwesomePro = false;
   $('head script[src*="pro.fontawesome"]').each(function() {
@@ -2077,6 +2071,11 @@ function loadFontAwesomeFallback() {
       }).removeAttr('onerror')
       .appendTo('head');
   });
+}
+
+// Handle Pro load failure before app loads
+if (!window.fontAwesomePro) {
+  loadFontAwesomeFallback();
 }
 
 
