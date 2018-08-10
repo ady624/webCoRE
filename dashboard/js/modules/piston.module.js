@@ -265,54 +265,50 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 					$scope.piston.z = $scope.params && $scope.params.description ? $scope.params.description : '';
 					$scope.mode = 'edit';
 					if ($scope.params && $scope.params.type != 'blank') {
-						var getPiston;
 						switch ($scope.params.type) {
 							case 'duplicate':
 								if ($scope.params.piston) {
 									$scope.loading = true;
-									getPiston = dataService.getPiston($scope.params.piston).then(function (response) {
-										// Do not trigger a rebuild
-										delete response.data.l;
-										return response.data;
+									dataService.getPiston($scope.params.piston).then(function (response) {
+										$scope.loading = false;
+										if (response && response.data && response.data.piston) {
+											$scope.piston.o = response.data.piston.o ? response.data.piston.o : {};
+											$scope.piston.r = response.data.piston.r ? response.data.piston.r : [];
+											$scope.piston.rn = !!response.data.piston.rn;
+											$scope.piston.rop = response.data.piston.rop ? response.data.piston.rop : 'and';
+											$scope.piston.s = response.data.piston.s ? response.data.piston.s : [];
+											$scope.piston.v = response.data.piston.v ? response.data.piston.v : [];
+										}
+										$scope.initialized = true;
+										$scope.loading = false;
 									});
+									return;
 								}
 								break;
 							case 'restore':
 								if ($scope.params.bin) {
 									$scope.loading = true;
-									getPiston = dataService.loadFromBin($scope.params.bin).then(function (response) {
-										return response.data;
+									dataService.loadFromBin($scope.params.bin).then(function (response) {
+										var piston = response.data;
+										$scope.loading = false;
+										if (piston) {
+											$scope.piston.o = piston.o ? piston.o : {};
+											$scope.piston.r = piston.r ? piston.r : [];
+											$scope.piston.rn = !!piston.rn;
+											$scope.piston.rop = piston.rop ? piston.rop : 'and';
+											$scope.piston.s = piston.s ? piston.s : [];
+											$scope.piston.v = piston.v ? piston.v : [];
+											$scope.piston.z = piston.z ? piston.z : '';
+										}
+										$scope.initialized = true;
+										$scope.loading = false;
+										if (!!piston && (piston.l instanceof Object) && ($scope.objectToArray(piston.l).length)) {
+											$scope.rebuildPiston(piston.l);
+										}
 									});
+									return;
 								}
 								break;
-							case 'import':
-								if ($scope.params.piston) {
-									$scope.loading = true;
-									getPiston = dataService.loadFromImport($scope.params.piston).then(function (data) {
-										return data.piston;
-									});
-								}
-								break;
-						}
-						
-						if (getPiston) {
-							getPiston.then(function(piston) {
-								if (piston) {
-									$scope.piston.o = piston.o ? piston.o : {};
-									$scope.piston.r = piston.r ? piston.r : [];
-									$scope.piston.rn = !!piston.rn;
-									$scope.piston.rop = piston.rop ? piston.rop : 'and';
-									$scope.piston.s = piston.s ? piston.s : [];
-									$scope.piston.v = piston.v ? piston.v : [];
-									$scope.piston.z = piston.z ? piston.z : '';
-									
-									if ((piston.l instanceof Object) && ($scope.objectToArray(piston.l).length)) {
-										$scope.rebuildPiston(piston.l);
-									}
-								}
-								$scope.initialized = true;
-								$scope.loading = false;
-							});
 						}
 					}
 				}
