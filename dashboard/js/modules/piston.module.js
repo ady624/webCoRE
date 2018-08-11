@@ -201,6 +201,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 	$scope.init = function() {
 		if ($scope.$$destroyed) return;	
 		dataService.setStatusCallback($scope.setStatus);
+		$scope.initialized = false;
 		$scope.loading = true;
 		if ($scope.piston) $scope.loading = true;
 		dataService.getPiston($scope.pistonId).then(function (response) {
