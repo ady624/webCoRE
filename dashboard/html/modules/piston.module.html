@@ -42,7 +42,7 @@
 							<li class="dropdown"><a href="" ng-click="snapshot(true);" title="Take an anonymized snapshot of the piston"><i class="fas fa-camera fa-lg fa-fw"></i> Anonymized Snapshot</a></li>
 							<li class="dropdown"><a href="" ng-click="snapshot();" title="Take a snapshot of the piston"><i class="fas fa-camera fa-lg fa-fw"></i> Snapshot</a></li>
 							<li class="dropdown"><a href="" ng-click="textSnapshot();" title="Copy piston to clipboard"><i class="fal fa-copy fa-lg fa-fw"></i> Copy Piston</a></li>
-							<li ng-if="trace && trace.points"><a href="" ng-click="view.trace = !view.trace; toggleView(null);"><i ng-if="view.trace" class="far fa-check-square fa-lg fa-fw no-ng-animate"></i><i ng-if="!view.trace" class="far fa-square fa-lg fa-fw no-ng-animate"></i> Trace</a></li>
+							<li ng-if="trace && trace.points"><a href="" ng-click="view.trace = !view.trace; toggleView(null);"><checkbox checked="view.trace" icon-class="fa-lg fa-fw"></checkbox> Trace</a></li>
 							<li class="dropdown"><a href="" ng-click="deleteDialog();" title="Delete piston"><i class="fal fa-times fa-lg fa-fw"></i> Delete</a></li>
 						</ul>
 					</li>
@@ -86,21 +86,21 @@
 			<li ng-if="mode=='edit'" class="dropdown">
 					<a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Options <span class="caret"></span></a>
 					<ul class="dropdown-menu">
-						<li class="{{view.variables ? 'active-tick' : ''}}" ng-click="toggleView('variables');"><a>Show variables</a>
+						<li ng-click="toggleView('variables');"><a><checkbox checked="view.variables" icon-class="fa-lg fa-fw"></checkbox> Show variables</a>
 						</li>
-						<li class="{{view.elseIfs ? 'active-tick' : ''}}" ng-click="toggleView('elseIfs');"><a>Show complex IFs</a>
+						<li ng-click="toggleView('elseIfs');"><a><checkbox checked="view.elseIfs" icon-class="fa-lg fa-fw"></checkbox> Show complex IFs</a>
 						</li>
-						<li class="{{view.restrictions ? 'active-tick' : ''}}" ng-click="toggleView('restrictions');"><a>Show restrictions</a>
-						</li>
-						<li role="separator" class="divider"></li>
-						<li class="{{view.advancedStatements ? 'active-tick' : ''}}" ng-click="toggleView('advancedStatements');"><a>Show advanced statements</a>
-						</li>
-						<li class="{{view.settings ? 'active-tick' : ''}}" ng-click="toggleView('settings');"><a>Show piston settings</a>
-						</li>
-						<li class="{{view.whens ? 'active-tick' : ''}}" ng-click="toggleView('whens');"><a>Show when true/false actions</a>
+						<li ng-click="toggleView('restrictions');"><a><checkbox checked="view.restrictions" icon-class="fa-lg fa-fw"></checkbox> Show restrictions</a>
 						</li>
 						<li role="separator" class="divider"></li>
-						<li class="{{view.console ? 'active-tick' : ''}}" ng-click="toggleView('console');"><a>Show evaluation console</a>
+						<li ng-click="toggleView('advancedStatements');"><a><checkbox checked="view.advancedStatements" icon-class="fa-lg fa-fw"></checkbox> Show advanced statements</a>
+						</li>
+						<li ng-click="toggleView('settings');"><a><checkbox checked="view.settings" icon-class="fa-lg fa-fw"></checkbox> Show piston settings</a>
+						</li>
+						<li ng-click="toggleView('whens');"><a><checkbox checked="view.whens" icon-class="fa-lg fa-fw"></checkbox> Show when true/false actions</a>
+						</li>
+						<li role="separator" class="divider"></li>
+						<li ng-click="toggleView('console');"><a><checkbox checked="view.console" icon-class="fa-lg fa-fw"></checkbox> Show evaluation console</a>
 						</li>
 					</ul>
 

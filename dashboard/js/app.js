@@ -397,6 +397,18 @@ app.directive('taskedit', function() {
 	};
 });
 
+app.directive('checkbox', function() {
+	return {
+		restrict: 'E',
+		scope: {
+			checked: '=',
+			iconClass: '@',
+			radio: '=',
+		},
+		template: '<i ng-if="checked" ng-class="iconClass + \' fa-check-\' + (radio ? \'circle\' : \'square\')" class="far no-ng-animate"></i><i ng-if="!checked" ng-class="iconClass + \' fa-\' + (radio ? \'circle\' : \'square\')" class="far no-ng-animate"></i>'
+	};
+});
+
 app.filter('orderObjectBy', function() {
   return function(items, field, reverse) {
     var filtered = [];

@@ -33,7 +33,7 @@
         <li class="dropdown"><a class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">{{location.name}} \ {{instance ? instance.name + ' (' + instance.coreVersion.split('.').splice(0,3).join('.') + ')' : 'loading...'}}<span class="caret"></span></a>
             <ul class="dropdown-menu">
               <li role="separator" class="dropdown-header" ng-repeat-start="l in locations" ng-init="instances = listInstances(l.id)">{{l.name}}</li>
-            	<li instance ng-repeat="i in instances" ng-repeat-end ng-click="switchInstance(i.id);"><a><i ng-if="i.id == instance.id" class="far fa-check-circle fa-lg fa-fw no-ng-animate"></i><i ng-if="i.id != instance.id" class="far fa-circle fa-lg fa-fw no-ng-animate"></i> {{l.name}} \ {{i.name}} ({{i.coreVersion.split('.').splice(0,3).join('.')}})</a></li>
+            	<li instance ng-repeat="i in instances" ng-repeat-end ng-click="switchInstance(i.id);"><a><checkbox checked="i.id == instance.id" radio="true" icon-class="fa-lg fa-fw"></checkbox> {{l.name}} \ {{i.name}} ({{i.coreVersion.split('.').splice(0,3).join('.')}})</a></li>
             </ul>
         </li>
 			</ul>
