@@ -474,6 +474,11 @@ line handle {
 	padding: 0px 4px 0px 0px;
 }
 
+line handle .sprite-icon {
+  width: .65em;
+  height: .65em;
+}
+
 piston[movable=true] line handle {
 	position: absolute;
 	left: 52px;

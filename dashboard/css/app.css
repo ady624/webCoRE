@@ -748,6 +748,12 @@ span.swatch {
 	margin-right: 4px;
 }
 
+.sprite-icon {
+    width: 1em;
+    height: 1em;
+    vertical-align: -.125em;
+}
+
 
 span.s-b { font-weight: bold; }
 span.s-i { font-style: italic; }
