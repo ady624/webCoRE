@@ -1579,15 +1579,30 @@ private api_intf_variable_set() {
     render contentType: "application/javascript;charset=utf-8", data: "${params.callback}(${groovy.json.JsonOutput.toJson(result)})"
 }
 
+public resetFuelStreamList(){
+	state.fuelStreams = []
+}
+
 public writeToFuelStream(req){
     def name = "${handle()} Fuel Stream"
     def streamName = "${(req.c ?: "")}||${req.n}"
     
     def result = getChildApps().find{ it.name == name && it.label.contains(streamName)}
+    def fuelStreams = hubUID ? [] : atomicState.fuelStreams ?: []
+    
     if(!result){
-        def id =  (getChildApps().findAll{ it.name == name }.collect{ it.label.split(' - ')[0].toInteger()}.max() ?: 0) + 1        
+        if(fuelStreams.find{ it.contains(streamName) } ?: false){ //bug in smartthings doesn't remember state,childapps between multiple calls in the same piston
+        	error "Found duplicate stream, not adding point"
+            return
+        }
+        def id =  (getChildApps().findAll{ it.name == name }.collect{ it.label.split(' - ')[0].toInteger()}.max() ?: 0) + 1
         try {
-            result = addChildApp('ady624', name, "$id - $streamName") 
+            result = addChildApp('ady624', name, "$id - $streamName")
+            if(!hubUID){
+                fuelStreams = getChildApps().find{ it.name == name }.collect { it.label }
+                fuelStreams << result.label
+                atomicState.fuelStreams = fuelStreams
+            }            
        		result.createStream([id: id, name: req.n, canister: req.c ?: ""])
         }
         catch(e){

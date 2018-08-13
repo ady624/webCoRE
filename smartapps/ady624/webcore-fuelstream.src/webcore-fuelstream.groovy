@@ -97,3 +97,7 @@ def getFuelStream(){
 def listFuelStreamData(){
     state.fuelStreamData.collect{ it << [t: getFormattedDate(new Date(it.i))]}
 }
+
+def uninstalled(){
+	parent.resetFuelStreamList()
+}
