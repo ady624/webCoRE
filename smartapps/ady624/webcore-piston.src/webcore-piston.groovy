@@ -742,7 +742,7 @@ private getRunTimeData(rtData = null, semaphore = null, fetchWrappers = false) {
         def logging = "$state.logging".toString()
         logging = logging.isInteger() ? logging.toInteger() : 0
         rtData.logging = (int) logging
-	    rtData.locationId = hashId(location.id)
+	    rtData.locationId = hashId(location.id + (hubUID ? '-L' : ''))
         rtData.locationModeId = hashId(location.getCurrentMode().id)
 	    //flow control
 	    //we're reading the old state from atomicState because we might have waited at a semaphore
@@ -984,7 +984,7 @@ private Boolean executeEvent(rtData, event) {
         rtData.currentEvent = [
             date: event.date.getTime(),
             delay: rtData.stats?.timing?.d ?: 0,
-            device: srcEvent ? srcEvent.device : hashId((event.device?:location).id),
+            device: srcEvent ? srcEvent.device : hashId((event.device?:location).id + (hubUID ? !isDeviceLocation(device) ? '' : '-L' : '')),
             name: srcEvent ? srcEvent.name : event.name,
             value: srcEvent ? srcEvent.value : event.value,
             descriptionText: srcEvent ? srcEvent.descriptionText : event.descriptionText,
@@ -2427,9 +2427,9 @@ private long vcmd_setLocationMode(rtData, device, params) {
 
 private long vcmd_setAlarmSystemStatus(rtData, device, params) {
 	def statusIdOrName = params[0]
-    def dev = rtData.virtualDevices['alarmSystemStatus'];
+    def dev = rtData.virtualDevices['alarmSystemStatus']
     def options = hubUID ? dev?.ac : dev?.o    
-    options?.find{ (it.key == statusIdOrName) || (it.value == statusIdOrName)}.collect{ [id: it.key, name: it.value] }
+    def status = options?.find{ (it.key == statusIdOrName) || (it.value == statusIdOrName)}.collect{ [id: it.key, name: it.value] }
     
     if (status && status.size()) {
 	    sendLocationEvent(name: (hubUID ? 'hsmSetArm' : 'alarmSystemStatus'), value: status[0].id)
@@ -3730,7 +3730,7 @@ private evaluateOperand(rtData, node, operand, index = null, trigger = false, ne
 		case 'd': //devices
         	def deviceIds = []
             for (d in expandDeviceList(rtData, operand.d)) {
-                if(hubUID){
+                if(hubUID && !!rtData.deviceIds){
                     if(rtData.deviceIds.any { (d == hashId(it.id)) || (d == it.label) }) {
                         deviceIds.push(d)
                     }
@@ -4819,7 +4819,7 @@ private sanitizeVariableName(name) {
 }
 
 private getDevice(rtData, idOrName) {
-    if(hubUID) return getDeviceHubitat(rtData, idOrName)
+    if(hubUID && !!rtData.deviceIds) return getDeviceHubitat(rtData, idOrName)
 	if (rtData.locationId == idOrName) return location
 	def device = rtData.devices[idOrName] ?: rtData.devices.find{ it.value.getDisplayName() == idOrName }?.value
     if (!device) {
@@ -4920,7 +4920,9 @@ private Map getDeviceAttribute(rtData, deviceId, attributeName, subDeviceIndex =
         if (attributeName == 'hue') {
         	value = cast(rtData, cast(rtData, value, 'decimal') * 3.6, attribute.t)
         }
-		return [t: attribute.t, v: value, d: deviceId, a: attributeName, i: subDeviceIndex, x: (!!attribute.m || !!trigger) && ((device?.id != (rtData.event.device?:location).id) || (((attributeName == 'orientation') || (attributeName == 'axisX') || (attributeName == 'axisY') || (attributeName == 'axisZ') ? 'threeAxis' : attributeName) != rtData.event.name))]
+        //have to compare ids and type for hubitat since the locationid can be the same as the deviceid
+        def deviceMatch = (device?.id == (rtData.event.device?:location).id) && ( isDeviceLocation(device) == isDeviceLocation((rtData.event.device?:location)))
+		return [t: attribute.t, v: value, d: deviceId, a: attributeName, i: subDeviceIndex, x: (!!attribute.m || !!trigger) && (!deviceMatch || (((attributeName == 'orientation') || (attributeName == 'axisX') || (attributeName == 'axisY') || (attributeName == 'axisZ') ? 'threeAxis' : attributeName) != rtData.event.name))]
     }
     return [t: "error", v: "Device '${deviceId}' not found"]
 }
@@ -6675,7 +6677,7 @@ private func_previousage(rtData, params) {
     def param = evaluateExpression(rtData, params[0], 'device')
     if ((param.t == 'device') && (param.a) && param.v.size()) {
 		def device = getDevice(rtData, param.v[0])
-        if (device && (device.id != location.id)) {
+        if (device && !isDeviceLocation(device)) {
         	def states = device.statesSince(param.a, new Date(now() - 604500000), [max: 5])
             if (states.size() > 1) {
             	def newValue = states[0].getValue()
@@ -6707,7 +6709,7 @@ private func_previousvalue(rtData, params) {
     	def attribute = rtData.attributes[param.a]
         if (attribute) {
 			def device = getDevice(rtData, param.v[0])
-	        if (device && (device.id != location.id)) {
+	        if (device && !isDeviceLocation(device)) {
                 def states = device.statesSince(param.a, new Date(now() - 604500000), [max: 5])
                 if (states.size() > 1) {
                     def newValue = states[0].getValue()
@@ -7785,6 +7787,11 @@ private List hexToRgbArray(hex) {
     	} catch (e) {}
 	}
     return [0, 0, 0];
+}
+
+//hubitat device ids can be the same as the location id
+private isDeviceLocation(device){
+ 	return device?.id.toString() == location.id.toString() && (hubUID ? ((device?.hubs?.size() ?: 0) > 0) : true)
 }
 
 /******************************************************************************/

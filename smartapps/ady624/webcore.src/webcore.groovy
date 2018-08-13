@@ -967,7 +967,7 @@ private api_get_base_result(deviceVersion = 0, updateCache = false) {
 	    	account: [id: hashId(hubUID ?: app.getAccountId(), updateCache)],
         	pistons: getChildApps().findAll{ it.name == name }.sort{ it.label }.collect{ [ id: hashId(it.id, updateCache), 'name': it.label, 'meta': state[hashId(it.id, updateCache)] ] },
             id: instanceId,
-            locationId: hashId(location.id, updateCache),
+            locationId: hashId(location.id + (hubUID ? '-L' : ''), updateCache),
             name: app.label ?: app.name,
             uri: state.endpoint,
             deviceVersion: currentDeviceVersion,
@@ -983,7 +983,7 @@ private api_get_base_result(deviceVersion = 0, updateCache = false) {
             contactBookEnabled: location.getContactBookEnabled(),
             hubs: location.getHubs().collect{ [id: hashId(it.id, updateCache), name: it.name, firmware: hubUID ? getHubitatVersion()[it.id] : it.getFirmwareVersionString(), physical: it.getType().toString().contains('PHYSICAL'), powerSource: it.isBatteryInUse() ? 'battery' : 'mains' ]},
             incidents: hubUID ? [] : location.activeIncidents.collect{[date: it.date.time, title: it.getTitle(), message: it.getMessage(), args: it.getMessageArgs(), sourceType: it.getSourceType()]}.findAll{ it.date >= incidentThreshold },
-            id: hashId(location.id, updateCache),
+            id: hashId(location.id + (hubUID ? '-L' : ''), updateCache),
             mode: hashId(location.getCurrentMode().id, updateCache),
             modes: location.getModes().collect{ [id: hashId(it.id, updateCache), name: it.name ]},
 			shm: hubUID ? transformHsmStatus(state.hsmStatus) : location.currentState("alarmSystemStatus")?.value,
@@ -2063,7 +2063,7 @@ private testLifx() {
 
 private registerInstance() {
 	def accountId = hashId(hubUID ?: app.getAccountId())
-    def locationId = hashId(location.id)
+    def locationId = hashId(location.id + (hubUID ? '-L' : ''))
     def instanceId = hashId(app.id)
     def endpoint = state.endpoint
     def region = endpoint.contains('graph-eu') ? 'eu' : 'us';
@@ -2215,7 +2215,7 @@ public Map getRunTimeData(semaphore = null, fetchWrappers = false) {
         useLocalFuelStreams : settings.localFuelStreams
     ] + (hubUID ? [        
 		hsmStatus: state.hsmStatus,
-        deviceIds: getAllDeviceIds()
+        deviceIds: allDeviceIds
     ] : [:])
 }
 
