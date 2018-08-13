@@ -4064,7 +4064,7 @@ private boolean valueWas(rtData, comparisonValue, rightValue, rightValue2, timeV
     }
     if (!duration) return false
     result = (timeValue.f == 'l') ? duration < threshold : duration >= threshold
-    debug "Duration ${duration}ms for ${func.replace('is_', 'was_')} ${timeValue.f == 'l' ? '<' : '>='} ${threshold}ms threshold = ${result}", rtData
+    if (rtData.logging > 2) debug "Duration ${duration}ms for ${func.replace('is_', 'was_')} ${timeValue.f == 'l' ? '<' : '>='} ${threshold}ms threshold = ${result}", rtData
     return result
 }
 
