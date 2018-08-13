@@ -31,6 +31,14 @@
     <meta name="msapplication-TileColor" content="#603cba">
     <meta name="msapplication-config" content="img/favicon/browserconfig.xml">
     <meta name="theme-color" content="#ffffff">
+    <!--Font Awesome config-->
+    <script async type="text/javascript">
+        if (window.fontAwesomePro === undefined) {
+          fontAwesomePro = true;
+          FontAwesomeConfig = { autoReplaceSvg: 'nest' };
+          function loadFontAwesomeFallback() { fontAwesomePro = false }
+        }
+    </script>
 		<!--dashboard components-->
 		<link rel="stylesheet" href="css/webCoRE.min.css" charset="utf-8" media="none" onload="if(media!='all')media='all'"/>
 		<script async type="text/javascript" src="js/webCoRE.min.js" charset="utf-8"></script>
