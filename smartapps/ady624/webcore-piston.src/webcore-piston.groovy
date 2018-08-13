@@ -3409,16 +3409,17 @@ private long vcmd_writeToFuelStream(rtData, device, params) {
     def name = params[1]
     def data = params[2]
     def source = params[3]
+    
+    def req = [
+        c: canister,
+        n: name,
+        s: source,
+        d: data,
+        i: rtData.instanceId
+    ]
 
-    def fuelStreamApp = parent.getFuelStreamApp()    
-    if(fuelStreamApp){
-        fuelStreamApp.updateFuelStream([
-            c: canister,
-            n: name,
-            s: source,
-            d: data,
-            i: rtData.instanceId
-        ]);
+    if(rtData.useLocalFuelStreams){
+        parent.writeToFuelStream(req)
     }
     else if(!hubUID){
         def requestParams = [
@@ -3440,7 +3441,7 @@ private long vcmd_writeToFuelStream(rtData, device, params) {
     }
     else {        
      	log.error "Fuel stream app is not installed. Install it to write to local fuel streams"   
-    }
+    }  
     
     return 0
 }

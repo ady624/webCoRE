@@ -311,6 +311,7 @@ preferences {
 	page(name: "pageInitializeDashboard")
 	page(name: "pageFinishInstall")
 	page(name: "pageSelectDevices")
+    page(name: "pageFuelStreams")
 	page(name: "pageSettings")
     page(name: "pageChangePassword")
     page(name: "pageSavePassword")
@@ -585,12 +586,13 @@ def pageSettings() {
 			}
         	    }
         
-        def fuelStreamApp = getFuelStreamApp()
-        if(fuelStreamApp){
-            section("Local fuel streams"){
-               app([title: hubUID ? 'Do not click' : 'Fuel Streams', multiple: false, install: true, uninstall: false], 'fuelStreams', 'ady624', "${handle()} Fuel Streams")
-            }
+        section("Fuel Streams"){
+            input "localFuelStreams", "bool", title: "Use local fuel streams?", defaultValue: hubUID ? true : false, submitOnChange: true
+            if(settings.localFuelStreams){
+                href "pageFuelStreams", title: "Fuel Streams", description: "Tap here to manage fuel streams"                
+            }         	
         }
+        
 /*		section("Integrations") {
 			href "pageIntegrations", title: "Integrations with other services", description: "Tap here to configure your integrations"
 		}*/
@@ -625,6 +627,14 @@ def pageSettings() {
 		}
 
 	}
+}
+
+private pageFuelStreams(){
+    dynamicPage(name: "pageFuelStreams", title: "", uninstall: false, install: false){
+        section(){
+        	app([title: hubUID ? 'Do not click' : 'Fuel Streams', multiple: true, install: true, uninstall: false], 'fuelStreams', 'ady624', "${handle()} Fuel Stream")
+        }
+    }
 }
 
 private pageChangePassword() {
@@ -991,7 +1001,7 @@ private api_get_base_result(deviceVersion = 0, updateCache = false) {
 }
 
 private getFuelStreamUrls(iid){
-    if(!hubUID){
+    if(!settings.localFuelStreams){
         def region = state.endpoint.contains('graph-eu') ? 'eu' : 'us'
         def baseUrl = 'https://api-' + region + '-' + iid[32] + '.webcore.co:9287/fuelStreams'
         def headers = [ 'Auth-Token' : iid ]
@@ -1005,6 +1015,7 @@ private getFuelStreamUrls(iid){
     def baseUrl = isCustomEndpoint() ? customServerUrl("/") : 
     					hubUID ? apiServerUrl("$hubUID/apps/${app.id}/")
     						: apiServerUrl("/api/token/${state.accessToken}/smartapps/installations/${app.id}/")
+    
     def params = baseUrl.contains(state.accessToken) ? "" : "access_token=${state.accessToken}"
     return [
         list : [l: true, u: baseUrl + "intf/fuelstreams/list?${params}"],
@@ -1034,8 +1045,6 @@ private api_intf_dashboard_load() {
     recoveryHandler()
     //install storage app
     def storageApp = getStorageApp(true)
-    //install fuel stream app
-    getFuelStreamApp(true)
     //debug "Dashboard: Request received to initialize instance"
 	if (verifySecurityToken(params.token)) {
     	result = api_get_base_result(params.dev, true)
@@ -1494,7 +1503,7 @@ private api_intf_dashboard_piston_delete() {
 	if (verifySecurityToken(params.token)) {
 	    def piston = getChildApps().find{ hashId(it.id) == params.id };
 	    if (piston) {
-        	app.deleteChildApp(piston.id);
+        	app.deleteChildApp(hubUID ? piston.id : piston)
 			result = [status: "ST_SUCCESS"]
             state.remove(params.id)
             state.remove('sph${params.id}')
@@ -1570,39 +1579,41 @@ private api_intf_variable_set() {
     render contentType: "application/javascript;charset=utf-8", data: "${params.callback}(${groovy.json.JsonOutput.toJson(result)})"
 }
 
+public writeToFuelStream(req){
+    def name = "${handle()} Fuel Stream"
+    def streamName = "${(req.c ?: "")}||${req.n}"
+    
+    def result = getChildApps().find{ it.name == name && it.label.contains(streamName)}
+    if(!result){
+        def id =  (getChildApps().findAll{ it.name == name }.collect{ it.label.split(' - ')[0].toInteger()}.max() ?: 0) + 1        
+        try {
+            result = addChildApp('ady624', name, "$id - $streamName") 
+       		result.createStream([id: id, name: req.n, canister: req.c ?: ""])
+        }
+        catch(e){
+            error "Please install the webCoRE Fuel Streams app for local Fuel Streams"
+            return
+        }     	
+    }
+    
+    result.updateFuelStream(req)
+}
+
 private api_intf_fuelstreams_list() {
 	def result = []
-    debug "Fuel Streams: Request to list fuel streams"
-
-    def fuelStreamApp = getFuelStreamApp()
-    
-    if(fuelStreamApp){
-        result = fuelStreamApp.listFuelStreams().values().collect {
-         	it.c = it.c ?: ""
-            it
-        }
-    }
-    else {
-   		debug "Fuel stream app not installed. Install for local fuel streams"
-    }
+    def name = "${handle()} Fuel Stream"
+    result = getChildApps().findAll{ it.name == name }*.getFuelStream()
     
    	render contentType: "application/javascript;charset=utf-8", data: "${params.callback}(${groovy.json.JsonOutput.toJson(["fuelStreams" : result])})"
 }
 
 private api_intf_fuelstreams_get() {
-    def result = []
-    debug "Fuel Streams: Request to list fuel stream data"
+    def result = []  
+    def id = params.id
     
-    def id = params.id	
-
-    def fuelStreamApp = getFuelStreamApp()
-    
-    if(fuelStreamApp){
-        result = fuelStreamApp.listFuelStreamData(id)
-    }
-    else {
-   		debug "Fuel stream app not installed. Install for local fuel streams"
-    }
+    def name = "${handle()} Fuel Stream"
+    def stream = getChildApps().find { it.name == name && it.label.startsWith("$id -")}
+    result = stream.listFuelStreamData()
     
    	render contentType: "application/javascript;charset=utf-8", data: "${params.callback}(${groovy.json.JsonOutput.toJson(["points" : result])})"
 }
@@ -1799,26 +1810,6 @@ private getStorageApp(install = false) {
     } catch (all) {
     }
     return storageApp
-}
-
-public getFuelStreamApp(install = false){
- 	def name = handle() + ' Fuel Streams'
-    def fuelStreamApp = getChildApps().find{ it.name == name }
-    def label = "${app.label} Fuel Streams"
-    if(fuelStreamApp){
-        if (label != fuelStreamApp.label) {
-    		fuelStreamApp.updateLabel(label)
-        }
-    	return fuelStreamApp
-    }
-    if (!install) return null
-    try {
-    	fuelStreamApp = addChildApp("ady624", name, label)
-    } catch (all) {
-        if(hubUID) error "Please install the webCoRE Fuel Streams app for local Fuel Streams"
-        return null
-    }    
-    return fuelStreamApp
 }
 
 private getDashboardApp(install = false) {
@@ -2205,7 +2196,8 @@ public Map getRunTimeData(semaphore = null, fetchWrappers = false) {
         ended: now(),
         generatedIn: now() - startTime,
         redirectContactBook: settings.redirectContactBook,
-        logPistonExecutions: settings.logPistonExecutions
+        logPistonExecutions: settings.logPistonExecutions,
+        useLocalFuelStreams : settings.localFuelStreams
     ] + (hubUID ? [        
 		hsmStatus: state.hsmStatus,
         deviceIds: getAllDeviceIds()
