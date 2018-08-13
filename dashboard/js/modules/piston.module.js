@@ -205,7 +205,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		if ($scope.piston) $scope.loading = true;
 		dataService.getPiston($scope.pistonId).then(function (response) {
 			if ($scope.$$destroyed) return;
-			$scope.endpoint = data.endpoint + 'execute/' + $scope.pistonId + '?access_token=' + si.accessToken;
+			$scope.endpoint = data.endpoint + 'execute/' + $scope.pistonId + (si.accessToken ? '?access_token=' + si.accessToken : '');
 			try {
 				var showOptions = $scope.piston ? !!$scope.showOptions : false;
 				if (!response || !response.data || !response.data.piston) {
@@ -787,7 +787,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 	$scope.getIFTTTUri = function(eventName) {
 		var uri = dataService.getApiUri();
 		if (!uri) return "An error has occurred retrieving the IFTTT Maker URL";
-		return uri + 'ifttt/' + eventName + '?access_token=' + si.accessToken;
+		return uri + 'ifttt/' + eventName + (si.accessToken ? '?access_token=' + si.accessToken : '');
 	}
 
 	$scope.toggleAdvancedOptions = function() {

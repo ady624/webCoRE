@@ -21,7 +21,7 @@ public static String version() { return "v0.3.107.20180806" }
 /*** webCoRE DEFINITION														***/
 /******************************************************************************/
 private static String handle() { return "webCoRE" }
-//include 'asynchttp_v1'
+if(!hubUID)include 'asynchttp_v1'
 definition(
 	name: "${handle()} Dashboard",
 	namespace: "ady624",
@@ -156,20 +156,12 @@ private void broadcastEvent(deviceId, eventName, eventValue, eventTime) {
             body: [d: deviceId, n: eventName, v: eventValue, t: eventTime]
         ]
     
-    asynchttpPut((String)null, params)
-    
-    /*
-    asynchttp_v1.put(null, [
-        uri: "https://api-${region}-${iid[32]}.webcore.co:9237",
-        path: '/event/sink',
-        headers: ['ST' : state.instanceId],
-        body: [
-        	d: deviceId,
-        	n: eventName,
-        	v: eventValue,
-        	t: eventTime
-    	]
-    ])*/
+    if(asynchttp_v1){
+        asynchttp_v1.put(null, params)
+    }
+    else {
+        asynchttpPut((String)null, params)
+    }
 }
 
 /******************************************************************************/

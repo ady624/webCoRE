@@ -288,7 +288,7 @@ public static String version() { return "v0.3.107.20180806" }
 /******************************************************************************/
 private static String handle() { return "webCoRE" }
 private static String domain() { return "webcore.co" }
-//include 'asynchttp_v1'
+if(!hubUID) include 'asynchttp_v1'
 definition(
 	name: "${handle()}",
 	namespace: "ady624",
@@ -391,9 +391,9 @@ def pageMain() {
 				input "customEndpoints", "bool", submitOnChange: true, title: "Use custom endpoints?", default: false, required: true
 
                 if(customEndpoints){
-                 	input "customHubUrl", "string", title: "Custom hub url different from https://cloud.hubitat.com", default: null, required: false
+                    if(hubUID) input "customHubUrl", "string", title: "Custom hub url different from ${hubUID ? "https://cloud.hubitat.com" : "https://graph.smartthings.com"}", default: null, required: false
                 	input "customWebcoreInstanceUrl", "string", title: "Custom webcore instance url different from dashboard.webcore.co", default: null, required: false   
-                    paragraph "If you enter a custom url above you will have to use a different webcore instance from dashboard.webcore.co as they restrict their api to hubitat and smartthing's cloud"
+                    paragraph "If you enter a custom url above you will have to use a different webcore instance from dashboard.webcore.co as the site is restricted to hubitat and smartthing's cloud"
                 }
 			}
 		}
@@ -577,13 +577,20 @@ def pageSettings() {
         def storageApp = getStorageApp()
         if (storageApp) {
 			section("Available devices") {
-	        	app([title: 'Available devices', multiple: false, install: true, uninstall: false], 'storage', 'ady624', "${handle()} Storage")
+	        	app([title: hubUID ? 'Do not click' : 'Available Devices', multiple: false, install: true, uninstall: false], 'storage', 'ady624', "${handle()} Storage")
 	        }
 		} else {
 			section("Available devices") {
 				href "pageSelectDevices", title: "Available devices", description: "Tap here to select which devices are available to pistons"
 			}
         	    }
+        
+        def fuelStreamApp = getFuelStreamApp()
+        if(fuelStreamApp){
+            section("Local fuel streams"){
+               app([title: hubUID ? 'Do not click' : 'Fuel Streams', multiple: false, install: true, uninstall: false], 'fuelStreams', 'ady624', "${handle()} Fuel Streams")
+            }
+        }
 /*		section("Integrations") {
 			href "pageIntegrations", title: "Integrations with other services", description: "Tap here to configure your integrations"
 		}*/
@@ -605,6 +612,7 @@ def pageSettings() {
 			input "redirectContactBook", "bool", title: "Redirect all Contact Book requests as PUSH notifications", description: "SmartThings has removed the Contact Book feature and as a result, all uses of Contact Book are by default ignored. By enabling this option, you will get all the existing Contact Book uses fall back onto the PUSH notification system, possibly allowing other people to receive these notifications.", defaultValue: false, required: true
 			input "disabled", "bool", title: "Disable all pistons", description: "Disable all pistons belonging to this instance", defaultValue: false, required: false
 			href "pageRebuildCache", title: "Clean up and rebuild data cache", description: "Tap here to change your clean up and rebuild your data cache"
+            input "logPistonExecutions", "bool", title: "Log piston executions?", description: "Tap here to change logging pistons in location events", defaultValue: hubUID ? false : true, required: false
 		}
 
 		section(title: "Recovery") {
@@ -791,14 +799,6 @@ def installed() {
 }
 
 def updated() {
-    if(state.accessToken){
-        if(customEndpoints && (customHubUrl ?: "") != ""){
-               state.endpoint = customServerUrl("?access_token=${state.accessToken}")
-        }
-        else {
-               state.endpoint = hubUID ? apiServerUrl("$hubUID/apps/${app.id}/?access_token=${state.accessToken}") : apiServerUrl("/api/token/${accessToken}/smartapps/installations/${app.id}/")
-        }
-    }
 	warn "Updating webCoRE ${version()}"
 	unsubscribe()
     unschedule()
@@ -833,20 +833,27 @@ private initialize() {
 		state.settings.remove('lifx_groups')
 		state.settings.remove('lifx_locations')
 	}
+    
+    if(state.accessToken){
+    	updateEndpoint(state.accessToken)
+    }
 }
 
+private updateEndpoint(accessToken){
+    if(isCustomEndpoint()){
+        state.endpoint = customServerUrl("?access_token=${accessToken}")
+    }
+    else {
+        state.endpoint = hubUID ? apiServerUrl("$hubUID/apps/${app.id}/?access_token=${accessToken}") : apiServerUrl("/api/token/${accessToken}/smartapps/installations/${app.id}/")
+    }
+}
 private initializeWebCoREEndpoint() {
 	try {
         if (!state.endpoint) {
             try {
                 def accessToken = createAccessToken()
                 if (accessToken) {
-                    if(customEndpoints && (customHubUrl ?: "") != ""){
-                       state.endpoint = customServerUrl("?access_token=${state.accessToken}")
-                    }
-                    else {
-                       state.endpoint = hubUID ? apiServerUrl("$hubUID/apps/${app.id}/?access_token=${state.accessToken}") : apiServerUrl("/api/token/${accessToken}/smartapps/installations/${app.id}/")
-                    }
+                    updateEndpoint(accessToken)
                 }
             } catch(e) {
                 state.endpoint = null
@@ -870,7 +877,7 @@ private subscribeAll() {
 	subscribe(location, "echoSistant", echoSistantHandler)
     subscribe(location, "HubUpdated", hubUpdatedHandler, [filterEvents: false])
     subscribe(location, "summary", summaryHandler, [filterEvents: false])
-	subscribe(location, "hsmStatus", hsmHandler, [filterEvents: false])
+    if(hubUID) subscribe(location, "hsmStatus", hsmHandler, [filterEvents: false])
     setPowerSource(getHub()?.isBatteryInUse() ? 'battery' : 'mains')
 }
 
@@ -906,6 +913,8 @@ mappings {
 	path("/intf/dashboard/presence/create") {action: [GET: "api_intf_dashboard_presence_create"]}
 	path("/intf/dashboard/variable/set") {action: [GET: "api_intf_variable_set"]}
 	path("/intf/dashboard/settings/set") {action: [GET: "api_intf_settings_set"]}
+    path("/intf/fuelstreams/list") {action: [GET: "api_intf_fuelstreams_list"]}
+    path("/intf/fuelstreams/get") {action: [GET: "api_intf_fuelstreams_get"]}
 	path("/intf/location/entered") {action: [GET: "api_intf_location_entered"]}
 	path("/intf/location/exited") {action: [GET: "api_intf_location_exited"]}
 	path("/intf/location/updated") {action: [GET: "api_intf_location_updated"]}
@@ -924,7 +933,7 @@ private api_get_error_result(error) {
     ]
 }
 
-private getFirmwareVersion(){
+private getHubitatVersion(){
     try{
         return location.getHubs().collectEntries {[it.id, it.getFirmwareVersionString()]}
     }
@@ -939,12 +948,15 @@ private api_get_base_result(deviceVersion = 0, updateCache = false) {
 	def Boolean sendDevices = (deviceVersion != currentDeviceVersion)
     def name = handle() + ' Piston'
     def incidentThreshold = now() - 604800000
+    
+    def instanceId = hashId(app.id, updateCache)
+    
 	return [
         name: location.name + ' \\ ' + (app.label ?: app.name),
         instance: [
 	    	account: [id: hashId(hubUID ?: app.getAccountId(), updateCache)],
         	pistons: getChildApps().findAll{ it.name == name }.sort{ it.label }.collect{ [ id: hashId(it.id, updateCache), 'name': it.label, 'meta': state[hashId(it.id, updateCache)] ] },
-            id: hashId(app.id, updateCache),
+            id: instanceId,
             locationId: hashId(location.id, updateCache),
             name: app.label ?: app.name,
             uri: state.endpoint,
@@ -955,15 +967,16 @@ private api_get_base_result(deviceVersion = 0, updateCache = false) {
             lifx: state.lifx ?: [:],
             virtualDevices: virtualDevices(updateCache),
             globalVars: listAvailableVariables(),
+            fuelStreamUrls: getFuelStreamUrls(instanceId),
         ] + (sendDevices ? [contacts: [:], devices: listAvailableDevices(false, updateCache)] : [:]),
         location: [
             contactBookEnabled: location.getContactBookEnabled(),
-            hubs: location.getHubs().collect{ [id: hashId(it.id, updateCache), name: it.name, firmware: getFirmwareVersion()[it.id], physical: it.getType().toString().contains('PHYSICAL'), powerSource: it.isBatteryInUse() ? 'battery' : 'mains' ]},
+            hubs: location.getHubs().collect{ [id: hashId(it.id, updateCache), name: it.name, firmware: hubUID ? getHubitatVersion()[it.id] : it.getFirmwareVersionString(), physical: it.getType().toString().contains('PHYSICAL'), powerSource: it.isBatteryInUse() ? 'battery' : 'mains' ]},
             incidents: hubUID ? [] : location.activeIncidents.collect{[date: it.date.time, title: it.getTitle(), message: it.getMessage(), args: it.getMessageArgs(), sourceType: it.getSourceType()]}.findAll{ it.date >= incidentThreshold },
             id: hashId(location.id, updateCache),
             mode: hashId(location.getCurrentMode().id, updateCache),
             modes: location.getModes().collect{ [id: hashId(it.id, updateCache), name: it.name ]},
-			shm: transformHsmStatus(state.hsmStatus),
+			shm: hubUID ? transformHsmStatus(state.hsmStatus) : location.currentState("alarmSystemStatus")?.value,
             name: location.name,
             temperatureScale: location.getTemperatureScale(),
             timeZone: tz ? [
@@ -974,6 +987,28 @@ private api_get_base_result(deviceVersion = 0, updateCache = false) {
             zipCode: location.getZipCode(),
         ],
         now: now(),
+    ]
+}
+
+private getFuelStreamUrls(iid){
+    if(!hubUID){
+        def region = state.endpoint.contains('graph-eu') ? 'eu' : 'us'
+        def baseUrl = 'https://api-' + region + '-' + iid[32] + '.webcore.co:9287/fuelStreams'
+        def headers = [ 'Auth-Token' : iid ]
+
+        return [
+            list : [l: false, m: 'POST', h: headers, u: baseUrl + '/list', d: [i : iid]],
+            get  : [l: false, m: 'POST', h: headers, u: baseUrl + '/get',  d: [ i: iid ], p: 'f']
+        ]
+    }    
+    
+    def baseUrl = isCustomEndpoint() ? customServerUrl("/") : 
+    					hubUID ? apiServerUrl("$hubUID/apps/${app.id}/")
+    						: apiServerUrl("/api/token/${state.accessToken}/smartapps/installations/${app.id}/")
+    def params = baseUrl.contains(state.accessToken) ? "" : "access_token=${state.accessToken}"
+    return [
+        list : [l: true, u: baseUrl + "intf/fuelstreams/list?${params}"],
+        get  : [l: true, u: baseUrl + "intf/fuelstreams/get?id={fuelStreamId}${params ? "&" + params : ""}", p: 'fuelStreamId']
     ]
 }
 
@@ -999,6 +1034,8 @@ private api_intf_dashboard_load() {
     recoveryHandler()
     //install storage app
     def storageApp = getStorageApp(true)
+    //install fuel stream app
+    getFuelStreamApp(true)
     //debug "Dashboard: Request received to initialize instance"
 	if (verifySecurityToken(params.token)) {
     	result = api_get_base_result(params.dev, true)
@@ -1052,7 +1089,7 @@ private api_intf_dashboard_piston_create() {
 	def result
     debug "Dashboard: Request received to generate a new piston name"
 	if (verifySecurityToken(params.token)) {
-    	def piston = addChildApp("ady624", "${handle()} Piston", params.name?:generatePistonName(), [:])
+    	def piston = addChildApp("ady624", "${handle()} Piston", params.name?:generatePistonName())
         if (params.author || params.bin) {
         	piston.config([bin: params.bin, author: params.author, initialVersion: version()])
         }
@@ -1104,14 +1141,14 @@ private api_intf_dashboard_piston_get() {
     result.now = now()
     def jsonData = groovy.json.JsonOutput.toJson(result)
     
-    if(!customEndpoints || (customHubUrl ?: "") == ""){
+    if(hubUID && (!isCustomEndpoint() || customHubUrl.contains(hubUID))){
         //data saver for hubitat ~100K limit    
         def responseLength = jsonData.getBytes("UTF-8").length
         if(responseLength > 100 * 1024){ //these are loaded anyway right after loading the piston
             log.warn "Trimming ${ (int)(responseLength/1024) }KB response to smaller size"
             result.instance = null
-            result.data.logs = []
-            result.data.stats.timing = [] 
+            result.data?.logs = []
+            result.data?.stats?.timing = [] 
             //for accuracy, use the time as close as possible to the render
             result.now = now()
             jsonData = groovy.json.JsonOutput.toJson(result)
@@ -1533,6 +1570,43 @@ private api_intf_variable_set() {
     render contentType: "application/javascript;charset=utf-8", data: "${params.callback}(${groovy.json.JsonOutput.toJson(result)})"
 }
 
+private api_intf_fuelstreams_list() {
+	def result = []
+    debug "Fuel Streams: Request to list fuel streams"
+
+    def fuelStreamApp = getFuelStreamApp()
+    
+    if(fuelStreamApp){
+        result = fuelStreamApp.listFuelStreams().values().collect {
+         	it.c = it.c ?: ""
+            it
+        }
+    }
+    else {
+   		debug "Fuel stream app not installed. Install for local fuel streams"
+    }
+    
+   	render contentType: "application/javascript;charset=utf-8", data: "${params.callback}(${groovy.json.JsonOutput.toJson(["fuelStreams" : result])})"
+}
+
+private api_intf_fuelstreams_get() {
+    def result = []
+    debug "Fuel Streams: Request to list fuel stream data"
+    
+    def id = params.id	
+
+    def fuelStreamApp = getFuelStreamApp()
+    
+    if(fuelStreamApp){
+        result = fuelStreamApp.listFuelStreamData(id)
+    }
+    else {
+   		debug "Fuel stream app not installed. Install for local fuel streams"
+    }
+    
+   	render contentType: "application/javascript;charset=utf-8", data: "${params.callback}(${groovy.json.JsonOutput.toJson(["points" : result])})"
+}
+
 private api_intf_settings_set() {
 	def result
     debug "Dashboard: Request received to set settings"
@@ -1583,7 +1657,7 @@ private api_intf_dashboard_piston_activity() {
 
 def api_ifttt() {
 	def data = [:]
-    def remoteAddr = "UNKNOWN" /*request.getHeader("X-FORWARDED-FOR") ?: request.getRemoteAddr() */
+    def remoteAddr = hubUID ? "UNKNOWN" : request.getHeader("X-FORWARDED-FOR") ?: request.getRemoteAddr()
     if (params) {
     	data.params = [:]
         for(param in params) {
@@ -1615,7 +1689,7 @@ def api_email() {
 private api_execute() {
 	def result = [:]
 	def data = [:]
-    def remoteAddr = "UNKOWN" /*request.getHeader("X-FORWARDED-FOR") ?: request.getRemoteAddr()*/
+    def remoteAddr = hubUID ? "UNKNOWN" : request.getHeader("X-FORWARDED-FOR") ?: request.getRemoteAddr()
     debug "Dashboard: Request received to execute a piston from IP $remoteAddr"
 	if (params) {
     	data = [:]
@@ -1700,15 +1774,16 @@ private cleanUp() {
 private getStorageApp(install = false) {
 	def name = handle() + ' Storage'
 	def storageApp = getChildApps().find{ it.name == name }
+    def label = "${app.label} Devices"
     if (storageApp) {
-    	if (app.label != storageApp.label) {
-    		storageApp.updateLabel(app.label)
+        if (label != storageApp.label) {
+    		storageApp.updateLabel(label)
         }
     	return storageApp
     }
     if (!install) return null
     try {
-    	storageApp = addChildApp("ady624", name, app.label)
+    	storageApp = addChildApp("ady624", name, label)
     } catch (all) {
     	error "Please install the webCoRE Storage SmartApp for better performance"
         return null
@@ -1724,6 +1799,26 @@ private getStorageApp(install = false) {
     } catch (all) {
     }
     return storageApp
+}
+
+public getFuelStreamApp(install = false){
+ 	def name = handle() + ' Fuel Streams'
+    def fuelStreamApp = getChildApps().find{ it.name == name }
+    def label = "${app.label} Fuel Streams"
+    if(fuelStreamApp){
+        if (label != fuelStreamApp.label) {
+    		fuelStreamApp.updateLabel(label)
+        }
+    	return fuelStreamApp
+    }
+    if (!install) return null
+    try {
+    	fuelStreamApp = addChildApp("ady624", name, label)
+    } catch (all) {
+        if(hubUID) error "Please install the webCoRE Fuel Streams app for local Fuel Streams"
+        return null
+    }    
+    return fuelStreamApp
 }
 
 private getDashboardApp(install = false) {
@@ -1749,14 +1844,18 @@ def customServerUrl(path){
     if(!path.startsWith("/")){
         path = "/" + path
     }
-       return customHubUrl + "/apps/api/" + app.id + path
+    
+    if(customHubUrl.contains(hubUID)){
+     	return customHubUrl + "/" + app.id + path   
+    }
+    return customHubUrl + "/apps/api/" + app.id + path
 }
 
 
 private String getDashboardInitUrl(register = false) {
 	def url = register ? getDashboardRegistrationUrl() : getDashboardUrl()
     if (!url) return null
-    if(customEndpoints && (customHubUrl ?: "") != ""){
+    if(isCustomEndpoint()){
         return url + (register ? "register/" : "init/") +	(
             customServerUrl('/?access_token=' + state.accessToken)
         ).bytes.encodeBase64()
@@ -1800,7 +1899,7 @@ public Map listAvailableDevices(raw = false, updateCache = false) {
 private def transformCommand(command, overrides){
     def override = overrides[command.getName()]
     if(override && override.s == command.getArguments()?.toString()){
-    	return override.r;   
+    	return override.r
     }
     return command.getName()
 }
@@ -1950,7 +2049,7 @@ private testLifx() {
         requestContentType: "application/json"
     ]
     if (asynchttp_v1) asynchttp_v1.get(lifxHandler, requestParams, [request: 'scenes'])
-    pauseExecution(250)
+    pause(250)
     requestParams.path = "/v1/lights/all"
     if (asynchttp_v1) asynchttp_v1.get(lifxHandler, requestParams, [request: 'lights'])
 	return true
@@ -1991,8 +2090,8 @@ private registerInstance() {
         asynchttp_v1.put(instanceRegistrationHandler, params)
     }
     else {
-        //params << [contentType: 'text/plain']
-        //httpPut(params) { res -> }
+        params << [contentType: 'application/json', requestContentType: 'application/json']
+        httpPut(params) { res -> }
     }   
 }
 
@@ -2074,7 +2173,7 @@ public Map getRunTimeData(semaphore = null, fetchWrappers = false) {
 	            break
 	        }
 	        waited = true
-	    	pauseExecution(250)
+	    	pause(250)
 	    }
     }
     def storageApp = !!fetchWrappers ? getStorageApp() : null
@@ -2098,7 +2197,6 @@ public Map getRunTimeData(semaphore = null, fetchWrappers = false) {
         globalStore: state.store ?: [:],
         settings: state.settings ?: [:],
         lifx: state.lifx ?: [:],
-		hsmStatus: state.hsmStatus,
         powerSource: state.powerSource ?: 'mains',
 		region: state.endpoint.contains('graph-eu') ? 'eu' : 'us',
         instanceId: hashId(app.id),
@@ -2106,8 +2204,12 @@ public Map getRunTimeData(semaphore = null, fetchWrappers = false) {
         started: startTime,
         ended: now(),
         generatedIn: now() - startTime,
-        redirectContactBook: settings.redirectContactBook
-    ]
+        redirectContactBook: settings.redirectContactBook,
+        logPistonExecutions: settings.logPistonExecutions
+    ] + (hubUID ? [        
+		hsmStatus: state.hsmStatus,
+        deviceIds: getAllDeviceIds()
+    ] : [:])
 }
 
 public void updateRunTimeData(data) {
@@ -2223,7 +2325,7 @@ def webCoREHandler(event) {
     switch (event.value) {
     	case 'poll':
         	int delay = (int) Math.round(2000 * Math.random())
-        	pauseExecution(delay)
+        	pause(delay)
             broadcastPistonList()
        		break;
 /*    	case 'ping':
@@ -2430,19 +2532,15 @@ private warn(message, shift = null, err = null) { debug message, shift, err, 'wa
 private error(message, shift = null, err = null) { debug message, shift, err, 'error' }
 private timer(message, shift = null, err = null) { debug message, shift, err, 'timer' }
 
-
-
-
-
-
-
-
+private isCustomEndpoint(){
+    customEndpoints && (customHubUrl ?: "") != ""
+}
 
 /******************************************************************************/
 /*** DATABASE																***/
 /******************************************************************************/
 
-private static Map capabilities() {
+private Map capabilities() {
     //n = name
     //d = friendly devices name
     //a = default attribute
@@ -2450,14 +2548,15 @@ private static Map capabilities() {
     //m = momentary
     //s = number of subdevices
     //i = subdevice index in event data
-	return [
+	def capabilities = [
 		accelerationSensor			: [ n: "Acceleration Sensor",			d: "acceleration sensors",			a: "acceleration",																																																							],
 		actuator					: [ n: "Actuator", 						d: "actuators",																																																																	],
 		alarm						: [ n: "Alarm",							d: "alarms and sirens",				a: "alarm",								c: ["off", "strobe", "siren", "both"],																																								],
 		audioNotification			: [ n: "Audio Notification",			d: "audio notification devices",											c: ["playText", "playTextAndResume", "playTextAndRestore", "playTrack", "playTrackAndResume", "playTrackAndRestore"],				 																],
 		battery						: [ n: "Battery",						d: "battery powered devices",		a: "battery",																																																								],
 		beacon						: [ n: "Beacon",						d: "beacons",						a: "presence",																																																								],
-		bulb						: [ n: "Bulb",							d: "bulbs",							a: "switch",							c: ["off", "on"],																																													],		
+		bulb						: [ n: "Bulb",							d: "bulbs",							a: "switch",							c: ["off", "on"],																																													],
+		button						: [ n: "Button",						d: "buttons",						a: "button",				m: true,	s: "numberOfButtons,numButtons", i: "buttonNumber",																																					],
 		carbonDioxideMeasurement	: [ n: "Carbon Dioxide Measurement",	d: "carbon dioxide sensors",		a: "carbonDioxide",																																																							],
 		carbonMonoxideDetector		: [ n: "Carbon Monoxide Detector",		d: "carbon monoxide detectors",		a: "carbonMonoxide",																																																						],
 		colorControl				: [ n: "Color Control",					d: "adjustable color lights",		a: "color",								c: ["setColor", "setHue", "setSaturation"],																																							],
@@ -2466,11 +2565,10 @@ private static Map capabilities() {
 		consumable					: [ n: "Consumable",					d: "consumables",					a: "consumableStatus",					c: ["setConsumableStatus"],																																											],
 		contactSensor				: [ n: "Contact Sensor",				d: "contact sensors",				a: "contact",																																																								],
 		doorControl					: [ n: "Door Control",					d: "automatic doors",				a: "door",								c: ["close", "open"],																																												],
-        doubleTapableButton			: [ n: "Double Tapable Button",			d: "double tapable buttons",		a: "doubleTapped",						c: ["doubleTap"],																																													],
 		energyMeter					: [ n: "Energy Meter",					d: "energy meters",					a: "energy",																																																								],
 		estimatedTimeOfArrival		: [ n: "Estimated Time of Arrival", 	d: "moving devices (ETA)",			a: "eta",																																																									],
 		garageDoorControl			: [ n: "Garage Door Control",			d: "automatic garage doors",		a: "door",								c: ["close", "open"],																																												],
-		holdableButton				: [ n: "Holdable Button",				d: "holdable buttons",				a: "held",								c: ["hold"]																																															],        
+		holdableButton				: [ n: "Holdable Button",				d: "holdable buttons",				a: "button",				m: true,	s: "numberOfButtons,numButtons", i: "buttonNumber",																																					],
 		illuminanceMeasurement		: [ n: "Illuminance Measurement",		d: "illuminance sensors",			a: "illuminance",																																																							],
 		imageCapture				: [ n: "Image Capture",					d: "cameras, imaging devices",		a: "image",								c: ["take"],																																														],
 		indicator					: [ n: "Indicator",						d: "indicator devices",				a: "indicatorStatus",					c: ["indicatorNever", "indicatorWhenOn", "indicatorWhenOff"],																																		],
@@ -2479,7 +2577,7 @@ private static Map capabilities() {
 		lock						: [ n: "Lock",							d: "electronic locks",				a: "lock",								c: ["lock", "unlock"],	s:"numberOfCodes,numCodes", i: "usedCode", 																									 								],
 		lockOnly					: [ n: "Lock Only",						d: "electronic locks (lock only)",	a: "lock",								c: ["lock"],																																														],
 		mediaController				: [ n: "Media Controller",				d: "media controllers",				a: "currentActivity",					c: ["startActivity", "getAllActivities", "getCurrentActivity"],																																		],
-		momentary					: [ n: "Momentary",						d: "momentary switches",													c: ["pushMomentary"],																																														],
+		momentary					: [ n: "Momentary",						d: "momentary switches",													c: ["push"],																																														],
 		motionSensor				: [ n: "Motion Sensor",					d: "motion sensors",				a: "motion",																																																								],
         musicPlayer					: [ n: "Music Player",					d: "music players",					a: "status",							c: ["mute", "nextTrack", "pause", "play", "playTrack", "previousTrack", "restoreTrack", "resumeTrack", "setLevel", "setTrack", "stop", "unmute"],													],
 		notification				: [ n: "Notification",					d: "notification devices",													c: ["deviceNotification"],																																											],
@@ -2489,7 +2587,6 @@ private static Map capabilities() {
 		powerMeter					: [ n: "Power Meter",					d: "power meters",					a: "power",																																																									],
 		powerSource					: [ n: "Power Source",					d: "multisource powered devices",	a: "powerSource",																																																							],
 		presenceSensor				: [ n: "Presence Sensor",				d: "presence sensors",				a: "presence",																																																								],
-        pushableButton				: [ n: "Pushable Button",				d: "pushable buttons",				a: "pushed",							c: ["push"],																																														],
 		refresh						: [ n: "Refresh",						d: "refreshable devices",													c: ["refresh"],																																														],
 		relativeHumidityMeasurement	: [ n: "Relative Humidity Measurement",	d: "humidity sensors",				a: "humidity",																																																								],
 		relaySwitch					: [ n: "Relay Switch",					d: "relay switches",				a: "switch",							c: ["off", "on"],																																													],
@@ -2522,19 +2619,32 @@ private static Map capabilities() {
 		valve						: [ n: "Valve",							d: "valves",						a: "valve",								c: ["close", "open"],																																												],
 		voltageMeasurement			: [ n: "Voltage Measurement",			d: "voltmeters",					a: "voltage",																																																								],
 		waterSensor					: [ n: "Water Sensor",					d: "water and leak sensors",		a: "water",																																																									],
-		windowShade					: [ n: "Window Shade",					d: "automatic window shades",		a: "windowShade",						c: ["close", "open", "presetPosition"],																																								],
-	]
+		windowShade					: [ n: "Window Shade",					d: "automatic window shades",		a: "windowShade",						c: ["close", "open", "presetPosition"],																																								]
+	]  + (hubUID ? [
+		doubleTapableButton			: [ n: "Double Tapable Button",			d: "double tapable buttons",		a: "doubleTapped",						c: ["doubleTap"],																																													],
+        holdableButton				: [ n: "Holdable Button",				d: "holdable buttons",				a: "held",								c: ["hold"]																																															],
+        momentary					: [ n: "Momentary",						d: "momentary switches",													c: ["pushMomentary"],																																												],
+        pushableButton				: [ n: "Pushable Button",				d: "pushable buttons",				a: "pushed",							c: ["push"],																																														]
+        
+    ] : [:])
+    
+    if(hubUID){
+     	capabilities.remove('button') 
+    }
+    
+    return capabilities
 }
 
-private static Map attributes() {
-	return [
+private Map attributes() {
+	def attrs = [
 		acceleration				: [ n: "acceleration",			t: "enum",		o: ["active", "inactive"],																			],
 		activities					: [ n: "activities", 			t: "object",																										],
 		alarm						: [ n: "alarm", 				t: "enum",		o: ["both", "off", "siren", "strobe"],																],
 		axisX						: [ n: "X axis",				t: "integer",	r: [-1024, 1024],	s: "threeAxis",																	],
 		axisY						: [ n: "Y axis",				t: "integer",	r: [-1024, 1024],	s: "threeAxis",																	],
 		axisZ						: [ n: "Z axis",				t: "integer",	r: [-1024, 1024],	s: "threeAxis",																	],
-		battery						: [ n: "battery", 				t: "integer",	r: [0, 100],		u: "%",																			],		
+		battery						: [ n: "battery", 				t: "integer",	r: [0, 100],		u: "%",																			],
+		button						: [ n: "button", 				t: "enum",		o: ["pushed", "held"],									c: "button",					m: true, s: "numberOfButtons,numButtons", i: "buttonNumber"		],
 		carbonDioxide				: [ n: "carbon dioxide",		t: "decimal",	r: [0, null],																						],
 		carbonMonoxide				: [ n: "carbon monoxide",		t: "enum",		o: ["clear", "detected", "tested"],																	],
 		color						: [ n: "color",					t: "color",																											],
@@ -2544,13 +2654,12 @@ private static Map attributes() {
 		coolingSetpoint				: [ n: "cooling setpoint",		t: "decimal",	r: [-127, 127],		u: '°?',															],
 		currentActivity				: [ n: "current activity",		t: "string",																										],
 		door						: [ n: "door",					t: "enum",		o: ["closed", "closing", "open", "opening", "unknown"],					p: true,					],
-        doubleTapped				: [ n: "double tapped button", 	t: "integer",	c: "doubleTapableButton"																			],
 		energy						: [ n: "energy",				t: "decimal",	r: [0, null],		u: "kWh",																		],
 		eta							: [ n: "ETA",					t: "datetime",																										],
 		goal						: [ n: "goal",					t: "integer",	r: [0, null],																						],
 		heatingSetpoint				: [ n: "heating setpoint",		t: "decimal",	r: [-127, 127],		u: '°?',															],
-        held						: [ n: "held button", 			t: "integer",	c: "holdableButton"																					],
-		hex							: [ n: "hexadecimal code",		t: "hexcolor",																										],		
+		hex							: [ n: "hexadecimal code",		t: "hexcolor",																										],
+		holdableButton				: [ n: "holdable button",		t: "enum",		o: ["held", "pushed"],								c: "holdableButton",			m: true,		],
 		hue							: [ n: "hue",					t: "integer",	r: [0, 360],		u: "°",																			],
 		humidity					: [ n: "relative humidity",		t: "integer",	r: [0, 100],		u: "%",																			],
 		illuminance					: [ n: "illuminance",			t: "integer",	r: [0, null],		u: "lux",																		],
@@ -2571,7 +2680,6 @@ private static Map attributes() {
 		power						: [ n: "power",					t: "decimal",		u: "W",																			],
 		powerSource					: [ n: "power source",			t: "enum",		o: ["battery", "dc", "mains", "unknown"],															],
 		presence					: [ n: "presence",				t: "enum",		o: ["not present", "present"],																		],
-        pushed						: [ n: "pushed button", 		t: "integer",	c: "pushableButton"																					],
 		rssi						: [ n: "signal strength",		t: "integer",	r: [0, 100],		u: "%",																			],
 		saturation					: [ n: "saturation",			t: "integer",	r: [0, 100],		u: "%",																			],
 		schedule					: [ n: "schedule",				t: "object",																										],
@@ -2623,16 +2731,28 @@ private static Map attributes() {
 		speed						: [ n: "speed",					t: "decimal",	r: [null, null],	u: "ft/s",																		],
 		speedMetric					: [ n: "speed (metric)",		t: "decimal",	r: [null, null],	u: "m/s",																		],
 		bearing						: [ n: "bearing",				t: "decimal",	r: [0, 360],		u: "°",																			],
-	]
+	]  + (hubUID ? [
+        doubleTapped				: [ n: "double tapped button", 	t: "integer",	c: "doubleTapableButton"																			],
+        held						: [ n: "held button", 			t: "integer",	c: "holdableButton"																					],
+        pushed						: [ n: "pushed button", 		t: "integer",	c: "pushableButton"																					]
+    ] : [:])
+    
+    if(hubUID){
+    	attrs.remove('button')
+        attrs.remove('holdableButton')
+    }
+    
+    return attrs
 }
 
+/* Push command has multiple overloads in hubitat */
 public Map commandOverrides(){
-	return [
-     	push : [c: "push", s: null , r: "pushMomentary"]  
-    ]
+	return (hubUID ? [
+     	push : [c: "push", s: null , r: "pushMomentary"]  //s: command signature 
+    ] : [:])
 }
 
-private static Map commands() {
+private Map commands() {
 	return [
 		auto						: [ n: "Set to Auto",																	a: "thermostatMode",				v: "auto",																																			],
 		beep						: [ n: "Beep",																																																																	],
@@ -2642,16 +2762,13 @@ private static Map commands() {
 		configure					: [ n: "Configure",						i: 'cog',																																																										],
 		cool						: [ n: "Set to Cool",					i: 'snowflake', is: 'l',									a: "thermostatMode",				v: "cool",																																			],
 		deviceNotification			: [ n: "Send device notification...",	d: "Send device notification \"{0}\"",																		p: [[n:"Message",t:"string"]],  																							],
-        doubleTap					: [ n: "Double Tap",					d: "Double tap button {0}",						a: "doubleTapped",										p:[[n: "Button #", t: "integer"]]																																																										],
 		emergencyHeat				: [ n: "Set to Emergency Heat",															a: "thermostatMode",				v: "emergency heat",																																	],
 		fanAuto						: [ n: "Set fan to Auto",																a: "thermostatFanMode",				v: "auto",																																			],
 		fanCirculate				: [ n: "Set fan to Circulate",															a: "thermostatFanMode",				v: "circulate",																																		],
 		fanOn						: [ n: "Set fan to On",																	a: "thermostatFanMode",				v: "on",																																			],
-  		flash						: [ n: "Flash",																	       																																															],
 		getAllActivities			: [ n: "Get all activities",																																																													],
 		getCurrentActivity			: [ n: "Get current activity",																																																													],
 		heat						: [ n: "Set to Heat",					i: 'fire',										a: "thermostatMode",				v: "heat",																																			],
-        hold						: [ n: "Hold",							d: "Hold Button {0}",							a: "held",													p: [[n:"Button #", t: "integer"]]																																						],
 		indicatorNever				: [ n: "Disable indicator",																																																														],
 		indicatorWhenOff			: [ n: "Enable indicator when off",																																																												],
 		indicatorWhenOn				: [ n: "Enable indicator when on",																																																												],
@@ -2672,8 +2789,7 @@ private static Map commands() {
 		poll						: [ n: "Poll",						i: 'question',																																																											],
 		presetPosition				: [ n: "Move to preset position",														a: "windowShade",					v: "partially open",																																],
 		previousTrack				: [ n: "Previous track",																																																														],
-        push						: [ n: "Push",							d: "Push button {0}",							a: "pushed",												p:[[n: "Button #", t: "integer"]]																																																										],
-        pushMomentary				: [ n: "Push"																																																																						],
+		push						: [ n: "Push",																																																																	],
 		refresh						: [ n: "Refresh",					i: 'sync',																																																											],
 		restoreTrack				: [ n: "Restore track...",				d: "Restore track <uri>{0}</uri>",																			p: [[n:"Track URL",t:"url"]],  																								],
 		resumeTrack					: [ n: "Resume track...",				d: "Resume track <uri>{0}</uri>",																			p: [[n:"Track URL",t:"url"]],  																								],
@@ -2754,10 +2870,16 @@ private static Map commands() {
 		low							: [ n: "Set to Low",																																																															],
 		med							: [ n: "Set to Medium",																																																															],
 		high						: [ n: "Set to High",																																																															],
-	]
+	] + (hubUID ? [
+            doubleTap					: [ n: "Double Tap",					d: "Double tap button {0}",						a: "doubleTapped",										p:[[n: "Button #", t: "integer"]]																																																										],
+            flash						: [ n: "Flash",																	       																																															],
+            hold						: [ n: "Hold",							d: "Hold Button {0}",							a: "held",													p: [[n:"Button #", t: "integer"]]																																						],
+            push						: [ n: "Push",							d: "Push button {0}",							a: "pushed",												p:[[n: "Button #", t: "integer"]]																																																										],
+        	pushMomentary				: [ n: "Push"																																																																						]
+        ] : [:])
 }
 
-private static Map virtualCommands() {
+private Map virtualCommands() {
 	//a = aggregate
     //d = display
 	//n = name
@@ -2793,7 +2915,7 @@ private static Map virtualCommands() {
         setTile						: [ n: "Set piston tile...",		a: true,	i: "info-square", is:"l",			d: "Set piston tile #{0} title  to \"{1}\", text to \"{2}\", footer to \"{3}\", and colors to {4} over {5}{6}",		p: [[n:"Tile Index",t:"enum",o:tileIndexes],[n:"Title",t:"string"],[n:"Text",t:"string"],[n:"Footer",t:"string"],[n:"Text Color",t:"color"],[n:"Background Color",t:"color"],[n:"Flash mode",t:"boolean",d:" (flashing)"]],	],
         clearTile					: [ n: "Clear piston tile...",		a: true,	i: "info-square", is:"l",			d: "Clear piston tile #{0}",											p: [[n:"Tile Index",t:"enum",o:tileIndexes]],	],
 		setLocationMode				: [ n: "Set location mode...",		a: true,	i: "", 						d: "Set location mode to {0}", 											p: [[n:"Mode",t:"mode"]],																														],
-		setAlarmSystemStatus		: [ n: "Set Hubitat Safety Monitor status...",	a: true, i: "",				d: "Set Hubitat Safety Monitor status to {0}",							p: [[n:"Status", t:"enum", o: getAlarmSystemStatusActions().collect {[n: it.value, v: it.key]}]],																										],
+		setAlarmSystemStatus		: [ n: "Set Smart Home Monitor status...",	a: true, i: "",					d: "Set Smart Home Monitor status to {0}",								p: [[n:"Status", t:"alarmSystemStatus"]],																										],
 		sendEmail					: [ n: "Send email...",				a: true,	i: "envelope", 				d: "Send email with subject \"{1}\" to {0}", 							p: [[n:"Recipient",t:"email"],[n:"Subject",t:"string"],[n:"Message body",t:"string"]],																							],
         wolRequest					: [ n: "Wake a LAN device", 		a: true,	i: "", 						d: "Wake LAN device at address {0}{1}",									p: [[n:"MAC address",t:"string"],[n:"Secure code",t:"string",d:" with secure code {v}"]],	],
 		adjustLevel					: [ n: "Adjust level...",	 r: ["setLevel"], 	i: "toggle-on",				d: "Adjust level by {0}%{1}",											p: [[n:"Adjustment",t:"integer",r:[-100,100]], [n:"Only if switch is...", t:"enum",o:["on","off"], d:" if already {v}"]],																],
@@ -2806,7 +2928,7 @@ private static Map virtualCommands() {
 		fadeSaturation				: [ n: "Fade saturation...",	 r: ["setSaturation"], 		i: "toggle-on",				d: "Fade saturation{0} to {1}% in {2}{3}",					p: [[n:"Starting saturation",t:"level",d:" from {v}%"],[n:"Final saturation",t:"level"],[n:"Duration",t:"duration"], [n:"Only if switch is...", t:"enum",o:["on","off"], d:" if already {v}"]],																],
 		fadeHue						: [ n: "Fade hue...",			 r: ["setHue"], 		i: "toggle-on",				d: "Fade hue{0} to {1}° in {2}{3}",								p: [[n:"Starting hue",t:"hue",d:" from {v}°"],[n:"Final hue",t:"hue"],[n:"Duration",t:"duration"], [n:"Only if switch is...", t:"enum",o:["on","off"], d:" if already {v}"]],																],
 		fadeColorTemperature		: [ n: "Fade color temperature...",		 r: ["setColorTemperature"], 		i: "toggle-on",				d: "Fade color temperature{0} to {1}°K in {2}{3}",									p: [[n:"Starting color temperature",t:"colorTemperature",d:" from {v}°K"],[n:"Final color temperature",t:"colorTemperature"],[n:"Duration",t:"duration"], [n:"Only if switch is...", t:"enum",o:["on","off"], d:" if already {v}"]],																],
-		emulatedFlash				: [ n: "Flash...",	 r: ["on", "off"], 			i: "toggle-on",				d: "Flash on {0} / off {1} for {2} times{3}",							p: [[n:"On duration",t:"duration"],[n:"Off duration",t:"duration"],[n:"Number of flashes",t:"integer"], [n:"Only if switch is...", t:"enum",o:["on","off"], d:" if already {v}"]],																],
+		flash						: [ n: "Flash...",	 r: ["on", "off"], 			i: "toggle-on",				d: "Flash on {0} / off {1} for {2} times{3}",							p: [[n:"On duration",t:"duration"],[n:"Off duration",t:"duration"],[n:"Number of flashes",t:"integer"], [n:"Only if switch is...", t:"enum",o:["on","off"], d:" if already {v}"]],																],
 		flashLevel					: [ n: "Flash (level)...",	 r: ["setLevel"], 			i: "toggle-on",		d: "Flash {0}% {1} / {2}% {3} for {4} times{5}",						p: [[n:"Level 1", t:"level"],[n:"Duration 1",t:"duration"],[n:"Level 2", t:"level"],[n:"Duration 2",t:"duration"],[n:"Number of flashes",t:"integer"], [n:"Only if switch is...", t:"enum",o:["on","off"], d:" if already {v}"]],																],
 		flashColor					: [ n: "Flash (color)...",	 r: ["setColor"], 			i: "toggle-on",		d: "Flash {0} {1} / {2} {3} for {4} times{5}",							p: [[n:"Color 1", t:"color"],[n:"Duration 1",t:"duration"],[n:"Color 2", t:"color"],[n:"Duration 2",t:"duration"],[n:"Number of flashes",t:"integer"], [n:"Only if switch is...", t:"enum",o:["on","off"], d:" if already {v}"]],																],
 		iftttMaker					: [ n: "Send an IFTTT Maker event...",	a: true,							d: "Send the {0} IFTTT Maker event{1}{2}{3}",							p: [[n:"Event", t:"text"], [n:"Value 1", t:"string", d:", passing value1 = '{v}'"], [n:"Value 2", t:"string", d:", passing value2 = '{v}'"], [n:"Value 3", t:"string", d:", passing value3 = '{v}'"]],				],
@@ -2845,7 +2967,11 @@ private static Map virtualCommands() {
 	] : [:])
 	+ (getLifxToken() ? [
 		lifxScene: [n: "Activate LIFX scene", p: ["Scene:lifxScenes"], l: true, dd: "Activate LIFX Scene '{0}'", aggregated: true],
-	] : [:])*/
+	] : [:])*/    
+    + (hubUID ? [
+            setAlarmSystemStatus		: [ n: "Set Hubitat Safety Monitor status...",	a: true, i: "",				d: "Set Hubitat Safety Monitor status to {0}",							p: [[n:"Status", t:"enum", o: getAlarmSystemStatusActions().collect {[n: it.value, v: it.key]}]],																										],
+            flash				: [ n: "Emulated Flash...",	 r: ["on", "off"], 			i: "toggle-on",				d: "Flash on {0} / off {1} for {2} times{3}",							p: [[n:"On duration",t:"duration"],[n:"Off duration",t:"duration"],[n:"Number of flashes",t:"integer"], [n:"Only if switch is...", t:"enum",o:["on","off"], d:" if already {v}"]],																]
+    ] : [:])
 }
 
 
@@ -3067,12 +3193,20 @@ private static Map getAlarmSystemStatusActions() {
 }
 
 private static Map getAlarmSystemStatusOptions() {
-	return [    
+    return [
+        off:	"Disarmed",
+        stay: 	"Armed/Stay",
+        away:	"Armed/Away"
+    ]
+}
+
+private static Map getHubitatAlarmSystemStatusOptions() {
+    return [    
         armedAway:		"Armed Away",
         armedHome: 		"Armed Home",        
         disarmed: 		"Disarmed",
-		allDisarmed:	"All Disarmed"  
-    ]
+        allDisarmed:	"All Disarmed"  
+    ]	
 }
 
 private static Map getAlarmSystemAlertOptions() {
@@ -3123,12 +3257,14 @@ private Map virtualDevices(updateCache = false) {
     	mode:				[ n: 'Location mode',				t: 'enum', 		o: getLocationModeOptions(updateCache),		x: true],
         tile:				[ n: 'Piston tile',					t: 'enum',		o: ['1':'1','2':'2','3':'3','4':'4','5':'5','6':'6','7':'7','8':'8','9':'9','10':'10','11':'11','12':'12','13':'13','14':'14','15':'15','16':'16'],		m: true	],
         routine:			[ n: 'Routine',						t: 'enum',		o: getRoutineOptions(updateCache),			m: true],
-    	alarmSystemStatus:	[ n: 'Hubitat Safety Monitor status',t: 'enum',		o: getAlarmSystemStatusOptions(), ac: getAlarmSystemStatusActions(),			x: true],
+        alarmSystemStatus:	[ n: 'Smart Home Monitor status',	t: 'enum',		o: getAlarmSystemStatusOptions(),			x: true]
+    ] + (hubUID ? [
+        alarmSystemStatus:	[ n: 'Hubitat Safety Monitor status',t: 'enum',		o: getHubitatAlarmSystemStatusOptions(), ac: getAlarmSystemStatusActions(),			x: true],
         //this one can be confusing to users so it's been commented out. It can subscribe to hsmSetArm, but the safety monitor doesn't actually send these events themselves, only other apps
         //alarmSystemEvent:	[ n: 'Hubitat Safety Monitor event',t: 'enum',		o: getAlarmSystemStatusActions(),			m: true],
         alarmSystemAlert: 	[ n: 'Hubitat Safety Monitor alert',t: 'enum',		o: getAlarmSystemAlertOptions(),			m: true],
-        alarmSystemRule: 	[ n: 'Hubitat Safety Monitor rule',t: 'enum',		o: getAlarmSystemRuleOptions(),			m: true]
-    ]
+        alarmSystemRule: 	[ n: 'Hubitat Safety Monitor rule',t: 'enum',		o: getAlarmSystemRuleOptions(),			m: true]    
+    ] : [:])
 }
 public Map getColorByName(name){
     return getColors().find{ it.name == name }

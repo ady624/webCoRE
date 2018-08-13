@@ -144,7 +144,7 @@ def Map listAvailableDevices(raw = false) {
 private def transformCommand(command, overrides){
     def override = overrides[command.getName()]
     if(override && override.s == command.getArguments()?.toString()){
-    	return override.r;   
+    	return override.r
     }
     return command.getName()
 }
@@ -167,10 +167,11 @@ public String mem(showBytes = true) {
 	return Math.round(100.00 * (bytes/ 100000.00)) + "%${showBytes ? " ($bytes bytes)" : ""}"
 }
 
+/* Push command has multiple overloads in hubitat */
 public Map commandOverrides(){
-	return [
-     	push : [c: "push", s: null , r: "pushMomentary"]  
-    ]
+	return (hubUID ? [
+     	push : [c: "push", s: null , r: "pushMomentary"]  //s: command signature 
+    ] : [:])
 }
 
 /******************************************************************************/
