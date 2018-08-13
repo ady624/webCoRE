@@ -5308,6 +5308,21 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 
 }]);
 
+// For use with data-fa-symbol, older versions of Firefox require the full 
+// pathname in the href
+config.directive('spriteIcon', ['$sce', function($sce) {
+	return {
+		restrict: 'C',
+		scope: {
+			symbol: '@'
+		},
+		link: function(scope) {
+			scope.href = $sce.trustAsUrl(window.location.pathname + '#' + scope.symbol);
+		},
+		template: '<use xlink:href="{{href}}"></use>',
+	};
+}]);
+
 function test(value, parseAsString, dataType) {
 	scope.evaluateExpression(scope.parseExpression(value, parseAsString, dataType));
 }
