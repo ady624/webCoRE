@@ -33,7 +33,7 @@
         <li class="dropdown"><a class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">{{location.name}} \ {{instance ? instance.name + ' (' + instance.coreVersion.split('.').splice(0,3).join('.') + ')' : 'loading...'}}<span class="caret"></span></a>
             <ul class="dropdown-menu">
               <li role="separator" class="dropdown-header" ng-repeat-start="l in locations" ng-init="instances = listInstances(l.id)">{{l.name}}</li>
-            	<li instance ng-repeat="i in instances" ng-repeat-end class="{{i.id == instance.id ? 'active-tick' : ''}}" ng-click="switchInstance(i.id);"><a>{{l.name}} \ {{i.name}} ({{i.coreVersion.split('.').splice(0,3).join('.')}})</a></li>
+            	<li instance ng-repeat="i in instances" ng-repeat-end ng-click="switchInstance(i.id);"><a><checkbox checked="i.id == instance.id" radio="true" icon-class="fa-lg fa-fw"></checkbox> {{l.name}} \ {{i.name}} ({{i.coreVersion.split('.').splice(0,3).join('.')}})</a></li>
             </ul>
         </li>
 			</ul>
@@ -41,17 +41,17 @@
 				<li class="dropdown">
  					<a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Options <span class="caret"></span></a>
           <ul class="dropdown-menu">
-            <li><a href="#" ng-click="newPiston();"><i class="fa fa-plus"></i>&nbsp;&nbsp;New Piston</a></li>
-						<li><a href="#" ng-click="showDashboard();"><i class="fas fa-th-large"></i>&nbsp;&nbsp;Dashboard</a></li>
-						<li><a href="#" ng-click="showFuelStreams();"><i class="fas fa-chart-area"></i>&nbsp;&nbsp;Fuel Streams</a></li>
-						<li><a href="" ng-click="backup();"><i class="fas fa-cloud-upload-alt"></i>&nbsp;&nbsp;Backup Piston(s)</a></li>
-            <li ng-if="instanceCount > 1"><a href="#" ng-click="movePiston();"><i class="fas fa-sort"></i>Move Piston(s)</a></li>
-            <li><a href="register"><i class="fas fa-home"></i>&nbsp;&nbsp;Register Instance</a></li>
-            <li><a href="#" ng-click="showSettings()"><i class="fas fa-wrench"></i>&nbsp;&nbsp;Settings</a></li>
-						<li><a target="_blank" aria-haspopup="true" aria-expanded="false" href="https://www.paypal.me/ady624"><i class="fab fa-paypal"></i>&nbsp;&nbsp;Donate</a></li>
-						<li><a target="_blank" aria-haspopup="true" aria-expanded="false" href="https://community.webcore.co"><i class="fas fa-comments"></i>&nbsp;&nbsp;Forum</a></li>
-						<li><a target="_blank" aria-haspopup="true" aria-expanded="false" href="https://wiki.webcore.co"><i class="fas fa-book"></i>&nbsp;&nbsp;Wiki</a></li>
-						<li><a href="#" ng-click="logOut();"><i class="fas fa-sign-out-alt"></i>&nbsp;&nbsp;Log Out</a></li>
+						<li><a href="#" ng-click="newPiston();"><i class="fa fa-plus fa-lg fa-fw"></i>&nbsp;&nbsp;New Piston</a></li>
+						<li><a href="#" ng-click="showDashboard();"><i class="fas fa-th-large fa-lg fa-fw"></i>&nbsp;&nbsp;Dashboard</a></li>
+						<li><a href="#" ng-click="showFuelStreams();"><i class="fas fa-chart-area fa-lg fa-fw"></i>&nbsp;&nbsp;Fuel Streams</a></li>
+						<li><a href="" ng-click="backup();"><i class="fas fa-cloud-upload-alt fa-lg fa-fw"></i>&nbsp;&nbsp;Backup Piston(s)</a></li>
+						<li ng-if="instanceCount > 1"><a href="#" ng-click="movePiston();"><i class="fas fa-sort fa-lg fa-fw"></i>Move Piston(s)</a></li>
+						<li><a href="register"><i class="fas fa-home fa-lg fa-fw"></i>&nbsp;&nbsp;Register Instance</a></li>
+						<li><a href="#" ng-click="showSettings()"><i class="fas fa-wrench fa-lg fa-fw"></i>&nbsp;&nbsp;Settings</a></li>
+						<li><a target="_blank" aria-haspopup="true" aria-expanded="false" href="https://www.paypal.me/ady624"><i class="fab fa-paypal fa-lg fa-fw"></i>&nbsp;&nbsp;Donate</a></li>
+						<li><a target="_blank" aria-haspopup="true" aria-expanded="false" href="https://community.webcore.co"><i class="fas fa-comments fa-lg fa-fw"></i>&nbsp;&nbsp;Forum</a></li>
+						<li><a target="_blank" aria-haspopup="true" aria-expanded="false" href="https://wiki.webcore.co"><i class="fas fa-book fa-lg fa-fw"></i>&nbsp;&nbsp;Wiki</a></li>
+						<li><a href="#" ng-click="logOut();"><i class="fas fa-sign-out-alt fa-lg fa-fw"></i>&nbsp;&nbsp;Log Out</a></li>
 					</ul>
 				</li>
 			</ul>
@@ -203,7 +203,7 @@
 							<tr ng-repeat="piston in category.p" active="true" ng-if="piston.meta && piston.meta.a" data-toggle="tooltip" title="{{piston.meta.t ? 'Executed ' + timeSince(piston.meta.t) : 'Never executed'}}">
 								<td ng-click="openPiston(piston.id);"><span><i star class="fas fa-circle fa-xs" ng-style="{opacity: piston.opacity}"></i>{{piston.name}}<span state ng-bind-html="renderString(piston.meta.s.new)"></span><!--<span ng-if="piston.meta.s && piston.meta.s.new" state="{{piston.meta.s.new}}">{{piston.meta.s.new}}</span>--></span></td>
 								<td ng-click="openPiston(piston.id);" dur class="col-md-1 text-right">{{piston.meta.n ? timeCounter(piston.meta.n) : ''}}</td>
-								<td ng-if="!mobile" opt><i class="fa fa-ellipsis-v"></i><actions class="animated"><action ng-click="pausePiston(piston.id);" data-toggle="tooltip" title="Pause piston">Pause</action><action ng-click="testPiston(piston.id);" data-toggle="tooltip" title="Test piston">Test</action><action ng-click="openPiston(piston.id);" data-toggle="tooltip" title="View/Edit piston">View</action></actions></td>
+								<td ng-if="!mobile" opt><i class="far fa-ellipsis-v"></i><actions class="animated"><action ng-click="pausePiston(piston.id);" data-toggle="tooltip" title="Pause piston">Pause</action><action ng-click="testPiston(piston.id);" data-toggle="tooltip" title="Test piston">Test</action><action ng-click="openPiston(piston.id);" data-toggle="tooltip" title="View/Edit piston">View</action></actions></td>
 
 							</tr>
 						</tbody>
@@ -216,7 +216,7 @@
 							<tr ng-repeat="piston in pausedPistons"  active="false" ng-if="!piston.meta || !piston.meta.a" data-toggle="tooltip" title="{{piston.meta.t ? 'Paused on ' + utcToString(piston.meta.t) : ''}}">
 								<td ng-click="openPiston(piston.id);"><span>{{piston.name}}</span></td>
 								<td ng-click="openPiston(piston.id);" class="col-md-1 text-right">{{piston.meta.n ? timeCounter(piston.meta.n) : ''}}</td>
-								<td ng-if="!mobile" opt><i class="fa fa-ellipsis-v"></i><actions class="animated"><action ng-click="resumePiston(piston.id);" data-toggle="tooltip" title="Resume piston">Resume</action><action ng-click="testPiston(piston.id);" data-toggle="tooltip" title="Test piston">Test</action><action ng-click="openPiston(piston.id);" data-toggle="tooltip" title="View/Edit piston">View</action></actions></td>
+								<td ng-if="!mobile" opt><i class="far fa-ellipsis-v"></i><actions class="animated"><action ng-click="resumePiston(piston.id);" data-toggle="tooltip" title="Resume piston">Resume</action><action ng-click="testPiston(piston.id);" data-toggle="tooltip" title="Test piston">Test</action><action ng-click="openPiston(piston.id);" data-toggle="tooltip" title="View/Edit piston">View</action></actions></td>
 							</tr>
 						</tbody>
 					</table>
@@ -414,10 +414,6 @@
       <header ng-if="designer.type=='duplicate'">
           <h3>Create a duplicate piston</h3>
           <span>You are about to create a duplicate piston. Select the source piston below and click Create to get started.</span>
-      </header>
-      <header ng-if="designer.type=='template'">
-          <h3>Create new piston from a template</h3>
-          <span>You wanted to create a new piston from a template. The bad news is, there are no templates yet :( But the good news is, you can start one from scratch. Yey! Click Next to get started.</span>
       </header>
       <header ng-if="designer.type=='restore'">
           <h3>Restore a piston</h3>

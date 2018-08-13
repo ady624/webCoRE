@@ -201,6 +201,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 	$scope.init = function() {
 		if ($scope.$$destroyed) return;	
 		dataService.setStatusCallback($scope.setStatus);
+		$scope.initialized = false;
 		$scope.loading = true;
 		if ($scope.piston) $scope.loading = true;
 		dataService.getPiston($scope.pistonId).then(function (response) {
@@ -3459,17 +3460,15 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 	};
 
 	$scope.refreshSelects = function(type) {
-		if (type) {
-			$scope.$$postDigest(function() {
+		type = type || 'selectpicker';
+		$scope.$$postDigest(function() {
+			$('select[' + type + ']').selectpicker('refresh');
+			$timeout(function() {
 				$('select[' + type + ']').selectpicker('refresh');
-				$timeout(function() {$('select[' + type + ']').selectpicker('refresh');}, 0, false);
-			});
-		} else {
-			$scope.$$postDigest(function() {
-				$('select[selectpicker]').selectpicker('refresh');
-				$timeout(function() {$('select[selectpicker]').selectpicker('refresh');}, 0, false);
-			});
-		}
+				// Match smart-area height to backing textarea
+				$('textarea').trigger('keyup');
+			}, 0, false);
+		});
 	}
 
 	$scope.getOrdinalSuffix = function(value) {
