@@ -2102,6 +2102,21 @@ app.directive('fal', function() {
 	return directive;
 });
 
+// For use with data-fa-symbol, older versions of Firefox require the full 
+// pathname in the href
+app.directive('spriteIcon', ['$sce', function($sce) {
+	return {
+		restrict: 'C',
+		scope: {
+			symbol: '@'
+		},
+		link: function(scope) {
+			scope.href = $sce.trustAsUrl(window.location.pathname + '#' + scope.symbol);
+		},
+		template: '<use xlink:href="{{href}}"></use>',
+	};
+}]);
+
 // Polyfills
 if (!String.prototype.endsWith) {
 	String.prototype.endsWith = function(search, this_len) {
