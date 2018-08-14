@@ -170,7 +170,8 @@ public String mem(showBytes = true) {
 /* Push command has multiple overloads in hubitat */
 public Map commandOverrides(){
 	return (hubUID ? [
-     	push : [c: "push", s: null , r: "pushMomentary"]  //s: command signature 
+     	push : [c: "push", s: null , r: "pushMomentary"],
+        flash : [c: "flash", s: null , r: "flashNative"],//s: command signature
     ] : [:])
 }
 

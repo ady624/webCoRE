@@ -1684,7 +1684,7 @@ private Boolean executeTask(rtData, devices, statement, task, async) {
  	def vcmd = rtData.commands.virtual[command]
     long delay = 0
     for (device in (virtualDevice ? [virtualDevice] : devices)) {
-        if (!virtualDevice && device.hasCommand(command)) {
+        if (!virtualDevice && device.hasCommand(command) && !(vcmd && vcmd.o /*virutal command overrides physical command*/)) {
             def msg = timer "Executed [$device].${command}"
         	try {
             	delay = "cmd_${command}"(rtData, device, params)
@@ -2722,7 +2722,7 @@ private long vcmd_internal_fade(Map rtData, device, String command, int startLev
     return duration + 100
 }
 
-private long vcmd_emulatedflash(rtData, device, params) {
+private long vcmd_emulatedFlash(rtData, device, params) {
     vcmd_flash(rtData, device, params)
 }
 

@@ -2754,8 +2754,9 @@ private Map attributes() {
 
 /* Push command has multiple overloads in hubitat */
 public Map commandOverrides(){
-	return (hubUID ? [
-     	push : [c: "push", s: null , r: "pushMomentary"]  //s: command signature 
+	return (hubUID ? [ //s: command signature
+     	push : [c: "push", s: null , r: "pushMomentary"],
+        flash : [c: "flash", s: null , r: "flashNative"] //flash native command conflicts with flash emulated command. Also needs "o" option on command described later
     ] : [:])
 }
 
@@ -2879,7 +2880,7 @@ private Map commands() {
 		high						: [ n: "Set to High",																																																															],
 	] + (hubUID ? [
             doubleTap					: [ n: "Double Tap",					d: "Double tap button {0}",						a: "doubleTapped",										p:[[n: "Button #", t: "integer"]]																																																										],
-            flash						: [ n: "Flash",																	       																																															],
+            flashNative					: [ n: "Flash",																	       																																															],
             hold						: [ n: "Hold",							d: "Hold Button {0}",							a: "held",													p: [[n:"Button #", t: "integer"]]																																						],
             push						: [ n: "Push",							d: "Push button {0}",							a: "pushed",												p:[[n: "Button #", t: "integer"]]																																																										],
         	pushMomentary				: [ n: "Push"																																																																						]
@@ -2892,7 +2893,7 @@ private Map virtualCommands() {
 	//n = name
     //t = type
     List tileIndexes = ['1','2','3','4','5','6','7','8','9','10','11','12','13','14','15','16']
-	return [
+	def commands = [
 		noop						: [	n: "No operation",				a: true,	i: "circle",				d: "No operation",																										],
 		wait						: [	n: "Wait...", 					a: true,	i: "clock", is: "r",				d: "Wait {0}",															p: [[n:"Duration", t:"duration"]],				],
 		waitRandom					: [ n: "Wait randomly...",			a: true,	i: "clock", is: "r",				d: "Wait randomly between {0} and {1}",									p: [[n:"At least", t:"duration"],[n:"At most", t:"duration"]],	],
@@ -2974,11 +2975,19 @@ private Map virtualCommands() {
 	] : [:])
 	+ (getLifxToken() ? [
 		lifxScene: [n: "Activate LIFX scene", p: ["Scene:lifxScenes"], l: true, dd: "Activate LIFX Scene '{0}'", aggregated: true],
-	] : [:])*/    
-    + (hubUID ? [
+	] : [:])*/        
+    
+    if(hubUID){
+        commands += [
             setAlarmSystemStatus		: [ n: "Set Hubitat Safety Monitor status...",	a: true, i: "",				d: "Set Hubitat Safety Monitor status to {0}",							p: [[n:"Status", t:"enum", o: getAlarmSystemStatusActions().collect {[n: it.value, v: it.key]}]],																										],
-            flash				: [ n: "Emulated Flash...",	 r: ["on", "off"], 			i: "toggle-on",				d: "Flash on {0} / off {1} for {2} times{3}",							p: [[n:"On duration",t:"duration"],[n:"Off duration",t:"duration"],[n:"Number of flashes",t:"integer"], [n:"Only if switch is...", t:"enum",o:["on","off"], d:" if already {v}"]],																]
-    ] : [:])
+            //keep emulated flash to not break old pistons
+            emulatedFlash				: [ n: "(Old do not use) Emulated Flash",	 r: ["on", "off"], 			i: "toggle-on",				d: "(Old do not use)Flash on {0} / off {1} for {2} times{3}",							p: [[n:"On duration",t:"duration"],[n:"Off duration",t:"duration"],[n:"Number of flashes",t:"integer"], [n:"Only if switch is...", t:"enum",o:["on","off"], d:" if already {v}"]],																],
+            //add back emulated flash with "o" option so that it overrides the native flash command
+            flash						: [ n: "Flash...",	 r: ["on", "off"], 			i: "toggle-on",				d: "Flash on {0} / off {1} for {2} times{3}",							p: [[n:"On duration",t:"duration"],[n:"Off duration",t:"duration"],[n:"Number of flashes",t:"integer"], [n:"Only if switch is...", t:"enum",o:["on","off"], d:" if already {v}"]],		o: true /*override physical command*/													]
+    	]
+    }
+    
+    return commands
 }
 
 
@@ -3266,7 +3275,7 @@ private Map virtualDevices(updateCache = false) {
         routine:			[ n: 'Routine',						t: 'enum',		o: getRoutineOptions(updateCache),			m: true],
         alarmSystemStatus:	[ n: 'Smart Home Monitor status',	t: 'enum',		o: getAlarmSystemStatusOptions(),			x: true]
     ] + (hubUID ? [
-        alarmSystemStatus:	[ n: 'Hubitat Safety Monitor status',t: 'enum',		o: getHubitatAlarmSystemStatusOptions(), ac: getAlarmSystemStatusActions(),			x: true],
+        alarmSystemStatus:	[ n: 'Hubitat Safety Monitor status',t: 'enum',		o: getHubitatAlarmSystemStatusOptions(), ac: getAlarmSystemStatusActions(),			x: true], //ac - actions. hubitat doesn't reuse the status for actions
         //this one can be confusing to users so it's been commented out. It can subscribe to hsmSetArm, but the safety monitor doesn't actually send these events themselves, only other apps
         //alarmSystemEvent:	[ n: 'Hubitat Safety Monitor event',t: 'enum',		o: getAlarmSystemStatusActions(),			m: true],
         alarmSystemAlert: 	[ n: 'Hubitat Safety Monitor alert',t: 'enum',		o: getAlarmSystemAlertOptions(),			m: true],
