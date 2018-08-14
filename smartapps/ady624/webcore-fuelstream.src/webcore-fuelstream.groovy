@@ -66,9 +66,7 @@ def cleanFuelStreams(){
 
         log.debug "Size ${storageSize}KB Points ${points} Avg $averageSize Remove $pointsToRemove"
         def toBeRemoved = state.fuelStreamData.sort { it.i }.take(pointsToRemove)
-        state.fuelStreamData.each {
-         	it.removeAll(toBeRemoved)   
-        }                
+        state.fuelStreamData.removeAll(toBeRemoved)                
     }
 }
 
