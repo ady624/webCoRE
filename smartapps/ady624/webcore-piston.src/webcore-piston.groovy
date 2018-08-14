@@ -288,10 +288,10 @@ public static String version() { return "v0.3.107.20180806" }
 /*** webCoRE DEFINITION														***/
 /******************************************************************************/
 private static String handle() { return "webCoRE" }
-import hubitat.device.HubAction
-import hubitat.device.Protocol
-//import physicalgraph.device.HubAction
-//import physicalgraph.device.Protocol
+//import hubitat.device.HubAction
+//import hubitat.device.Protocol
+import physicalgraph.device.HubAction
+import physicalgraph.device.Protocol
 
 if(!hubUID)include 'asynchttp_v1'
 
