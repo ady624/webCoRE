@@ -394,7 +394,7 @@ def pageMain() {
                 if(customEndpoints){
                     if(hubUID) input "customHubUrl", "string", title: "Custom hub url different from ${hubUID ? "https://cloud.hubitat.com" : "https://graph.smartthings.com"}", default: null, required: false
                 	input "customWebcoreInstanceUrl", "string", title: "Custom webcore instance url different from dashboard.webcore.co", default: null, required: false   
-                    paragraph "If you enter a custom url above you will have to use a different webcore instance from dashboard.webcore.co as the site is restricted to hubitat and smartthing's cloud"
+                    if(hubUID) paragraph "If you enter a custom url above you will have to use a different webcore instance from dashboard.webcore.co as the site is restricted to hubitat and smartthing's cloud"
                 }
 			}
 		}
@@ -986,7 +986,7 @@ private api_get_base_result(deviceVersion = 0, updateCache = false) {
             id: hashId(location.id + (hubUID ? '-L' : ''), updateCache),
             mode: hashId(location.getCurrentMode().id, updateCache),
             modes: location.getModes().collect{ [id: hashId(it.id, updateCache), name: it.name ]},
-			shm: hubUID ? transformHsmStatus(state.hsmStatus) : location.currentState("alarmSystemStatus")?.value,
+			shm: hubUID ? transformHsmStatus(location.hsmStatus ?: state.hsmStatus) : location.currentState("alarmSystemStatus")?.value,
             name: location.name,
             temperatureScale: location.getTemperatureScale(),
             timeZone: tz ? [
