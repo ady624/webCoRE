@@ -288,7 +288,13 @@ public static String version() { return "v0.3.107.20180806" }
 /*** webCoRE DEFINITION														***/
 /******************************************************************************/
 private static String handle() { return "webCoRE" }
-//include 'asynchttp_v1'
+import hubitat.device.HubAction
+import hubitat.device.Protocol
+//import physicalgraph.device.HubAction
+//import physicalgraph.device.Protocol
+
+if(!hubUID)include 'asynchttp_v1'
+
 definition(
     name: "${handle()} Piston",
     namespace: "ady624",
@@ -726,7 +732,7 @@ private getRunTimeData(rtData = null, semaphore = null, fetchWrappers = false) {
         rtData.category = state.category;
 	    rtData.stats = [nextScheduled: 0]
 	    //we're reading the cache from atomicState because we might have waited at a semaphore
-        def atomState = getCachedAtomicState()        
+        def atomState = hubUID ? getCachedAtomicState() : atomicState    
         
 	    rtData.cache = atomState.cache ?: [:]
 	    rtData.newCache = [:]
@@ -736,7 +742,7 @@ private getRunTimeData(rtData = null, semaphore = null, fetchWrappers = false) {
         def logging = "$state.logging".toString()
         logging = logging.isInteger() ? logging.toInteger() : 0
         rtData.logging = (int) logging
-	    rtData.locationId = hashId(location.id)
+	    rtData.locationId = hashId(location.id + (hubUID ? '-L' : ''))
         rtData.locationModeId = hashId(location.getCurrentMode().id)
 	    //flow control
 	    //we're reading the old state from atomicState because we might have waited at a semaphore
@@ -749,6 +755,8 @@ private getRunTimeData(rtData = null, semaphore = null, fetchWrappers = false) {
 	    rtData.fastForwardTo = null
 	    rtData.break = false
         rtData.updateDevices = false
+        rtData.timeLimits = getTimeLimits()
+        
         state.schedules = atomState.schedules
         if (!fetchWrappers) {
         	rtData.devices = (settings.dev && (settings.dev instanceof List) ? settings.dev.collectEntries{[(hashId(it.id)): it]} : [:])
@@ -796,6 +804,11 @@ try {
     }
 }
 
+//new and improved timeout recovery management
+def timeoutRecoveryHandler_webCoRE(event) {
+	timeHandler([t:now()], true)
+}
+
 def timeRecoveryHandler(event) {
 	timeHandler(event, true)
 }
@@ -804,10 +817,26 @@ def executeHandler(event) {
 	handleEvents([date: event.date, device: location, name: 'execute', value: event.value, jsonData: event.jsonData])
 }
 
+def getTimeLimits(){
+    return hubUID ? [
+    	schedule: 20000,
+        scheduleVariance: 3000,
+        executionTime: 30000,
+        taskRemaining: 3000,
+        taskDelayMax: 5000,
+        recovery: 45000
+    ] : [
+        schedule: 5000,
+        scheduleVariance: 2000,
+        executionTime: 20000,
+        taskRemaining: 10000,
+        taskDelayMax: 5000
+    ]
+}
 //entry point for all events
 def handleEvents(event) {
 	//cancel all pending jobs, we'll handle them later
-	unschedule(timeHandler)
+	if(hubUID) unschedule(timeHandler)
     if (!state.active) return
 	def startTime = now()
     state.lastExecuted = startTime
@@ -826,7 +855,13 @@ def handleEvents(event) {
     	return;
     }
     checkVersion(rtData)
-	runIn(45.toInteger(), timeRecoveryHandler)    
+    if(hubUID) {
+        runIn(rtData.timeLimits.recovery.toInteger(), timeRecoveryHandler)        
+    }
+    else {
+        setTimeoutRecoveryHandler('timeoutRecoveryHandler_webCoRE')
+    }
+	   
     if (rtData.semaphoreDelay) {
     	warn "Piston waited at a semaphore for ${rtData.semaphoreDelay}ms", rtData
     }
@@ -849,8 +884,7 @@ def handleEvents(event) {
     //process all time schedules in order
     def t = now()
     
-    while (success && (30000 + rtData.timestamp - now() > 10000)) { //allocate 30 seconds total execution time with max of 20 for schedule loop
-        //we only keep doing stuff if we haven't passed the 20s execution time mark
+    while (success && (rtData.timeLimits.executionTime + rtData.timestamp - now() > rtData.timeLimits.schedule)) {
         def schedules = rtData.piston.o?.pep ? atomicState.schedules : state.schedules
         //anything less than 2 seconds in the future is considered due, we'll do some pause to sync with it
         //we're doing this because many times, the scheduler will run a job early, usually 0-1.5 seconds early...
@@ -858,7 +892,7 @@ def handleEvents(event) {
         if (event.name == 'wc_async_reply') {
         	event.schedule = schedules.sort{ it.t }.find{ it.d == event.value }
         } else {
-        	event = [date: event.date, device: location, name: 'time', value: now(), schedule: schedules.sort{ it.t }.find{ it.t < now() + 3000 }]
+        	event = [date: event.date, device: location, name: 'time', value: now(), schedule: schedules.sort{ it.t }.find{ it.t < now() + rtData.timeLimits.scheduleVariance }]
        }
         if (!event.schedule) break
         long threshold = now() > event.schedule.t ? now() : event.schedule.t
@@ -898,7 +932,7 @@ def handleEvents(event) {
         def delay = event.schedule.t - now()
         if (syncTime && (delay > 0)) {
         	if (rtData.logging > 2) debug "Fast executing schedules, waiting for ${delay}ms to sync up", rtData
-        	pauseExecution delay
+        	pause delay
         }
        	success = executeEvent(rtData, event)
         syncTime = true
@@ -909,15 +943,15 @@ def handleEvents(event) {
     if (rtData.logging > 1) trace msg2, rtData
     if (!success) msg.m = "Event processing failed"
     finalizeEvent(rtData, msg, success)
-    if (rtData.currentEvent) {
+    if (rtData.currentEvent && rtData.logPistonExecutions) {
     	try {
 		    def desc = 'webCore piston \'' + app.label + '\' was executed'
-    		/*sendLocationEvent(name: 'webCoRE', value: 'pistonExecuted', isStateChange: true, displayed: false, linkText: desc, descriptionText: desc, data: [
+    		sendLocationEvent(name: 'webCoRE', value: 'pistonExecuted', isStateChange: true, displayed: false, linkText: desc, descriptionText: desc, data: [
     			id: hashId(app.id),
 	        	name: app.label,
 	    	    event: [date: rtData.currentEvent.date, delay: rtData.currentEvent.delay, duration: now() - rtData.currentEvent.date, device: "$rtData.event.device", name: rtData.currentEvent.name, value: rtData.currentEvent.value, physical: rtData.currentEvent.physical, index: rtData.currentEvent.index],
     	    	state: [old: rtData.state.old, new: rtData.state.new]
-			]) */
+			])
 		} catch (all) {
         }
 	}
@@ -950,7 +984,7 @@ private Boolean executeEvent(rtData, event) {
         rtData.currentEvent = [
             date: event.date.getTime(),
             delay: rtData.stats?.timing?.d ?: 0,
-            device: srcEvent ? srcEvent.device : hashId((event.device?:location).id),
+            device: srcEvent ? srcEvent.device : hashId((event.device?:location).id + (hubUID ? !isDeviceLocation(device) ? '' : '-L' : '')),
             name: srcEvent ? srcEvent.name : event.name,
             value: srcEvent ? srcEvent.value : event.value,
             descriptionText: srcEvent ? srcEvent.descriptionText : event.descriptionText,
@@ -1156,11 +1190,15 @@ private processSchedules(rtData, scheduleJob = false) {
         	rtData.stats.nextSchedule = next.t
         	if (rtData.logging) info "Setting up scheduled job for ${formatLocalTime(next.t)} (in ${t}s)" + (schedules.size() > 1 ? ', with ' + (schedules.size() - 1).toString() + ' more job' + (schedules.size() > 2 ? 's' : '') + ' pending' : ''), rtData
         	runIn(t.toInteger(), timeHandler, [data: next])
-            runIn((t+45).toInteger(), timeRecoveryHandler, [data: next])
+            if(hubUID){
+                runIn((t + rtData.timeLimits.recovery).toInteger(), timeRecoveryHandler, [data: next])
+            }            
     	} else {
 	    	rtData.stats.nextSchedule = 0
             //remove the recovery
-    		unschedule(timeRecoveryHandler)
+            if(hubUID){
+                unschedule(timeRecoveryHandler)
+            }
 	    }
     }
     if (rtData.piston.o?.pep) atomicState.schedules = schedules
@@ -1218,7 +1256,6 @@ private Boolean executeStatement(rtData, statement, async = false) {
 	//if rtData.fastForwardTo is a positive, non-zero number, we need to fast forward through all
     //branches until we find the task with an id equal to that number, then we play nicely after that
 	if (!statement) return false
-    //if (rtData.logging > 2) debug "Execute Statement ${statement.$}", rtData
     if (!rtData.fastForwardTo) {
     	switch (statement.tep) {
         	case 'c':
@@ -1647,7 +1684,7 @@ private Boolean executeTask(rtData, devices, statement, task, async) {
  	def vcmd = rtData.commands.virtual[command]
     long delay = 0
     for (device in (virtualDevice ? [virtualDevice] : devices)) {
-        if (!virtualDevice && device.hasCommand(command)) {
+        if (!virtualDevice && device.hasCommand(command) && !(vcmd && vcmd.o /*virutal command overrides physical command*/)) {
             def msg = timer "Executed [$device].${command}"
         	try {
             	delay = "cmd_${command}"(rtData, device, params)
@@ -1666,13 +1703,13 @@ private Boolean executeTask(rtData, devices, statement, task, async) {
     //if we don't have to wait, we're home free
     if (delay) {
     	//get remaining piston time
-    	def timeLeft = 30000 + rtData.timestamp - now()
+    	def timeLeft = rtData.timeLimits.executionTime + rtData.timestamp - now()
         //negative delays force us to reschedule, no sleeping on this one
         boolean reschedule = (delay < 0)
         delay = reschedule ? -delay : delay
     	//we're aiming at waking up with at least 3s left
 		//keep executing until we hit 3 seconds before the total execution time limit
-    	if (reschedule || (timeLeft - delay < 3000) || (delay >= 5000) || async) {
+    	if (reschedule || (timeLeft - delay < rtData.timeLimits.taskRemaining) || (delay >= rtData.timeLimits.taskMaxDelay) || async) {
 	        //schedule a wake up
 	        if (rtData.logging > 1) trace "Requesting a wake up for ${formatLocalTime(now() + delay)} (in ${cast(rtData, delay / 1000, 'decimal')}s)", rtData
             tracePoint(rtData, "t:${task.$}", now() - t, -delay)
@@ -1680,7 +1717,7 @@ private Boolean executeTask(rtData, devices, statement, task, async) {
 	        return false
 	    } else {
 	        if (rtData.logging > 1) trace "Waiting for ${delay}ms", rtData
-	        pauseExecution(delay)
+	        pause(delay)
 	    }
 	}
 	tracePoint(rtData, "t:${task.$}", now() - t, delay)
@@ -1703,7 +1740,7 @@ private long executeVirtualCommand(rtData, devices, command, params)
 }
 
 private executePhysicalCommand(rtData, device, command, params = [], delay = null, scheduleDevice = null, disableCommandOptimization = false) {
-	if(!!delay && !scheduleDevice){
+	if(hubUID && (!!delay && !scheduleDevice)){
 		//delay without schedules is not supported in hubitat
 		scheduleDevice = hashId(device.id)
 	}
@@ -1753,7 +1790,7 @@ private executePhysicalCommand(rtData, device, command, params = [], delay = nul
             	msg.m = "Skipped execution of physical command [${device.label ?: device.name}].$command($params) because it would make no change to the device."
             } else {
                 if (params.size()) {
-                    if (delay) { //not supported
+                    if (delay) { //not supported in hubitat
                         device."$command"((params as Object[]) + [delay: delay])
                         msg.m = "Executed physical command [${device.label ?: device.name}].$command($params, [delay: $delay])"
                     } else {
@@ -1761,7 +1798,7 @@ private executePhysicalCommand(rtData, device, command, params = [], delay = nul
                         msg.m = "Executed physical command [${device.label ?: device.name}].$command($params)"
                     }
                 } else {
-                    if (delay) { //not supported
+                    if (delay) { //not supported in hubitat
                         device."$command"([delay: delay])
                         msg.m = "Executed physical command [${device.label ?: device.name}].$command([delay: $delay])"
                     } else {
@@ -1775,7 +1812,7 @@ private executePhysicalCommand(rtData, device, command, params = [], delay = nul
             error "Error while executing physical command $device.$command($params):", rtData, null, all
         }
         if (rtData.piston.o?.ced) {
-            pauseExecution(rtData.piston.o.ced)
+            pause(rtData.piston.o.ced)
             if (rtData.logging > 2) debug "Injected a ${rtData.piston.o.ced}ms delay after [$device].$command(${params ? "$params" : ''})", rtData
         }
     }
@@ -1836,6 +1873,7 @@ private scheduleTimer(rtData, timer, long lastRun = 0) {
 
 
     //switch to local date/times
+    //hubitat timezone is already local
     time = hubUID ? time : utcToLocalTime(time)
     long rightNow = hubUID ? now() : utcToLocalTime(now())
     lastRun = lastRun ? (hubUID ? lastRun : utcToLocalTime(lastRun)) : rightNow
@@ -2389,9 +2427,12 @@ private long vcmd_setLocationMode(rtData, device, params) {
 
 private long vcmd_setAlarmSystemStatus(rtData, device, params) {
 	def statusIdOrName = params[0]
-    def status = rtData.virtualDevices['alarmSystemStatus']?.ac?.find{ (it.key == statusIdOrName) || (it.value == statusIdOrName)}.collect{ [id: it.key, name: it.value] }
+    def dev = rtData.virtualDevices['alarmSystemStatus']
+    def options = hubUID ? dev?.ac : dev?.o    
+    def status = options?.find{ (it.key == statusIdOrName) || (it.value == statusIdOrName)}.collect{ [id: it.key, name: it.value] }
+    
     if (status && status.size()) {
-	    sendLocationEvent(name: 'hsmSetArm', value: status[0].id)
+	    sendLocationEvent(name: (hubUID ? 'hsmSetArm' : 'alarmSystemStatus'), value: status[0].id)
     } else {
 	    error "Error setting SmartThings Home Monitor status. Status '$statusIdOrName' does not exist.", rtData
     }
@@ -2682,6 +2723,10 @@ private long vcmd_internal_fade(Map rtData, device, String command, int startLev
 }
 
 private long vcmd_emulatedFlash(rtData, device, params) {
+    vcmd_flash(rtData, device, params)
+}
+
+private long vcmd_flash(rtData, device, params) {
 	long onDuration = cast(rtData, params[0], 'long')
 	long offDuration = cast(rtData, params[1], 'long')
     int cycles = cast(rtData, params[2], 'integer')
@@ -2910,12 +2955,13 @@ private long vcmd_wolRequest(rtData, device, params) {
 	def mac = params[0]
 	def secureCode = params[1]
 	mac = mac.replace(":", "").replace("-", "").replace(".", "").replace(" ", "").toLowerCase()
-	sendHubCommand(new hubitat.device.HubAction(
-		"wake on lan $mac",
-		hubitat.device.Protocol.LAN,
-		null,
-		secureCode ? [secureCode: secureCode] : [:]
-	))
+    
+	sendHubCommand(new HubAction(
+        "wake on lan $mac",
+        Protocol.LAN,
+        null,
+        secureCode ? [secureCode: secureCode] : [:]
+    ))
     return 0
 }
 
@@ -3175,7 +3221,7 @@ private long vcmd_lifxPulse(rtData, device, params) {
 }
 
 
-public localHttpRequestHandler(hubitat.device.HubResponse hubResponse) {
+public localHttpRequestHandler(hubResponse) {
 	def responseCode = ''
 	for (header in hubResponse.headers) {
     	if (header.key.startsWith('http')) {
@@ -3284,7 +3330,7 @@ private long vcmd_httpRequest(rtData, device, params) {
 				query: useQueryString ? data : null, //thank you @destructure00
 				body: !useQueryString ? data : null //thank you @destructure00
 			]
-			sendHubCommand(new hubitat.device.HubAction(requestParams, null, [callback: localHttpRequestHandler]))
+			sendHubCommand(new HubAction(requestParams, null, [callback: localHttpRequestHandler]))
             return 20000
 		} catch (all) {
 			error "Error executing internal web request: ", rtData, null, all
@@ -3363,29 +3409,40 @@ private long vcmd_writeToFuelStream(rtData, device, params) {
     def name = params[1]
     def data = params[2]
     def source = params[3]
-	def requestParams = [
-        uri:  "https://api-${rtData.region}-${rtData.instanceId[32]}.webcore.co:9247",
-        path: "/fuelStream/write",
-        headers: [
-            'ST' : rtData.instanceId
-        ],
-         body: [
-        	c: canister,
-        	n: name,
-            s: source,
-        	d: data,
-            i: rtData.instanceId
-    	],
-        requestContentType: "application/json"
+    
+    def req = [
+        c: canister,
+        n: name,
+        s: source,
+        d: data,
+        i: rtData.instanceId
     ]
-    if (asynchttp_v1) {
-        asynchttp_v1.put(null, requestParams)
+
+    if(rtData.useLocalFuelStreams){
+        parent.writeToFuelStream(req)
     }
-    else {
-        //httpPut(requestParams) {
-            
-        //}
+    else if(!hubUID){
+        def requestParams = [
+             uri:  "https://api-${rtData.region}-${rtData.instanceId[32]}.webcore.co:9247",
+             path: "/fuelStream/write",
+             headers: [
+                 'ST' : rtData.instanceId
+             ],
+              body: [
+                c: canister,
+                n: name,
+                 s: source,
+                d: data,
+                 i: rtData.instanceId
+            ],
+            requestContentType: "application/json"
+        ]
+        if (asynchttp_v1) asynchttp_v1.put(null, requestParams)
     }
+    else {        
+     	log.error "Fuel stream app is not installed. Install it to write to local fuel streams"   
+    }  
+    
     return 0
 }
 
@@ -3672,12 +3729,15 @@ private evaluateOperand(rtData, node, operand, index = null, trigger = false, ne
 	        break;
 		case 'd': //devices
         	def deviceIds = []
-        	//def systemDeviceIds = getAllDeviceIds()
             for (d in expandDeviceList(rtData, operand.d)) {
-				//if (getDevice(rtData, d)) deviceIds.push(d)
-                //if(systemDeviceIds.any { (d == hashId(it.id)) || (d == it.label) }) {
-                    deviceIds.push(d)
-                //}
+                if(hubUID && !!rtData.deviceIds){
+                    if(rtData.deviceIds.any { (d == hashId(it.id)) || (d == it.label) }) {
+                        deviceIds.push(d)
+                    }
+                }
+                else {
+                    if (getDevice(rtData, d)) deviceIds.push(d)
+                }                
             }
             /*
             for (d in rtData, operand.d) {
@@ -4349,14 +4409,14 @@ private traverseExpressions(node, closure, param, parentNode = null) {
 }
 
 private getRoutineById(routineId) {
-    return [ id : routineId ]
-	/*def routines = location.helloHome?.getPhrases()
+    if(hubUID) return [ id : routineId ]
+	def routines = location.helloHome?.getPhrases()
     for(routine in routines) {
     	if (routine && routine?.label && (hashId(routine.id) == routineId)) {
     		return routine
         }
     }
-    return null */
+    return null
 }
 
 private void updateDeviceList(deviceIdList) {
@@ -4451,7 +4511,7 @@ private void subscribeAll(rtData) {
                     switch (operand.v) {
                         case 'alarmSystemStatus':
                         	subscriptionId = "$deviceId${operand.v}"
-                           	attribute = "hsmStatus"
+                           	attribute = hubUID ? "hsmStatus" : operand.v
                         	break;
                         case 'alarmSystemAlert':
                         	subscriptionId = "$deviceId${operand.v}"
@@ -4478,13 +4538,13 @@ private void subscribeAll(rtData) {
                             	def routine = getRoutineById(value.c)
                                 if (routine) {
 	                        		subscriptionId = "$deviceId${operand.v}${routine.id}"
-    	                        	attribute = "routineExecuted"
+                                    attribute = "routineExecuted${hubUID ? "" : ("." + routine.id)}"
                                 }
                             }
                             break
                         case 'email':
                             subscriptionId = "$deviceId${operand.v}${hashId(app.id)}"
-                            attribute = "email"
+                            attribute = "email${hubUID ? "" : ("." + hashId(app.id))}"
                             break
                         case 'ifttt':
                         case 'askAlexa':
@@ -4494,13 +4554,15 @@ private void subscribeAll(rtData) {
                             	def item = options ? options[value.c] : value.c
                                 if (item) {
                                     subscriptionId = "$deviceId${operand.v}${item}"
-                                	attribute = "${operand.v}"
+                                    
+                                    def attrVal = hubUID ? "" : ".${item}"
+                                    attribute = "${operand.v}${attrVal}"                                    
                                     switch (operand.v) {
                                     	case 'askAlexa':
-                                        	attribute = "askAlexaMacro"
+                                        	attribute = "askAlexaMacro${attrVal}"
                                             break;
                                     	case 'echoSistant':
-                                        	attribute = "echoSistantProfile"
+                                        	attribute = "echoSistantProfile${attrVal}"
                                             break;
                                     }
                                 }
@@ -4756,21 +4818,14 @@ private sanitizeVariableName(name) {
 	name = name ? "$name".trim().replace(" ", "_") : null
 }
 
-/*
 private getDevice(rtData, idOrName) {
+    if(hubUID && !!rtData.deviceIds) return getDeviceHubitat(rtData, idOrName)
 	if (rtData.locationId == idOrName) return location
 	def device = rtData.devices[idOrName] ?: rtData.devices.find{ it.value.getDisplayName() == idOrName }?.value
     if (!device) {
-        if (!rtData.allDevices) {
-            def start = now()
-            //rtData.allDevices = getAllDeviceIds().collect{ getDeviceById(it.id) }.flatten().collectEntries{ dev -> [(hashId(dev.id)): dev]}
-            //log.debug getAllDeviceIds()
-            rtData.allDevices = parent.listAvailableDevices(true)
-            if (rtData.logging > 2) debug "Grabbed parent devices in ${now() - start}ms", rtData
-        }
-        
+    	if (!rtData.allDevices) rtData.allDevices = parent.listAvailableDevices(true)
         if (rtData.allDevices) {
-			def deviceMap = rtData.allDevices.find{ (idOrName == it.key) || (idOrName == it.value.getDisplayName()) }            
+			def deviceMap = rtData.allDevices.find{ (idOrName == it.key) || (idOrName == it.value.getDisplayName()) }
 	        if (deviceMap) {
             	rtData.updateDevices = true
             	rtData.devices[deviceMap.key] = deviceMap.value
@@ -4781,10 +4836,10 @@ private getDevice(rtData, idOrName) {
         }
     }
     return device
-}*/
-
-private getDevice(rtData, idOrName) {
-    def start = now()
+}
+//parent.listAvailableDevices(true) adds several hundred milliseconds. Get devs only as needed by deviceid
+private getDeviceHubitat(rtData, idOrName) {
+    //def start = now()
 	if (rtData.locationId == idOrName) return location
 	def device = rtData.devices[idOrName] ?: rtData.devices.find{ it.value.getDisplayName() == idOrName }?.value
     if (!device) {
@@ -4794,7 +4849,7 @@ private getDevice(rtData, idOrName) {
 
         def deviceMap = rtData.allDevices.find{ (idOrName == it.key) || (idOrName == it.value.getDisplayName()) }
         if(!deviceMap){
-            def minDev = getAllDeviceIds().find { (idOrName == hashId(it.id)) || (idOrName == it.label) }
+            def minDev = rtData.deviceIds.find { (idOrName == hashId(it.id)) || (idOrName == it.label) }
             if(minDev){
                 rtData.allDevices[hashId(minDev.id)] = getDeviceById(minDev.id)
                 deviceMap = rtData.allDevices.find { it.key == hashId(minDev.id) }
@@ -4805,7 +4860,10 @@ private getDevice(rtData, idOrName) {
             rtData.updateDevices = true
             rtData.devices[deviceMap.key] = deviceMap.value
             device = deviceMap.value
-        }        
+        } 
+        else {
+            error "Device ${idOrName} was not found. Please review your piston.", rtData
+        }
     }
     //if (rtData.logging > 2) debug "Device grabbed in  ${now() - start}ms", rtData
     return device
@@ -4844,8 +4902,8 @@ private Map getDeviceAttribute(rtData, deviceId, attributeName, subDeviceIndex =
         	case 'mode':
             	def mode = location.getCurrentMode();
             	return [t: 'string', v: hashId(mode.getId()), n: mode.getName()]
-        	case 'alarmSystemStatus':
-				def v = location.hsmStatus ?: rtData.hsmStatus
+        	case 'alarmSystemStatus':            
+				def v = hubUID ? (location.hsmStatus ?: rtData.hsmStatus) : location.currentState("alarmSystemStatus")?.value
                 def n = rtData.virtualDevices['alarmSystemStatus']?.o[v]
 				return [t: 'string', v: v, n: n]
         }
@@ -4862,7 +4920,9 @@ private Map getDeviceAttribute(rtData, deviceId, attributeName, subDeviceIndex =
         if (attributeName == 'hue') {
         	value = cast(rtData, cast(rtData, value, 'decimal') * 3.6, attribute.t)
         }
-		return [t: attribute.t, v: value, d: deviceId, a: attributeName, i: subDeviceIndex, x: (!!attribute.m || !!trigger) && ((device?.id != (rtData.event.device?:location).id) || (((attributeName == 'orientation') || (attributeName == 'axisX') || (attributeName == 'axisY') || (attributeName == 'axisZ') ? 'threeAxis' : attributeName) != rtData.event.name))]
+        //have to compare ids and type for hubitat since the locationid can be the same as the deviceid
+        def deviceMatch = (device?.id == (rtData.event.device?:location).id) && ( isDeviceLocation(device) == isDeviceLocation((rtData.event.device?:location)))
+		return [t: attribute.t, v: value, d: deviceId, a: attributeName, i: subDeviceIndex, x: (!!attribute.m || !!trigger) && (!deviceMatch || (((attributeName == 'orientation') || (attributeName == 'axisX') || (attributeName == 'axisY') || (attributeName == 'axisZ') ? 'threeAxis' : attributeName) != rtData.event.name))]
     }
     return [t: "error", v: "Device '${deviceId}' not found"]
 }
@@ -6617,7 +6677,7 @@ private func_previousage(rtData, params) {
     def param = evaluateExpression(rtData, params[0], 'device')
     if ((param.t == 'device') && (param.a) && param.v.size()) {
 		def device = getDevice(rtData, param.v[0])
-        if (device && (device.id != location.id)) {
+        if (device && !isDeviceLocation(device)) {
         	def states = device.statesSince(param.a, new Date(now() - 604500000), [max: 5])
             if (states.size() > 1) {
             	def newValue = states[0].getValue()
@@ -6649,7 +6709,7 @@ private func_previousvalue(rtData, params) {
     	def attribute = rtData.attributes[param.a]
         if (attribute) {
 			def device = getDevice(rtData, param.v[0])
-	        if (device && (device.id != location.id)) {
+	        if (device && !isDeviceLocation(device)) {
                 def states = device.statesSince(param.a, new Date(now() - 604500000), [max: 5])
                 if (states.size() > 1) {
                     def newValue = states[0].getValue()
@@ -7729,6 +7789,11 @@ private List hexToRgbArray(hex) {
     return [0, 0, 0];
 }
 
+//hubitat device ids can be the same as the location id
+private isDeviceLocation(device){
+ 	return device?.id.toString() == location.id.toString() && (hubUID ? ((device?.hubs?.size() ?: 0) > 0) : true)
+}
+
 /******************************************************************************/
 /*** DEBUG FUNCTIONS														***/
 /******************************************************************************/
@@ -7932,7 +7997,7 @@ def Map getSystemVariablesAndValues(rtData) {
     return result
 }
 
-private static Map getSystemVariables() {
+private Map getSystemVariables() {
 	return [
         '$args': [t: "dynamic", d: true],
         '$json': [t: "dynamic", d: true],
@@ -8016,7 +8081,7 @@ private static Map getSystemVariables() {
 		"\$iftttStatusCode": [t: "integer", v: null],
 		"\$iftttStatusOk": [t: "boolean", v: null],
 		"\$locationMode": [t: "string", d: true],
-		"\$hsmStatus": [t: "string", d: true],
+        "\$${hubUID ? "hsmStatus" : "shmStatus"}": [t: "string", d: true],
         "\$version": [t: "string", d: true]
 	].sort{it.key}
 }
@@ -8069,8 +8134,9 @@ private getSystemVariableValue(rtData, name) {
 		case "\$randomSaturation": def result = getRandomValue("\$randomSaturation") ?: (int)Math.round(50 + 50 * Math.random()); setRandomValue("\$randomSaturation", result); return result
 		case "\$randomHue": def result = getRandomValue("\$randomHue") ?: (int)Math.round(360 * Math.random()); setRandomValue("\$randomHue", result); return result
   		case "\$locationMode": return location.getMode()
-		//case "\$hsmStatus": switch (location.hsmStatus ?: rtData.hsmStatus) { case 'allDisarmed' : return 'All Disarmed'; case 'disarmed': return 'Disarmed'; case 'armedHome': return 'Armed/Home'; case 'armedAway': return 'Armed/Away'; }; return null;
-        case "\$hsmStatus": return location.hsmStatus ?: rtData.hsmStatus
+        case "\$${hubUID ? "hsmStatus" : "shmStatus"}": 
+        	if(hubUID) { return location.hsmStatus ?: rtData.hsmStatus } 
+        	else switch (location.currentState("alarmSystemStatus")?.value) { case 'off': return 'Disarmed'; case 'stay': return 'Armed/Stay'; case 'away': return 'Armed/Away'; }; return null;
     }
 }
 

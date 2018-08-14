@@ -34,7 +34,7 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 				if ($scope.$$destroyed) return;
 				if (currentRequestId != $scope.requestId) { return };
 				if (data) {
-					$scope.endpoint=data.endpoint + 'execute/:pistonId:' + '?access_token=' + data.accessToken;
+					$scope.endpoint=data.endpoint + 'execute/:pistonId:' + (data.accessToken ? '?access_token=' + data.accessToken : '');
 					$scope.rawEndpoint=data.endpoint;
 					$scope.rawAccessToken=data.accessToken;
 					if (data.error) {
@@ -664,7 +664,7 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
         	$scope.designer.items = [
 	            { type: 'blank', name: 'Create a blank piston', icon: 'code', cssClass: 'wide btn-default' },
 	            { type: 'duplicate', name: 'Create a duplicate piston', icon: 'code', cssClass: 'wide btn-info' },
-    	        { type: 'template', name: 'Create a piston from a template', icon: 'code', cssClass: 'wide btn-success' },
+    	        // { type: 'template', name: 'Create a piston from a template', icon: 'code', cssClass: 'wide btn-success' },
         	    { type: 'restore', name: 'Restore a piston using a backup code', icon: 'code', cssClass: 'wide btn-warning' },
         	    { type: 'import', name: 'Import a piston from an external source', icon: 'code', cssClass: 'wide btn-danger' },
 	        ];

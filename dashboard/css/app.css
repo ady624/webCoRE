@@ -748,6 +748,12 @@ span.swatch {
 	margin-right: 4px;
 }
 
+.sprite-icon {
+    width: 1em;
+    height: 1em;
+    vertical-align: -.125em;
+}
+
 
 span.s-b { font-weight: bold; }
 span.s-i { font-style: italic; }
@@ -1067,6 +1073,7 @@ button .btn .btn-default active{
 }
 
 .collapse-control {
+  display: inline-block;
   transition: transform 0.2s ease-out;
   padding: 10px;
   margin: -5px -10px 0 0;
@@ -1225,13 +1232,13 @@ li[instance] {
   }
 
   /* Rotate the icon */
-  .main.allow-transition > .collapse-control::before {
+  .main.allow-transition > .collapse-control svg {
     transition: transform 0.5s ease-out;
   }
-  .main > .collapse-control::before {
+  .main > .collapse-control svg {
     display: inline-block;
   }
-  .main.sidebar-collapsed > .collapse-control::before {
+  .main.sidebar-collapsed > .collapse-control svg {
     transform: rotate(180deg);
   }
 

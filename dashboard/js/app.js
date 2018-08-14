@@ -397,6 +397,18 @@ app.directive('taskedit', function() {
 	};
 });
 
+app.directive('checkbox', function() {
+	return {
+		restrict: 'E',
+		scope: {
+			checked: '=',
+			iconClass: '@',
+			radio: '=',
+		},
+		template: '<i ng-if="checked" ng-class="iconClass + \' fa-check-\' + (radio ? \'circle\' : \'square\')" class="far no-ng-animate"></i><i ng-if="!checked" ng-class="iconClass + \' fa-\' + (radio ? \'circle\' : \'square\')" class="far no-ng-animate"></i>'
+	};
+});
+
 app.filter('orderObjectBy', function() {
   return function(items, field, reverse) {
     var filtered = [];
@@ -1333,21 +1345,51 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 	dataService.listFuelStreams = function() {
 		var instance = dataService.getInstance();
 		if (instance) {
-			var iid = instance.id;
-			var si = store[instance.id];
-			if (!si) si = {};
-			var region = (si && si.uri && si.uri.startsWith('https://graph-eu')) ? 'eu' : 'us';
-			var req = {
-				method: 'POST',
-				url: 'https://api-' + region + '-' + iid[32] + '.webcore.co:9287/fuelStreams/list',
-				headers: {
-				'Auth-Token': '|'+ iid
-				},
-				data: { i: iid }
+			var urls = instance.fuelStreamUrls;
+			var jsonp = false;
+			var req;
+			
+			if(urls){
+				var params = urls.list;
+				
+				if(params.l){
+					jsonp = true;
+					req = params.u;
+				}
+				else {
+					req = {
+						method: params.m,
+						url: params.u,
+						headers: params.h,
+						data: params.d
+					}
+				}
 			}
-			return $http(req).then(function(response) {
-					return response.data;
-				});
+			else {
+				var iid = instance.id;
+				var si = store[instance.id];
+				if (!si) si = {};
+				var region = (si && si.uri && si.uri.startsWith('https://graph-eu')) ? 'eu' : 'us';
+				req = {
+					method: 'POST',
+					url: 'https://api-' + region + '-' + iid[32] + '.webcore.co:9287/fuelStreams/list',
+					headers: {
+					'Auth-Token': '|'+ iid
+					},
+					data: { i: iid }
+				}				
+			}
+			
+			if(jsonp){
+				return $http.jsonp(req,{jsonpCallbackParam: 'callback'}).then(function(response) {
+						return response.data;
+					});
+			}
+			else {
+				return $http(req).then(function(response) {
+						return response.data;
+					});
+			}
 		}
 	}
 
@@ -1396,21 +1438,54 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 	dataService.listFuelStreamData = function(fuelStreamId) {
 		var instance = dataService.getInstance();
 		if (instance) {
-			var iid = instance.id;
-			var si = store[instance.id];
-			if (!si) si = {};
-			var region = (si && si.uri && si.uri.startsWith('https://graph-eu')) ? 'eu' : 'us';
-			var req = {
-				method: 'POST',
-				url: 'https://api-' + region + '-' + iid[32] + '.webcore.co:9287/fuelStreams/get',
-				headers: {
-				'Auth-Token': '|'+iid
-				},
-				data: { i: iid, f: fuelStreamId }
+			var urls = instance.fuelStreamUrls;
+			var jsonp = false;
+			var req;
+			
+			if(urls){
+				var params = urls.get;
+				
+				if(params.l){
+					jsonp = true;
+					req = params.u.replace("{" + params.p + "}", fuelStreamId);
+				}
+				else {
+					var data = params.d
+					data[params.p] = fuelStreamId;
+					
+					req = {
+						method: params.m,
+						url: params.u,
+						headers: params.h,
+						data: data
+					}
+				}
 			}
-			return $http(req).then(function(response) {
-					return response.data;
-				});
+			else {
+				var iid = instance.id;
+				var si = store[instance.id];
+				if (!si) si = {};
+				var region = (si && si.uri && si.uri.startsWith('https://graph-eu')) ? 'eu' : 'us';
+				req = {
+					method: 'POST',
+					url: 'https://api-' + region + '-' + iid[32] + '.webcore.co:9287/fuelStreams/get',
+					headers: {
+					'Auth-Token': '|'+iid
+					},
+					data: { i: iid, f: fuelStreamId }
+				}				
+			}
+			
+			if(jsonp){
+				return $http.jsonp(req,{jsonpCallbackParam: 'callback'}).then(function(response) {
+						return response.data;
+					});
+			}
+			else {
+				return $http(req).then(function(response) {
+						return response.data;
+					});
+			}
 		}
 	}
 
@@ -2047,12 +2122,6 @@ if (document.selection) {
      document.execCommand("Copy");
 }}
 
-window.FontAwesomeConfig = {
-  autoReplaceSvg: 'nest',
-};
-
-var fontAwesomePro = true;
-
 function loadFontAwesomeFallback() {
   fontAwesomePro = false;
   $('head script[src*="pro.fontawesome"]').each(function() {
@@ -2062,6 +2131,11 @@ function loadFontAwesomeFallback() {
       }).removeAttr('onerror')
       .appendTo('head');
   });
+}
+
+// Handle Pro load failure before app loads
+if (!window.fontAwesomePro) {
+  loadFontAwesomeFallback();
 }
 
 
