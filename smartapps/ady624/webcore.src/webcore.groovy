@@ -1828,6 +1828,7 @@ private getStorageApp(install = false) {
 }
 
 private getDashboardApp(install = false) {
+    if(hubUID) return null
 	def name = handle() + ' Dashboard'
     def label = app.label + ' (dashboard)'
 	def dashboardApp = getChildApps().find{ it.name == name }

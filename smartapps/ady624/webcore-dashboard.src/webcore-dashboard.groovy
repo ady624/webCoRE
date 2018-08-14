@@ -159,9 +159,9 @@ private void broadcastEvent(deviceId, eventName, eventValue, eventTime) {
     if(asynchttp_v1){
         asynchttp_v1.put(null, params)
     }
-    else {
-        asynchttpPut((String)null, params)
-    }
+    //else {
+    //    asynchttpPut((String)null, params)
+    //}
 }
 
 /******************************************************************************/
