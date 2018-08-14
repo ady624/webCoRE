@@ -113,6 +113,8 @@
 
 
 <viewer ng-if="initialized" ng-animate options="{{viewerPiston.showOptions}}" mode="{{mode}}">
+	<i data-fa-symbol="drag-handle" class="fas fa-sort svg-inline--fa"></i>
+	
 	<div header ng-if="mode=='view'">
 		<div class="container">
 			<div class="row">
@@ -400,7 +402,6 @@
 <script type="text/ng-template" id="piston">
 	<gutter></gutter>
 	<tracer></tracer>
-	<i data-fa-symbol="drag-handle" class="fas fa-sort svg-inline--fa"></i>
 	<content>
 		<line com h ng-if="piston.loading">loading piston "{{meta.name}}"...</line>
 		<line com h ng-if-start="!piston.loading">/**************************************************************/</line>
