@@ -664,7 +664,7 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
         	$scope.designer.items = [
 	            { type: 'blank', name: 'Create a blank piston', icon: 'code', cssClass: 'wide btn-default' },
 	            { type: 'duplicate', name: 'Create a duplicate piston', icon: 'code', cssClass: 'wide btn-info' },
-    	        { type: 'template', name: 'Create a piston from a template', icon: 'code', cssClass: 'wide btn-success' },
+    	        // { type: 'template', name: 'Create a piston from a template', icon: 'code', cssClass: 'wide btn-success' },
         	    { type: 'restore', name: 'Restore a piston using a backup code', icon: 'code', cssClass: 'wide btn-warning' },
         	    { type: 'import', name: 'Import a piston from an external source', icon: 'code', cssClass: 'wide btn-danger' },
 	        ];

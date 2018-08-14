@@ -397,6 +397,18 @@ app.directive('taskedit', function() {
 	};
 });
 
+app.directive('checkbox', function() {
+	return {
+		restrict: 'E',
+		scope: {
+			checked: '=',
+			iconClass: '@',
+			radio: '=',
+		},
+		template: '<i ng-if="checked" ng-class="iconClass + \' fa-check-\' + (radio ? \'circle\' : \'square\')" class="far no-ng-animate"></i><i ng-if="!checked" ng-class="iconClass + \' fa-\' + (radio ? \'circle\' : \'square\')" class="far no-ng-animate"></i>'
+	};
+});
+
 app.filter('orderObjectBy', function() {
   return function(items, field, reverse) {
     var filtered = [];
@@ -2110,12 +2122,6 @@ if (document.selection) {
      document.execCommand("Copy");
 }}
 
-window.FontAwesomeConfig = {
-  autoReplaceSvg: 'nest',
-};
-
-var fontAwesomePro = true;
-
 function loadFontAwesomeFallback() {
   fontAwesomePro = false;
   $('head script[src*="pro.fontawesome"]').each(function() {
@@ -2125,6 +2131,11 @@ function loadFontAwesomeFallback() {
       }).removeAttr('onerror')
       .appendTo('head');
   });
+}
+
+// Handle Pro load failure before app loads
+if (!window.fontAwesomePro) {
+  loadFontAwesomeFallback();
 }
 
 

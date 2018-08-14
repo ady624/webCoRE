@@ -157,3 +157,9 @@ ul[fuelStreams] li label {
 		height: 50%;
 	}
 }
+
+.collapse-control {
+	padding-top: 3px;
+	padding-bottom: 3px;
+	padding-right: 14px;
+}
