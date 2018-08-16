@@ -7282,7 +7282,8 @@ private cast(rtData, value, dataType, srcDataType = null) {
             	case 'boolean': return value ? "true" : "false";
             	case 'decimal':
                 	//if (value instanceof Double) return sprintf('%f', value)
-                    return value.toString().replaceFirst(/\.?(0+)$/, '')
+                    // strip trailing zeroes (e.g. 5.00 to 5 and 5.030 to 5.03)
+                    return value.toString().replaceFirst(/(?:\.|(\.\d*?))0+$/, '$1')
             	case 'integer':
             	case 'long': break; if (value > 9999999999) { return formatLocalTime(value) }; break;
                 case 'time': return formatLocalTime(value, 'h:mm:ss a z');
