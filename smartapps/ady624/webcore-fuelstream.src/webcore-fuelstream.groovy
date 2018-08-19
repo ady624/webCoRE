@@ -44,12 +44,17 @@ def initialize(){
     unsubscribe()
     unschedule()    
      
-    if(!state.fuelStreamData){
-     	state.fuelStreamData = []   
-    }
+    getFuelStreamData()
     
     cleanFuelStreams()
 }
+
+def getFuelStreamData(){
+    if(!state.fuelStreamData){
+     	state.fuelStreamData = []   
+    }
+    return state.fuelStreamData
+}	
 
 def cleanFuelStreams(){    
     //ensure max size is obeyed
@@ -58,15 +63,15 @@ def cleanFuelStreams(){
     
     if(storageSize > max){
         log.debug "Trim down fuel stream"     
-        def points = state.fuelStreamData.size()
+        def points = getFuelStreamData().size()
         def averageSize = points > 0 ? storageSize/(double)points : 0      
 
         def pointsToRemove = averageSize > 0 ? (int)((storageSize - max) / (double)averageSize) : 0
         pointsToRemove = pointsToRemove > 0 ? pointsToRemove : 0
 
         log.debug "Size ${storageSize}KB Points ${points} Avg $averageSize Remove $pointsToRemove"
-        def toBeRemoved = state.fuelStreamData.sort { it.i }.take(pointsToRemove)
-        state.fuelStreamData.removeAll(toBeRemoved)                
+        def toBeRemoved = getFuelStreamData().sort { it.i }.take(pointsToRemove)
+        getFuelStreamData().removeAll(toBeRemoved)                
     }
 }
 
@@ -77,7 +82,7 @@ def updateFuelStream(req){
     def instance = req.i
     def source = req.s
  
-    state.fuelStreamData.add([d: data, i: (new Date()).getTime()])
+    getFuelStreamData().add([d: data, i: (new Date()).getTime()])
     
     cleanFuelStreams()
 }
@@ -93,7 +98,7 @@ def getFuelStream(){
 }
 
 def listFuelStreamData(){
-    state.fuelStreamData.collect{ it << [t: getFormattedDate(new Date(it.i))]}
+    getFuelStreamData().collect{ it << [t: getFormattedDate(new Date(it.i))]}
 }
 
 def uninstalled(){
