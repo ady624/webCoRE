@@ -324,7 +324,7 @@ preferences {
 /******************************************************************************/
 def pageMain() {
 	//webCoRE Piston main page
-	return dynamicPage(name: "pageMain", title: "", uninstall: !!state.build) {
+	return dynamicPage(name: "pageMain", title: "", install: hubUID ? true : false, uninstall: !!state.build) {
     	if (!parent || !parent.isInstalled()) {
         	section() {
 				paragraph "Sorry, you cannot install a piston directly from the Marketplace, please use the webCoRE SmartApp instead."
@@ -362,6 +362,12 @@ def pageMain() {
             	href "pageRun", title: "Force-run this piston"
                 href "pageClear", title: "Clear all data except variables", description: "You will lose all logs, trace points, statistics, but no variables"
                 href "pageClearAll", title: "Clear all data", description: "You will lose all data stored in any variables"
+            }
+            
+            if(hubUID){
+                section(){
+                    input "dev", "capability.*", title: "Devices", description: "Piston devices", multiple: true    
+                }
             }
         }
 	}
@@ -414,6 +420,7 @@ def isInstalled(){
 }
 
 def installed() {
+    if(hubUID && !app.id) return
    	state.created = now()
     state.modified = now()
     state.build = 0
@@ -1079,7 +1086,7 @@ private finalizeEvent(rtData, initialMsg, success = true) {
     processSchedules(rtData, true)
 
 	if (rtData.updateDevices) {
-    	updateDeviceList(rtData.devices*.value.id)
+    	updateDeviceList(rtData, rtData.devices*.value.id)
     }
     if (initialMsg) {
     	if (success) {
@@ -4412,8 +4419,9 @@ private getRoutineById(routineId) {
     return null
 }
 
-private void updateDeviceList(deviceIdList) {
-	app.updateSetting('dev', [type: 'capability.device', value: deviceIdList.unique()])
+private void updateDeviceList(rtData, deviceIdList) {
+    if(hubUID && deviceIdList && !settings.dev) debug "Unable to update setting 'dev' from child app. Open piston '$app.label' and click 'Done' for faster operation", rtData
+	app.updateSetting('dev', [type: hubUID ? 'capability' : 'capability.device', value: deviceIdList.unique()])
 }
 
 private void updateContactList(contactIdList) {
@@ -4743,7 +4751,7 @@ private void subscribeAll(rtData) {
         //save devices
         List deviceIdList = rawDevices.collect{ it && it.value ? it.value.id : null }
         deviceIdList.removeAll{ it == null }
-        updateDeviceList(deviceIdList)
+        updateDeviceList(rtData, deviceIdList)
         //save contacts
         List contactIdList = rawContacts.collect{ it && it.value ? it.value.id : null }
         contactIdList.removeAll{ it == null }
@@ -4815,7 +4823,11 @@ private getDevice(rtData, idOrName) {
 	if (rtData.locationId == idOrName) return location
 	def device = rtData.devices[idOrName] ?: rtData.devices.find{ it.value.getDisplayName() == idOrName }?.value
     if (!device) {
-    	if (!rtData.allDevices) rtData.allDevices = parent.listAvailableDevices(true)
+        if (!rtData.allDevices){
+            def msg = timer "Device missing from piston. Loading all from parent..."
+            rtData.allDevices = parent.listAvailableDevices(true)
+            if (rtData.logging > 2) debug msg, rtData
+        }
         if (rtData.allDevices) {
 			def deviceMap = rtData.allDevices.find{ (idOrName == it.key) || (idOrName == it.value.getDisplayName()) }
 	        if (deviceMap) {
