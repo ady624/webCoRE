@@ -2215,8 +2215,7 @@ public Map getRunTimeData(semaphore = null, fetchWrappers = false) {
         logPistonExecutions: settings.logPistonExecutions,
         useLocalFuelStreams : settings.localFuelStreams
     ] + (hubUID ? [        
-		hsmStatus: state.hsmStatus,
-        deviceIds: allDeviceIds
+		hsmStatus: state.hsmStatus
     ] : [:])
 }
 

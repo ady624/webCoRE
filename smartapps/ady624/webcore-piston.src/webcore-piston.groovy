@@ -3730,14 +3730,7 @@ private evaluateOperand(rtData, node, operand, index = null, trigger = false, ne
 		case 'd': //devices
         	def deviceIds = []
             for (d in expandDeviceList(rtData, operand.d)) {
-                if(hubUID && !!rtData.deviceIds){
-                    if(rtData.deviceIds.any { (d == hashId(it.id)) || (d == it.label) }) {
-                        deviceIds.push(d)
-                    }
-                }
-                else {
-                    if (getDevice(rtData, d)) deviceIds.push(d)
-                }                
+				if (getDevice(rtData, d)) deviceIds.push(d)                
             }
             /*
             for (d in rtData, operand.d) {
@@ -4819,7 +4812,6 @@ private sanitizeVariableName(name) {
 }
 
 private getDevice(rtData, idOrName) {
-    if(hubUID && !!rtData.deviceIds) return getDeviceHubitat(rtData, idOrName)
 	if (rtData.locationId == idOrName) return location
 	def device = rtData.devices[idOrName] ?: rtData.devices.find{ it.value.getDisplayName() == idOrName }?.value
     if (!device) {
@@ -4835,37 +4827,6 @@ private getDevice(rtData, idOrName) {
             error "Device ${idOrName} was not found. Please review your piston.", rtData
         }
     }
-    return device
-}
-//parent.listAvailableDevices(true) adds several hundred milliseconds. Get devs only as needed by deviceid
-private getDeviceHubitat(rtData, idOrName) {
-    //def start = now()
-	if (rtData.locationId == idOrName) return location
-	def device = rtData.devices[idOrName] ?: rtData.devices.find{ it.value.getDisplayName() == idOrName }?.value
-    if (!device) {
-        if (!rtData.allDevices) {
-            rtData.allDevices = [:]            
-        }         
-
-        def deviceMap = rtData.allDevices.find{ (idOrName == it.key) || (idOrName == it.value.getDisplayName()) }
-        if(!deviceMap){
-            def minDev = rtData.deviceIds.find { (idOrName == hashId(it.id)) || (idOrName == it.label) }
-            if(minDev){
-                rtData.allDevices[hashId(minDev.id)] = getDeviceById(minDev.id)
-                deviceMap = rtData.allDevices.find { it.key == hashId(minDev.id) }
-            }
-        }
-
-        if (deviceMap) {
-            rtData.updateDevices = true
-            rtData.devices[deviceMap.key] = deviceMap.value
-            device = deviceMap.value
-        } 
-        else {
-            error "Device ${idOrName} was not found. Please review your piston.", rtData
-        }
-    }
-    //if (rtData.logging > 2) debug "Device grabbed in  ${now() - start}ms", rtData
     return device
 }
 
