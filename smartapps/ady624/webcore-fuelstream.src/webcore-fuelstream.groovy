@@ -44,9 +44,10 @@ def initialize(){
     unsubscribe()
     unschedule()    
      
-    getFuelStreamData()
-    
-    cleanFuelStreams()
+    if(app.id){
+        getFuelStreamData()
+    	cleanFuelStreams()
+    }
 }
 
 def getFuelStreamData(){
@@ -73,6 +74,10 @@ def cleanFuelStreams(){
         def toBeRemoved = getFuelStreamData().sort { it.i }.take(pointsToRemove)
         getFuelStreamData().removeAll(toBeRemoved)                
     }
+    
+    getFuelStreamData().each {
+     	it.keySet().remove('t')   
+    }
 }
 
 def updateFuelStream(req){
@@ -98,7 +103,7 @@ def getFuelStream(){
 }
 
 def listFuelStreamData(){
-    getFuelStreamData().collect{ it << [t: getFormattedDate(new Date(it.i))]}
+    getFuelStreamData().collect{ it + [t: getFormattedDate(new Date(it.i))]}
 }
 
 def uninstalled(){
