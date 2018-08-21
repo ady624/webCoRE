@@ -3227,10 +3227,11 @@ private static Map getHubitatAlarmSystemStatusOptions() {
 
 private static Map getAlarmSystemAlertOptions() {
 	return [    
-    	intrusion:	"Intrusion",
-        smoke:		"Smoke",
-        water:		"Water",
-        rule:		"Rule"
+    	intrusion:			"Intrusion Away",
+        "intrusion-home": 	"Intrusion Home",
+        smoke:				"Smoke",
+        water:				"Water",
+        rule:				"Rule"
     ]
 }
 
@@ -3276,8 +3277,7 @@ private Map virtualDevices(updateCache = false) {
         alarmSystemStatus:	[ n: 'Smart Home Monitor status',	t: 'enum',		o: getAlarmSystemStatusOptions(),			x: true]
     ] + (hubUID ? [
         alarmSystemStatus:	[ n: 'Hubitat Safety Monitor status',t: 'enum',		o: getHubitatAlarmSystemStatusOptions(), ac: getAlarmSystemStatusActions(),			x: true], //ac - actions. hubitat doesn't reuse the status for actions
-        //this one can be confusing to users so it's been commented out. It can subscribe to hsmSetArm, but the safety monitor doesn't actually send these events themselves, only other apps
-        //alarmSystemEvent:	[ n: 'Hubitat Safety Monitor event',t: 'enum',		o: getAlarmSystemStatusActions(),			m: true],
+		alarmSystemEvent:	[ n: 'Hubitat Safety Monitor event',t: 'enum',		o: getAlarmSystemStatusActions(),			m: true],
         alarmSystemAlert: 	[ n: 'Hubitat Safety Monitor alert',t: 'enum',		o: getAlarmSystemAlertOptions(),			m: true],
         alarmSystemRule: 	[ n: 'Hubitat Safety Monitor rule',t: 'enum',		o: getAlarmSystemRuleOptions(),			m: true]    
     ] : [:])
