@@ -5292,6 +5292,7 @@ def setLocalVariable(name, value) {
 /******************************************************************************/
 
 def Map proxyEvaluateExpression(rtData, expression, dataType = null) {
+    log.debug expression
 	resetRandomValues()
     rtData = getRunTimeData(rtData)
 	def result = evaluateExpression(rtData, expression, dataType)
@@ -8054,7 +8055,7 @@ private Map getSystemVariables() {
 		"\$iftttStatusCode": [t: "integer", v: null],
 		"\$iftttStatusOk": [t: "boolean", v: null],
 		"\$locationMode": [t: "string", d: true],
-        "\$${hubUID ? "hsmStatus" : "shmStatus"}": [t: "string", d: true],
+        (hubUID ? "\$hsmStatus" : "\$shmStatus"): [t: "string", d: true],
         "\$version": [t: "string", d: true]
 	].sort{it.key}
 }
@@ -8107,7 +8108,7 @@ private getSystemVariableValue(rtData, name) {
 		case "\$randomSaturation": def result = getRandomValue("\$randomSaturation") ?: (int)Math.round(50 + 50 * Math.random()); setRandomValue("\$randomSaturation", result); return result
 		case "\$randomHue": def result = getRandomValue("\$randomHue") ?: (int)Math.round(360 * Math.random()); setRandomValue("\$randomHue", result); return result
   		case "\$locationMode": return location.getMode()
-        case "\$${hubUID ? "hsmStatus" : "shmStatus"}": 
+        case  (hubUID ? "\$hsmStatus" : "\$shmStatus"): 
         	if(hubUID) { return location.hsmStatus ?: rtData.hsmStatus } 
         	else switch (location.currentState("alarmSystemStatus")?.value) { case 'off': return 'Disarmed'; case 'stay': return 'Armed/Stay'; case 'away': return 'Armed/Away'; }; return null;
     }
