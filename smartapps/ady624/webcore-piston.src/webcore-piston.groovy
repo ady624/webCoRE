@@ -7476,7 +7476,11 @@ private localToUtcTime(dateOrTimeOrString) {
 	if (dateOrTimeOrString instanceof String) {
 		//get unix time
         try {
-        	return (new Date()).parse(dateOrTimeOrString + (!(dateOrTimeOrString =~ /(\s[A-Z]{3}((\+|\-)[0-9]{2}\:[0-9]{2}|\s[0-9]{4})?$)/)? ' ' + formatLocalTime(now(), 'z') : ''))
+            if (!(dateOrTimeOrString =~ /(\s[A-Z]{3}((\+|\-)[0-9]{2}\:[0-9]{2}|\s[0-9]{4})?$)/)) {
+                def newDate = (new Date()).parse(dateOrTimeOrString + ' ' + formatLocalTime(now(), 'Z'))
+                return newDate + (location.timeZone.getOffset(now()) - location.timeZone.getOffset(newDate))
+            }
+            return (new Date()).parse(dateOrTimeOrString)
 		} catch (all) {
         	try {
 	        	return (new Date(dateOrTimeOrString)).getTime()
