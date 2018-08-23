@@ -5292,7 +5292,6 @@ def setLocalVariable(name, value) {
 /******************************************************************************/
 
 def Map proxyEvaluateExpression(rtData, expression, dataType = null) {
-    log.debug expression
 	resetRandomValues()
     rtData = getRunTimeData(rtData)
 	def result = evaluateExpression(rtData, expression, dataType)
