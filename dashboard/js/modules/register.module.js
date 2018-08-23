@@ -2,6 +2,7 @@ config.controller('register', ['$scope', '$rootScope', 'dataService', '$timeout'
 	var tmrStatus = null;
 	$scope.loading = false;
 	$scope.code = '';
+	$scope.hasRegistered = dataService.listLocations().length > 0;
 
 	$scope.init = function() {
 	};
@@ -23,7 +24,7 @@ config.controller('register', ['$scope', '$rootScope', 'dataService', '$timeout'
 	$scope.register = function() {
 		$scope.loading = true;
 		dataService.registerDashboard($scope.code).then(function(data) {
-			if (data && (data.length >= 80) && (data.length <= 140)) {
+			if (data && (data.length >= 80) && (data.length <= 180)) {
 				$location.path('/init/' + data);
 			} else {
 				$scope.setStatus("Sorry, the registration code you provided did not work...");
@@ -34,6 +35,9 @@ config.controller('register', ['$scope', '$rootScope', 'dataService', '$timeout'
 
 
 
+	$scope.cancel = function() {
+		$location.path('/');
+	};
 
 
     //init

@@ -18,8 +18,21 @@
  *
  *  Version history
 */
-public static String version() { return "v0.2.0fa.20171011" }
+public static String version() { return "v0.3.107.20180806" }
 /*
+ *	08/06/2018 >>> v0.3.107.20180806 - BETA M3 - Font Awesome 5 icons, expanding textareas to fix expression scrolling, boolean date and datetime global variable editor fixes
+ *	07/31/2018 >>> v0.3.106.20180731 - BETA M3 - Contact Book removal support
+ *	06/28/2018 >>> v0.3.105.20180628 - BETA M3 - Reorder variables, collapse fuel streams, custom web request body, json and urlEncode functions
+ *	03/23/2018 >>> v0.3.104.20180323 - BETA M3 - Fixed unexpected dashboard logouts, updating image urls in tiles, 12 am/pm in time(), unary negation following another operator
+ *	02/24/2018 >>> v0.3.000.20180224 - BETA M3 - Dashboard redesign by @acd37, collapsible sidebar, fix "was" conditions on decimal attributes and log failures due to duration threshold
+ *	01/16/2018 >>> v0.2.102.20180116 - BETA M2 - Fixed IE 11 script error, display of offset expression evaluation, blank device lists on piston restore, avoid error and log a warning when ST sunrise/sunset is blank
+ *	12/27/2017 >>> v0.2.101.20171227 - BETA M2 - Fixed 172.x.x.x web requests thanks to @tbam, fixed array subscripting with 0.0 decimal value as in a for loop using $index
+ *	12/11/2017 >>> v0.2.100.20171211 - BETA M2 - Replaced the scheduler-based timeout recovery handling to ease up on resource usage
+ *	11/29/2017 >>> v0.2.0ff.20171129 - BETA M2 - Fixed missing conditions and triggers for several device attributes, new comparison group for binary files
+ *	11/09/2017 >>> v0.2.0fe.20171109 - BETA M2 - Fixed on events subscription for global and superglobal variables
+ *	11/05/2017 >>> v0.2.0fd.20171105 - BETA M2 - Further DST fixes
+ *	11/05/2017 >>> v0.2.0fc.20171105 - BETA M2 - DST fixes
+ *	10/26/2017 >>> v0.2.0fb.20171026 - BETA M2 - Partial support for super global variables - works within same location - no inter-location comms yet
  *	10/11/2017 >>> v0.2.0fa.20171010 - BETA M2 - Various bug fixes and improvements - fixed the mid() and random() functions
  *	10/07/2017 >>> v0.2.0f9.20171007 - BETA M2 - Added previous location attribute support and methods to calculate distance between places, people, fixed locations...
  *	10/06/2017 >>> v0.2.0f8.20171006 - BETA M2 - Added support for Android geofence filtering depending on horizontal accuracy
@@ -270,7 +283,7 @@ public static String version() { return "v0.2.0fa.20171011" }
  *	12/02/2016 >>> v0.0.002.20161202 - ALPHA - Small progress, Add new piston now points to the piston editor UI
  *	10/28/2016 >>> v0.0.001.20161028 - ALPHA - Initial release
  */
- 
+
 /******************************************************************************/
 /*** webCoRE DEFINITION														***/
 /******************************************************************************/
@@ -306,7 +319,7 @@ preferences {
 def pageMain() {
 	//webCoRE Piston main page
 	return dynamicPage(name: "pageMain", title: "", uninstall: !!state.build) {
-    	if (!parent || !parent.isInstalled()) {        
+    	if (!parent || !parent.isInstalled()) {
         	section() {
 				paragraph "Sorry, you cannot install a piston directly from the Marketplace, please use the webCoRE SmartApp instead."
             }
@@ -321,11 +334,11 @@ def pageMain() {
                 label name: "name", title: "Name", required: true, state: (name ? "complete" : null), defaultValue: parent.generatePistonName(), submitOnChange: true
             }
 
-            section("Dashboard") {        
+            section("Dashboard") {
                 def dashboardUrl = parent.getDashboardUrl()
                 if (dashboardUrl) {
                     dashboardUrl = "${dashboardUrl}piston/${hashId(app.id)}"
-                    href "", title: "View piston in dashboard", style: "external", url: dashboardUrl, image: "https://cdn.rawgit.com/ady624/CoRE/master/resources/images/icons/dashboard.png", required: false
+                    href "", title: "View piston in dashboard", style: "external", url: dashboardUrl, image: "https://cdn.rawgit.com/ady624/${handle()}/master/resources/icons/dashboard.png", required: false
                 } else {
                     paragraph "Sorry, your dashboard does not seem to be enabled, please go to the parent app and enable the dashboard."
                 }
@@ -338,7 +351,7 @@ def pageMain() {
                 paragraph version(), title: "Version"
                 paragraph mem(), title: "Memory Usage"
             }
-            
+
             section(title:"Recovery") {
             	href "pageRun", title: "Force-run this piston"
                 href "pageClear", title: "Clear all data except variables", description: "You will lose all logs, trace points, statistics, but no variables"
@@ -452,14 +465,14 @@ def activity(lastLogTimestamp) {
 	return [
     	name: app.label,
         state: state.state,
-    	logs: index ? logs[0..index-1] : [],		
+    	logs: index ? logs[0..index-1] : [],
     	trace: state.trace,
         localVars: state.vars,
         memory: mem(),
         lastExecuted: state.lastExecuted,
         nextSchedule: state.nextSchedule,
         schedules: state.schedules
-    ]    
+    ]
 }
 
 def clearLogs() {
@@ -521,7 +534,7 @@ private int setIds(node, maxId = 0, existingIds = [:], requiringIds = [], level 
         	node.ei.removeAll{ !it.c && !it.s }
 			for (elseIf in node.ei) {
 		        id = elseIf['$']
-                if (!id || existingIds[id]) {               
+                if (!id || existingIds[id]) {
                     requiringIds.push(elseIf)
                 } else {
                     maxId = (maxId < id) ? id : maxId
@@ -532,7 +545,7 @@ private int setIds(node, maxId = 0, existingIds = [:], requiringIds = [], level 
         if ((node.t == 'switch') && (node.cs)) {
 			for (_case in node.cs) {
 		        id = _case['$']
-                if (!id || existingIds[id]) {               
+                if (!id || existingIds[id]) {
                     requiringIds.push(_case)
                 } else {
                     maxId = (maxId < id) ? id : maxId
@@ -543,7 +556,7 @@ private int setIds(node, maxId = 0, existingIds = [:], requiringIds = [], level 
         if ((node.t == 'action') && (node.k)) {
 			for (task in node.k) {
 		        id = task['$']
-                if (!id || existingIds[id]) {               
+                if (!id || existingIds[id]) {
                     requiringIds.push(task)
                 } else {
                     maxId = (maxId < id) ? id : maxId
@@ -552,7 +565,7 @@ private int setIds(node, maxId = 0, existingIds = [:], requiringIds = [], level 
             }
         }
     }
-	for (list in node.findAll{ it.value instanceof List }) { 
+	for (list in node.findAll{ it.value instanceof List }) {
         for (item in list.value.findAll{ it instanceof Map }) {
             maxId = setIds(item, maxId, existingIds, requiringIds, level + 1)
         }
@@ -574,7 +587,7 @@ def config(data) {
     }
 	if (data.bin) {
 		state.bin = data.bin;
-	    app.updateSetting('bin', [type: 'text', value: state.bin ?: ''])        
+	    app.updateSetting('bin', [type: 'text', value: state.bin ?: ''])
     }
 	if (data.author) {
 		state.author = data.author;
@@ -624,11 +637,11 @@ Map resume() {
 	if (tempRtData.logging) info "Starting piston... (${version()})", tempRtData, 0
     def rtData = getRunTimeData(tempRtData, null, true)
     checkVersion(rtData)
-    state.hash = null    
+    state.hash = null
     state.subscriptions = [:]
     atomicState.schedules = []
     state.schedules = []
-    subscribeAll(rtData)   
+    subscribeAll(rtData)
     if (rtData.logging) info msg, rtData
     updateLogs(rtData)
     rtData.result = [active: true, subscriptions: state.subscriptions]
@@ -684,7 +697,7 @@ private getRunTimeData(rtData = null, semaphore = null, fetchWrappers = false) {
 	    def logs = (rtData && rtData.temporary) ? rtData.logs : null
 		rtData = (rtData && !rtData.temporary) ? rtData : parent.getRunTimeData((semaphore && !(piston.o?.pep)) ? appId : null, !!fetchWrappers)
 	    rtData.timestamp = timestamp
-	    rtData.logs = [[t: timestamp]]    
+	    rtData.logs = [[t: timestamp]]
 	    if (logs && logs.size()) {
 	        rtData.logs = rtData.logs + logs
 	    }
@@ -718,13 +731,13 @@ private getRunTimeData(rtData = null, semaphore = null, fetchWrappers = false) {
         if (!fetchWrappers) {
         	rtData.devices = (settings.dev && (settings.dev instanceof List) ? settings.dev.collectEntries{[(hashId(it.id)): it]} : [:])
         	rtData.contacts = (settings.contacts && (settings.contacts instanceof List) ? settings.contacts.collectEntries{[(hashId(it.id)): it]} : [:])
-        }        
+        }
 	    rtData.systemVars = getSystemVariables()
 	    rtData.localVars = getLocalVariables(rtData, piston.v)
 	} catch(all) {
     	error "Error while getting runtime data:", rtData, null, all
     }
-	return rtData    
+	return rtData
 }
 
 private checkVersion(rtData) {
@@ -754,15 +767,23 @@ def deviceHandler(event) {
 }
 
 def timeHandler(event, recovery = false) {
+try {
 	handleEvents([date: new Date(event.t), device: location, name: 'time', value: event.t, schedule: event, recovery: recovery])
+    } catch (Exception e) {
+    error "Unexpected error:", null, null, e
+    }
 }
 
+//new and improved timeout recovery management
+def timeoutRecoveryHandler_webCoRE(event) {
+	timeHandler([t:now()], true)
+}
+
+/*
 def timeRecoveryHandler(event) {
 	timeHandler(event, true)
-	//def event = [date: new Date(), device: location, name: 'time', value: now(), schedule: [t: 0, s: 0, i: -9]]
-    //executeEvent(rtData, event)
-	//processSchedules rtData, true
 }
+*/
 
 def executeHandler(event) {
 	handleEvents([date: event.date, device: location, name: 'execute', value: event.value, jsonData: event.jsonData])
@@ -771,7 +792,7 @@ def executeHandler(event) {
 //entry point for all events
 def handleEvents(event) {
 	//cancel all pending jobs, we'll handle them later
-	unschedule(timeHandler)
+	//unschedule(timeHandler)
     if (!state.active) return
 	def startTime = now()
     state.lastExecuted = startTime
@@ -789,8 +810,9 @@ def handleEvents(event) {
 		warn "Kill switch is active, aborting piston execution."
     	return;
     }
-    checkVersion(rtData)    
-	runIn(30, timeRecoveryHandler)
+    checkVersion(rtData)
+    setTimeoutRecoveryHandler('timeoutRecoveryHandler_webCoRE')
+	//runIn(30, timeRecoveryHandler)
     if (rtData.semaphoreDelay) {
     	warn "Piston waited at a semaphore for ${rtData.semaphoreDelay}ms", rtData
     }
@@ -805,7 +827,7 @@ def handleEvents(event) {
 	msg2 = timer "Execution stage complete.", null, -1
     if (rtData.logging > 1) trace "Execution stage started", rtData, 1
     def success = true
-    def syncTime = false    
+    def syncTime = false
     if ((event.name != 'time') && (event.name != 'wc_async_reply')) {
     	success = executeEvent(rtData, event)
         syncTime = true
@@ -817,7 +839,7 @@ def handleEvents(event) {
         def schedules = rtData.piston.o?.pep ? atomicState.schedules : state.schedules
         //anything less than 2 seconds in the future is considered due, we'll do some pause to sync with it
         //we're doing this because many times, the scheduler will run a job early, usually 0-1.5 seconds early...
-        if (!schedules || !schedules.size()) break        
+        if (!schedules || !schedules.size()) break
         if (event.name == 'wc_async_reply') {
         	event.schedule = schedules.sort{ it.t }.find{ it.d == event.value }
         } else {
@@ -929,7 +951,7 @@ private Boolean executeEvent(rtData, event) {
         rtData.terminated = false
         if (event.name == 'time') {
         	rtData.fastForwardTo = event.schedule.i
-        }        
+        }
 		setSystemVariableValue(rtData, '$state', rtData.state.new)
         setSystemVariableValue(rtData, '$previousEventDate', rtData.previousEvent?.date ?: now())
         setSystemVariableValue(rtData, '$previousEventDelay', rtData.previousEvent?.delay ?: 0)
@@ -984,7 +1006,7 @@ private Boolean executeEvent(rtData, event) {
                 ended = true
 				tracePoint(rtData, 'end', 0, 0)
 				processSchedules rtData
-                
+
             }
             if (!ended) tracePoint(rtData, 'break', 0, 0)
         } catch (all) {
@@ -1014,7 +1036,7 @@ private finalizeEvent(rtData, initialMsg, success = true) {
         	error initialMsg
         }
     }
-    
+
 	updateLogs(rtData)
 	//update graph data
     rtData.stats.timing.u = now() - startTime
@@ -1062,7 +1084,7 @@ private processSchedules(rtData, scheduleJob = false) {
 	//def msg = timer "Processing schedules..."
 	//reschedule stuff
     //todo, override tasks, if any
-    
+
     def tt = now()
     def schedules = (rtData.piston.o?.pep ? atomicState.schedules : state.schedules) ?: []
     /*
@@ -1075,12 +1097,12 @@ private processSchedules(rtData, scheduleJob = false) {
     */
 	//reset states
     //if automatic states, we set it based on the autoNew - if any
-    if (!rtData.piston.o?.mps) {    
+    if (!rtData.piston.o?.mps) {
     	rtData.state.new = rtData.state.autoNew ?: 'true'
     }
-    
+
     //debug msg, rtData
-    
+
     rtData.state.old = rtData.state.new
     //schedules = (atomicState.schedules ?: [])
     if (rtData.cancelations.all) {
@@ -1116,11 +1138,11 @@ private processSchedules(rtData, scheduleJob = false) {
         	rtData.stats.nextSchedule = next.t
         	if (rtData.logging) info "Setting up scheduled job for ${formatLocalTime(next.t)} (in ${t}s)" + (schedules.size() > 1 ? ', with ' + (schedules.size() - 1).toString() + ' more job' + (schedules.size() > 2 ? 's' : '') + ' pending' : ''), rtData
         	runIn(t, timeHandler, [data: next])
-        	runIn(t + 30, timeRecoveryHandler, [data: next])
+        	//runIn(t + 30, timeRecoveryHandler, [data: next])
     	} else {
 	    	rtData.stats.nextSchedule = 0
             //remove the recovery
-    		unschedule(timeRecoveryHandler)    
+    		//unschedule(timeRecoveryHandler)
 	    }
     }
     if (rtData.piston.o?.pep) atomicState.schedules = schedules
@@ -1218,7 +1240,7 @@ private Boolean executeStatement(rtData, statement, async = false) {
     def perform = false
     def repeat = true
     def index = null
-    def allowed = !statement.r || !(statement.r.length) || evaluateConditions(rtData, statement, 'r', async)    
+    def allowed = !statement.r || !(statement.r.length) || evaluateConditions(rtData, statement, 'r', async)
     if (allowed || !!rtData.fastForwardTo) {
     	while (repeat) {
             switch (statement.t) {
@@ -1272,7 +1294,7 @@ private Boolean executeStatement(rtData, statement, async = false) {
                                     	if (rtData.event.name == operand.v) perform = true
                                     	break;
                                    	case 'x':
-                                    	if ((rtData.event.value == operand.x) && (rtData.event.name == handle())) perform = true                                        
+                                    	if ((rtData.event.value == operand.x) && (rtData.event.name == (operand.x.startsWith('@@') ? '@@' + handle() : rtData.instanceId))) perform = true
                                     	break;
                                 }
                             }
@@ -1288,7 +1310,7 @@ private Boolean executeStatement(rtData, statement, async = false) {
                 	//we override current condition so that child statements can cancel on it
 	                rtData.stack.c = statement.$
                     if (!rtData.fastForwardTo && (!rtData.piston.o?.mps) && (statement.t == 'if') && (rtData.statementLevel == 1) && perform) {
-                        //automatic piston state                        
+                        //automatic piston state
                         rtData.state.autoNew = 'true';
                     }
                     if (perform || !!rtData.fastForwardTo) {
@@ -1315,7 +1337,7 @@ private Boolean executeStatement(rtData, statement, async = false) {
                                     }
                                     value = true
                                     if (!rtData.fastForwardTo) break
-                                }                	
+                                }
                             }
                             if (!rtData.fastForwardTo && (!rtData.piston.o?.mps) && (rtData.statementLevel == 1)) {
                             	//automatic piston state
@@ -1349,13 +1371,13 @@ private Boolean executeStatement(rtData, statement, async = false) {
                         if (rtData.fastForwardTo) index = cast(rtData, rtData.cache["f:${statement.$}"], 'decimal')
                     	if (index == null) {
                         	index = cast(rtData, startValue, 'decimal')
-	                        rtData.cache["f:${statement.$}"] = index                            
+	                        rtData.cache["f:${statement.$}"] = index
                         }
                         setSystemVariableValue(rtData, '$index', index)
 						if ((statement.t == 'each') && !rtData.fastForward) setSystemVariableValue(rtData, '$device', (index < devices.size() ? [devices[(int) index]] : []))
                         if (counterVariable && !rtData.fastForward) setVariable(rtData, counterVariable, (statement.t == 'each') ? (index < devices.size() ? [devices[(int) index]] : []) : index)
                         //do the loop
-                        perform = executeStatements(rtData, statement.s, async)                        
+                        perform = executeStatements(rtData, statement.s, async)
                         if (!perform) {
                             //stop processing
                             value = false
@@ -1377,7 +1399,7 @@ private Boolean executeStatement(rtData, statement, async = false) {
                         if (((stepValue > 0 ) && (index > endValue)) || ((stepValue < 0 ) && (index < endValue))) {
                         	perform = false
                             break
-                        }                    
+                        }
                     }
                 	break
 				case 'switch':
@@ -1411,7 +1433,7 @@ private Boolean executeStatement(rtData, statement, async = false) {
 							}
                             //if we determine that the fast forwarding ended during this execution, we assume found is true
                             found = found || (fastForwardTo != rtData.fastForwardTo)
-                            value = true                            
+                            value = true
                             //if implicit breaks
                             if (implicitBreaks && !rtData.fastForwardTo) {
                                 fallThrough = false
@@ -1455,7 +1477,7 @@ private Boolean executeStatement(rtData, statement, async = false) {
             }
             //break the loop
             if (rtData.fastForwardTo || (statement.t == 'if')) perform = false
-            
+
             //is this statement a loop
             def loop = (statement.t in ['while', 'repeat', 'for', 'each'])
             if (loop && !value && !!rtData.break) {
@@ -1494,18 +1516,18 @@ private Boolean executeStatement(rtData, statement, async = false) {
     //restore current condition
     rtData.stack.c = c
     if (stacked) {
-        rtData.stack.cs.pop()        
-    }    
+        rtData.stack.cs.pop()
+    }
     rtData.stack.s = rtData.stack.ss.pop()
     setSystemVariableValue(rtData, '$index', parentIndex)
     setSystemVariableValue(rtData, '$device', parentDevice)
-    rtData.conditionStateChanged = parentConditionStateChanged   
+    rtData.conditionStateChanged = parentConditionStateChanged
 	return value || !!rtData.fastForwardTo
 }
 
 
 private Boolean executeAction(rtData, statement, async) {
-	def parentDevicesVar = rtData.systemVars['$devices'].v    
+	def parentDevicesVar = rtData.systemVars['$devices'].v
 	//def devices = []
     //def deviceIds = []
     //if override
@@ -1543,7 +1565,7 @@ private Boolean executeAction(rtData, statement, async) {
 	    if (task.$ == rtData.fastForwardTo) {
         	//resuming a waiting task, we need to bring back the devices
             if (rtData.event && rtData.event.schedule && rtData.event.schedule.stack) {
-	            setSystemVariableValue(rtData, '$index', rtData.event.schedule.stack.index)       	
+	            setSystemVariableValue(rtData, '$index', rtData.event.schedule.stack.index)
     	        setSystemVariableValue(rtData, '$device', rtData.event.schedule.stack.device)
                 if (rtData.event.schedule.stack.devices instanceof List) {
 	        	    setSystemVariableValue(rtData, '$devices', rtData.event.schedule.stack.devices)
@@ -1571,10 +1593,10 @@ private Boolean executeTask(rtData, devices, statement, task, async) {
     		//finally found the resuming point, play nicely from hereon
             tracePoint(rtData, "t:${task.$}", now() - t, null)
     		rtData.fastForwardTo = null
-            //restore $device and $devices         
+            //restore $device and $devices
             rtData.resumed = true
         }
-       	//we're not doing anything, we're fast forwarding...        
+       	//we're not doing anything, we're fast forwarding...
        	return true
     }
     if (task.m && (task.m instanceof List) && (task.m.size())) {
@@ -1657,7 +1679,7 @@ private long executeVirtualCommand(rtData, devices, task, params)
 }
 
 private executePhysicalCommand(rtData, device, command, params = [], delay = null, scheduleDevice = null, disableCommandOptimization = false) {
-	if (!!delay && !!scheduleDevice) {    
+	if (!!delay && !!scheduleDevice) {
     	//we're using schedules instead
         def statement = rtData.currentAction
     	def cs = [] + ((statement.tcp == 'b') || (statement.tcp == 'c') ? (rtData.stack?.cs ?: []) : [])
@@ -1703,7 +1725,7 @@ private executePhysicalCommand(rtData, device, command, params = [], delay = nul
             	msg.m = "Skipped execution of physical command [${device.label}].$command($params) because it would make no change to the device."
             } else {
                 if (params.size()) {
-                    if (delay) {            	
+                    if (delay) {
                         device."$command"((params as Object[]) + [delay: delay])
                         msg.m = "Executed physical command [${device.label}].$command($params, [delay: $delay])"
                     } else {
@@ -1741,7 +1763,7 @@ private scheduleTimer(rtData, timer, long lastRun = 0) {
     if (!interval.isInteger()) return
     interval = interval.toInteger()
     if (interval <= 0) return
-    def intervalUnit = timer.lo.vt   
+    def intervalUnit = timer.lo.vt
 
     int level = 0
     switch(intervalUnit) {
@@ -1763,7 +1785,7 @@ private scheduleTimer(rtData, timer, long lastRun = 0) {
     	case 'm': delta = 60000; break;
     	case 'h': delta = 3600000; break;
     }
-   
+
     if (!delta) {
     	//let's get the offset
         time = evaluateExpression(rtData, evaluateOperand(rtData, null, timer.lo2), 'datetime').v
@@ -1776,28 +1798,31 @@ private scheduleTimer(rtData, timer, long lastRun = 0) {
         	//first run, just adjust the time so we're in the future
             while (time <= now()) {
             	//add days to bring it to next occurrence
-            	time += 86400000
+                //we need to go through local time to support DST
+                time = localToUtcTime(utcToLocalTime(time) + 86400000)
             }
         }
     }
     delta = delta * interval
     def priorActivity = !!lastRun
-    
+
+
     //switch to local date/times
     time = utcToLocalTime(time)
     long rightNow = utcToLocalTime(now())
     lastRun = lastRun ? utcToLocalTime(lastRun) : rightNow
     long nextSchedule = lastRun
-    
-    if (lastRun >= rightNow) {
+
+    if (lastRun > rightNow) {
     	//sometimes ST runs timers early, so we need to make sure we're at least in the near future
     	rightNow = lastRun + 1
     }
-    
+
     if (intervalUnit == 'h') {
     	long min = cast(rtData, timer.lo.om, 'long')
-    	nextSchedule = (long) 3600000 * (Math.floor(nextSchedule / 3600000) - 1) + (min * 60000)
+    	nextSchedule = (long) 3600000 * Math.floor(nextSchedule / 3600000) + (min * 60000)
     }
+
     //next date
 	int cycles = 100
     while (cycles) {
@@ -1810,13 +1835,13 @@ private scheduleTimer(rtData, timer, long lastRun = 0) {
             }
 	    	nextSchedule = nextSchedule + delta
 	    } else {
-        
+
             //advance one day if we're in the past
             while (time < rightNow) time += 86400000
             long lastDay = Math.floor(nextSchedule / 86400000)
             long thisDay = Math.floor(time / 86400000)
-        
-	    	//the repeating interval is not necessarily constant	    
+
+	    	//the repeating interval is not necessarily constant
             switch (intervalUnit) {
             	case 'd':
                 	if (priorActivity) {
@@ -1898,21 +1923,21 @@ private scheduleTimer(rtData, timer, long lastRun = 0) {
         priorActivity = true
         cycles -= 1
     }
-       
+
     if (nextSchedule > lastRun) {
     	//convert back to UTC
     	nextSchedule = localToUtcTime(nextSchedule)
     	rtData.schedules.removeAll{ it.s == timer.$ }
         requestWakeUp(rtData, timer, [$: -1], nextSchedule)
     }
-    
+
 }
 
 
 private scheduleTimeCondition(rtData, condition) {
 	//if already scheduled once during this run, don't do it again
     if (rtData.schedules.find{ (it.s == condition.$) && (it.i == 0) }) return
-	def comparison = rtData.comparisons.conditions[condition.co]    
+	def comparison = rtData.comparisons.conditions[condition.co]
     def trigger = false
     if (!comparison) {
 		comparison = rtData.comparisons.triggers[condition.co]
@@ -1922,7 +1947,7 @@ private scheduleTimeCondition(rtData, condition) {
     cancelStatementSchedules(rtData, condition.$)
     if (!comparison.p) return
     def tv1 = condition.ro && (condition.ro.t != 'c') ? evaluateOperand(rtData, null, condition.to) : null
-    def v1 = evaluateExpression(rtData, evaluateOperand(rtData, null, condition.ro), 'datetime').v + (tv1 ? evaluateExpression(rtData, [t: 'duration', v: tv1.v, vt: tv1.vt], 'long').v : 0)    
+    def v1 = evaluateExpression(rtData, evaluateOperand(rtData, null, condition.ro), 'datetime').v + (tv1 ? evaluateExpression(rtData, [t: 'duration', v: tv1.v, vt: tv1.vt], 'long').v : 0)
     def tv2 = condition.ro2 && (condition.ro2.t != 'c') && (comparison.p > 1) ? evaluateOperand(rtData, null, condition.to2) : null
     def v2 = trigger ? v1 : ((comparison.p > 1) ? (evaluateExpression(rtData, evaluateOperand(rtData, null, condition.ro2, null, false, true), 'datetime').v + (tv2 ? evaluateExpression(rtData, [t: 'duration', v: tv2.v, vt: tv2.vt]).v : 0)) : (condition.lo.v == 'time' ? getMidnightTime(rtData) : v1))
     def n = now() + 2000
@@ -1958,7 +1983,7 @@ private Long checkTimeRestrictions(Map rtData, Map operand, long time, int level
 	//returns 0 if restrictions are passed
     //returns a positive number as millisecond offset to apply to nextSchedule for fast forwarding
     //returns a negative number as a failed restriction with no fast forwarding offset suggestion
-    
+
 	List om = (level <= 2) && (operand.om instanceof List) && operand.om.size() ? operand.om : null;
     List oh = (level <= 3) && (operand.oh instanceof List) && operand.oh.size() ? operand.oh : null;
     List odw = (level <= 5) && (operand.odw instanceof List) && operand.odw.size() ? operand.odw : null;
@@ -1969,7 +1994,7 @@ private Long checkTimeRestrictions(Map rtData, Map operand, long time, int level
 
 	if (!om && !oh && !odw && !odm && !owm && !omy) return 0
 	def date = new Date(time)
-          
+
     long result = -1
     //month restrictions
     if (omy && (omy.indexOf(date.month + 1) < 0)) {
@@ -1998,11 +2023,11 @@ private Long checkTimeRestrictions(Map rtData, Map operand, long time, int level
                 case 3: //by minute
                 result = interval * (Math.floor(((7 - date.day) * 1440 - date.hours * 60 - date.minutes) / interval) - 2) * 60000
                 break
-            }        
+            }
             return (result > 0) ? result : -1
         }
     }
-    
+
    	//day of month restrictions
     if (odm) {
 		if (odm.indexOf(date.date) < 0) {
@@ -2022,7 +2047,7 @@ private Long checkTimeRestrictions(Map rtData, Map operand, long time, int level
                 case 3: //by minute
                 result = interval * (Math.floor((((odm.sort{ it }.find{ it > date.date } ?: lastDayOfMonth + odm.sort{ it }[0]) - date.date) * 1440 - date.hours * 60 - date.minutes) / interval) - 2) * 60000
                 break
-            }        
+            }
             return (result > 0) ? result : -1
         }
     }
@@ -2036,7 +2061,7 @@ private Long checkTimeRestrictions(Map rtData, Map operand, long time, int level
         	case 3: //by minute
           	    result = interval * (Math.floor((((odw.sort{ it }.find{ it > date.day } ?: 7 + odw.sort{ it }[0]) - date.day) * 1440 - date.hours * 60 - date.minutes) / interval) - 2) * 60000
                 break
-        }        
+        }
 		return (result > 0) ? result : -1
     }
 
@@ -2261,7 +2286,7 @@ private long vcmd_setState(rtData, device, params) {
     if (rtData.piston.o?.mps) {
     	rtData.state.new = value
     	rtData.pistonStateChanged = rtData.pistonStateChanged || (rtData.state.old != rtData.state.new)
-        setSystemVariableValue(rtData, '$state', rtData.state.new)        
+        setSystemVariableValue(rtData, '$state', rtData.state.new)
     } else {
 	    error "Cannot set the piston state while in automatic mode. Please edit the piston settings to disable the automatic piston state if you want to manually control the state.", rtData
     }
@@ -2592,7 +2617,7 @@ private long vcmd_internal_fade(Map rtData, device, String command, int startLev
     if (duration <= 5000) {
     	minInterval = 500
     } else if (duration <= 10000) {
-    	minInterval = 1000    
+    	minInterval = 1000
 	} else if (duration <= 30000) {
 		minInterval = 3000
 	} else {
@@ -2647,7 +2672,7 @@ private long vcmd_flash(rtData, device, params) {
     def firstCommand = currentState == 'on' ? 'off' : 'on'
     long firstDuration = firstCommand == 'on' ? onDuration : offDuration
     def secondCommand = firstCommand == 'on' ? 'off' : 'on'
-    long secondDuration = firstCommand == 'on' ? offDuration : onDuration    
+    long secondDuration = firstCommand == 'on' ? offDuration : onDuration
     def scheduleDevice = (duration > 10000) ? hashId(device.id) : null
     long dur = 0
     for(def i = 1; i <= cycles; i++) {
@@ -2655,7 +2680,7 @@ private long vcmd_flash(rtData, device, params) {
         dur += firstDuration
     	executePhysicalCommand(rtData, device, secondCommand, [], dur, scheduleDevice, true)
         dur += secondDuration
-    }    
+    }
     //for good measure, send a last command 100ms after the end of the interval
     executePhysicalCommand(rtData, device, currentState, [], duration + 99, scheduleDevice, true)
 	return duration + 100
@@ -2687,7 +2712,7 @@ private long vcmd_flashLevel(rtData, device, params) {
         dur += duration1
     	executePhysicalCommand(rtData, device, 'setLevel', [level2], dur, scheduleDevice, true)
         dur += duration2
-    }    
+    }
     //for good measure, send a last command 100ms after the end of the interval
     executePhysicalCommand(rtData, device, 'setLevel', [currentLevel], duration + 98, scheduleDevice, true)
     executePhysicalCommand(rtData, device, currentState, [], duration + 99, scheduleDevice, true)
@@ -2719,7 +2744,7 @@ private long vcmd_flashColor(rtData, device, params) {
         dur += duration1
     	executePhysicalCommand(rtData, device, 'setColor', [color2], dur, scheduleDevice, true)
         dur += duration2
-    }    
+    }
     //for good measure, send a last command 100ms after the end of the interval
     executePhysicalCommand(rtData, device, currentState, [], duration + 99, scheduleDevice, true)
 	return duration + 100
@@ -2759,18 +2784,11 @@ private long vcmd_sendSMSNotification(rtData, device, params) {
 }
 
 private long vcmd_sendNotificationToContacts(rtData, device, params) {
+	// Contact Book has been disabled and we're falling back onto PUSH notifications, if the option is enabled in the SmartApp's settings
+    if (!rtData.redirectContactBook) return 0
 	def message = params[0]
-    List contacts = (params[1] instanceof List ? params[1] : params[1].toString().tokenize(',')).unique();
-	List recipients = rtData.contacts.findAll{ it.key in contacts }.collect{ it.value }
-    if (recipients.size()) {
-        if (recipients && recipients.size()) {
-			def save = !!params[2]
-			sendNotificationToContacts(message, recipients, [event: save])
-        }
-	} else {
-    	error "Invalid list of contacts: ${params[1]}", rtData
-    }
-    return 0
+    def save = !!params[2]
+    return vcmd_sendPushNotification(rtData, devices, [message, save])
 }
 
 
@@ -2907,7 +2925,7 @@ private long vcmd_lifxScene(rtData, device, params) {
     if (!token) {
     	error "Sorry, you need to enable the LIFX integration in your dashboard's Settings section before trying to activate a LIFX scene.", rtData
         return 0
-    }    
+    }
 	def sceneId = params[0]
     double duration = params.size() > 1 ? cast(rtData, params[1], 'long') / 1000 : 0
     if (!rtData.lifx?.scenes) {
@@ -2974,7 +2992,7 @@ private long vcmd_lifxState(rtData, device, params) {
     if (!token) {
     	error "Sorry, you need to enable the LIFX integration in your dashboard's Settings section before trying to activate a LIFX scene.", rtData
         return 0
-    }    
+    }
     def selector = getLifxSelector(rtData, params[0])
 	if (!selector) {
     	error "Sorry, could not find the specified LIFX selector.", rtData
@@ -3014,7 +3032,7 @@ private long vcmd_lifxToggle(rtData, device, params) {
     if (!token) {
     	error "Sorry, you need to enable the LIFX integration in your dashboard's Settings section before trying to activate a LIFX scene.", rtData
         return 0
-    }    
+    }
     def selector = getLifxSelector(rtData, params[0])
 	if (!selector) {
     	error "Sorry, could not find the specified LIFX selector.", rtData
@@ -3050,7 +3068,7 @@ private long vcmd_lifxBreathe(rtData, device, params) {
     if (!token) {
     	error "Sorry, you need to enable the LIFX integration in your dashboard's Settings section before trying to activate a LIFX scene.", rtData
         return 0
-    }    
+    }
     def selector = getLifxSelector(rtData, params[0])
 	if (!selector) {
     	error "Sorry, could not find the specified LIFX selector.", rtData
@@ -3092,7 +3110,7 @@ private long vcmd_lifxPulse(rtData, device, params) {
     if (!token) {
     	error "Sorry, you need to enable the LIFX integration in your dashboard's Settings section before trying to activate a LIFX scene.", rtData
         return 0
-    }    
+    }
     def selector = getLifxSelector(rtData, params[0])
 	if (!selector) {
     	error "Sorry, could not find the specified LIFX selector.", rtData
@@ -3139,7 +3157,7 @@ public localHttpRequestHandler(physicalgraph.device.HubResponse hubResponse) {
             }
         }
     }
-    
+
     def binary = false
     def mediaType = hubResponse.getHeaders()['content-type']?.toLowerCase().tokenize(';')[0]
     switch (mediaType) {
@@ -3174,9 +3192,19 @@ public localHttpRequestHandler(physicalgraph.device.HubResponse hubResponse) {
 private long vcmd_httpRequest(rtData, device, params) {
 	def uri = params[0].replace(" ", "%20")
 	def method = params[1]
-	def contentType = params[2]
+	def useQueryString = method == 'GET' || method == 'DELETE' || method == 'HEAD'
+	def requestBodyType = params[2]
 	def variables = params[3]
-    def auth = params.size() > 4 ? params[4] : '';
+    def auth = null
+    def requestBody = null
+    def contentType = null
+    if (params.size() == 5) {
+	    auth = params[4];
+    } else if (params.size() == 7) {
+        requestBody = params[4]
+        contentType = params[5] ?: 'text/plain'
+        auth = params[6];
+    }
     if (!uri) return false
 	def protocol = "https"
     def userPart = ""
@@ -3199,14 +3227,16 @@ private long vcmd_httpRequest(rtData, device, params) {
 	def internal = uri.startsWith("10.") || uri.startsWith("192.168.")
 	if ((!internal) && uri.startsWith("172.")) {
 		//check for the 172.16.x.x/12 class
-		def b = uri.substring(4,2)
+		def b = uri.substring(4,6)
 		if (b.isInteger()) {
 			b = b.toInteger()
 			internal = (b >= 16) && (b <= 31)
 		}
 	}
 	def data = null
-	if (variables instanceof List) {
+    if (requestBodyType == 'CUSTOM' && !useQueryString) {
+	    data = requestBody
+    } else if (variables instanceof List) {
     	for(variable in variables.findAll{ !!it }) {
         	data  = data ?: [:]
 			data[variable] = getVariable(rtData, variable).v
@@ -3223,8 +3253,8 @@ private long vcmd_httpRequest(rtData, device, params) {
 				headers: [
 					HOST: userPart + ip,
 				] + (auth ? [Authorization: auth] : [:]),
-				query: method == "GET" ? data : null, //thank you @destructure00
-				body: method != "GET" ? data : null //thank you @destructure00    
+				query: useQueryString ? data : null, //thank you @destructure00
+				body: !useQueryString ? data : null //thank you @destructure00
 			]
 			sendHubCommand(new physicalgraph.device.HubAction(requestParams, null, [callback: localHttpRequestHandler]))
             return 20000
@@ -3236,10 +3266,10 @@ private long vcmd_httpRequest(rtData, device, params) {
 			if (rtData.logging > 2) debug "Sending external web request to: $uri", rtData
 			def requestParams = [
 				uri:  "${protocol}://${userPart}${uri}",
-				query: method == "GET" ? data : null,
+				query: useQueryString ? data : null,
                 headers: (auth ? [Authorization: auth] : [:]),
-				requestContentType: (method != "GET") && (contentType == "JSON") ? "application/json" : "application/x-www-form-urlencoded",
-				body: method != "GET" ? data : null
+				requestContentType: (method == "GET" || requestBodyType == "FORM") ? "application/x-www-form-urlencoded" : (requestBodyType == "JSON") ? "application/json" : contentType,
+				body: !useQueryString ? data : null
 			]
 			def func = ""
 			switch(method) {
@@ -3470,13 +3500,13 @@ private evaluateConditions(rtData, conditions, collection, async) {
 	def t = now()
     def msg = timer ''
     //override condition id
-    def c = rtData.stack.c    
+    def c = rtData.stack.c
     rtData.stack.c = conditions.$
     def not = (collection == 'c') ? !!conditions.n : !!conditions.rn
     def grouping = (collection == 'c') ? conditions.o : conditions.rop
     def value = (grouping == 'or' ? false : true)
-    
-    
+
+
     if ((grouping == 'followed by') && (collection == 'c')) {
     	if (!rtData.fastForwardTo || (rtData.fastForwardTo == conditions.$)) {
             //we're dealing with a followed by condition
@@ -3514,7 +3544,7 @@ private evaluateConditions(rtData, conditions, collection, async) {
                     //successful step, move on
                     ladderIndex += 1
                     ladderUpdated = now()
-                    cancelStatementSchedules(rtData, conditions.$)                
+                    cancelStatementSchedules(rtData, conditions.$)
                     if (rtData.logging > 2) debug "Condition group #${conditions.$} made progress up the ladder, currently at step $ladderIndex of $steps", rtData
                     if (ladderIndex < steps) {
                         //delay decision, there are more steps to go through
@@ -3537,7 +3567,7 @@ private evaluateConditions(rtData, conditions, collection, async) {
                     //ladder either collapsed or finished, reset data
                     ladderIndex = 0
                 	ladderUpdated = 0
-                    cancelStatementSchedules(rtData, conditions.$)                
+                    cancelStatementSchedules(rtData, conditions.$)
                 	break
             }
             if (rtData.fastForwardTo == conditions.$) rtData.fastForwardTo = null
@@ -3565,7 +3595,7 @@ private evaluateConditions(rtData, conditions, collection, async) {
         rtData.cache["c:${conditions.$}"] = result
         //true/false actions
         if (collection == 'c') {
-            if ((result || rtData.fastForwardTo) && conditions.ts && conditions.ts.length) executeStatements(rtData, conditions.ts, async) 
+            if ((result || rtData.fastForwardTo) && conditions.ts && conditions.ts.length) executeStatements(rtData, conditions.ts, async)
             if ((!result || rtData.fastForwardTo) && conditions.fs && conditions.fs.length) executeStatements(rtData, conditions.fs, async)
         }
         if (!rtData.fastForwardTo) {
@@ -3588,7 +3618,7 @@ private evaluateOperand(rtData, node, operand, index = null, trigger = false, ne
             break
         case "p": //physical device
         	def j = 0;
-            def attribute = rtData.attributes[operand.a]            
+            def attribute = rtData.attributes[operand.a]
         	for(deviceId in expandDeviceList(rtData, operand.d)) {
             	def value = [i: "${deviceId}:${operand.a}", v:getDeviceAttribute(rtData, deviceId, operand.a, operand.i, trigger) + (operand.vt ? [vt: operand.vt] : [:]) + (attribute && attribute.p ? [p: operand.p] : [:])]
                 updateCache(rtData, value)
@@ -3622,9 +3652,9 @@ private evaluateOperand(rtData, node, operand, index = null, trigger = false, ne
                     	}
                 	}
             	}
-            }    
+            }
             */
-			values = [[i: "${node?.$}:d", v:[t: 'device', v: deviceIds.unique()]]]	
+			values = [[i: "${node?.$}:d", v:[t: 'device', v: deviceIds.unique()]]]
             break
 		case 'v': //virtual devices
         	switch (operand.v) {
@@ -3653,7 +3683,7 @@ private evaluateOperand(rtData, node, operand, index = null, trigger = false, ne
 				case 'askAlexa':
                 	values = [[i: "${node?.$}:v", v:[t: 'string', v: (rtData.event.name == 'askAlexaMacro' ? hashId(rtData.event.value) : null)]]];
                     break;
-				case 'echoSistant':                
+				case 'echoSistant':
                 	values = [[i: "${node?.$}:v", v:[t: 'string', v: (rtData.event.name == 'echoSistantProfile' ? hashId(rtData.event.value) : null)]]];
                     break;
             }
@@ -3672,15 +3702,15 @@ private evaluateOperand(rtData, node, operand, index = null, trigger = false, ne
                     values = [[i: "${node?.$}:$index:0", v:[t:operand.vt, v:v]]]
 					break
 				default:
-					values = [[i: "${node?.$}:$index:0", v:[t:operand.vt, v:operand.s]]]           
-					break	
+					values = [[i: "${node?.$}:$index:0", v:[t:operand.vt, v:operand.s]]]
+					break
 			}
             break
         case "x": //variable
         	if ((operand.vt == 'device') && (operand.x instanceof List)) {
             	//we could have multiple devices selected
                 def sum = []
-                for (x in operand.x) {               
+                for (x in operand.x) {
                 	def var = getVariable(rtData, x)
                     if (var.v instanceof List) {
                     	sum += var.v
@@ -3712,7 +3742,7 @@ private evaluateOperand(rtData, node, operand, index = null, trigger = false, ne
 	        values = [[i: "${node?.$}:$index:0", v: getArgument(rtData, operand.u)]]
             break
     }
-    if (!node) 
+    if (!node)
     {
     	if (values.length) return values[0].v
         return [t: 'dynamic', v: null]
@@ -3729,10 +3759,10 @@ private Boolean evaluateCondition(rtData, condition, collection, async) {
 	def t = now()
     def msg = timer ''
     //override condition id
-    def c = rtData.stack.c    
+    def c = rtData.stack.c
     rtData.stack.c = condition.$
     def not = false
-    def oldResult = !!rtData.cache["c:${condition.$}"];    
+    def oldResult = !!rtData.cache["c:${condition.$}"];
     def result = false
     if (condition.t == 'group') {
     	return evaluateConditions(rtData, condition, collection, async)
@@ -3751,7 +3781,7 @@ private Boolean evaluateCondition(rtData, condition, collection, async) {
                 for(int i = 0; i <= paramCount; i++) {
                     def operand = (i == 0 ? condition.lo : (i == 1 ? condition.ro : condition.ro2))
                     //parse the operand
-                    def values = evaluateOperand(rtData, condition, operand, i, trigger)                    
+                    def values = evaluateOperand(rtData, condition, operand, i, trigger)
                     switch (i) {
                         case 0:
                         lo = [operand: operand, values: values]
@@ -3878,7 +3908,7 @@ private Boolean evaluateComparison(rtData, comparison, lo, ro = null, ro2 = null
         	options.devices = [matched: [], unmatched: []]
         }
         //if multiple left values, go through each
-        def tvalue = to && to.operand && to.values ? to.values + [f: to.operand.f] : null 
+        def tvalue = to && to.operand && to.values ? to.values + [f: to.operand.f] : null
         def tvalue2 = to2 && to2.operand && to2.values ? to2.values : null
         for(value in lo.values) {
             def res = false
@@ -3902,7 +3932,7 @@ private Boolean evaluateComparison(rtData, comparison, lo, ro = null, ro2 = null
                                 def msg = timer ""
                                 rres = "$fn"(rtData, value, rvalue, null, tvalue, tvalue2)
                                 msg.m = "Comparison  (${value?.v?.t}) ${value?.v?.v} $comparison  (${rvalue?.v?.t}) ${rvalue?.v?.v} = $rres"
-                                if (rtData.logging > 2) debug msg, rtData                                
+                                if (rtData.logging > 2) debug msg, rtData
                             } else {
                                 rres = (ro2.operand.g == 'any' ? false : true)
                                 //if multiple right2 values, go through each
@@ -3931,7 +3961,7 @@ private Boolean evaluateComparison(rtData, comparison, lo, ro = null, ro2 = null
                         case 'datetime':
 							boolean pass = checkTimeRestrictions(rtData, lo.operand, utcToLocalTime(), 5, 1) == 0
                             if (rtData.logging > 2) debug "Time restriction check ${pass ? 'passed' : 'failed'}", rtData
-                        	if (!pass) res = false;                            
+                        	if (!pass) res = false;
                     }
                 }
             }
@@ -4024,16 +4054,18 @@ private boolean valueWas(rtData, comparisonValue, rightValue, rightValue2, timeV
     if (!device) return false
     def attribute = comparisonValue.v.a
     long threshold = evaluateExpression(rtData, [t: 'duration', v: timeValue.v, vt: timeValue.vt], 'long').v
-    
+
 	def states = listPreviousStates(device, attribute, threshold, (rtData.event.device?.id == device.id) && (rtData.event.name == attribute))
     def result = true
     long duration = 0
     for (state in states) {
-    	if (!("comp_$func"(rtData, [i: comparisonValue.i, v: [t: comparisonValue.v.t, v: state.value]], rightValue, rightValue2, timeValue))) break
+    	if (!("comp_$func"(rtData, [i: comparisonValue.i, v: [t: comparisonValue.v.t, v: cast(rtData, state.value, comparisonValue.v.t)]], rightValue, rightValue2, timeValue))) break
         duration += state.duration
     }
     if (!duration) return false
-    return (timeValue.f == 'l') ? duration < threshold : duration >= threshold
+    result = (timeValue.f == 'l') ? duration < threshold : duration >= threshold
+    debug "Duration ${duration}ms for ${func.replace('is_', 'was_')} ${timeValue.f == 'l' ? '<' : '>='} ${threshold}ms threshold = ${result}", rtData
+    return result
 }
 
 private boolean valueChanged(rtData, comparisonValue, timeValue) {
@@ -4044,7 +4076,7 @@ private boolean valueChanged(rtData, comparisonValue, timeValue) {
     if (!device) return false
     def attribute = comparisonValue.v.a
     long threshold = evaluateExpression(rtData, [t: 'duration', v: timeValue.v, vt: timeValue.vt], 'long').v
-    
+
 	def states = listPreviousStates(device, attribute, threshold, false)
     if (!states.size()) return false
     def value = states[0].value
@@ -4165,7 +4197,7 @@ private traverseStatements(node, closure, parentNode = null, data = null) {
     if (!node) return
 	//if a statements element, go through each item
 	if (node instanceof List) {
-    	for(def item in node) {	    	
+    	for(def item in node) {
         	if (!item.di) {
 	           	boolean lastTimer = (data && data.timer)
     	        if (data && (item.t == 'every')) {
@@ -4178,13 +4210,13 @@ private traverseStatements(node, closure, parentNode = null, data = null) {
             }
 	    }
         return
-	}   
-    
+	}
+
     //got a statement, pass it on to the closure
     if (closure instanceof Closure) {
     	closure(node, parentNode, data)
     }
-    
+
     //if the statements has substatements, go through them
     if (node.s instanceof List) {
     	traverseStatements(node.s, closure, node, data)
@@ -4312,7 +4344,7 @@ private void subscribeAll(rtData) {
         def conditionTraverser
 		def restrictionTraverser
 		def statementTraverser
-        expressionTraverser = { expression, parentExpression, comparisonType -> 
+        expressionTraverser = { expression, parentExpression, comparisonType ->
         	def subscriptionId = null
             def deviceId = null
             def attribute = null
@@ -4325,12 +4357,12 @@ private void subscribeAll(rtData) {
             if ((expression.t == 'variable') && expression.x && expression.x.startsWith('@')) {
                 subscriptionId = "${expression.x}"
                 deviceId = rtData.locationId
-                attribute = "${handle()}.${expression.x}"
+                attribute = "${expression.x.startsWith('@@') ? '@@' + handle() : rtData.instanceId}.${expression.x}"
             }
             if (subscriptionId && deviceId) {
                 def ct = subscriptions[subscriptionId]?.t ?: null
                 if ((ct == 'trigger') || (comparisonType == 'trigger')) {
-                    ct = 'trigger'                       
+                    ct = 'trigger'
                 } else {
                     ct = ct ?: comparisonType
                 }
@@ -4340,17 +4372,17 @@ private void subscribeAll(rtData) {
                     devices[deviceId] =  [c: (comparisonType ? 1 : 0) + (devices[deviceId]?.c ?: 0)]
                 }
             }
-        }    
+        }
         operandTraverser = { node, operand, value, comparisonType ->
         	if (!operand) return
-            switch (operand.t) {	
+            switch (operand.t) {
                 case "p": //physical device
                     for(deviceId in expandDeviceList(rtData, operand.d, true)) {
                         devices[deviceId] = [c: (comparisonType ? 1 : 0) + (devices[deviceId]?.c ?: 0)]
                         //if we have any trigger, it takes precedence over anything else
                         def ct = subscriptions["$deviceId${operand.a}"]?.t ?: null
                         if ((ct == 'trigger') || (comparisonType == 'trigger')) {
-                            ct = 'trigger'                       
+                            ct = 'trigger'
                         } else {
                             ct = ct ?: comparisonType
                         }
@@ -4413,7 +4445,7 @@ private void subscribeAll(rtData) {
                     if (subscriptionId) {
                     	def ct = subscriptions[subscriptionId]?.t ?: null
                         if ((ct == 'trigger') || (comparisonType == 'trigger')) {
-                            ct = 'trigger'                       
+                            ct = 'trigger'
                         } else {
                             ct = ct ?: comparisonType
                         }
@@ -4424,10 +4456,10 @@ private void subscribeAll(rtData) {
                 case 'x':
                 	if (operand.x && operand.x.startsWith('@')) {
                     	def subscriptionId = operand.x
-                        def attribute = "${handle()}.${operand.x}"
+                        def attribute = "${operand.x.startsWith('@@') ? '@@' + handle() : rtData.instanceId}.${operand.x}"
                         def ct = subscriptions[subscriptionId]?.t ?: null
                         if ((ct == 'trigger') || (comparisonType == 'trigger')) {
-                            ct = 'trigger'                       
+                            ct = 'trigger'
                         } else {
                             ct = ct ?: comparisonType
                         }
@@ -4453,7 +4485,7 @@ private void subscribeAll(rtData) {
                 if (!comparison) {
                     hasTriggers = true
                     comparisonType = downgradeTriggers || (condition.sm == 'never') ? 'condition' : 'trigger'
-                    comparison = rtData.comparisons.triggers[condition.co]                	
+                    comparison = rtData.comparisons.triggers[condition.co]
                 }
                 if (comparison) {
                     condition.ct = comparisonType.take(1)
@@ -4475,7 +4507,7 @@ private void subscribeAll(rtData) {
                 if (!comparison) {
                     //hasTriggers = true
                     //comparisonType = downgradeTriggers ? 'condition' : 'trigger'
-                    comparison = rtData.comparisons.triggers[restriction.co]                	
+                    comparison = rtData.comparisons.triggers[restriction.co]
                 }
                 if (comparison) {
                     def paramCount = comparison.p ?: 0
@@ -4486,7 +4518,7 @@ private void subscribeAll(rtData) {
                     }
                 }
             }
-        }    
+        }
         statementTraverser = { node, parentNode, data ->
         	downgradeTriggers = data && data.timer
             if (node.r) traverseRestrictions(node.r, restrictionTraverser)
@@ -4494,7 +4526,7 @@ private void subscribeAll(rtData) {
                 devices[deviceId] = devices[deviceId] ?: [c: 0]
                 if ((deviceId != rtData.locationId) && (deviceId.startsWith(':'))) {
                 	rawDevices[deviceId] = rtData.devices[deviceId]
-                }                
+                }
             }
             switch( node.t ) {
             	case 'action':
@@ -4549,7 +4581,7 @@ private void subscribeAll(rtData) {
                 devices[deviceId] = [c: 0 + (devices[deviceId]?.c ?: 0)]
                 if (deviceId != rtData.locationId) {
                 	rawDevices[deviceId] = rtData.devices[deviceId]
-                }                
+                }
             }
         }
         def dds = [:]
@@ -4587,7 +4619,7 @@ private void subscribeAll(rtData) {
 	                devices[subscription.value.d].c = devices[subscription.value.d].c - 1
                 }
             }
-        }       
+        }
         //save devices
         List deviceIdList = rawDevices.collect{ it && it.value ? it.value.id : null }
         deviceIdList.removeAll{ it == null }
@@ -4619,7 +4651,7 @@ private void subscribeAll(rtData) {
 		processSchedules rtData, true
         //save cache collected through dummy run
         for(item in rtData.newCache) rtData.cache[item.key] = item.value
-        atomicState.cache = rtData.cache    
+        atomicState.cache = rtData.cache
     } catch (all) {
     	error "An error has occurred while subscribing: ", rtData, null, all
     }
@@ -4675,7 +4707,7 @@ private getDevice(rtData, idOrName) {
             error "Device ${idOrName} was not found. Please review your piston.", rtData
         }
     }
-    return device    
+    return device
 }
 
 private getDeviceAttributeValue(rtData, device, attributeName) {
@@ -4708,10 +4740,10 @@ private Map getDeviceAttribute(rtData, deviceId, attributeName, subDeviceIndex =
 	if (deviceId == rtData.locationId) {
     	//we have the location here
         switch (attributeName) {
-        	case 'mode': 
+        	case 'mode':
             	def mode = location.getCurrentMode();
             	return [t: 'string', v: hashId(mode.getId()), n: mode.getName()]
-        	case 'alarmSystemStatus': 
+        	case 'alarmSystemStatus':
 				def v = hubUID ? 'off' : location.currentState("alarmSystemStatus")?.value
                 def n = hubUID ? 'Disarmed' : rtData.virtualDevices['alarmSystemStatus']?.o[v]
 				return [t: 'string', v: v, n: n]
@@ -4845,24 +4877,24 @@ private Map getJsonData(rtData, data, name, feature = null) {
                         case 'sun':
                         case 'sunday':
                         	offset = dow <= 2 ? 0 - dow : 7 - dow
-                        	break          
+                        	break
                         case 'lastweek':
                         	start = (dow <= 2 ? - 4 - dow : 3 - dow) - 7
                             end = (dow <= 2 ? 2 - dow : 9 - dow) - 7
-                        	break          
+                        	break
                         case 'thisweek':
                         	start = dow <= 2 ? - 4 - dow : 3 - dow
                             end = dow <= 2 ? 2 - dow : 9 - dow
-                        	break          
+                        	break
                         case 'nextweek':
                         	start = (dow <= 2 ? - 4 - dow : 3 - dow) + 7
                             end = (dow <= 2 ? 2 - dow : 9 - dow) + 7
-                        	break          
+                        	break
                     }
                     if (offset != null) {
                     	date.setTime(date.getTime() + offset * 86400000)
                         def game = args.games.find{ (it.year == date.year + 1900) && (it.month == date.month + 1) && (it.day == date.date) }
-                        args = game                        
+                        args = game
                         continue
                     }
                     if (start != null) {
@@ -4938,7 +4970,7 @@ private Map getWeather(rtData, name) {
         	rtData.weather[dataFeature] = app.getWeatherFeature(dataFeature)
         }
     }
-	return getJsonData(rtData, rtData.weather, name)    
+	return getJsonData(rtData, rtData.weather, name)
 }
 
 private Map getNFLDataFeature(dataFeature) {
@@ -5043,7 +5075,9 @@ private Map getVariable(rtData, name) {
         	Map indirectVar = getVariable(rtData, var.index)
             //indirect variable addressing
             if (indirectVar && (indirectVar.t != 'error')) {
-            	var.index = cast(rtData, indirectVar.t == 'decimal' ? cast(rtData, indirectVar.v, 'integer', indirectVar.t) : indirectVar.v, 'string', indirectVar.t)
+                def value = indirectVar.t == 'decimal' ? cast(rtData, indirectVar.v, 'integer', indirectVar.t) : indirectVar.v
+                def dataType = indirectVar.t == 'decimal' ? 'integer' : indirectVar.t
+                var.index = cast(rtData, value, 'string', dataType)
             }
         	result.v = result.v[var.index]
 //        } else {
@@ -5079,18 +5113,18 @@ private Map setVariable(rtData, name, value) {
             rtData.gvCache = cache
             return variable
         }
-	} else {    	
+	} else {
 		def variable = rtData.localVars[var.name]
         if (variable instanceof Map) {
             //set value
             if (variable.t.endsWith(']')) {
-            	//we're dealing with a list           
+            	//we're dealing with a list
                 variable.v = (variable.v instanceof Map) ? variable.v : [:]
                 Map indirectVar = getVariable(rtData, var.index)
                 //indirect variable addressing
                 if (indirectVar && (indirectVar.t != 'error')) {
                     var.index = cast(rtData, indirectVar.v, 'string', indirectVar.t)
-                }                
+                }
                 variable.v[var.index] = cast(rtData, value, variable.t.replace('[]', ''))
             } else {
             	variable.v = cast(rtData, value, variable.t)
@@ -5102,7 +5136,7 @@ private Map setVariable(rtData, name, value) {
                 atomicState.vars = vars
             }
             return variable
-            
+
 		}
 	}
    	result = [t: 'error', v: 'Invalid variable']
@@ -5166,7 +5200,7 @@ private Map evaluateExpression(rtData, expression, dataType = null) {
         case "uri":
         case "text":
         	result = [t: 'string', v: cast(rtData, expression.v, 'string', expression.t)]
-        	break        
+        	break
 		case "bool":
         	result = [t: "boolean", v: cast(rtData, expression.v, "boolean", expression.t)]
         	break
@@ -5248,7 +5282,7 @@ private Map evaluateExpression(rtData, expression, dataType = null) {
 			} catch (all) {
 				//log error
                 result = [t: "error", v: all]
-			}        	
+			}
         	break
         case "expression":
         	//if we have a single item, we simply traverse the expression
@@ -5348,19 +5382,19 @@ private Map evaluateExpression(rtData, expression, dataType = null) {
                     	items = [items[1]]
                     } else {
                     	items = [items[2]]
-                    }                    
+                    }
                     items[0].o = null;
                     break
                 }
 	           	//order of operations :D
                 idx = 0
-                //#2 	 !   !!   ~ 	Logical negation, logical double-negation and bitwise NOT unary operators 
+                //#2 	 !   !!   ~   - 	Logical negation, logical double-negation, bitwise NOT, and numeric negation unary operators
                 for (item in items) {
-                	if (((item.o) == '!') || ((item.o) == '!!') || ((item.o) == '~')) break;
+                	if (((item.o) == '!') || ((item.o) == '!!') || ((item.o) == '~') || (item.t == null && item.o == '-')) break;
                     secondary = true
                     idx++
                 }
-                //#3 	** 	Exponent operator 
+                //#3 	** 	Exponent operator
                 if (idx >= items.size()) {
 	                //we then look for power **
                     idx = 0
@@ -5369,7 +5403,7 @@ private Map evaluateExpression(rtData, expression, dataType = null) {
         	            idx++
             	    }
                 }
-                //#4 	*   /   \   % MOD 	Multiplication, division, modulo 
+                //#4 	*   /   \   % MOD 	Multiplication, division, modulo
                 if (idx >= items.size()) {
                     //we then look for * or /
                     idx = 0
@@ -5378,7 +5412,7 @@ private Map evaluateExpression(rtData, expression, dataType = null) {
                         idx++
                     }
                 }
-                //#5 	+   - 	Addition and subtraction 
+                //#5 	+   - 	Addition and subtraction
                 if (idx >= items.size()) {
                     idx = 0
                     for (item in items) {
@@ -5386,7 +5420,7 @@ private Map evaluateExpression(rtData, expression, dataType = null) {
                         idx++
                     }
                 }
-                //#6 	<<   >> 	Shift left and shift right operators 
+                //#6 	<<   >> 	Shift left and shift right operators
                 if (idx >= items.size()) {
                     idx = 0
                     for (item in items) {
@@ -5402,7 +5436,7 @@ private Map evaluateExpression(rtData, expression, dataType = null) {
                         idx++
                     }
                 }
-                //#8 	==   != 	Comparisons: equal and not equal 
+                //#8 	==   != 	Comparisons: equal and not equal
                 if (idx >= items.size()) {
                     idx = 0
                     for (item in items) {
@@ -5410,7 +5444,7 @@ private Map evaluateExpression(rtData, expression, dataType = null) {
                         idx++
                     }
                 }
-                //#9 	& 	Bitwise AND 
+                //#9 	& 	Bitwise AND
                 if (idx >= items.size()) {
                     idx = 0
                     for (item in items) {
@@ -5418,7 +5452,7 @@ private Map evaluateExpression(rtData, expression, dataType = null) {
                         idx++
                     }
                 }
-                //#10 	^ 	Bitwise exclusive OR (XOR) 
+                //#10 	^ 	Bitwise exclusive OR (XOR)
                 if (idx >= items.size()) {
                     idx = 0
                     for (item in items) {
@@ -5426,7 +5460,7 @@ private Map evaluateExpression(rtData, expression, dataType = null) {
                         idx++
                     }
                 }
-                //#11 	| 	Bitwise inclusive (normal) OR 
+                //#11 	| 	Bitwise inclusive (normal) OR
                 if (idx >= items.size()) {
                     idx = 0
                     for (item in items) {
@@ -5434,7 +5468,7 @@ private Map evaluateExpression(rtData, expression, dataType = null) {
                         idx++
                     }
                 }
-                //#12 	&& 	Logical AND 
+                //#12 	&& 	Logical AND
                 if (idx >= items.size()) {
                     idx = 0
                     for (item in items) {
@@ -5461,7 +5495,7 @@ private Map evaluateExpression(rtData, expression, dataType = null) {
                 if (idx >= items.size()) {
                 	//just get the first one
                 	idx = 0;
-                }                
+                }
                 if (idx >= items.size() - 1) idx = 0
                 //we're onto something
                 def v = null
@@ -5486,7 +5520,7 @@ private Map evaluateExpression(rtData, expression, dataType = null) {
                 if ((t1 == 'device') && (t2 == 'device') && ((o == '+') || (o == '-'))) {
 					v1 = (v1 instanceof List) ? v1 : [v1]
 					v2 = (v2 instanceof List) ? v2 : [v2]
-                    v = (o == '+') ? v1 + v2 : v1 - v2                    
+                    v = (o == '+') ? v1 + v2 : v1 - v2
         	        //set the results
     	            items[idx + 1].t = 'device'
                     items[idx + 1].v = v
@@ -5661,7 +5695,7 @@ private Map evaluateExpression(rtData, expression, dataType = null) {
                 	}
 
 					if (rtData.logging > 2) debug "Calculating ($t1) $v1 $o ($t2) $v2 >> ($t) $v", rtData
-    	            
+
                     //set the results
                     items[idx + 1].t = t
                     items[idx + 1].v = cast(rtData, v, t)
@@ -5677,7 +5711,7 @@ private Map evaluateExpression(rtData, expression, dataType = null) {
     if (dataType && (dataType != 'device') && (result.t == 'device')) {
     	//if not a list, make it a list
     	if (!(result.v instanceof List)) result.v = [result.v]
-        switch (result.v.size()) {        	
+        switch (result.v.size()) {
             case 0: result = [t: 'error', v: 'Empty device list']; break;
             case 1: result = getDeviceAttribute(rtData, result.v[0], result.a, result.i); break;
             default: result = [t: 'string', v: buildDeviceAttributeList(rtData, result.v, result.a)]; break;
@@ -5935,7 +5969,7 @@ private func_left(rtData, params) {
     }
     def value = evaluateExpression(rtData, params[0], 'string').v
     def count = evaluateExpression(rtData, params[1], 'integer').v
-    if (count > value.size()) count = value.size()    
+    if (count > value.size()) count = value.size()
     return [t: "string", v: value.substring(0, count)]
 }
 
@@ -6071,10 +6105,13 @@ private func_replace(rtData, params) {
     int cnt = Math.floor((params.size() - 1) / 2)
     for (int i = 0; i < cnt; i++) {
     	def search = evaluateExpression(rtData, params[i * 2 + 1], 'string').v
+        def replace = evaluateExpression(rtData, params[i * 2 + 2], 'string').v
         if ((search.size() > 2) && search.startsWith('/') && search.endsWith('/')) {
         	search = ~search.substring(1, search.size() - 1)
+	        value = value.replaceAll(search, replace)
+        } else {
+	        value = value.replace(search, replace)
         }
-        value = value.replaceAll(search, evaluateExpression(rtData, params[i * 2 + 2], 'string').v)
     }
     return [t: "string", v: value]
 }
@@ -6123,7 +6160,7 @@ private func_rainbowvalue(rtData, params) {
     if (input == maxInput) return [t: "string", v: maxColor.hex]
     def start = hexToHsl(minColor.hex)
     def end = hexToHsl(maxColor.hex)
-    float alpha = 1.0000000 * (input - minInput) / (maxInput - minInput + 1)   
+    float alpha = 1.0000000 * (input - minInput) / (maxInput - minInput + 1)
 	def h = Math.round(start[0] - ((input - minInput) * (start[0] - end[0]) / (maxInput - minInput)))
     h = h < 0 ? h % 360 + 360 : h % 360
     int s = Math.round(start[1] + (end[1] - start[1]) * alpha)
@@ -6180,7 +6217,7 @@ private func_lastindexof(rtData, params) {
         def item = evaluateExpression(rtData, params[1], params[0].t).v
         def key = params[0].v.find{ it.value == item }?.key
         return [t: "string", v: key]
-    } else {    
+    } else {
     	def value = evaluateExpression(rtData, params[0], 'string').v
     	def substring = evaluateExpression(rtData, params[1], 'string').v
     	return [t: "integer", v: value.lastIndexOf(substring)]
@@ -6521,7 +6558,7 @@ private func_previousvalue(rtData, params) {
                         if (result != newValue) {
                             return [t: attribute.t, v: cast(rtData, result, attribute.t)]
                         }
-                    }                    
+                    }
                 }
                 //we're saying 7 days, though it may be wrong - but we have no data
                 return [t: 'string', v: '']
@@ -6610,7 +6647,7 @@ private func_contains(rtData, params) {
             }
         }
         return [t: "boolean", v: false]
-    } else {    
+    } else {
     	def string = evaluateExpression(rtData, params[0], 'string').v
     	def substring = evaluateExpression(rtData, params[1], 'string').v
     	return [t: "boolean", v: string.contains(substring)]
@@ -6862,7 +6899,7 @@ private func_monthname(rtData, params) {
     	return [t: "error", v: "Invalid parameters. Expecting monthName(dateTimeOrMonthNumber)"];
     }
     long value = evaluateExpression(rtData, params[0], 'long').v
-   	int index = ((value >= 86400000) ? utcToLocalDate(value).month : value - 1) % 12 + 1    
+   	int index = ((value >= 86400000) ? utcToLocalDate(value).month : value - 1) % 12 + 1
     return [t: "string", v: yearMonths()[index]]
 }
 
@@ -6928,7 +6965,7 @@ private func_formatduration(rtData, params) {
 	int h = value % 24
     value = Math.floor((value - h) / 24)
 	int d = value
-    
+
     def parts = 0
     def partName = ''
     switch (granularity) {
@@ -6962,7 +6999,7 @@ private func_formatduration(rtData, params) {
                 }
                 result = (showAdverbs && (sign > 0) ? 'in ' : '') + result + (showAdverbs && (sign < 0) ? ' ago' : '')
             	break
-		}            
+		}
     } else {
     	result = (sign < 0 ? '-' : '') + (d > 0 ? sprintf("%dd ", d) : '') + sprintf("%02d:%02d", h, m) + (parts > 3 ? sprintf(":%02d", s) : '') + (parts > 4 ? sprintf(".%03d", ms) : '')
     }
@@ -7104,6 +7141,35 @@ private func_distance(rtData, params) {
 	return [t: 'decimal', v: dist]
 }
 
+/******************************************************************************/
+/*** json encodes data as a JSON string					***/
+/*** Usage: json(value[, pretty])									***/
+/******************************************************************************/
+private func_json(rtData, params) {
+	if (!params || !(params instanceof List) || (params.size() < 1) || (params.size() > 2)) {
+    	return [t: "error", v: "Invalid parameters. Expecting json(value[, format])"];
+    }
+    def builder = new groovy.json.JsonBuilder([params[0].v])
+    def op = params[1] ? 'toPrettyString' : 'toString'
+    def json = builder."${op}"()
+    return [t: 'string', v: json[1..-2].trim()]
+}
+
+/******************************************************************************/
+/*** percent encodes data for use in a URL					***/
+/*** Usage: urlencode(value)									***/
+/******************************************************************************/
+private func_urlencode(rtData, params) {
+	if (!params || !(params instanceof List) || (params.size() != 1)) {
+    	return [t: "error", v: "Invalid parameters. Expecting urlencode(value])"];
+    }
+    // URLEncoder converts spaces to + which is then indistinguishable from any 
+    // actual + characters in the value. Match encodeURIComponent in ECMAScript
+    // which encodes "a+b c" as "a+b%20c" rather than URLEncoder's "a+b+c"
+    def value = (evaluateExpression(rtData, params[0], 'string').v ?: '').replaceAll('\\+', '__wc_plus__')
+    return [t: 'string', v: URLEncoder.encode(value, 'UTF-8').replaceAll('\\+', '%20').replaceAll('__wc_plus__', '+')]
+}
+private func_encodeuricomponent(rtData, params) { return func_urlencode(rtData, params); }
 
 /******************************************************************************/
 /*** 																		***/
@@ -7163,6 +7229,12 @@ private getThreeAxisOrientation(value, getIndex = false) {
 	return value
 }
 
+private long getTimeToday(long time) {
+	long result = localToUtcTime(time + utcToLocalTime(getMidnightTime()))
+    //we need to adjust for time overlapping during DST changes
+    return result + time - (utcToLocalTime(result) % 86400000)
+}
+
 private cast(rtData, value, dataType, srcDataType = null) {
     //error "CASTING ($srcDataType) $value as $dataType", rtData
     //if (srcDataType == 'vector3') error "got x = $value.x", rtData
@@ -7185,7 +7257,7 @@ private cast(rtData, value, dataType, srcDataType = null) {
 		if (value instanceof Long) { srcDataType = 'long' } else
 		if (value instanceof Double) { srcDataType = 'decimal' } else
 		if (value instanceof Float) { srcDataType = 'decimal' } else
-		if (value instanceof BigDecimal) { srcDataType = 'decimal' } else 
+		if (value instanceof BigDecimal) { srcDataType = 'decimal' } else
         if ((value instanceof Map) && (value.x != null) && (value.y != null) && (value.z != null)) { srcDataType = 'vector3' } else {
             value = "$value".toString()
             srcDataType = 'string'
@@ -7303,11 +7375,11 @@ private cast(rtData, value, dataType, srcDataType = null) {
         	def n = localTime()
 			return utcToLocalTime((srcDataType == 'string') ? localToUtcTime(value) : cast(rtData, value, "long")) % 86400000
 		case "date":
-        	if ((srcDataType == 'time') && (value < 86400000)) value += getMidnightTime()
+        	if ((srcDataType == 'time') && (value < 86400000)) value = getTimeToday(value)
 			def d = utcToLocalTime((srcDataType == 'string') ? localToUtcTime(value) : cast(rtData, value, "long"))
             return localToUtcTime(d - (d % 86400000))
 		case "datetime":
-        	if ((srcDataType == 'time') && (value < 86400000)) value += getMidnightTime()
+        	if ((srcDataType == 'time') && (value < 86400000)) value = getTimeToday(value) //localToUtcTime(value + utcToLocalTime(getMidnightTime()))
 			return ((srcDataType == 'string') ? localToUtcTime(value) : cast(rtData, value, "long"))
 		case "vector3":
 			return (value instanceof Map) && (value.x != null) && (value.y != null) && (value.z != null) ? value : [x:0, y:0, z:0]
@@ -7339,7 +7411,7 @@ private cast(rtData, value, dataType, srcDataType = null) {
 private utcToLocalDate(dateOrTimeOrString = null) {
 	if (dateOrTimeOrString instanceof String) {
 		//get UTC time
-        try {        
+        try {
 			//dateOrTimeOrString = timeToday(dateOrTimeOrString, location.timeZone).getTime()
 			dateOrTimeOrString = localToUtcTime(dateOrTimeOrString)
         } catch (all) {
@@ -7419,7 +7491,10 @@ private localToUtcTime(dateOrTimeOrString) {
                     }
                     long time = timeToday(dateOrTimeOrString, tz).getTime()
                     //adjust for PM - timeToday has no clue....
-                    if (dateOrTimeOrString.trim().toLowerCase().endsWith('pm')) time += 43200000
+                    dateOrTimeOrString = dateOrTimeOrString.trim().toLowerCase()
+                    def twelve = dateOrTimeOrString.startsWith('12')
+                    if (twelve && dateOrTimeOrString.endsWith('am')) time -= 43200000
+                    if (!twelve && dateOrTimeOrString.endsWith('pm')) time += 43200000
                     return time
                 } catch (all3) {
                     return (new Date()).getTime()
@@ -7503,8 +7578,8 @@ private String hslToHex(hue, saturation, level) {
 	float r, g, b
     if(s == 0){
         r = g = b = l; // achromatic
-    } else {   
-        
+    } else {
+
         float q = l < 0.5 ? l * (1 + s) : l + s - l * s;
         float p = 2 * l - q;
         r = _hue2rgb(p, q, h + 1/3);
@@ -7593,7 +7668,7 @@ private log(message, rtData = null, shift = null, err = null, cmd = null, force 
 			//levelDelta = -(level > 0 ? 1 : 0)
 			pad = "═"
 			prefix = "╔"
-			prefix2 = "╚"           
+			prefix2 = "╚"
 		break
 	}
 
@@ -7671,14 +7746,19 @@ private initSunriseAndSunset(rtData) {
     def rightNow = localTime()
     if (!rtData.sunTimes) {
     	def sunTimes = app.getSunriseAndSunset()
+        if (!sunTimes.sunrise) {
+            warn "Actual sunrise and sunset times are unavailable; please reset the location for your hub", rtData
+            sunTimes.sunrise = new Date(getMidnightTime() + 7 * 3600000)
+            sunTimes.sunset = new Date(getMidnightTime() + 19 * 3600000)
+        }
         rtData.sunTimes = [
     		sunrise: sunTimes.sunrise.time,
     		sunset: sunTimes.sunset.time,
         	updated: now()
     	]
     }
-	rtData.sunrise = localToUtcTime(rightNow - rightNow.mod(86400000) + utcToLocalTime(rtData.sunTimes.sunrise).mod(86400000))
-	rtData.sunset = localToUtcTime(rightNow - rightNow.mod(86400000) + utcToLocalTime(rtData.sunTimes.sunset).mod(86400000))    
+    rtData.sunrise = localToUtcTime(rightNow - rightNow.mod(86400000) + utcToLocalTime(rtData.sunTimes.sunrise).mod(86400000))
+	rtData.sunset = localToUtcTime(rightNow - rightNow.mod(86400000) + utcToLocalTime(rtData.sunTimes.sunset).mod(86400000))
 }
 
 private getSunriseTime(rtData) {
@@ -7707,8 +7787,8 @@ private getMidnightTime(rtData) {
 }
 
 private getNextMidnightTime(rtData) {
-	def rightNow = localTime()
-    return localToUtcTime(rightNow - rightNow.mod(86400000) + 86400000)
+	def rightNow = utcToLocalTime(localToUtcTime(localTime() + 86400000))
+    return localToUtcTime(rightNow - rightNow.mod(86400000))
 }
 
 private getNoonTime(rtData) {
@@ -7718,7 +7798,8 @@ private getNoonTime(rtData) {
 
 private getNextNoonTime(rtData) {
 	def rightNow = localTime()
-    return localToUtcTime(rightNow - rightNow.mod(86400000) + 43200000 + (rightNow.mod(86400000) >= 43200000 ? 86400000 : 0))
+	rightNow = utcToLocalTime(localToUtcTime(rightNow + (rightNow.mod(86400000) >= 43200000 ? 86400000 : 0)))
+    return localToUtcTime(rightNow - rightNow.mod(86400000) + 43200000)
 }
 
 private Map getLocalVariables(rtData, vars) {
@@ -7731,7 +7812,7 @@ private Map getLocalVariables(rtData, vars) {
         }
         rtData.localVars[var.n] = variable
     }
-    return rtData.localVars    
+    return rtData.localVars
 }
 
 def Map getSystemVariablesAndValues(rtData) {
@@ -7819,11 +7900,11 @@ private static Map getSystemVariables() {
 		"\$httpContentType": [t: "string", v: null],
 		"\$httpStatusCode": [t: "integer", v: null],
 		"\$httpStatusOk": [t: "boolean", v: null],
-		"\$mediaId": [t: "string", d: true],       
-		"\$mediaUrl": [t: "string", d: true],       
-		"\$mediaType": [t: "string", d: true],       
-		"\$mediaSize": [t: "integer", d: true],       
-		"\$iftttStatusCode": [t: "integer", v: null], 
+		"\$mediaId": [t: "string", d: true],
+		"\$mediaUrl": [t: "string", d: true],
+		"\$mediaType": [t: "string", d: true],
+		"\$mediaSize": [t: "integer", d: true],
+		"\$iftttStatusCode": [t: "integer", v: null],
 		"\$iftttStatusOk": [t: "boolean", v: null],
 		"\$locationMode": [t: "string", d: true],
 		"\$shmStatus": [t: "string", d: true],
@@ -7850,34 +7931,34 @@ private getSystemVariableValue(rtData, name) {
 		case "\$now": return (long) now()
 		case "\$utc": return (long) now()
 		case "\$localNow": return (long) localTime()
-		case "\$hour": def h = localDate().hours; return (h == 0 ? 12 : (h > 12 ? h - 12 : h)) 
+		case "\$hour": def h = localDate().hours; return (h == 0 ? 12 : (h > 12 ? h - 12 : h))
 		case "\$hour24": return localDate().hours
-		case "\$minute": return localDate().minutes 
-		case "\$second": return localDate().seconds 
-		case "\$meridian": def h = localDate().hours; return ( h < 12 ? "AM" : "PM") 
-		case "\$meridianWithDots": def h = localDate().hours; return ( h < 12 ? "A.M." : "P.M.") 
-		case "\$day": return localDate().date 
-		case "\$dayOfWeek": return localDate().day 
-		case "\$dayOfWeekName": return weekDays()[localDate().day] 
-		case "\$month": return localDate().month + 1 
-		case "\$monthName": return yearMonths()[localDate().month + 1] 
-		case "\$year": return localDate().year + 1900 
+		case "\$minute": return localDate().minutes
+		case "\$second": return localDate().seconds
+		case "\$meridian": def h = localDate().hours; return ( h < 12 ? "AM" : "PM")
+		case "\$meridianWithDots": def h = localDate().hours; return ( h < 12 ? "A.M." : "P.M.")
+		case "\$day": return localDate().date
+		case "\$dayOfWeek": return localDate().day
+		case "\$dayOfWeekName": return weekDays()[localDate().day]
+		case "\$month": return localDate().month + 1
+		case "\$monthName": return yearMonths()[localDate().month + 1]
+		case "\$year": return localDate().year + 1900
 		case "\$midnight": return getMidnightTime(rtData)
 		case "\$noon": return getNoonTime(rtData)
-		case "\$sunrise": return getSunriseTime(rtData); 
+		case "\$sunrise": return getSunriseTime(rtData);
 		case "\$sunset": return getSunsetTime(rtData);
 		case "\$nextMidnight":  return getNextMidnightTime(rtData);
 		case "\$nextNoon": return getNextNoonTime(rtData);
 		case "\$nextSunrise": return getNextSunriseTime(rtData);
 		case "\$nextSunset": return getNextSunsetTime(rtData);
-		case "\$time": def t = localDate(); def h = t.hours; def m = t.minutes; return (h == 0 ? 12 : (h > 12 ? h - 12 : h)) + ":" + (m < 10 ? "0$m" : "$m") + " " + (h <12 ? "A.M." : "P.M.") 
-		case "\$time24": def t = localDate(); def h = t.hours; def m = t.minutes; return h + ":" + (m < 10 ? "0$m" : "$m") 
-		case "\$random": def result = getRandomValue("\$random") ?: (double)Math.random(); setRandomValue("\$random", result); return result 
-		case "\$randomColor": def result = getRandomValue("\$randomColor") ?: colorUtil?.RANDOM?.rgb; setRandomValue("\$randomColor", result); return result 
-		case "\$randomColorName": def result = getRandomValue("\$randomColorName") ?: colorUtil?.RANDOM?.name; setRandomValue("\$randomColorName", result); return result 
-		case "\$randomLevel": def result = getRandomValue("\$randomLevel") ?: (int)Math.round(100 * Math.random()); setRandomValue("\$randomLevel", result); return result 
-		case "\$randomSaturation": def result = getRandomValue("\$randomSaturation") ?: (int)Math.round(50 + 50 * Math.random()); setRandomValue("\$randomSaturation", result); return result 
-		case "\$randomHue": def result = getRandomValue("\$randomHue") ?: (int)Math.round(360 * Math.random()); setRandomValue("\$randomHue", result); return result 
+		case "\$time": def t = localDate(); def h = t.hours; def m = t.minutes; return (h == 0 ? 12 : (h > 12 ? h - 12 : h)) + ":" + (m < 10 ? "0$m" : "$m") + " " + (h <12 ? "A.M." : "P.M.")
+		case "\$time24": def t = localDate(); def h = t.hours; def m = t.minutes; return h + ":" + (m < 10 ? "0$m" : "$m")
+		case "\$random": def result = getRandomValue("\$random") ?: (double)Math.random(); setRandomValue("\$random", result); return result
+		case "\$randomColor": def result = getRandomValue("\$randomColor") ?: colorUtil?.RANDOM?.rgb; setRandomValue("\$randomColor", result); return result
+		case "\$randomColorName": def result = getRandomValue("\$randomColorName") ?: colorUtil?.RANDOM?.name; setRandomValue("\$randomColorName", result); return result
+		case "\$randomLevel": def result = getRandomValue("\$randomLevel") ?: (int)Math.round(100 * Math.random()); setRandomValue("\$randomLevel", result); return result
+		case "\$randomSaturation": def result = getRandomValue("\$randomSaturation") ?: (int)Math.round(50 + 50 * Math.random()); setRandomValue("\$randomSaturation", result); return result
+		case "\$randomHue": def result = getRandomValue("\$randomHue") ?: (int)Math.round(360 * Math.random()); setRandomValue("\$randomHue", result); return result
   		case "\$locationMode": return location.getMode()
 		case "\$shmStatus": switch (hubUID ? 'off' : location.currentState("alarmSystemStatus")?.value) { case 'off': return 'Disarmed'; case 'stay': return 'Armed/Stay'; case 'away': return 'Armed/Away'; }; return null;
     }

@@ -1,52 +1,27 @@
 body {
 	overflow-y: auto;
+	background-color: #fff;
+	display: flex;
+	align-items: center;
+	justify-content: center;
 }
 
-div[welcome] {
-	width: 800px;
-	display: table;
-	background: rgba(255, 255, 255, 0.95);
-	border-radius: 4px;
-	margin: 32px auto;
-	padding-bottom: 32px;
+.loginbox {
+	max-width: 300px;
+	margin: 0 auto;
 }
 
-div[welcome] > label {
-	display: block;
-	width: 100%;
-	text-align: center;
-	font-size: 32px;
-	font-weight: normal;
-	padding: 32px;
+.loginbox-logo {
+	max-width: 100%;
 }
 
-div[welcome] > div {
-	padding: 0px 32px;
-	text-align: justify;
+.loginbox .input-group .form-control,
+.loginbox .input-group .btn {
+	border-radius: 0 !important;
 }
 
-panel {
-	display: inline-block;
-	padding: 32px;
-	width: 50%;
-	margin: 0px;
-	float: left;
-}
-
-panel+panel {
-	border-left: solid 1px #eee;
-	float: right;
-}
-
-panel p {
-	text-align: justify;
-}
-
-input[code] {
-	font-size: 32px !important;
-	height: 48px !important;
-	text-align: center;
-	color: #999 !important;
+input[name="code"] {
+	font-size: 26px;
 	text-transform: lowercase;
 }
 
@@ -54,17 +29,23 @@ ng-view {
 	position: relative;
 }
 
-@media (max-width: 767px) {
-	div[welcome] {
-		width: 80%;
-	}
+#instance, 
+.loginbox .input-group, 
+.help-row {
+	margin-top: 40px;
+}
 
-	panel {
-		width: 100%;
-	}
 
-	panel+panel {
-		border-left: none;
-		border-top: solid 1px #eee
-	} 
+.help-row{
+	text-align: center;
+}
+
+.help-row a{
+	text-decoration: none;
+	color: #fff;
+}
+
+.help-row a:hover{
+	text-decoration: none;
+	color: #fff;
 }

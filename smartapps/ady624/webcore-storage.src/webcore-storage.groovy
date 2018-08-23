@@ -16,7 +16,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-public static String version() { return "v0.2.0fa.20171011" }
+public static String version() { return "v0.3.107.20180806" }
 /******************************************************************************/
 /*** webCoRE DEFINITION														***/
 /******************************************************************************/
@@ -38,7 +38,6 @@ preferences {
 	//UI pages
 	page(name: "pageSettings")
 	page(name: "pageSelectDevices")
-	page(name: "pageSelectContacts")
 }
 
 
@@ -50,7 +49,7 @@ preferences {
 def pageSettings() {
     //clear devices cache
 	dynamicPage(name: "pageSettings", title: "", install: false, uninstall: false) {
-        if (!parent || !parent.isInstalled()) {        
+        if (!parent || !parent.isInstalled()) {
             section() {
                 paragraph "Sorry, you cannot install a piston directly from the Marketplace, please use the webCoRE SmartApp instead."
             }
@@ -60,15 +59,7 @@ def pageSettings() {
             }
         } else {
             section("Available devices") {
-                href "pageSelectDevices", title: "Available devices", description: "Tap here to select which devices are available to pistons" 
-            }
-
-            section("Available contacts") {
-                if (location.getContactBookEnabled()) {
-                    href "pageSelectContacts", title: "Available contacts", description: "Tap here to select which contacts are available to pistons" 
-                } else {
-                    paragraph "Your contact book is not enabled."
-                }
+                href "pageSelectDevices", title: "Available devices", description: "Tap here to select which devices are available to pistons"
             }
         }
 	}
@@ -86,7 +77,7 @@ private pageSelectDevices() {
 			input "dev:actuator", "capability.actuator", multiple: true, title: "Which actuators", required: false, submitOnChange: true
 			input "dev:sensor", "capability.sensor", multiple: true, title: "Which sensors", required: false, submitOnChange: true
 		}
-        
+
 		section ('Select devices by capability') {
         	paragraph "If you cannot find a device by type, you may try looking for it by category below"
 			def d
@@ -97,19 +88,6 @@ private pageSelectDevices() {
 		}
 	}
 }
-
-private pageSelectContacts() {
-	parent.refreshDevices()
-	dynamicPage(name: "pageSelectContacts", title: "") {
-		section() {
-			paragraph "Select the contacts you want ${handle()} to have access to."
-        }
-        section () {
-			input "contacts", "contact", multiple: true, title: "Which contacts", required: false, submitOnChange: true
-		}
-	}
-}
-
 
 
 /******************************************************************************/
@@ -147,14 +125,11 @@ def initData(devices, contacts) {
 		for(item in devices) {
 	    	if (item) {
 	    		def deviceType = item.key.replace('dev:', 'capability.')
-	    		def deviceIdList = item.value.collect{ it.id }        
+	    		def deviceIdList = item.value.collect{ it.id }
 	    		app.updateSetting(item.key, [type: deviceType, value: deviceIdList])
 	        }
 	    }
 	}
-    if (contacts) {
-    	app.updateSetting('contacts', [type: 'contact', value: contacts.collect{ it.id }])
-    }
 }
 
 def Map listAvailableDevices(raw = false) {
@@ -176,19 +151,6 @@ def Map getDashboardData() {
 			return [ (it) : value]
 	    }]
     }
-}
-
-def Map listAvailableContacts(raw = false) {
-    def contacts = [:]
-    for(contact in settings.contacts) {
-        def contactId = hashId(contact.id);
-        if (raw) {
-            contacts[contactId] = contact
-        } else {
-            contacts[contactId] = [t: contact.name, f: contact.contact.firstName, l: contact.contact.lastName, p: "$contact".endsWith('PUSH')]
-        }
-    }
-    return contacts
 }
 
 public String mem(showBytes = true) {

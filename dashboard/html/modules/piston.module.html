@@ -1,81 +1,117 @@
 <status ng-if="status" ng-animate ng-bind-html="status" ng-click="setStatus()"></status>
-<logo>webCoRE</logo>
-<loader ng-if="loading" ng-animate>
-	<ul>
-		<li></li>
-		<li></li>
-		<li></li>
-		<li></li>
-	</ul>
-</loader>
+<logo ng-if="view != 'dashboard'"><img src="https://community.webcore.co/uploads/default/original/2X/d/d82aa5d0f719318d1f35bafdec06e2c8cf3c54be.svg"></logo>
+	<div id="preloader">
+  		<div id="loader"></div>
+	</div>
 <error ng-if="error" ng-animate><p ng-bind-html="error"></p><button class="btn btn-default" ng-click="home()">Go home</button></error>
-<nav ng-if="initialized" ng-animate class="navbar navbar-default">
+
+<!-- Start nav -->
+<nav ng-if="initialized" ng-animate class="navbar navbar-inverse navbar-fixed-top">
 	<div class="container-fluid">
-		<!-- Brand and toggle get grouped for better mobile display -->
+
+<!-- Brand section -->
+
 		<div class="navbar-header">
-			<button ng-if="mode=='edit'" type="button" class="navbar-toggle btn btn-default collapsed" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1" aria-expanded="false">
+			<button ng-if="mode=='edit'" id="navbar-btn" type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1" aria-expanded="false">
 				<span class="sr-only">Toggle navigation</span>
 				<span class="icon-bar"></span>
 				<span class="icon-bar"></span>
 				<span class="icon-bar"></span>
 			</button>
-			<div ng-if="mode=='view'" class="nav navbar-nav btn-group">
-				<span class="title btn btn-default" title="Back to piston list" ng-click="home()"><i class="fa fa-chevron-left" aria-hidden="true"></i>&nbsp;{{location.name}} \ {{instance.name}} ({{instance.coreVersion.split('.').splice(0,3).join('.')}})</span>
+			<button ng-if="mode=='view'" id="navbar-btn" type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar-view-collapse" aria-expanded="false">
+				<span class="sr-only">Toggle navigation</span>
+				<span class="icon-bar"></span>
+				<span class="icon-bar"></span>
+				<span class="icon-bar"></span>
+			</button>
+
+<!-- View mode -->
+
+			<div ng-if="mode=='view'" class="nav navbar-nav btn-group hidden-xs hidden-sm">
+				<span class="title btn" title="Back to piston list" ng-click="home()"><i class="fa fa-chevron-left"></i>&nbsp;{{location.name}} \ {{instance.name}} ({{instance.coreVersion.split('.').splice(0,3).join('.')}})</span>
+			</div>
+			<div ng-if="mode=='view'" class="nav navbar-nav btn-group hidden-md hidden-lg">
+					<span class="title btn" title="Back to piston list" ng-click="home()"><i class="fa fa-chevron-left"></i>&nbsp;Back</span>
+			</div>
+			<div ng-if="mode=='view'" class="collapse navbar-collapse" id="navbar-view-collapse">
+       	<ul class="nav navbar-nav">
+        	<li class="dropdown">
+						<ul class="dropdown-menu">
+							<li class="dropdown"><a href="" ng-click="edit();" title="Edit the piston"><i class="fas fa-pencil fa-lg fa-fw"></i> Edit</a></li>
+							<li class="dropdown"><a href="" ng-click="test();" title="Test the piston"><i class="fas fa-play-circle fa-lg fa-fw"></i> Test</a></li>
+							<li class="dropdown"><a href="" ng-click="snapshot(true);" title="Take an anonymized snapshot of the piston"><i class="fas fa-camera fa-lg fa-fw"></i> Anonymized Snapshot</a></li>
+							<li class="dropdown"><a href="" ng-click="snapshot();" title="Take a snapshot of the piston"><i class="fas fa-camera fa-lg fa-fw"></i> Snapshot</a></li>
+							<li class="dropdown"><a href="" ng-click="textSnapshot();" title="Copy piston to clipboard"><i class="fal fa-copy fa-lg fa-fw"></i> Copy Piston</a></li>
+							<li ng-if="trace && trace.points"><a href="" ng-click="view.trace = !view.trace; toggleView(null);"><checkbox checked="view.trace" icon-class="fa-lg fa-fw"></checkbox> Trace</a></li>
+							<li class="dropdown"><a href="" ng-click="deleteDialog();" title="Delete piston"><i class="fal fa-times fa-lg fa-fw"></i> Delete</a></li>
+						</ul>
+					</li>
+        </ul>
+			</div>
+
+<!-- End view mode -->
+
+<!-- Edit mode -->
+
+			<div ng-if="mode=='edit'" class="nav navbar-nav btn-group hidden-xxs">
+				<button class="btn btn-default {{view.variables ? 'active' : ''}}" ng-click="toggleView('variables');" title="Show variables"><i class="far fa-superscript"></i></button>
+				<button class="btn btn-default {{view.elseIfs ? 'active' : ''}}" ng-click="toggleView('elseIfs');" title="Show complex IFs"><i class="far fa-code-branch"></i></button>
+				<button class="btn btn-default {{view.restrictions ? 'active' : ''}}" ng-click="toggleView('restrictions');" title="Show restrictions"><i class="fas fa-filter"></i></button>
+				<button class="btn btn-default {{view.movable ? 'active' : ''}}" ng-click="toggleView('movable');" title="Allow moving of items by drag & drop"><i class="fas fa-sort"></i></button>
+				<button class="btn btn-default {{view.console ? 'active' : ''}}" ng-click="toggleView('console');" title="Show evaluation console"><i class="fal fa-terminal"></i></button>
 			</div>
 			<div ng-if="mode=='edit'" class="nav navbar-nav btn-group">
-				<button class="btn btn-default {{view.variables ? 'active' : ''}}" ng-click="toggleView('variables');" title="Show variables"><i class="fa fa-subscript" aria-hidden="true"></i></button>
-				<button class="btn btn-default {{view.elseIfs ? 'active' : ''}}" ng-click="toggleView('elseIfs');" title="Show complex IFs"><i class="fa fa-code-fork" aria-hidden="true"></i></button>
-				<button class="btn btn-default {{view.restrictions ? 'active' : ''}}" ng-click="toggleView('restrictions');" title="Show restrictions"><i class="fa fa-filter" aria-hidden="true"></i></button>
-				<button class="btn btn-default {{view.movable ? 'active' : ''}}" ng-click="toggleView('movable');" title="Allow moving of items by drag & drop"><i class="fa fa-sort" aria-hidden="true"></i></button>
-				<button class="btn btn-default {{view.console ? 'active' : ''}}" ng-click="toggleView('console');" title="Show evaluation console"><i class="fa fa-terminal" aria-hidden="true"></i></button>
-			</div>
-			<div ng-if="mode=='edit'" class="nav navbar-nav btn-group">
-				<button class="btn btn-default" title="Undo" ng-click="undo();" ng-disabled="!stack || !stack.undo || !stack.undo.length"><i class="fa fa-undo" aria-hidden="true"></i>
+				<button class="btn btn-default" title="Undo" ng-click="undo();" ng-disabled="!stack || !stack.undo || !stack.undo.length"><i class="fa fa-undo"></i>
 				</button>
-				<button class="btn btn-default" title="Redo" ng-click="redo();" ng-disabled="!stack || !stack.redo || !stack.redo.length"><i class="fa fa-repeat" aria-hidden="true"></i>
+				<button class="btn btn-default" title="Redo" ng-click="redo();" ng-disabled="!stack || !stack.redo || !stack.redo.length"><i class="fas fa-redo"></i>
 				</button>
 			</div>
 		</div>
 
-		<!-- Collect the nav links, forms, and other content for toggling -->
+<!-- Collect the nav links, forms, and other content for toggling -->
+
 		<div ng-if="mode=='edit'" class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
-			<div class="nav navbar-nav navbar-right btn-group">
-				<button ng-if="(mode=='edit') && !!meta.build" class="btn btn-warning" ng-click="cancel();">Cancel</button>
-				<button ng-if="mode=='edit'" class="btn btn-success" ng-click="save();">Save</button>
-			</div>
-			<ul ng-if="mode=='edit'" class="nav navbar-nav navbar-right">
-				<li class="dropdown">
-					<a class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false"><i class="fa fa-cog" aria-hidden="true"></i> Options<span class="caret"></span></a>
-					<ul class="dropdown-menu btn btn-default">
-						<li class="{{view.variables ? 'active-tick' : ''}}" ng-click="toggleView('variables');"><a>Show variables</a>
+
+			<ul class="nav navbar-nav navbar-right">
+			<li class="dropdown">
+				<a ng-if="(mode=='edit') && !!meta.build" ng-click="cancel();" role="button">Cancel</a>
+			</li>
+			<li class="dropdown">
+				<a ng-if="(mode=='edit')" ng-click="deleteDialog();" role="button">Delete</a>
+			</li>
+			<li class="dropdown">
+				<a ng-if="mode=='edit'" ng-click="save();" role="button">Save</a>
+
+
+			<li ng-if="mode=='edit'" class="dropdown">
+					<a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Options <span class="caret"></span></a>
+					<ul class="dropdown-menu">
+						<li ng-click="toggleView('variables');"><a><checkbox checked="view.variables" icon-class="fa-lg fa-fw"></checkbox> Show variables</a>
 						</li>
-						<li class="{{view.elseIfs ? 'active-tick' : ''}}" ng-click="toggleView('elseIfs');"><a>Show complex IFs</a>
+						<li ng-click="toggleView('elseIfs');"><a><checkbox checked="view.elseIfs" icon-class="fa-lg fa-fw"></checkbox> Show complex IFs</a>
 						</li>
-						<li class="{{view.restrictions ? 'active-tick' : ''}}" ng-click="toggleView('restrictions');"><a>Show restrictions</a>
+						<li ng-click="toggleView('restrictions');"><a><checkbox checked="view.restrictions" icon-class="fa-lg fa-fw"></checkbox> Show restrictions</a>
 						</li>
 						<li role="separator" class="divider"></li>
-						<li class="{{view.advancedStatements ? 'active-tick' : ''}}" ng-click="toggleView('advancedStatements');"><a>Show advanced statements</a>
+						<li ng-click="toggleView('advancedStatements');"><a><checkbox checked="view.advancedStatements" icon-class="fa-lg fa-fw"></checkbox> Show advanced statements</a>
 						</li>
-						<li class="{{view.settings ? 'active-tick' : ''}}" ng-click="toggleView('settings');"><a>Show piston settings</a>
+						<li ng-click="toggleView('settings');"><a><checkbox checked="view.settings" icon-class="fa-lg fa-fw"></checkbox> Show piston settings</a>
 						</li>
-						<li class="{{view.whens ? 'active-tick' : ''}}" ng-click="toggleView('whens');"><a>Show when true/false actions</a>
+						<li ng-click="toggleView('whens');"><a><checkbox checked="view.whens" icon-class="fa-lg fa-fw"></checkbox> Show when true/false actions</a>
 						</li>
 						<li role="separator" class="divider"></li>
-						<li class="{{view.console ? 'active-tick' : ''}}" ng-click="toggleView('console');"><a>Show evaluation console</a>
+						<li ng-click="toggleView('console');"><a><checkbox checked="view.console" icon-class="fa-lg fa-fw"></checkbox> Show evaluation console</a>
 						</li>
 					</ul>
-				</li>
+
 			</ul>
-			<!--	  <form class="navbar-form navbar-left">
-		<div class="form-group">
-		  <input type="text" class="form-control" placeholder="Search">
 		</div>
-		<button type="submit" class="btn btn-default">Submit</button>
-	  </form>-->
-		</div>
-		<!-- /.navbar-collapse -->
 	</div>
 </nav>
+
+<!-- End nav -->
+
+
 <viewer ng-if="initialized" ng-animate options="{{viewerPiston.showOptions}}" mode="{{mode}}">
 	<div header ng-if="mode=='view'">
 		<div class="container">
@@ -86,40 +122,38 @@
 	</div>
 
 	<div class="container" ng-if="mode=='view'">
+		
+		<div warning ng-if="meta.active && !subscriptions.events && !schedules.length && !piston.o.des" class="alert alert-warning">This piston does not subscribe to any events. Unless executed by other means, it will never run on its own.</div>
+
+		<div class="text-right">
+			<span class="fas fa-caret-down collapse-control rotate-on-collapse" data-toggle="collapse" collapse-control data-target="#collapseCards" aria-expanded="true" small title="Hide/Show"></span>
+		</div>
+		
 		<div class="row">
-			<div class="row" ng-if="0==1">
-				<div class="col-md-12">
-					<div class="btn-group btn-group-justified" role="group">
-						<label class="btn btn-default" type="button">Pause</label>
-						<label class="btn btn-default" type="button" ng-click="edit();">Edit</label>
-						<label class="btn btn-default" type="button">Export</label>
-						<label class="btn btn-default" type="button">Backup</label>
-						<label class="btn btn-default" type="button">Restore</label>
-					</div>
-				</div>
-			</div>
-			<div warning ng-if="meta.active && !subscriptions.events && !schedules.length && !piston.o.des" class="alert alert-warning">This piston does not subscribe to any events. Unless executed by other means, it will never run on its own.</div>
-			<div class="row">
+			
+			<div class="collapse in" collapse-target id="collapseCards">
 				<div class="col-md-4">
-					<h2>Status</h2>
-					<div ng-if="meta.active">
-						<p>This piston is currently active and humming happily.</p>
-						<button class="btn btn-default" ng-click="pause();">Pause »</button>
-					</div>
-					<div ng-if="!meta.active">
-						<p>This piston is currently <span class="danger">PAUSED</span>. No actions will be performed by this piston until you resume it.</p>
-						<button class="btn btn-default" ng-click="resume();">Resume »</button>
-					</div>
-					<hr/>
-					<p>
-						<p>Piston category</p>
+					<div class="columnCards">
+						<h2>Status</h2>
+						<div ng-if="meta.active">
+							<p>This piston is currently active and humming happily.</p>
+							<button class="btn btn-default" ng-click="pause();">Pause »</button>
+						</div>
+						<div ng-if="!meta.active">
+							<p>This piston is currently <span class="danger">PAUSED</span>. No actions will be performed by this piston until you resume it.</p>
+							<button class="btn btn-default" ng-click="resume();">Resume »</button>
+						</div>
+						<hr/>
+						<p>Piston Category</p>
 						<div>
 							<select selectpicker ng-model="$parent.$parent.category" class="form-control" ng-change="setCategory()"><option ng-repeat="category in categories" value="{{category.i}}">{{category.n ? category.n : '(no name)'}}</option></select>
 						</div>
-					</p>
+					</div>
 				</div>
+
 				<div class="col-md-4">
-					<h2>Quick facts</h2>
+					<div class="columnCards">
+					<h2>Quick Facts</h2>
 					<p>Piston state: <span ng-bind-html="renderString(state.new)"></span></p>
 					<p>Last executed: {{lastExecuted ? utcToString(lastExecuted) : 'never'}}</p>
 					<p>Next scheduled: {{nextSchedule ? utcToString(nextSchedule) : 'never'}}</p>
@@ -128,40 +162,58 @@
 					<p>Memory used: {{memory ? memory : 'unknown'}}</p>
 					<p>External URL: <a href="{{endpoint}}" target="_blank">(click to open/execute)</a></p>
 				</div>
+				</div>
+
+
 				<div class="col-md-4">
-					<h2>Automatic backup</h2>
+					<div class="columnCards">
+
+					<h2>Automatic Backup</h2>
 					<div ng-if="meta.bin">
-						<p>Automatic backup is enabled for this piston.</p>
-						<p>{{mobile ? 'Touch' : 'Click'}} the box below to reveal your backup bin code. You should make a note of this code as you may use it later to restore a piston that you "mistakenly" deleted.</p>
+						<p> Automatic backup enabled. </p>
+						<p>{{mobile ? 'Touch' : 'Click'}} the box to reveal your backup bin code. Make a note of this code as you may use it later to restore a deleted piston.</p>
 						<p class="well bin animated" reveal="{{revealing}}" ng-click="revealBin();">{{meta.bin}}</p>
-						<p class="text-center"><b>Please do NOT share this code with anyone.</b></p>
+						<p class="text-center"><b>Do NOT share this code with anyone.</b></p>
 					</div>
 					<div ng-if="!meta.bin">
 						<p>You do not have automatic backup enabled for this piston.</p>
 						<button class="btn btn-default" ng-click="enableAutomaticBackup()">Enable automatic backup »</button>
+
 					</div>
 				</div>
 			</div>
+				</div>
+			</div>
+
+
+
 			<div class="row">
 				<div class="col-md-12">
-					<h2>Script <span small ng-click="hideScript = !hideScript">({{hideScript ? 'show' : 'hide'}})</span></h2>
-					<p ng-if="!hideScript">
-						<piston id="piston" ng-if="initialized" mode="{{mode}}" ng-repeat="piston in [piston]" data-nag-model="piston" ng-include="'piston'" trace="{{view.trace && (mode=='view') && !!trace && !!trace.points}}" no-animation context-menu="contextMenu()" context-menu-class="contextmenu"></piston>
-					</p>
-					<div ng-if="!hideScript">
-						<button class="btn btn-default" ng-click="edit();" title="Edit the piston">Edit »</button>
-						<button class="btn btn-warning" ng-click="test();" title="Test the piston">Test</button>
-						<button class="btn btn-success" ng-click="snapshot(true);" title="Take an anonymized snapshot of the piston"><i class="fa fa-camera" aria-hidden="true"></i></button>
-						<button class="btn btn-danger" ng-click="snapshot();" title="Take a snapshot of the piston"><i class="fa fa-camera" aria-hidden="true"></i></button>
-						<button class="btn btn-default" ng-click="textSnapshot();" title="Copy piston to clipboard"><i class="fa fa-copy" aria-hidden="true"></i></button>
-						<toggle ng-if="trace && trace.points" ng-model="view.trace" on="Trace" off="Trace" ng-click="toggleView(null)"></toggle>
-						<button class="btn btn-danger pull-right" ng-click="deleteDialog();">Delete »</button>
-					</div>
+					<span class="fas fa-caret-down pull-right collapse-control rotate-on-collapse" data-toggle="collapse" collapse-control data-target="#collapseScript" aria-expanded="true" small title="Hide/Show"></span>
+					<h3 class="pull-left">
+						Script 
+					</h3>
+						<div class="collapse navbar-collapse script" id="navbar-view-collapse">
+							<div ng-include="'piston-editor-buttons'"></div>
+						</div>
+
+						<div class="clearfix"></div>
+						<div class="collapse in" collapse-target id="collapseScript">
+							<piston id="piston" ng-if="initialized" mode="{{mode}}" ng-repeat="piston in [piston]" data-nag-model="piston" ng-include="'piston'" trace="{{view.trace && (mode=='view') && !!trace && !!trace.points}}" no-animation context-menu="contextMenu()" context-menu-class="contextmenu"></piston>
+							<div ng-include="'piston-editor-buttons'" class="hidden-xs"></div>
+						</div>
 				</div>
 			</div>
+
 			<div class="row">
+
 				<div class="col-md-12 col-lg-6">
-					<h2>Logs</h2>
+					<h3>
+						<span class="fas fa-caret-down pull-right collapse-control rotate-on-collapse" data-toggle="collapse" collapse-control data-target="#collapseLogs" aria-expanded="true" small title="Hide/Show"></span>
+						Logs
+					</h3>
+					<div class="collapse in" collapse-target id="collapseLogs">
+
 					<div class="logs">
 						<table class="table logs table-striped">
 							<thead>
@@ -169,7 +221,7 @@
 									<th>The log is empty</th>
 								</tr>
 							</thead>
-							<tbody>				
+							<tbody>
 								<tr ng-repeat="log in logs" log="{{log.c}}">
 									<td ng-if="log.t" colspan="2" class="hdr">{{utcToString(log.t) + ' +' + (log.t % 1000) + 'ms'}}</td>
 									<td ng-if-start="log.o != null">+{{log.o}}ms</td>
@@ -178,7 +230,7 @@
 							</tbody>
 						</table>
 					</div>
-					<div class="form-group">
+					<div class="form-group clearfix">
 						<button ng-if="logs && logs.length" class="btn btn-default" ng-click="clearLogs();" title="Clear the logs">Clear</button>
 						<select selectpicker class="selectpicker show-tick pull-right" data-style="btn-default" data-mobile="{{mobile}}" ng-change="setLoggingLevel($parent);" ng-model="$parent.$parent.logging">
 							<option value="" style="display:none" disabled>Nothing selected</option>
@@ -190,11 +242,21 @@
 						<span class="pull-right form-control-static">Logging level&nbsp;</span>
 					</div>
 				</div>
+				</div>
+
+
+
+
 				<div class="col-md-12 col-lg-6">
-					<h2>Variables</h2>
+					<h3>
+						<span class="fas fa-caret-down pull-right collapse-control rotate-on-collapse" data-toggle="collapse" collapse-control data-target="#collapseVars" aria-expanded="true" small title="Hide/Show"></span>
+						Variables
+					</h3>
+					<div class="collapse in" collapse-target id="collapseVars">
+
 					<div multicolumn>
 						<label var ng-if="piston && piston.v">Local variables</label>
-						<div ng-if="localVars" var ng-repeat="var in piston.v"><span><span class="vartype">{{var.t}}</span><span>{{var.n}}</span></span><span class="{{var.v == null ? 'notset' : ''}}" ng-bind-html="var.v ? renderOperand(var.v) : formatVariableValue(var, var.n)"></span></div>
+						<div ng-if="localVars" var ng-repeat="var in piston.v"><span><span class="vartype">{{var.t}}</span><span>{{var.n}}</span> <i class="clickable far fa-edit" aria-hidden="true" ng-if="!var.v && (var.t.substr(-1) != ']')" ng-click="editLocalVariable(var)"></i></span><span class="{{var.v == null ? 'notset' : ''}}" ng-bind-html="var.v ? renderOperand(var.v) : formatVariableValue(var, var.n)"></span></div>
 						<div novar>(no variables defined)</div>
 						<label var ng-if="globalVars">Global variables</label>
 						<div ng-if="globalVars" var ng-repeat="(name, var) in globalVars"><span><span class="vartype">{{var.t}}</span><span>{{name}}</span></span><span class="{{var.v == null ? 'notset' : ''}}" ng-bind-html="formatVariableValue(var)"></span></div>
@@ -204,9 +266,16 @@
 					</div>
 				</div>
 			</div>
-			<div class="row">				
+			</div>
+
+
+			<div class="row">
 				<div class="col-md-12">
-					<h2>Evaluation console</h2>
+					<h3>
+						<span class="fas fa-caret-down pull-right collapse-control rotate-on-collapse" data-toggle="collapse" collapse-control data-target="#collapseCons" aria-expanded="true" small title="Hide/Show"></span>
+						Evaluation Console
+					</h3>
+					<div class="collapse in" collapse-target id="collapseCons">
 					<console ng-if="initialized" mode="{{mode}}">
 						<label>Evaluation console</label>
 						<content>
@@ -221,17 +290,24 @@
 					</console>
 				</div>
 			</div>
+			</div>
 			<div class="row" ng-if="!mobile && stats && stats.timing && stats.timing.length">
 				<div class="col-md-12">
-					<h2>Statistics</h2>
+
+					<h3>
+						<span class="fas fa-caret-down pull-right collapse-control rotate-on-collapse" collapse-control data-toggle="collapse" data-target="#collapseStats" aria-expanded="true" small title="Hide/Show"></span>
+						Statistics
+					</h3>
+					<div class="collapse in" collapse-target id="collapseStats">
 					<canvas id="line" height="100" class="chart chart-line" chart-data="chart.data" chart-labels="chart.labels" chart-series="chart.series" chart-options="chart.options" chart-dataset-override="chart.datasetOverride" disabled-chart-click_ed="chart.onClick"></canvas>
 				</div>
+			</div>
 			</div>
 		</div>
 		<footer>
 			<p></p>
 		</footer>
-	</div>
+
 	<piston id="editor" console="{{view.console}}" ng-if="initialized && (mode=='edit')" mode="{{mode}}" ng-repeat="piston in [piston]" data-nag-model="piston" ng-include="'piston'" movable="{{(mode=='edit') && view.movable}}" context-menu="contextMenu()" context-menu-class="contextmenu"></piston>
 	<console ng-if="(mode == 'edit') && view.console && initialized" mode="{{mode}}">
 		<label>Evaluation console</label>
@@ -295,7 +371,17 @@
 	</toolbar>
 </viewer>
 
+<!-- Begin script -->
 
+<script type="text/ng-template" id="piston-editor-buttons">
+	<button class="btn btn-default" ng-click="edit();" title="Edit the piston">Edit</button>
+	<button class="btn btn-warning" ng-click="test();" title="Test the piston">Test</button>
+	<button class="btn btn-success" ng-click="snapshot(true);" title="Take an anonymized snapshot of the piston"><i class="fas fa-camera" data-fa-transform="grow-4"></i></button>
+	<button class="btn btn-danger" ng-click="snapshot();" title="Take a snapshot of the piston"><i class="fas fa-camera" data-fa-transform="grow-4"></i></button>
+	<button class="btn btn-default" ng-click="textSnapshot();" title="Copy piston to clipboard"><i class="fal fa-copy" data-fa-transform="grow-4"></i></button>
+	<toggle ng-if="trace && trace.points" ng-model="view.trace" on="Trace" off="Trace" ng-click="toggleView(null)"></toggle>
+	<button class="btn btn-danger" ng-click="deleteDialog();">Delete</button>
+</script>
 
 <script type="text/ng-template" id="dialog-captured-image">
 	<br/>
@@ -314,6 +400,7 @@
 <script type="text/ng-template" id="piston">
 	<gutter></gutter>
 	<tracer></tracer>
+	<i data-fa-symbol="drag-handle" class="fas fa-sort svg-inline--fa"></i>
 	<content>
 		<line com h ng-if="piston.loading">loading piston "{{meta.name}}"...</line>
 		<line com h ng-if-start="!piston.loading">/**************************************************************/</line>
@@ -368,7 +455,10 @@
 <script type="text/ng-template" id="variables">
 			<div ng-repeat="variable in variables">
 				<line com ng-if="variable.z">/* {{variable.z}} */</line>
-				<line pun><span ng-click="editVariable(variable);"><span pun ng-if="(variable.a == 's') && (variable.v)">const&nbsp;</span><span typ>{{variable.t}}&nbsp;</span><span var>{{variable.n}}</span><span ng-if="variable.v" pun>&nbsp;=&nbsp;</span><span ng-if="variable.v" ng-bind-html="variable.$$html || (variable.$$html = renderOperand(variable.v))"></span><span pun>;</span><span ng-if="!variable.v" com sensitive>&nbsp;/* <span ng-bind-html="formatVariableValue(variable, variable.n)"></span> */</span></span></line>
+				<line pun dnd-nodrag dnd-draggable="variable" dnd-type="'variable'" dnd-moved="drag(variables, $index);" dnd-copied="copyVariable(variables, $index)" dnd-effect-allowed="copyMove">
+					<handle dnd-handle><svg class="sprite-icon"><use xlink:href="#drag-handle"></use></svg></handle>
+					<span ng-click="editVariable(variable);" dnd-nodrag><span pun ng-if="(variable.a == 's') && (variable.v)">const&nbsp;</span><span typ>{{variable.t}}&nbsp;</span><span var>{{variable.n}}</span><span ng-if="variable.v" pun>&nbsp;=&nbsp;</span><span ng-if="variable.v" ng-bind-html="variable.$$html || (variable.$$html = renderOperand(variable.v))"></span><span pun>;</span><span ng-if="!variable.v" com sensitive>&nbsp;/* <span ng-bind-html="formatVariableValue(variable, variable.n)"></span> */</span></span>
+				</line>
 			</div>
 			<line new data-ng-click="addVariable()">+ add a new variable</line>
 </script>
@@ -380,7 +470,7 @@
 </script>
 <script type="text/ng-template" id="statement">
 	<dnd-nodrag ng-selected="selection == statement" ng-disabled="statement.di">
-		<async ng-if="(statement.a == '1')" class="fa fa-code-fork" title="This statement is executed asynchronously"></async>
+		<async ng-if="(statement.a == '1')" class="fa fa-code-branch" title="This statement is executed asynchronously"></async>
 		<bar ng-if="(statement.t!='action') || ((mode=='edit') && view.movable) || ((statement.d) && (statement.d.length)) || ((statement.r) && (statement.r.length)) || ((statement.k) && ((mode=='edit') || (statement.k.length>1)))" asynch="{{statement.a == '1'}}"></bar>
 <!--		<trace ng-if="(view.trace && (mode=='view') && trace && trace.points && trace.points['s:' + statement.$])"><span>+{{trace.points['s:' + statement.$].o}}ms</span><span dur>{{trace.points['s:' + statement.$].d}}ms</span></trace>-->
 		<trace ng-if="(view.trace && (mode=='view') && ((statement.t != 'action') || (statement.d && statement.d.length)) && trace && trace.points && trace.points['s:' + statement.$])"><span>+{{trace.points['s:' + statement.$].o}}ms</span><span ng-if="(trace.points['s:' + statement.$].v != null) && (trace.points['s:' + statement.$].v >= 0)" dur>{{trace.points['s:' + statement.$].d}}ms</span><span ng-if="(trace.points['s:' + statement.$].v == null) || (trace.points['s:' + statement.$].v < 0)" timer ok="{{(trace.points['s:' + statement.$].v == null) || (trace.t + trace.points['s:' + statement.$].o + trace.points['s:' + statement.$].d - trace.points['s:' + statement.$].v >= currentTime())}}">{{trace.points['s:' + statement.$].v == null ? '▼ ▼ ▼' : timeCounter(trace.t + trace.points['s:' + statement.$].o + trace.points['s:' + statement.$].d - trace.points['s:' + statement.$].v)}}</span></trace>
@@ -391,7 +481,7 @@
 			<line kwd ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)">only when</line>
 			<restrictions ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)" data-ng-repeat="collection in [statement]" data-ng-include="'restrictions'" dnd-nodrag data-nag-model="statement"></restrictions>
 			<line ng-if-start="((mode=='edit') && view.movable) || ((statement.d) && (statement.d.length)) || ((statement.r) && (statement.r.length)) || ((statement.k) && (statement.k.length==0))" kwd ng-click="select(statement, statements)">
-				<handle dnd-handle class="fa fa-sort"></handle><span ng-click="editStatement(statement, statements)" kwd>{{statement.a == '1' ? 'async ' : ''}}with</span>
+				<handle dnd-handle><svg class="sprite-icon"><use xlink:href="#drag-handle"></use></svg></handle><span ng-click="editStatement(statement, statements)" kwd>{{statement.a == '1' ? 'async ' : ''}}with</span>
 				<badge green ng-if="(statement.tep == 'c')" badge="C" title="Only execute on condition state change"></badge>
 				<badge green ng-if="(statement.tep == 'p')" badge="P" title="Only execute on piston state change"></badge>
 				<badge green ng-if="(statement.tep == 'b')" badge="C|P" title="Only execute on condition or piston state change"></badge>
@@ -418,7 +508,7 @@
 			<line kwd ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)">only when</line>
 			<restrictions ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)" data-ng-repeat="collection in [statement]" data-ng-include="'restrictions'" dnd-nodrag data-nag-model="statement"></restrictions>
 			<line kwd ng-click="select(statement, statements)">
-				<handle dnd-handle class="fa fa-sort"></handle><span ng-click="editStatement(statement, statements)" kwd>{{statement.a == '1' ? 'async ' : ''}}do</span>
+				<handle dnd-handle><svg class="sprite-icon"><use xlink:href="#drag-handle"></use></svg></handle><span ng-click="editStatement(statement, statements)" kwd>{{statement.a == '1' ? 'async ' : ''}}do</span>
 				<badge green ng-if="(statement.tep == 'c')" badge="C" title="Only execute on condition state change"></badge>
 				<badge green ng-if="(statement.tep == 'p')" badge="P" title="Only execute on piston state change"></badge>
 				<badge green ng-if="(statement.tep == 'b')" badge="C|P" title="Only execute on condition or piston state change"></badge>
@@ -440,7 +530,7 @@
 			<line kwd ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)">only when</line>
 			<restrictions ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)" data-ng-repeat="collection in [statement]" data-ng-include="'restrictions'" dnd-nodrag data-nag-model="statement"></restrictions>
 			<line kwd ng-click="select(statement, statements)">
-				<handle dnd-handle class="fa fa-sort"></handle><span ng-click="editStatement(statement, statements)" kwd>on events from</span>
+				<handle dnd-handle><svg class="sprite-icon"><use xlink:href="#drag-handle"></use></svg></handle><span ng-click="editStatement(statement, statements)" kwd>on events from</span>
 				<span ng-if="view.trace && (mode=='view')" nul> /* #{{statement.$}} */</span>
 			</line>
 			<events data-ng-repeat="collection in [statement]" data-ng-include="'events'" dnd-nodrag eval="{{statement && trace && trace.points && trace.points['c:' + statement.$] ? trace.points['c:' + statement.$].v : ''}}"></events>
@@ -456,7 +546,7 @@
 			<line kwd ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)">only when</line>
 			<restrictions ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)" data-ng-repeat="collection in [statement]" data-ng-include="'restrictions'" dnd-nodrag data-nag-model="statement"></restrictions>
 			<line kwd ng-click="select(statement, statements)">
-				<handle dnd-handle class="fa fa-sort"></handle><span ng-click="editStatement(statement, statements)" kwd>{{statement.a == '1' ? 'async ' : ''}}if</span>
+				<handle dnd-handle><svg class="sprite-icon"><use xlink:href="#drag-handle"></use></svg></handle><span ng-click="editStatement(statement, statements)" kwd>{{statement.a == '1' ? 'async ' : ''}}if</span>
 				<badge green ng-if="(statement.tep == 'c')" badge="C" title="Only execute on condition state change"></badge>
 				<badge green ng-if="(statement.tep == 'p')" badge="P" title="Only execute on piston state change"></badge>
 				<badge green ng-if="(statement.tep == 'b')" badge="C|P" title="Only execute on condition or piston state change"></badge>
@@ -489,7 +579,7 @@
 			<line kwd ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)">only when</line>
 			<restrictions ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)" data-ng-repeat="collection in [statement]" data-ng-include="'restrictions'" dnd-nodrag data-nag-model="statement"></restrictions>
 			<line kwd ng-click="select(statement, statements)">
-				<handle dnd-handle class="fa fa-sort"></handle><span ng-click="editStatement(statement, statements)" kwd>{{statement.a == '1' ? 'async ' : ''}}switch</span> <span pun>(</span><span ng-bind-html="statement.$$html || (statement.$$html = renderOperand(statement.lo))"></span><span pun>)</span><span pun title="Fall-through mode" ng-if="statement.ctp == 'e'"><i class="fa fa-sort-amount-asc" aria-hidden="true"></i></span>
+				<handle dnd-handle><svg class="sprite-icon"><use xlink:href="#drag-handle"></use></svg></handle><span ng-click="editStatement(statement, statements)" kwd>{{statement.a == '1' ? 'async ' : ''}}switch</span> <span pun>(</span><span ng-bind-html="statement.$$html || (statement.$$html = renderOperand(statement.lo))"></span><span pun>)</span><span pun title="Fall-through mode" ng-if="statement.ctp == 'e'"><i class="fas fa-sort-amount-asc"></i></span>
 				<badge green ng-if="(statement.tep == 'c')" badge="C" title="Only execute on condition state change"></badge>
 				<badge green ng-if="(statement.tep == 'p')" badge="P" title="Only execute on piston state change"></badge>
 				<badge green ng-if="(statement.tep == 'b')" badge="C|P" title="Only execute on condition or piston state change"></badge>
@@ -522,7 +612,7 @@
 			<line kwd ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)">only when</line>
 			<restrictions ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)" data-ng-repeat="collection in [statement]" data-ng-include="'restrictions'" dnd-nodrag data-nag-model="statement"></restrictions>
 			<line kwd ng-click="select(statement, statements)">
-				<handle dnd-handle class="fa fa-sort"></handle><span ng-click="editStatement(statement, statements)" kwd>{{statement.a == '1' ? 'async ' : ''}}for</span> <span pun>(</span><span ng-bind-html="statement.$$html || (statement.$$html = renderForOperands(statement))"></span><span pun>)</span>
+				<handle dnd-handle><svg class="sprite-icon"><use xlink:href="#drag-handle"></use></svg></handle><span ng-click="editStatement(statement, statements)" kwd>{{statement.a == '1' ? 'async ' : ''}}for</span> <span pun>(</span><span ng-bind-html="statement.$$html || (statement.$$html = renderForOperands(statement))"></span><span pun>)</span>
 				<badge green ng-if="(statement.tep == 'c')" badge="C" title="Only execute on condition state change"></badge>
 				<badge green ng-if="(statement.tep == 'p')" badge="P" title="Only execute on piston state change"></badge>
 				<badge green ng-if="(statement.tep == 'b')" badge="C|P" title="Only execute on condition or piston state change"></badge>
@@ -544,7 +634,7 @@
 			<line kwd ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)">only when</line>
 			<restrictions ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)" data-ng-repeat="collection in [statement]" data-ng-include="'restrictions'" dnd-nodrag data-nag-model="statement"></restrictions>
 			<line kwd ng-click="select(statement, statements)">
-				<handle dnd-handle class="fa fa-sort"></handle><span ng-click="editStatement(statement, statements)" kwd>{{statement.a == '1' ? 'async ' : ''}}for each</span> <span pun>(</span><span ng-bind-html="statement.$$html || (statement.$$html = renderForEachOperands(statement))"></span><span pun>)</span>
+				<handle dnd-handle><svg class="sprite-icon"><use xlink:href="#drag-handle"></use></svg></handle><span ng-click="editStatement(statement, statements)" kwd>{{statement.a == '1' ? 'async ' : ''}}for each</span> <span pun>(</span><span ng-bind-html="statement.$$html || (statement.$$html = renderForEachOperands(statement))"></span><span pun>)</span>
 				<badge green ng-if="(statement.tep == 'c')" badge="C" title="Only execute on condition state change"></badge>
 				<badge green ng-if="(statement.tep == 'p')" badge="P" title="Only execute on piston state change"></badge>
 				<badge green ng-if="(statement.tep == 'b')" badge="C|P" title="Only execute on condition or piston state change"></badge>
@@ -566,7 +656,7 @@
 			<line kwd ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)">only when</line>
 			<restrictions ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)" data-ng-repeat="collection in [statement]" data-ng-include="'restrictions'" dnd-nodrag data-nag-model="statement"></restrictions>
 			<line kwd ng-click="select(statement, statements)">
-				<handle dnd-handle class="fa fa-sort"></handle><span ng-click="editStatement(statement, statements)" kwd>{{statement.a == '1' ? 'async ' : ''}}while</span>
+				<handle dnd-handle><svg class="sprite-icon"><use xlink:href="#drag-handle"></use></svg></handle><span ng-click="editStatement(statement, statements)" kwd>{{statement.a == '1' ? 'async ' : ''}}while</span>
 				<badge green ng-if="(statement.tep == 'c')" badge="C" title="Only execute on condition state change"></badge>
 				<badge green ng-if="(statement.tep == 'p')" badge="P" title="Only execute on piston state change"></badge>
 				<badge green ng-if="(statement.tep == 'b')" badge="C|P" title="Only execute on condition or piston state change"></badge>
@@ -589,7 +679,7 @@
 			<line kwd ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)">only when</line>
 			<restrictions ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)" data-ng-repeat="collection in [statement]" data-ng-include="'restrictions'" dnd-nodrag data-nag-model="statement"></restrictions>
 			<line ng-click="select(statement, statements)">
-				<handle dnd-handle class="fa fa-sort"></handle><span ng-click="editStatement(statement, statements)" kwd>{{statement.a == '1' ? 'async ' : ''}}repeat</span>
+				<handle dnd-handle><svg class="sprite-icon"><use xlink:href="#drag-handle"></use></svg></handle><span ng-click="editStatement(statement, statements)" kwd>{{statement.a == '1' ? 'async ' : ''}}repeat</span>
 				<badge green ng-if="(statement.tep == 'c')" badge="C" title="Only execute on condition state change"></badge>
 				<badge green ng-if="(statement.tep == 'p')" badge="P" title="Only execute on piston state change"></badge>
 				<badge green ng-if="(statement.tep == 'b')" badge="C|P" title="Only execute on condition or piston state change"></badge>
@@ -613,7 +703,7 @@
 			<line kwd ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)">only when</line>
 			<restrictions ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)" data-ng-repeat="collection in [statement]" data-ng-include="'restrictions'" dnd-nodrag data-nag-model="statement"></restrictions>
 			<line kwd ng-click="select(statement, statements)">
-				<handle dnd-handle class="fa fa-sort"></handle><span kwd ng-click="editStatement(statement, statements)">every</span> <span lit ng-click="editStatement(statement, statements)" ng-bind-html="renderTimer(statement);"></span>
+				<handle dnd-handle><svg class="sprite-icon"><use xlink:href="#drag-handle"></use></svg></handle><span kwd ng-click="editStatement(statement, statements)">every</span> <span lit ng-click="editStatement(statement, statements)" ng-bind-html="renderTimer(statement);"></span>
 				<badge green ng-if="(statement.tep == 'c')" badge="C" title="Only execute on condition state change"></badge>
 				<badge green ng-if="(statement.tep == 'p')" badge="P" title="Only execute on piston state change"></badge>
 				<badge green ng-if="(statement.tep == 'b')" badge="C|P" title="Only execute on condition or piston state change"></badge>
@@ -635,7 +725,7 @@
 			<line kwd ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)">only when</line>
 			<restrictions ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)" data-ng-repeat="collection in [statement]" data-ng-include="'restrictions'" dnd-nodrag data-nag-model="statement"></restrictions>
 			<line kwd ng-click="select(statement, statements)">
-				<handle dnd-handle class="fa fa-sort"></handle><span ng-click="editStatement(statement, statements)" kwd>break</span>
+				<handle dnd-handle><svg class="sprite-icon"><use xlink:href="#drag-handle"></use></svg></handle><span ng-click="editStatement(statement, statements)" kwd>break</span>
 				<span ng-if="view.trace && (mode=='view')" nul> /* #{{statement.$}} */</span>
 			</line>
 		</div>
@@ -647,7 +737,7 @@
 			<line kwd ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)">only when</line>
 			<restrictions ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)" data-ng-repeat="collection in [statement]" data-ng-include="'restrictions'" dnd-nodrag data-nag-model="statement"></restrictions>
 			<line kwd ng-click="select(statement, statements)">
-				<handle dnd-handle class="fa fa-sort"></handle><span kwd ng-click="editStatement(statement, statements)">exit</span> <span lit ng-bind-html="renderOperand(statement.lo)"></span><span kwd>;</span>
+				<handle dnd-handle><svg class="sprite-icon"><use xlink:href="#drag-handle"></use></svg></handle><span kwd ng-click="editStatement(statement, statements)">exit</span> <span lit ng-bind-html="renderOperand(statement.lo)"></span><span kwd>;</span>
 				<span ng-if="view.trace && (mode=='view')" nul> /* #{{statement.$}} */</span>
 			</line>
 		</div>
@@ -667,7 +757,7 @@
 			<event data-ng-repeat-start="event in collection.c" data-ng-include="'event'" dnd-nodrag dnd-draggable="event" dnd-nodrag dnd-type="'event'" dnd-moved="drag(collection.c, $index);" dnd-effect-allowed="copyMove"></event>
 			<line operator data-ng-repeat-end><span pun>or</span></line>
 			<line new data-ng-click="addEvent(collection)">+ add a new event</line>
-		</div>		
+		</div>
 	</dnd-nodrag>
 </script>
 <script type="text/ng-template" id="event">
@@ -677,9 +767,9 @@
 		<subscription ng-if="(mode == 'view') && !!event.s" class="fa fa-bolt" title="This event subscribes to events"></subscription>
 		<line com ng-if="!event.c && !!event.z">/* {{event.z}} */</line>
 		<line cond ng-if="!event.c" ng-click="select(event, collection.c, 'event')">
-			<handle dnd-handle class="fa fa-sort"></handle><span ng-click="editEvent(event, collection.c);" ng-bind-html="event.$$html || (event.$$html = renderOperand(event.lo))"></span><span ng-if="view.trace && (mode=='view')" nul> /* #{{event.$}} */</span>
+			<handle dnd-handle><svg class="sprite-icon"><use xlink:href="#drag-handle"></use></svg></handle><span ng-click="editEvent(event, collection.c);" ng-bind-html="event.$$html || (event.$$html = renderOperand(event.lo))"></span><span ng-if="view.trace && (mode=='view')" nul> /* #{{event.$}} */</span>
 		</line>
-		</div>	
+		</div>
 	</dnd-nodrag>
 </script>
 
@@ -705,7 +795,7 @@
 			<condition ng-if-start="(collection.t != 'group') && !collection.n" data-ng-repeat-start="condition in collection.c" data-ng-include="'condition'" dnd-nodrag data-nag-model="collection" dnd-draggable="condition" dnd-nodrag dnd-type="'condition'" dnd-moved="drag(collection.c, $index);" dnd-effect-allowed="copyMove"></condition>
 			<line operator ng-if-end data-ng-repeat-end ng-click="select({t: 'group', c: collection.c, o: collection.o, n: collection.n},  null, 'conditions')"><span pun data-ng-click="editConditionGroup(collection, null, (collection.t == 'group' ? ($parent.$parent.parentCollection ? $parent.$parent.parentCollection.o : statement.o) : null));" ng-bind-html="renderGroupingMethod(collection, condition)">{{collection.o}}</span></line>
 			<line new ng-if="(collection.t != 'group') && !collection.n" data-ng-click="addCondition(collection, null, null, collection.o)">+ add a new condition</line>
-		</div>		
+		</div>
 	</dnd-nodrag>
 </script>
 <script type="text/ng-template" id="condition">
@@ -716,12 +806,12 @@
 		<conditions ng-if="condition.c" ng-repeat="collection in [condition]" data-ng-include="'conditions'" dnd-nodrag data-nag-model="condition" dnd-draggable="condition" dnd-type="'condition'" dnd-moved="drag(collection.c, $index);" dnd-effect-allowed="copyMove" eval="{{collection && trace && trace.points && trace.points['c:' + collection.$] ? trace.points['c:' + collection.$].v : ''}}"></conditions>
 		<line com ng-if="!condition.c && !!condition.z">/* {{condition.z}} */</line>
 		<line cond ng-if="!condition.c" ng-click="select(condition, collection.c, 'condition')">
-			<handle dnd-handle class="fa fa-sort"></handle><span ng-click="editCondition(condition, collection.c, null, null, collection.o);" ng-bind-html="condition.$$html || (condition.$$html = renderComparison(condition.lo, condition.co, condition.ro, condition.ro2, condition.to, condition.to2))"></span><span ng-if="view.trace && (mode=='view')" nul> /* #{{condition.$}} */</span>
+			<handle dnd-handle><svg class="sprite-icon"><use xlink:href="#drag-handle"></use></svg></handle><span ng-click="editCondition(condition, collection.c, null, null, collection.o);" ng-bind-html="condition.$$html || (condition.$$html = renderComparison(condition.lo, condition.co, condition.ro, condition.ro2, condition.to, condition.to2))"></span><span ng-if="view.trace && (mode=='view')" nul> /* #{{condition.$}} */</span>
 			<badge blue ng-if="condition.sm == 'always'" badge="+" title="Always subscribe"></badge>
 			<badge red ng-if="condition.sm == 'never'" badge="-" title="Never subscribe"></badge>
 		</line>
-		<line ng-if="!condition.c && !!condition.lo && (condition.lo.t == 'p') && !!condition.lo.dm" pun>&nbsp;&nbsp;<i class="fa fa-subscript" aria-hidden="true"></i> save matching devices to <span var>{{'{' + condition.lo.dm + '}'}}</span></line>
-		<line ng-if="!condition.c && !!condition.lo && (condition.lo.t == 'p') && !!condition.lo.dn" pun>&nbsp;&nbsp;<i class="fa fa-subscript" aria-hidden="true"></i> save non-matching devices to <span var>{{'{' + condition.lo.dn + '}'}}</span></line>
+		<line ng-if="!condition.c && !!condition.lo && (condition.lo.t == 'p') && !!condition.lo.dm" pun>&nbsp;&nbsp;<i class="far fa-subscript"></i> save matching devices to <span var>{{'{' + condition.lo.dm + '}'}}</span></line>
+		<line ng-if="!condition.c && !!condition.lo && (condition.lo.t == 'p') && !!condition.lo.dn" pun>&nbsp;&nbsp;<i class="far fa-subscript"></i> save non-matching devices to <span var>{{'{' + condition.lo.dn + '}'}}</span></line>
 		<container ng-if="((mode=='edit') && view.whens) || (condition.ts && condition.ts.length) || (condition.fs && condition.fs.length)">
 			<line pun>{</line>
 			<container>
@@ -732,7 +822,7 @@
 			</container>
 			<line pun>}</line>
 		</container>
-		</div>	
+		</div>
 	</dnd-nodrag>
 </script>
 
@@ -759,7 +849,7 @@
 			<restriction ng-if-start="(collection.t != 'group') && !collection.rn" data-ng-repeat-start="restriction in collection.r" data-ng-include="'restriction'" dnd-nodrag data-nag-model="collection.r" dnd-draggable="restriction" dnd-nodrag dnd-type="'restriction'" dnd-moved="drag(collection.r, $index);" dnd-effect-allowed="copyMove"></restriction>
 			<line operator ng-if-end data-ng-repeat-end ng-click="select({t: 'group', c: collection.r, o: collection.ro, n: collection.rn}, null, 'restrictions')"><span pun data-ng-click="editRestrictionGroup(collection);">{{collection.rop}}</span></line>
 			<line new ng-if="(collection.t != 'group') && !collection.rn" data-ng-click="addRestriction(collection)">+ add a new restriction</line>
-		</div>		
+		</div>
 	</dnd-nodrag>
 </script>
 
@@ -771,9 +861,9 @@
 		<restrictions ng-if="restriction.r" data-ng-repeat="collection in [restriction]" data-ng-include="'restrictions'" dnd-nodrag data-nag-model="restriction" dnd-draggable="restriction" dnd-type="'restriction'" dnd-moved="drag(collection.r, $index);" dnd-effect-allowed="copyMove" eval="{{collection && trace && trace.points && trace.points['c:' + collection.$] ? trace.points['c:' + collection.$].v : ''}}"></restrictions>
 		<line com ng-if="!restriction.r && !!restriction.z">/* {{restriction.z}} */</line>
 		<line cond ng-if="!restriction.r" ng-click="select(restriction, collection.r, 'restriction')">
-			<handle dnd-handle class="fa fa-sort"></handle><span ng-click="editRestriction(restriction, collection.r);" ng-bind-html="restriction.$$html || (restriction.$$html = renderComparison(restriction.lo, restriction.co, restriction.ro, restriction.ro2, restriction.to, restriction.to2))"></span><span ng-if="view.trace && (mode=='view')" nul> /* #{{restriction.$}} */</span>
+			<handle dnd-handle><svg class="sprite-icon"><use xlink:href="#drag-handle"></use></svg></handle><span ng-click="editRestriction(restriction, collection.r);" ng-bind-html="restriction.$$html || (restriction.$$html = renderComparison(restriction.lo, restriction.co, restriction.ro, restriction.ro2, restriction.to, restriction.to2))"></span><span ng-if="view.trace && (mode=='view')" nul> /* #{{restriction.$}} */</span>
 		</line>
-		</div>	
+		</div>
 	</dnd-nodrag>
 </script>
 
@@ -792,7 +882,7 @@
 			<trace ng-if="(view.trace && (mode=='view') && trace && trace.points && trace.points['t:' + task.$])"><span>+{{trace.points['t:' + task.$].o}}ms</span><span ng-if="(trace.points['t:' + task.$].v != null) && (trace.points['t:' + task.$].v >= 0)" dur>{{trace.points['t:' + task.$].d}}ms</span><span ng-if="(trace.points['t:' + task.$].v == null) || (trace.points['t:' + task.$].v < 0)" timer ok="{{(trace.points['t:' + task.$].v == null) || (trace.t + trace.points['t:' + task.$].o + trace.points['t:' + task.$].d - trace.points['t:' + task.$].v >= currentTime())}}">{{trace.points['t:' + task.$].v == null ? '▼ ▼ ▼' : timeCounter(trace.t + trace.points['t:' + task.$].o + trace.points['t:' + task.$].d - trace.points['t:' + task.$].v)}}</span></trace>
 			<line com ng-if="task.z">/* {{task.z}} */</line>
 			<line ng-click="select(task, tasks ? tasks : statement.k, 'task')">
-				<handle dnd-handle class="fa fa-sort"></handle>
+				<handle dnd-handle><svg class="sprite-icon"><use xlink:href="#drag-handle"></use></svg></handle>
 				<span kwd data-ng-if="(mode=='edit') && !(((statement.d) && (statement.d.length)) || ((statement.r) && (statement.r.length)) || ((statement.k) && (statement.k.length==0)))" ng-click="editStatement(statement, statements)">do</span>
 				<span tsk single="{{(mode != 'edit') && !(((statement.d) && (statement.d.length)) || ((statement.r) && (statement.r.length)) || ((statement.k) && (statement.k.length!=1)))}}" ng-click="editTask(task, statement);" ng-bind-html="task.$$html || (task.$$html = renderTask(task))"></span>
 				<span ng-if="view.trace && (mode=='view')" nul> /* #{{task.$}} */</span>
@@ -812,14 +902,14 @@
 <script type="text/ng-template" id="dialog-edit-statement">
 	<designer ng-if="designer.page==0">
 		<header>
-			<label>Add a new statement</label>
+			<h3>Add a new statement</h3>
 		</header>
 		<p ng-if="view.advancedStatements">Basic statements</p>
 		<div class="form-group">
 			<div items class="row">
             	<div item class="col-sm-4" ng-repeat="item in designer.items.simple">
 					<item class="alert alert-{{item.cssClass}}">
-	                    <div class="title"><span class="fa fa-{{item.icon}}"></span><span help="{{item.name}}"> {{item.name}}</span></div>
+	                    <div class="title"><span class="fa{{item.iconStyle || 's'}} fa-{{item.icon}}"></span><span help="{{item.name}}"> {{item.name}}</span></div>
 	                    <p>{{item.description}}</p>
 	                   	<button class="btn btn-{{item.cssClass}}" ng-click="setDesignerType(item.type, true);">Add {{item.button}}</button>
 					</item>
@@ -831,7 +921,7 @@
 			<div items class="row">
             	<div item class="col-sm-4" ng-repeat="item in designer.items.advanced">
 					<item class="alert alert-{{item.cssClass}}">
-	                    <div class="title"><span class="fa fa-{{item.icon}}"></span><span help="{{item.name}}"> {{item.name}}</span></div>
+	                    <div class="title"><span class="fa{{item.iconStyle || 's'}} fa-{{item.icon}}"></span><span help="{{item.name}}"> {{item.name}}</span></div>
 	                    <p>{{item.description}}</p>
 	                    <button class="btn btn-{{item.cssClass}}" ng-click="setDesignerType(item.type, true);">Add {{item.button}}</button>
 					</item>
@@ -855,8 +945,8 @@
 
 	<designer ng-if="designer.page==1">
 		<header>
-			<label ng-if="designer.$new">Add a new {{designer.type}}</label>
-			<label ng-if="!designer.$new">Edit {{designer.type}}</label>
+			<h3 ng-if="designer.$new">Add a new {{designer.type}}</h3>
+			<h3 ng-if="!designer.$new">Edit {{designer.type}}</h3>
 		</header>
 		<form name="form" novalidate>
 			<div class="form-group" ng-if="designer.type=='if'">
@@ -880,7 +970,7 @@
 			</div>
 			<div class="form-group" ng-if="designer.type=='switch'">
 				<info>A SWITCH block is a decisional block designed to compare an expression against a list of possible values and execute actions depending on their matching.</info>
-				<label class="col-lg-12 no-padding">Expression<span class="error" ng-if="!designer.operand.valid">{{designer.operand.error}}<span ng-if="designer.operand.expressionVar"> (<a ng-click="autoAddVariable(designer.operand.expressionVar); validateOperand(designer.operand);">create it</a>)</span>&nbsp;<i class="fa fa-warning"></i></span></label>
+				<label class="col-lg-12 no-padding">Expression<span class="error" ng-if="!designer.operand.valid">{{designer.operand.error}}<span ng-if="designer.operand.expressionVar"> (<a ng-click="autoAddVariable(designer.operand.expressionVar); validateOperand(designer.operand);">create it</a>)</span>&nbsp;<i class="fas fa-exclamation-triangle"></i></span></label>
 				<operand ng-repeat="operand in [designer.operand]" ng-model="designer.operand" ng-include="'operand'"></operand>
 			</div>
 			<div class="form-group" ng-if="designer.type=='while'">
@@ -892,15 +982,15 @@
 			<div class="form-group" ng-if="designer.type=='for'">
 				<info>A FOR loop is an iteration block that allows you to repeat the same action for a preset number of times, also known as iterations. You can optionally use a counter variable that will be updated to reflect the current iteration index. The system variable <i>$index</i> is also providing that same value. When nesting for loops, $index contains the index for the inner-most loop.</info>
 				<div class="form-group">
-					<label class="col-lg-12 no-padding">Start value<span class="error" ng-if="!designer.operand.valid">{{designer.operand.error}}<span ng-if="designer.operand.expressionVar"> (<a ng-click="autoAddVariable(designer.operand.expressionVar); validateOperand(designer.operand);">create it</a>)</span>&nbsp;<i class="fa fa-warning"></i></span></label>
+					<label class="col-lg-12 no-padding">Start value<span class="error" ng-if="!designer.operand.valid">{{designer.operand.error}}<span ng-if="designer.operand.expressionVar"> (<a ng-click="autoAddVariable(designer.operand.expressionVar); validateOperand(designer.operand);">create it</a>)</span>&nbsp;<i class="fas fa-exclamation-triangle"></i></span></label>
 					<operand ng-repeat="operand in [designer.operand]" ng-model="designer.operand" ng-include="'operand'"></operand>
 				</div>
 				<div class="form-group">
-					<label class="col-lg-12 no-padding">End value<span class="error" ng-if="!designer.operand2.valid">{{designer.operand2.error}}<span ng-if="designer.operand2.expressionVar"> (<a ng-click="autoAddVariable(designer.operand2.expressionVar); validateOperand(designer.operand2);">create it</a>)</span>&nbsp;<i class="fa fa-warning"></i></span></label>
+					<label class="col-lg-12 no-padding">End value<span class="error" ng-if="!designer.operand2.valid">{{designer.operand2.error}}<span ng-if="designer.operand2.expressionVar"> (<a ng-click="autoAddVariable(designer.operand2.expressionVar); validateOperand(designer.operand2);">create it</a>)</span>&nbsp;<i class="fas fa-exclamation-triangle"></i></span></label>
 					<operand ng-repeat="operand in [designer.operand2]" ng-model="designer.operand2" ng-include="'operand'"></operand>
 				</div>
 				<div class="form-group">
-					<label class="col-lg-12 no-padding">Step<span class="error" ng-if="!designer.operand3.valid">{{designer.operand3.error}}<span ng-if="designer.operand3.expressionVar"> (<a ng-click="autoAddVariable(designer.operand3.expressionVar); validateOperand(designer.operand3);">create it</a>)</span>&nbsp;<i class="fa fa-warning"></i></span></label>
+					<label class="col-lg-12 no-padding">Step<span class="error" ng-if="!designer.operand3.valid">{{designer.operand3.error}}<span ng-if="designer.operand3.expressionVar"> (<a ng-click="autoAddVariable(designer.operand3.expressionVar); validateOperand(designer.operand3);">create it</a>)</span>&nbsp;<i class="fas fa-exclamation-triangle"></i></span></label>
 					<operand ng-repeat="operand in [designer.operand3]" ng-model="designer.operand3" ng-include="'operand'"></operand>
 				</div>
 				<div class="form-group">
@@ -935,13 +1025,13 @@
 					</div>
 				</div>
 				<div class="form-group">
-					<label class="col-lg-12 no-padding">List of devices<span class="error" ng-if="!designer.operand.valid">{{designer.operand.error}}<span ng-if="designer.operand.expressionVar"> (<a ng-click="autoAddVariable(designer.operand.expressionVar); validateOperand(designer.operand);">create it</a>)</span>&nbsp;<i class="fa fa-warning"></i></span></label>
+					<label class="col-lg-12 no-padding">List of devices<span class="error" ng-if="!designer.operand.valid">{{designer.operand.error}}<span ng-if="designer.operand.expressionVar"> (<a ng-click="autoAddVariable(designer.operand.expressionVar); validateOperand(designer.operand);">create it</a>)</span>&nbsp;<i class="fas fa-exclamation-triangle"></i></span></label>
 					<operand ng-repeat="operand in [designer.operand]" ng-model="designer.operand" ng-include="'operand'"></operand>
 				</div>
 			</div>
 			<div class="form-group" ng-if="designer.type=='exit'">
 				<info>Return causes the piston to end the evaluation stage and set the piston state to the value provided.</info>
-				<label class="col-lg-12 no-padding">New piston state<span class="error" ng-if="!designer.operand.valid">{{designer.operand.error}}<span ng-if="designer.operand.expressionVar"> (<a ng-click="autoAddVariable(designer.operand.expressionVar); validateOperand(designer.operand);">create it</a>)</span>&nbsp;<i class="fa fa-warning"></i></span></label>
+				<label class="col-lg-12 no-padding">New piston state<span class="error" ng-if="!designer.operand.valid">{{designer.operand.error}}<span ng-if="designer.operand.expressionVar"> (<a ng-click="autoAddVariable(designer.operand.expressionVar); validateOperand(designer.operand);">create it</a>)</span>&nbsp;<i class="fas fa-exclamation-triangle"></i></span></label>
 				<operand ng-repeat="operand in [designer.operand]" ng-model="designer.operand" ng-include="'operand'"></operand>
 			</div>
 			<div class="form-group" ng-if="designer.type=='do'">
@@ -1083,7 +1173,7 @@
 			<div ng-if="designer.showAdvancedOptions" class="form-group">
 				<div class="form-group">
 					<label for="descriptionInput">Description (optional)</label>
-					<textarea name="desc" type="text" id="descriptionInput" class="form-control" placeholder="Description for this statement" ng-model="designer.description"></textarea>
+					<textarea name="desc" type="text" id="descriptionInput" class="form-control" placeholder="Description for this statement" ng-model="designer.description" msd-elastic></textarea>
 				</div>
 				<div class="form-group" ng-if="designer.type != 'on'">
 					<label for="tep" help>Task Execution Policy</label>
@@ -1171,7 +1261,7 @@
 <script type="text/ng-template" id="dialog-edit-event">
 	<designer>
 		<header>
-			<label >{{designer.$new ? 'Add' : 'Edit' }} an event</label>
+			<h3>{{designer.$new ? 'Add' : 'Edit' }} an event</h3>
 		</header>
 		<form>
 			<info ng-if="designer.type=='condition'">An event allows the execution of statements when certain devices' attributes change.</info>
@@ -1180,7 +1270,7 @@
 			<div ng-if="designer.showAdvancedOptions" class="form-group">
 				<div class="form-group">
 					<label for="descriptionInput">Description (optional)</label>
-					<textarea type="text" id="descriptionInput" class="form-control" placeholder="Description for this event" ng-model="designer.description"></textarea>
+					<textarea type="text" id="descriptionInput" class="form-control" placeholder="Description for this event" ng-model="designer.description" msd-elastic></textarea>
 				</div>
 			</div>
 
@@ -1201,7 +1291,7 @@
 <script type="text/ng-template" id="dialog-edit-condition">
 	<designer ng-if="designer.page==0">
 		<header>
-			<label>Add a new condition</label>
+			<h3>Add a new condition</h3>
 		</header>
 		<form>
 			<div class="form-group">
@@ -1241,8 +1331,8 @@
 
 	<designer ng-if="designer.page==1">
 		<header>
-			<label ng-if="designer.$new">Add a new {{designer.type}}</label>
-			<label ng-if="!designer.$new">Edit {{designer.type}}</label>
+			<h3 ng-if="designer.$new">Add a new {{designer.type}}</h3>
+			<h3 ng-if="!designer.$new">Edit {{designer.type}}</h3>
 		</header>
 		<form>
 			<info ng-if="designer.type=='condition'">A condition allows for a single comparison to be made between two expressions.</info>
@@ -1269,7 +1359,7 @@
 				</div>
 			</div>
 			<div class="form-group" ng-if="designer.followedBy">
-				<label class="col-lg-12 no-padding">Within...<span class="error" ng-if="!designer.comparison.within.valid">{{designer.comparison.within.error}}<span ng-if="designer.comparison.within.expressionVar"> (<a ng-click="autoAddVariable(designer.comparison.within.expressionVar); validateOperand(designer.comparison.left);">create it</a>)</span>&nbsp;<i class="fa fa-warning"></i></span></label>
+				<label class="col-lg-12 no-padding">Within...<span class="error" ng-if="!designer.comparison.within.valid">{{designer.comparison.within.error}}<span ng-if="designer.comparison.within.expressionVar"> (<a ng-click="autoAddVariable(designer.comparison.within.expressionVar); validateOperand(designer.comparison.left);">create it</a>)</span>&nbsp;<i class="fas fa-exclamation-triangle"></i></span></label>
 				<operand ng-repeat="operand in [designer.comparison.within]" ng-model="designer.comparison.within" ng-include="'operand'"></operand>
 			</div>
 			<div class="form-group" ng-if="designer.followedBy" ng-if-end>
@@ -1320,7 +1410,7 @@
 				</div>
 				<div class="form-group">
 					<label for="descriptionInput">Description (optional)</label>
-					<textarea type="text" id="descriptionInput" class="form-control" placeholder="Description for this statement" ng-model="designer.description"></textarea>
+					<textarea type="text" id="descriptionInput" class="form-control" placeholder="Description for this statement" ng-model="designer.description" msd-elastic></textarea>
 				</div>
 			</div>
 
@@ -1342,7 +1432,7 @@
 <script type="text/ng-template" id="dialog-edit-condition-group">
 	<designer>
 		<header>
-			<label>Edit condition group</label>
+			<h3>Edit condition group</h3>
 		</header>
 		<form>
 			<div class="form-group">
@@ -1369,13 +1459,13 @@
 			<div ng-if="designer.showAdvancedOptions" class="form-group">
 				<div class="form-group">
 					<label for="descriptionInput">Description (optional)</label>
-					<textarea type="text" id="descriptionInput" class="form-control" placeholder="Description for this statement" ng-model="designer.description"></textarea>
+					<textarea type="text" id="descriptionInput" class="form-control" placeholder="Description for this statement" ng-model="designer.description" msd-elastic></textarea>
 				</div>
 			</div>
 
 
 			<div class="form-group" ng-if="designer.followedBy">
-				<label class="col-lg-12 no-padding">Within...<span class="error" ng-if="!designer.within.valid">{{designer.within.error}}<span ng-if="designer.within.expressionVar"> (<a ng-click="autoAddVariable(designer.within.expressionVar); validateOperand(designer.within);">create it</a>)</span>&nbsp;<i class="fa fa-warning"></i></span></label>
+				<label class="col-lg-12 no-padding">Within...<span class="error" ng-if="!designer.within.valid">{{designer.within.error}}<span ng-if="designer.within.expressionVar"> (<a ng-click="autoAddVariable(designer.within.expressionVar); validateOperand(designer.within);">create it</a>)</span>&nbsp;<i class="fas fa-exclamation-triangle"></i></span></label>
 				<operand ng-repeat="operand in [designer.within]" ng-model="designer.within" ng-include="'operand'"></operand>
 			</div>
 			<div class="form-group" ng-if="designer.followedBy">
@@ -1404,7 +1494,7 @@
 <script type="text/ng-template" id="dialog-edit-restriction">
 	<designer ng-if="designer.page==0">
 		<header>
-			<label>Add a new restriction</label>
+			<h3>Add a new restriction</h3>
 		</header>
 		<form>
 			<div class="form-group">
@@ -1413,7 +1503,7 @@
 				<div items class="row">
 					<div item class="col-sm-6">
 						<item>
-							<div class="alert alert-info"><span class="fa fa-question-circle-o"></span><span> Restriction</span></div>
+							<div class="alert alert-info"><span class="far fa-question-circle"></span><span> Restriction</span></div>
 							<p>A restriction is a single comparison between two or more operands, the basic building block of a decisional statement</p>
 							<div class="text-center"><button class="btn btn-info" ng-click="setDesignerType('restriction', true);">Add a restriction</button></div>
 						</item>
@@ -1444,8 +1534,8 @@
 	</designer>
 	<designer ng-if="designer.page==1">
 		<header>
-			<label ng-if="designer.$new">Add a new {{designer.type}}</label>
-			<label ng-if="!designer.$new">Edit {{designer.type}}</label>
+			<h3 ng-if="designer.$new">Add a new {{designer.type}}</h3>
+			<h3 ng-if="!designer.$new">Edit {{designer.type}}</h3>
 		</header>
 		<form>
 			<info ng-if="designer.type=='restriction'">A restriction allows for a single comparison to be made between two expressions.</info>
@@ -1475,7 +1565,7 @@
 
 			<div ng-if="designer.showAdvancedOptions" class="form-group">
 				<label for="descriptionInput">Description (optional)</label>
-				<textarea type="text" id="descriptionInput" class="form-control" placeholder="Description for this statement" ng-model="designer.description"></textarea>
+				<textarea type="text" id="descriptionInput" class="form-control" placeholder="Description for this statement" ng-model="designer.description" msd-elastic></textarea>
 			</div>
 		</form>
 		<footer>
@@ -1495,7 +1585,7 @@
 <script type="text/ng-template" id="dialog-edit-restriction-group">
 	<designer>
 		<header>
-			<label>Edit restriction group</label>
+			<h3>Edit restriction group</h3>
 		</header>
 		<form>
 			<div class="form-group">
@@ -1522,7 +1612,7 @@
 			<div ng-if="designer.showAdvancedOptions" class="form-group">
 				<div class="form-group">
 					<label for="descriptionInput">Description (optional)</label>
-					<textarea type="text" id="descriptionInput" class="form-control" placeholder="Description for this statement" ng-model="designer.description"></textarea>
+					<textarea type="text" id="descriptionInput" class="form-control" placeholder="Description for this statement" ng-model="designer.description" msd-elastic></textarea>
 				</div>
 			</div>
 		</form>
@@ -1539,8 +1629,8 @@
 <script type="text/ng-template" id="dialog-edit-case">
 	<designer>
 		<header>
-			<label ng-if="designer.$new">Add a new case</label>
-			<label ng-if="!designer.$new">Edit case</label>
+			<h3 ng-if="designer.$new">Add a new case</h3>
+			<h3 ng-if="!designer.$new">Edit case</h3>
 		</header>
 		<form>
 			<div class="form-group">
@@ -1560,7 +1650,7 @@
 			</div>
 			<div ng-if="designer.showAdvancedOptions" class="form-group">
 				<label for="descriptionInput">Description (optional)</label>
-				<textarea type="text" id="descriptionInput" class="form-control" placeholder="Description for this statement" ng-model="designer.description"></textarea>
+				<textarea type="text" id="descriptionInput" class="form-control" placeholder="Description for this statement" ng-model="designer.description" msd-elastic></textarea>
 			</div>
 		</form>
 		<footer>
@@ -1576,7 +1666,7 @@
 
 <script type="text/ng-template" id="comparison">
 	<div class="form-group">
-		<label class="col-lg-12 no-padding">{{comparison.event ? 'What event to expect' : 'What to compare'}}<span class="error" ng-if="!designer.comparison.left.valid">{{designer.comparison.left.error}}<span ng-if="designer.comparison.left.expressionVar"> (<a ng-click="autoAddVariable(designer.comparison.left.expressionVar); validateOperand(designer.comparison.left);">create it</a>)</span>&nbsp;<i class="fa fa-warning"></i></span></label>
+		<label class="col-lg-12 no-padding">{{comparison.event ? 'What event to expect' : 'What to compare'}}<span class="error" ng-if="!designer.comparison.left.valid">{{designer.comparison.left.error}}<span ng-if="designer.comparison.left.expressionVar"> (<a ng-click="autoAddVariable(designer.comparison.left.expressionVar); validateOperand(designer.comparison.left);">create it</a>)</span>&nbsp;<i class="fas fa-exclamation-triangle"></i></span></label>
 		<operand ng-repeat="operand in [designer.comparison.left]" ng-model="designer.comparison.left" ng-include="'operand'"></operand>
 	</div>
 	<div ng-if="!comparison.event" class="form-group {{comparison.operatorValid ? '' : 'has-error'}}">
@@ -1587,33 +1677,33 @@
 	</div>
 	<div ng-if="comparison.dataType == 'email'">
 		<div class="form-group">
-			<label class="col-lg-12 no-padding">From<span class="error" ng-if="!designer.comparison.right.valid">{{designer.comparison.right.error}}<span ng-if="designer.comparison.right.expressionVar"> (<a ng-click="autoAddVariable(designer.comparison.right.expressionVar); validatecomparison.right(designer.comparison.right);">create it</a>)</span>&nbsp;<i class="fa fa-warning"></i></span></label>
+			<label class="col-lg-12 no-padding">From<span class="error" ng-if="!designer.comparison.right.valid">{{designer.comparison.right.error}}<span ng-if="designer.comparison.right.expressionVar"> (<a ng-click="autoAddVariable(designer.comparison.right.expressionVar); validatecomparison.right(designer.comparison.right);">create it</a>)</span>&nbsp;<i class="fas fa-exclamation-triangle"></i></span></label>
 			<operand ng-repeat="operand in [designer.comparison.right]" ng-model="designer.comparison.left" ng-include="'operand'"></operand>
 		</div>
 		<div class="form-group">
-			<label class="col-lg-12 no-padding">Message<span class="error" ng-if="!designer.comparison.right2.valid">{{designer.comparison.right2.error}}<span ng-if="designer.comparison.right2.expressionVar"> (<a ng-click="autoAddVariable(designer.comparison.right2.expressionVar); validatecomparison.right2(designer.comparison.right2);">create it</a>)</span>&nbsp;<i class="fa fa-warning"></i></span></label>
+			<label class="col-lg-12 no-padding">Message<span class="error" ng-if="!designer.comparison.right2.valid">{{designer.comparison.right2.error}}<span ng-if="designer.comparison.right2.expressionVar"> (<a ng-click="autoAddVariable(designer.comparison.right2.expressionVar); validatecomparison.right2(designer.comparison.right2);">create it</a>)</span>&nbsp;<i class="fas fa-exclamation-triangle"></i></span></label>
 			<operand ng-repeat="operand in [designer.comparison.right2]" ng-model="designer.comparison.right2" ng-include="'operand'"></operand>
 		</div>
 	</div>
-	<div ng-if="comparison.dataType != 'email'">	
+	<div ng-if="comparison.dataType != 'email'">
 	<div class="form-group" ng-if="!comparison.event && (comparison.parameterCount > 0)">
-		<label class="col-lg-12 no-padding">{{comparison.parameterCount == 1 ? 'Compare to' : 'Between...'}}<span class="error" ng-if="!designer.comparison.right.valid">{{designer.comparison.right.error}}<span ng-if="designer.comparison.right.expressionVar"> (<a ng-click="autoAddVariable(designer.comparison.right.expressionVar); validatecomparison.right(designer.comparison.right);">create it</a>)</span>&nbsp;<i class="fa fa-warning"></i></span></label>
+		<label class="col-lg-12 no-padding">{{comparison.parameterCount == 1 ? 'Compare to' : 'Between...'}}<span class="error" ng-if="!designer.comparison.right.valid">{{designer.comparison.right.error}}<span ng-if="designer.comparison.right.expressionVar"> (<a ng-click="autoAddVariable(designer.comparison.right.expressionVar); validatecomparison.right(designer.comparison.right);">create it</a>)</span>&nbsp;<i class="fas fa-exclamation-triangle"></i></span></label>
 		<operand ng-repeat="operand in [designer.comparison.right]" ng-model="designer.comparison.right" ng-include="'operand'"></operand>
 	</div>
 	<div class="form-group" ng-if="!comparison.event && (comparison.parameterCount > 0) && (designer.comparison.left.selectedDataType=='time') && (designer.comparison.right.data.t != 'c')">
-		<label class="col-lg-12 no-padding">With offset...<span class="error" ng-if="!designer.comparison.right.valid">{{designer.comparison.time.error}}<span ng-if="designer.comparison.time.expressionVar"> (<a ng-click="autoAddVariable(designer.comparison.time.expressionVar); validatecomparison.right(designer.comparison.time);">create it</a>)</span>&nbsp;<i class="fa fa-warning"></i></span></label>
+		<label class="col-lg-12 no-padding">With offset...<span class="error" ng-if="!designer.comparison.right.valid">{{designer.comparison.time.error}}<span ng-if="designer.comparison.time.expressionVar"> (<a ng-click="autoAddVariable(designer.comparison.time.expressionVar); validatecomparison.right(designer.comparison.time);">create it</a>)</span>&nbsp;<i class="fas fa-exclamation-triangle"></i></span></label>
 		<operand ng-repeat="operand in [designer.comparison.time]" ng-model="deisgner.comparison.time" ng-include="'operand'"></operand>
 	</div>
 	<div class="form-group" ng-if="!comparison.event && (comparison.parameterCount > 1)">
-		<label class="col-lg-12 no-padding">...and...<span class="error" ng-if="!designer.comparison.right2.valid">{{designer.comparison.right2.error}}<span ng-if="designer.comparison.right2.expressionVar"> (<a ng-click="autoAddVariable(designer.comparison.right2.expressionVar); validatecomparison.right2(designer.comparison.right2);">create it</a>)</span>&nbsp;<i class="fa fa-warning"></i></span></label>
+		<label class="col-lg-12 no-padding">...and...<span class="error" ng-if="!designer.comparison.right2.valid">{{designer.comparison.right2.error}}<span ng-if="designer.comparison.right2.expressionVar"> (<a ng-click="autoAddVariable(designer.comparison.right2.expressionVar); validatecomparison.right2(designer.comparison.right2);">create it</a>)</span>&nbsp;<i class="fas fa-exclamation-triangle"></i></span></label>
 		<operand ng-repeat="operand in [designer.comparison.right2]" ng-model="designer.comparison.right2" ng-include="'operand'"></operand>
 	</div>
 	<div class="form-group" ng-if="!comparison.event && (comparison.parameterCount > 1) && (designer.comparison.left.selectedDataType=='time') && (designer.comparison.right2.data.t != 'c')">
-		<label class="col-lg-12 no-padding">With offset...<span class="error" ng-if="!designer.comparison.right.valid">{{designer.comparison.time2.error}}<span ng-if="designer.comparison.time2.expressionVar"> (<a ng-click="autoAddVariable(designer.comparison.time2.expressionVar); validatecomparison.right(designer.comparison.time2);">create it</a>)</span>&nbsp;<i class="fa fa-warning"></i></span></label>
+		<label class="col-lg-12 no-padding">With offset...<span class="error" ng-if="!designer.comparison.right.valid">{{designer.comparison.time2.error}}<span ng-if="designer.comparison.time2.expressionVar"> (<a ng-click="autoAddVariable(designer.comparison.time2.expressionVar); validatecomparison.right(designer.comparison.time2);">create it</a>)</span>&nbsp;<i class="fas fa-exclamation-triangle"></i></span></label>
 		<operand ng-repeat="operand in [designer.comparison.time2]" ng-model="deisgner.comparison.time2" ng-include="'operand'"></operand>
 	</div>
 	<div class="form-group" ng-if="!comparison.event && comparison.timed">
-		<label class="col-lg-12 no-padding">{{comparison.timed == 1 ? 'In the last...' : 'For...'}}<span class="error" ng-if="!designer.comparison.time.valid">{{designer.comparison.time.error}}<span ng-if="designer.comparison.time.expressionVar"> (<a ng-click="autoAddVariable(designer.comparison.time.expressionVar); validatecomparison.time(designer.comparison.time);">create it</a>)</span>&nbsp;<i class="fa fa-warning"></i></span></label>
+		<label class="col-lg-12 no-padding">{{comparison.timed == 1 ? 'In the last...' : 'For...'}}<span class="error" ng-if="!designer.comparison.time.valid">{{designer.comparison.time.error}}<span ng-if="designer.comparison.time.expressionVar"> (<a ng-click="autoAddVariable(designer.comparison.time.expressionVar); validatecomparison.time(designer.comparison.time);">create it</a>)</span>&nbsp;<i class="fas fa-exclamation-triangle"></i></span></label>
 		<div class="form-group" ng-if="comparison.timed == 2">
 			<select data-actions-box="true" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-warning" ng-model="comparison.time.data.f" data-mobile="{{mobile}}" ng-change="validateComparison(comparison)">
 				<option style="display:none" value="" disabled>Select an option...</option>
@@ -1625,7 +1715,7 @@
 	</div>
 	<div class="form-group" ng-if="!comparison.event && (comparison.left.data.t == 'v') && (comparison.left.data.v == 'ifttt')">
 		<label class="col-lg-12 no-padding">Use this URL in your IFTTT's Maker channel</label>
-		<textarea class="form-control" ifttt readonly value="test">{{getIFTTTUri(comparison.right.data.c)}}</textarea>
+		<textarea class="form-control" ifttt readonly value="test" msd-elastic>{{getIFTTTUri(comparison.right.data.c)}}</textarea>
 	</div>
 	<div class="form-group" ng-if="!comparison.event && (designer.comparison.left.data.t == 'v') && (designer.comparison.left.data.v == 'time')">
 		<label for="devicesInput">Only on these days of the week...</label>
@@ -1674,7 +1764,7 @@
 	</div>
 
 	<div class="form-group" ng-if="designer.followedBy">
-		<label class="col-lg-12 no-padding">Within...<span class="error" ng-if="!designer.comparison.within.valid">{{designer.comparison.within.error}}<span ng-if="designer.comparison.within.expressionVar"> (<a ng-click="autoAddVariable(designer.comparison.within.expressionVar); validateOperand(designer.comparison.left);">create it</a>)</span>&nbsp;<i class="fa fa-warning"></i></span></label>
+		<label class="col-lg-12 no-padding">Within...<span class="error" ng-if="!designer.comparison.within.valid">{{designer.comparison.within.error}}<span ng-if="designer.comparison.within.expressionVar"> (<a ng-click="autoAddVariable(designer.comparison.within.expressionVar); validateOperand(designer.comparison.left);">create it</a>)</span>&nbsp;<i class="fas fa-exclamation-triangle"></i></span></label>
 		<operand ng-repeat="operand in [designer.comparison.within]" ng-model="designer.comparison.within" ng-include="'operand'"></operand>
 	</div>
 	<div class="form-group" ng-if="designer.followedBy">
@@ -1692,7 +1782,7 @@
 <script type="text/ng-template" id="operand">
 	<div class="form-group" nag-init="validateOperand(operand);">
 <!--
-		<label class="col-lg-12 no-padding"><span class="error" ng-if="!operand.valid">{{operand.error}}<span ng-if="operand.expressionVar"> (<a ng-click="autoAddVariable(operand.expressionVar); validateOperand(operand);">create it</a>)</span>&nbsp;<i class="fa fa-warning"></i></span></label>
+		<label class="col-lg-12 no-padding"><span class="error" ng-if="!operand.valid">{{operand.error}}<span ng-if="operand.expressionVar"> (<a ng-click="autoAddVariable(operand.expressionVar); validateOperand(operand);">create it</a>)</span>&nbsp;<i class="fas fa-exclamation-triangle"></i></span></label>
 -->
 		<div class="form-group" ng-if="(!operand.event) && (operand.data.t=='p') && (operand.data.d) && ((operand.data.d.length> 1) || ((operand.data.d.length == 1) && !operand.data.d[0].startsWith(':'))) && (!operand.disableAggregation)">
 			<select data-actions-box="true" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-warning" ng-model="operand.data.g" data-mobile="{{mobile}}" ng-change="validateOperand(operand)">
@@ -1834,9 +1924,9 @@
 				<!-- constant -->
 				<div class="form-table input-group pull-left" ng-if="(operand.data.t=='c') && (!operand.options.length) && (operand.dataType != 'lifxSelector')" style="width:{{operand.dataType == 'duration' ? '75' : '100'}}%">
 					<input ng-if="['time', 'date', 'datetime'].indexOf(operand.inputType) < 0" class="form-control" ng-model="operand.data.c" type="{{operand.inputType}}" ng-change="validateOperand(operand)" ng-min="(operand.dataType == 'duration') && (operand.requirePositiveNumber) ? 1 : null" required/>
-					<input ng-if="operand.inputType == 'time'" class="form-control" ng-model="operand.data.c" type="time" ng-change="validateOperand(operand)" ng-min="(operand.dataType == 'duration') && (operand.requirePositiveNumber) ? 1 : null" required/>
-					<input ng-if="operand.inputType == 'date'" class="form-control" ng-model="operand.data.c" type="date" ng-change="validateOperand(operand)" ng-min="(operand.dataType == 'duration') && (operand.requirePositiveNumber) ? 1 : null" required/>
-					<input ng-if="operand.inputType == 'datetime'" class="form-control" ng-model="operand.data.c" type="datetime-local" ng-change="validateOperand(operand)" ng-min="(operand.dataType == 'duration') && (operand.requirePositiveNumber) ? 1 : null" required/>
+					<input ng-if="operand.inputType == 'time'" class="form-control" ng-model="operand.data.c" ng-model-options="{ updateOn: 'blur', '*': '$inherit' }" type="time" ng-change="validateOperand(operand)" ng-min="(operand.dataType == 'duration') && (operand.requirePositiveNumber) ? 1 : null" required/>
+					<input ng-if="operand.inputType == 'date'" class="form-control" ng-model="operand.data.c" ng-model-options="{ updateOn: 'blur', '*': '$inherit' }" type="date" ng-change="validateOperand(operand)" ng-min="(operand.dataType == 'duration') && (operand.requirePositiveNumber) ? 1 : null" required/>
+					<input ng-if="operand.inputType == 'datetime'" class="form-control" ng-model="operand.data.c" ng-model-options="{ updateOn: 'blur', '*': '$inherit' }" type="datetime-local" ng-change="validateOperand(operand)" ng-min="(operand.dataType == 'duration') && (operand.requirePositiveNumber) ? 1 : null" required/>
 				</div>
 				<div class="form-table input-group pull-left" ng-if="(operand.data.t=='c') && (operand.options.length) && (!operand.multiple) && (operand.dataType != 'lifxSelector')" style="width:{{operand.dataType == 'duration' ? '75' : '100'}}%">
 					<select data-actions-box="true" selectpicker class="selectpicker show-tick no-border-radius" data-width="75%" data-style="btn-default" ng-model="operand.data.c" data-mobile="{{mobile}}" ng-change="validateOperand(operand)">
@@ -1891,7 +1981,7 @@
 			</div>
 		</div>
 		<div ng-if="operand.data.t=='e'" class="form-group">
-			<textarea expression smart-area="operand.config" rows="5" class="form-control" id="leftItem" ng-model="operand.data.e" ng-change="validateOperand(operand)" spellcheck="false" ng-trim="true"></textarea>
+			<textarea expression smart-area="operand.config" rows="3" class="form-control" id="leftItem" ng-model="operand.data.e" ng-change="validateOperand(operand)" spellcheck="false" ng-trim="true" msd-elastic></textarea>
 		</div>
 	</div>
 	<div class="form-group" ng-if="(operand.data.t=='p') && operand.count && operand.showSubDevices">
@@ -2004,7 +2094,7 @@
 <script type="text/ng-template" id="dialog-edit-task">
 	<designer ng-if="designer.page==0">
 		<header>
-			<label>Add a new task</label>
+			<h3>Add a new task</h3>
 		</header>
 		<form>
 			<div class="form-group">
@@ -2032,9 +2122,11 @@
 						</optgroup>
 					</select>
 				</div>
-				<label ng-repeat-start="operand in designer.parameters" class="col-lg-12 no-padding">{{operand.name}}{{operand.optional ? ' (optional)' : ''}}<span class="error" ng-if="!operand.valid">{{operand.error}}<span ng-if="operand.expressionVar"> (<a ng-click="autoAddVariable(operand.expressionVar); validateOperand(operand);">create it</a>)</span>&nbsp;<i class="fa fa-warning"></i></span></label>
-				<div class="alert alert-warning" ng-if="operand.warn">{{operand.warn}}</div>
-				<parameter ng-repeat-end ng-include="'operand'" ng-model="operand"></parameter>
+				<div ng-repeat="operand in designer.parameters" ng-hide="operand.hidden">
+					<label class="col-lg-12 no-padding">{{operand.name}}{{operand.optional ? ' (optional)' : ''}}<span class="error" ng-if="!operand.valid">{{operand.error}}<span ng-if="operand.expressionVar"> (<a ng-click="autoAddVariable(operand.expressionVar); validateOperand(operand);">create it</a>)</span>&nbsp;<i class="fas fa-exclamation-triangle"></i></span></label>
+					<div class="alert alert-warning" ng-if="operand.warn">{{operand.warn}}</div>
+					<parameter ng-include="'operand'" ng-model="operand"></parameter>
+				</div>
 				<label ng-if-start="!!designer.command"class="col-lg-12 no-padding">Only during these modes</label>
 				<div ng-if-end class="form-group">
 					<select data-actions-box="true" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-warning" ng-model="designer.mode" data-mobile="{{mobile}}" multiple>
@@ -2050,7 +2142,7 @@
 			</div>
 			<div ng-if="designer.showAdvancedOptions" class="form-group">
 				<label for="descriptionInput">Description (optional)</label>
-				<textarea type="text" id="descriptionInput" class="form-control" placeholder="Description for this statement" ng-model="designer.description"></textarea>
+				<textarea type="text" id="descriptionInput" class="form-control" placeholder="Description for this statement" ng-model="designer.description" msd-elastic></textarea>
 			</div>
 			<p ng-if-start="designer.clipboard.length">From clipboard</p>
 			<div class="form-group" ng-if-end>
@@ -2097,7 +2189,7 @@
 <script type="text/ng-template" id="dialog-edit-variable">
 	<designer ng-if="designer.page==0">
 		<header>
-			<label>{{designer.$new ? 'Add a new' : 'Edit'}} variable</label>
+			<h3>{{designer.$new ? 'Add a new' : 'Edit'}} variable</h3>
 		</header>
 		<form>
 			<div class="form-group">
@@ -2131,7 +2223,7 @@
 				</div>
 			</div>
 			<div class="form-group" ng-if="designer.operand.dataType && !designer.operand.dataType.endsWith(']')">
-				<label class="col-lg-12 no-padding">Initial value (optional)<span class="error" ng-if="!designer.operand.valid">{{designer.operand.error}}<span ng-if="designer.operand.expressionVar"> (<a ng-click="autoAddVariable(designer.operand.expressionVar); validateOperand(designer.operand);">create it</a>)</span>&nbsp;<i class="fa fa-warning"></i></span></label>
+				<label class="col-lg-12 no-padding">Initial value (optional)<span class="error" ng-if="!designer.operand.valid">{{designer.operand.error}}<span ng-if="designer.operand.expressionVar"> (<a ng-click="autoAddVariable(designer.operand.expressionVar); validateOperand(designer.operand);">create it</a>)</span>&nbsp;<i class="fas fa-exclamation-triangle"></i></span></label>
 				<operand ng-repeat="operand in [designer.operand]" ng-model="designer.operand" ng-include="'operand'"></operand>
 			</div>
 			<div class="form-group" ng-if="(designer.operand.data.t != '') && designer.operand.dataType && !designer.operand.dataType.endsWith(']')">
@@ -2146,7 +2238,7 @@
 			</div>
 			<div ng-if="designer.showAdvancedOptions" class="form-group">
 				<label for="descriptionInput">Description (optional)</label>
-				<textarea type="text" id="descriptionInput" class="form-control" placeholder="Description for this statement" ng-model="designer.description"></textarea>
+				<textarea type="text" id="descriptionInput" class="form-control" placeholder="Description for this statement" ng-model="designer.description" msd-elastic></textarea>
 			</div>
 		</form>
 
@@ -2163,10 +2255,30 @@
 
 
 
+<script type="text/ng-template" id="dialog-edit-local-variable">
+	<designer>
+		<header>
+			<h3>Edit the {{designer.name}} local variable</h3>
+		</header>
+		<form>
+			<div class="form-group">
+				<label class="col-lg-12 no-padding">Value<span class="error" ng-if="!designer.operand.valid">{{designer.operand.error}}</label>
+				<operand ng-repeat="operand in [designer.operand]" ng-model="designer.operand" ng-include="'operand'"></operand>
+			</div>
+		</form>
+
+		<footer>
+			<button type="button" class="btn btn-info pull-right" ng-disabled="!designer.operand.valid" ng-click="updateLocalVariable();">Save</button>
+			<button type="button" class="btn btn-default" ng-click="closeDialog();">Cancel</button>
+		</footer>
+	</designer>
+</script>
+
+
 <script type="text/ng-template" id="dialog-edit-global-variable">
 	<designer>
 		<header>
-			<label>{{designer.$new ? 'Add a new' : 'Edit'}} global variable</label>
+			<h3>{{designer.$new ? 'Add a new' : 'Edit'}} global variable</h3>
 		</header>
 		<form>
 			<div class="form-group">
@@ -2206,14 +2318,14 @@
 <script type="text/ng-template" id="dialog-del-piston">
 	<designer>
 		<header>
-			<label>Delete piston</label>
+			<h3>Delete piston</h3>
 		</header>
 		<form>
 			<div class="form-group">
 				<label>Are you sure you want to delete piston "{{meta.name}}"?</label>
 			</div>
 			<div ng-if="meta.bin" class="form-group">
-				<label>This is the last opportunity to save the backup bin code, just in case you decide you want this piston back later...</label> 
+				<label>This is the last opportunity to save the backup bin code, just in case you decide you want this piston back later...</label>
 				<div class="text-center"><p class="well bin animated" reveal="true">{{meta.bin}}</p></div>
 			</div>
 		</form>
@@ -2228,7 +2340,7 @@
 <script type="text/ng-template" id="dialog-edit-settings">
 	<designer>
 		<header>
-			<label>Piston settings</label>
+			<h3>Piston settings</h3>
 		</header>
 		<form>
 			<div class="form-group">
@@ -2237,7 +2349,7 @@
 			</div>
 			<div class="form-group">
 				<label for="descriptionInput">Description (optional)</label>
-				<textarea type="text" id="descriptionInput" class="form-control" placeholder="Description for this statement" ng-model="designer.description"></textarea>
+				<textarea id="descriptionInput" class="form-control" placeholder="Description for this piston" ng-model="designer.description" msd-elastic="\n"></textarea>
 			</div>
 			<div class="form-group">
 				<label class="col-lg-12 no-padding">Automatic piston state</label>
@@ -2246,7 +2358,7 @@
 					<option ng-value="1">Disabled</option>
 				</select>
 			</div>
-			
+
 			<div ng-if="designer.showAdvancedOptions" class="form-group">
 				<div class="form-group">
 					<label class="col-lg-12 no-padding">Piston execution parallelism</label>
@@ -2308,7 +2420,7 @@
 <script type="text/ng-template" id="dialog-choose-version">
 	<designer>
 		<header>
-			<label>A local, newer, version of this piston was found</label>
+			<h3>A local, newer, version of this piston was found</h3>
 		</header>
 		<form>
 			<div class="form-group">
@@ -2317,17 +2429,23 @@
 			</div>
 		</form>
 		<footer>
-			<button type="button" class="btn btn-success pull-right" ng-click="chooseVersion(true);">Use the locally saved version</button>
-			<button type="button" class="btn btn-danger" ng-click="chooseVersion(false);">Use the current version</button>
+			<div class="row text-center">
+				<div class="col-sm-6">
+					<button type="button" class="btn btn-danger" ng-click="chooseVersion(false);">Use the current version</button>
+				</div>
+				<div class="col-sm-6">
+					<button type="button" class="btn btn-success" ng-click="chooseVersion(true);">Use the locally saved version</button>
+				</div>
+			</div>
 		</footer>
-	</designer>	
+	</designer>
 </script>
 
 
 <script type="text/ng-template" id="dialog-rebuild-piston">
 	<designer>
 		<header>
-			<label>Rebuild piston items</label>
+			<h3>Rebuild piston items</h3>
 		</header>
 		<form>
 			<info>This piston is using some items that do not exist in your webCoRE instance. Let's replace them with items you do have. Please try and select an equivalent value for each item in the list below. If you skip any items, you will have to fix them by manually visiting that statement.</info>
@@ -2358,11 +2476,15 @@
 				</div>
 				<div class="form-group" ng-if="item.t == 'phone'">
 					<label class="col-lg-12 no-padding">Phone number</label>
-					<input type="text" ng-value="item.id" />
+					<input type="text" ng-model="item.id" />
 				</div>
 				<div class="form-group" ng-if="item.t == 'uri'">
 					<label class="col-lg-12 no-padding">URL</label>
-					<input type="text" ng-value="item.id" />
+					<input type="text" ng-model="item.id" />
+				</div>
+				<div class="form-group" ng-if="item.t == 'email'">
+					<label class="col-lg-12 no-padding">Email</label>
+					<input type="text" ng-model="item.id" />
 				</div>
 			</div>
 		</form>
@@ -2370,5 +2492,5 @@
 			<button type="button" class="btn btn-default" ng-click="closeDialog();">Ignore</button>
 			<button type="button" class="btn btn-info pull-right" ng-click="doRebuildPiston();">Continue</button>
 		</footer>
-	</designer>	
+	</designer>
 </script>

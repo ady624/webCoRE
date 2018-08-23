@@ -1,4 +1,4 @@
-var app = angular.module('webCoRE', ['ng', 'ngRoute', 'ngSanitize', 'ngResource', 'ngDialog', 'ngAnimate', 'angular-svg-round-progressbar', 'angular-bootstrap-select', 'swipe', 'dndLists', 'ui.toggle', 'chart.js', 'smartArea', 'ui.bootstrap.contextMenu', 'ngFitText', 'googlechart']);
+var app = angular.module('webCoRE', ['ng', 'ngRoute', 'ngSanitize', 'ngResource', 'ngDialog', 'ngAnimate', 'angular-svg-round-progressbar', 'angular-bootstrap-select', 'swipe', 'dndLists', 'ui.toggle', 'chart.js', 'smartArea', 'ui.bootstrap.contextMenu', 'ngFitText', 'googlechart', 'ngMap', 'monospaced.elastic']);
 //var cdn = 'https://core.homecloudhub.com/dashboard/';
 var cdn = '';
 var theme = '';
@@ -208,6 +208,33 @@ app.directive('tileHeight', function(){
 });
 
 
+app.directive('tileMeta', ['$parse', '$sce', function($parse, $sce) {
+  var directive = {
+      restrict: 'A',
+      scope: false,
+      link: function (scope, elem, attrs) {
+          function updateTileMeta() {
+              var pistonMeta = $parse(attrs.tileMeta)(scope);
+              var index = $parse(attrs.tileIndex)(scope) + 1;
+              var meta = renderString($sce, pistonMeta['t' + index]).meta;
+              if (!meta || !meta.type) {
+                meta = renderString($sce, pistonMeta['f' + index]).meta;
+              }
+              if (!meta || !meta.type) {
+                meta = renderString($sce, pistonMeta['i' + index]).meta;
+              }
+              scope.$parent.meta = meta;
+          }
+          
+          scope.$watchCollection(attrs.tileMeta, updateTileMeta);
+          scope.$watch(attrs.tileIndex, updateTileMeta);
+      }
+  };
+
+  return directive;
+}]);
+
+
 app.directive('help', ['$compile', function($compile) {
 	var directive = {
 		restrict: 'A',
@@ -300,6 +327,88 @@ app.directive('title', function(){
     };
 });
 
+app.directive('collapseControl', ['dataService', function(dataService) {
+	return function(scope, element, attr) {
+		var id = (attr.target || attr.ariaControls || '').replace('#', '');
+		var wasCollapsed = dataService.isCollapsed(id);
+		
+		if (wasCollapsed && 'ariaExpanded' in attr) {
+			element.attr('aria-expanded', 'false');
+		}
+		
+		element.bind('click', function(event) {
+			var collapsed = dataService.isCollapsed(id);
+			dataService.setCollapsed(id, !collapsed);
+		});
+	};
+}]);
+
+app.directive('collapseTarget', ['dataService', function(dataService) {
+	return function(scope, element, attr) {
+		var id = attr.id || '';
+		var collapseClass = attr.collapseClass || 'in';
+		var collapsed = dataService.isCollapsed(id);
+		
+		if (collapsed) {
+			element.removeClass(collapseClass);
+		} else {
+			element.addClass(collapseClass);
+		}
+	};
+}]);
+
+app.directive('taskedit', function() {
+	return {
+		restrict: 'A',
+		scope: false,
+		link: function(scope, elem, attr) {
+			var watchers = [];
+			function setupCommand(command) {
+				if (watchers.length > 0) {
+					for (var i = 0; i < watchers.length; i++) {
+						watchers[i]();
+					}
+					watchers = [];
+				}
+				// Custom visibility toggling for httpRequest parameters 
+				if (command === 'httpRequest') {
+					function toggleHttpRequestFields() {
+						var parameters = scope.designer.parameters;
+						var method = parameters[1].data.c; 
+						var useQueryString = method === 'GET' || method === 'DELETE' || method === 'HEAD';
+						var requestBodyTypeOperand = parameters[2];
+						var sendVariablesOperand = parameters[3];
+						var requestBodyOperand = parameters[4];
+						var contentTypeOperand = parameters[5];
+						var custom = requestBodyTypeOperand.data.c === 'CUSTOM' && !useQueryString;
+						
+						requestBodyTypeOperand.hidden = useQueryString;
+						sendVariablesOperand.hidden = custom;
+						contentTypeOperand.hidden = requestBodyOperand.hidden = !custom || useQueryString;
+					}
+					watchers.push(
+						scope.$watch('designer.parameters[1].data.c', toggleHttpRequestFields),
+						scope.$watch('designer.parameters[2].data.c', toggleHttpRequestFields)
+					);
+				}
+			}
+			scope.$watch('designer.command', setupCommand);
+		}
+	};
+});
+
+app.directive('checkbox', function() {
+	return {
+		restrict: 'E',
+		scope: {
+			checked: '=',
+			iconClass: '@',
+			radio: '=',
+		},
+		template: '<i ng-if="checked" ng-class="iconClass + \' fa-check-\' + (radio ? \'circle\' : \'square\')" class="far no-ng-animate"></i><i ng-if="!checked" ng-class="iconClass + \' fa-\' + (radio ? \'circle\' : \'square\')" class="far no-ng-animate"></i>'
+	};
+});
+
 app.filter('orderObjectBy', function() {
   return function(items, field, reverse) {
     var filtered = [];
@@ -314,9 +423,29 @@ app.filter('orderObjectBy', function() {
   };
 });
 
+app.filter('dashify', function() {
+  return function(value) {
+    return dashify(value, { condense: true });
+  }
+});
+
+app.filter('uniqueDashify', function() {
+  var keyByUniqueValue = {};
+  return function(value, key) {
+    value = dashify(value, { condense: true });
+    var unique = value;
+    var i = 1;
+    while (unique in keyByUniqueValue && keyByUniqueValue[unique] !== key) {
+      unique = value + '-' + i++;
+    }
+    keyByUniqueValue[unique] = key;
+    return unique;
+  }
+});
 
 
-var config = app.config(['$routeProvider', '$locationProvider', '$sceDelegateProvider', '$rootScopeProvider',  function ($routeProvider, $locationProvider, $sceDelegateProvider,  $rootScopeProvider) {
+
+var config = app.config(['$routeProvider', '$locationProvider', '$sceDelegateProvider', '$rootScopeProvider', '$animateProvider',  function ($routeProvider, $locationProvider, $sceDelegateProvider,  $rootScopeProvider, $animateProvider) {
 	$rootScopeProvider.digestTtl(10000); 
 	//$cfpLoadingBarProvider.includeSpinner = false;
     var ext = '.module.css';
@@ -324,16 +453,18 @@ var config = app.config(['$routeProvider', '$locationProvider', '$sceDelegatePro
         'self',
         cdn + '**'
     ]);
+    // Allow ng-animate to be disabled on certain elements
+    $animateProvider.classNameFilter(/^(?:(?!no-ng-animate).)*$/);
     $routeProvider.
     when('/', {
-        templateUrl: cdn + theme + 'html/modules/dashboard.module.html',
+        templateUrl: cdn + theme + 'html/modules/dashboard.module.html?v=' + version(),
         controller: 'dashboard',
-        css: cdn + theme + 'css/modules/dashboard' + ext
+        css: cdn + theme + 'css/modules/dashboard' + ext + '?v=' + version()
     }).
     when('/register', {
-        templateUrl: cdn + theme + 'html/modules/register.module.html',
+        templateUrl: cdn + theme + 'html/modules/register.module.html?v=' + version(),
         controller: 'register',
-        css: cdn + theme + 'css/modules/register' + ext
+        css: cdn + theme + 'css/modules/register' + ext + '?v=' + version()
     }).
     when('/init/:init', {
         redirectTo: function(params) {
@@ -342,24 +473,24 @@ var config = app.config(['$routeProvider', '$locationProvider', '$sceDelegatePro
 		}
     }).
     when('/piston/:pistonId', {
-        templateUrl: cdn + theme + 'html/modules/piston.module.html',
+        templateUrl: cdn + theme + 'html/modules/piston.module.html?v=' + version(),
         controller: 'piston',
-        css: cdn + theme + 'css/modules/piston' + ext,
+        css: cdn + theme + 'css/modules/piston' + ext + '?v=' + version(),
 		reloadOnSearch: false
     }).
     when('/fuel', {
-        templateUrl: cdn + theme + 'html/modules/fuel.module.html',
+        templateUrl: cdn + theme + 'html/modules/fuel.module.html?v=' + version(),
         controller: 'fuel',
-        css: cdn + theme + 'css/modules/fuel' + ext
+        css: cdn + theme + 'css/modules/fuel' + ext + '?v=' + version()
     }).
     when('/visors', {
-        templateUrl: cdn + theme + 'html/modules/visors.module.html',
+        templateUrl: cdn + theme + 'html/modules/visors.module.html?v=' + version(),
         controller: 'visors',
-        css: cdn + theme + 'css/modules/visors' + ext
+        css: cdn + theme + 'css/modules/visors' + ext + '?v=' + version()
     }).
     when('/init/:instId1/:instId2', {
         redirectTo: function(params) {
-			app.initialInstanceUri = params.instId1 + params.instId2;
+			app.initialInstanceUri = atou(params.instId1 + '/' +  params.instId2);
 			return '/';
 		}
     }).
@@ -482,6 +613,16 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 		return location;
 	};
 
+	var fixSI = function(si) {
+		if (!si || !si.uri) return null;
+		if (si.uri.indexOf('?access_token=')) {
+			var parts = si.uri.split('?access_token=');
+			si.uri = parts[0];
+			si.accessToken = parts[1];
+		}
+		return si;
+	}
+
 	var setInstance = function(inst) {
 		var initial = (!instance);
 		if (!instance || (instance.id != inst.id)) instance = inst;
@@ -490,7 +631,7 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 		if (!si) si = {};
 		si.token = inst.token ? inst.token : si.token;
 		si.uri = inst.uri ? inst.uri.replace(':443', '') : si.uri;
-		store[instance.id] = si;
+		store[instance.id] = fixSI(si);
 		delete(instance.token);
 		delete(instance.uri);
 		if (inst.contacts) {
@@ -563,6 +704,9 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
         });
     };
 
+	var getAccessToken = function(si) {
+		return (si && si.accessToken ? 'access_token=' + si.accessToken + '&' : '');
+	};
 
 	dataService.openWebSocket = function(callback) {
 		if (callback && instance) {
@@ -611,6 +755,9 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 	}
 
 	dataService.logout = function() {
+		locations = {};
+		instances = {};
+		storage = {};
 		return localforage.clear();
 	}
 
@@ -689,7 +836,7 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 		return result;
 	};
 
-	dataService.getInstance = function (instanceId) {
+	dataService.getInstance = function (instanceId, getAny) {
 		if (instance && !instanceId) return instance;
 		if (instance && (instance.id == instanceId)) return instance;		
 		if (instanceId) {
@@ -702,6 +849,9 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 			try {
 				return JSON.parse(JSON.stringify(instance ? instance : (instances? instances[readObject('instance')] : null)));
 			} catch(e) {}
+		}
+		if (!!getAny && !!instances) {
+		    for (iid in instances) return JSON.parse(JSON.stringify(instances[iid]));
 		}
 		return null;
 	};
@@ -718,20 +868,32 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 	}
 
 	dataService.loadInstance = function(inst, uri, pin, dashboard) {
+		//inst = dataService.getInstance(inst && inst.id ? inst.id : null);
 		var si = inst ? store[inst.id] : null;
 		var deviceVersion = !inst || !(inst.devices instanceof Object ) || !(Object.keys(inst.devices).length) ? 0 : (inst.deviceVersion ? inst.deviceVersion : 0);
-		if (!si) {
+		if (!si || !si.token) {
 			if ((app.initialInstanceUri && app.initialInstanceUri.length) || (uri && uri.length)) {
 				uri = app.initialInstanceUri ? app.initialInstanceUri : uri;
-				if (uri && !(uri instanceof Object) && (uri.length >= 69)) {
-					var host = uri.substr(0, uri.length - 64);
-					if (!host.endsWith('.com')) host += '.api.smartthings.com';
-					uri = uri.substr(0, 8) == 'https://' ? uri : 'https://' + host + '/api/token/' + uri.substr(-64, 8) + '-' + uri.substr(-56, 4) + '-' + uri.substr(-52, 4) + '-' + uri.substr(-48, 4) + '-' + uri.substr(-44, 12) +  '/smartapps/installations/' + uri.substr(-32, 8) + '-' + uri.substr(-24, 4) + '-' + uri.substr(-20, 4) + '-' + uri.substr(-16, 4) + '-' + uri.substr(-12) + '/';
+				if (!uri.startsWith('https://')) {
+					if (uri && (uri.indexOf('tat.comapi') > 0)) {
+						var parts = uri.split('api');
+						if (parts[1].length >= 33) {
+							var uid = parts[1].substr(0, 32);
+							var appid = parts[1].substr(32);
+							uri = 'https://' + parts[0] + '/api/' + uid.substr(0, 8) + '-' + uid.substr(8, 4) + '-' + uid.substr(12, 4) + '-' + uid.substr(16, 4) + '-' + uid.substr(20, 12) + '/apps/' + appid;
+						}
+					} else {
+						if (uri && !(uri instanceof Object) && (uri.length >= 69)) {
+							var host = uri.substr(0, uri.length - 64);
+							if (!host.endsWith('.com')) host += '.api.smartthings.com';
+							uri = uri.substr(0, 8) == 'https://' ? uri : 'https://' + host + '/api/token/' + uri.substr(-64, 8) + '-' + uri.substr(-56, 4) + '-' + uri.substr(-52, 4) + '-' + uri.substr(-48, 4) + '-' + uri.substr(-44, 12) +  '/smartapps/installations/' + uri.substr(-32, 8) + '-' + uri.substr(-24, 4) + '-' + uri.substr(-20, 4) + '-' + uri.substr(-16, 4) + '-' + uri.substr(-12) + '/';
+						}
+					}
 				}
-				si = {uri: uri};
+				si = fixSI({uri: uri});
 				for(id in store) {
 					if (store[id].uri == uri) {
-						si = store[id];
+						si = fixSI(store[id]);
 						if (instances && instances[id] && instances[id].devices instanceof Object && Object.keys(instances[id].devices).length && instances[id].deviceVersion) deviceVersion = instances[id].deviceVersion;
 						break;
 					}
@@ -753,13 +915,14 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 			if (error) error.parentNode.removeChild(error);
 		}
 
-    	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/load?token=' + (si && si.token ? si.token : '') + (pin ? '&pin=' + pin : '') + '&dashboard='+ (dashboard ? 1 : 0) + '&dev=' + deviceVersion, {jsonpCallbackParam: 'callback'}).then(function(response) {
+    	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/load?' + getAccessToken(si) + 'token=' + (si && si.token ? si.token : '') + (pin ? '&pin=' + pin : '') + '&dashboard='+ (dashboard ? 1 : 0) + '&dev=' + deviceVersion, {jsonpCallbackParam: 'callback'}).then(function(response) {
 				var data = response.data;
 				if (data.now) {
 					adjustTimeOffset(data.now);
 				}
 				if (data.error && si) {
 					data.uri = si.uri ;
+					data.accessToken = si.accessToken;
 				}
 				if (data.location) {
 					setLocation(data.location);
@@ -768,8 +931,11 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 					data.instance = setInstance(data.instance);
 				}
 				data.endpoint = si.uri;
+				data.accessToken = si.accessToken;
 				return data;	
-			}, function(response) {
+			}, function(error) {
+				status('There was a problem loading the dashboard data. The data shown below may be outdated; please log out if this problem persists.');
+				return error;
 			});
     };
 
@@ -791,7 +957,7 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 		si = store && inst ? store[inst.id] : null;
 		var deviceVersion = !inst || !(inst.devices instanceof Object ) || !(Object.keys(inst.devices).length) ? 0 : (inst.deviceVersion ? inst.deviceVersion : 0);
 		status('Loading dashboard...');
-    	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/refresh?token=' + (si && si.token ? si.token : ''), {jsonpCallbackParam: 'callback'})
+    	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/refresh?' + getAccessToken(si) + 'token=' + (si && si.token ? si.token : ''), {jsonpCallbackParam: 'callback'})
 			.then(function(response) {
 				data = response.data;
 				return data;
@@ -807,7 +973,7 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 		var deviceVersion = !inst || !(inst.devices instanceof Object ) || !(Object.keys(inst.devices).length) ? 0 : (inst.deviceVersion ? inst.deviceVersion : 0);
         var dbVersion = readObject('db.version', _dk);
 		status('Loading piston...');
-    	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/piston/get?id=' + pistonId + '&db=' + dbVersion + '&token=' + (si && si.token ? si.token : '') + '&dev=' + deviceVersion, {jsonpCallbackParam: 'callback'})
+    	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/piston/get?' + getAccessToken(si) + 'id=' + pistonId + '&db=' + dbVersion + '&token=' + (si && si.token ? si.token : '') + '&dev=' + deviceVersion, {jsonpCallbackParam: 'callback'})
 			.then(function(response) {
 				data = response.data;
 				if (data.now) {
@@ -839,7 +1005,7 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 		var inst = dataService.getInstance(instanceId);
 		if (!inst) { inst = dataService.getInstance() };
 		si = store && inst ? store[inst.id] : null;
-    	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/piston/backup?ids=' + pistonIds + '&token=' + (si && si.token ? si.token : ''), {jsonpCallbackParam: 'callback'})
+    	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/piston/backup?' + getAccessToken(si) + 'ids=' + pistonIds + '&token=' + (si && si.token ? si.token : ''), {jsonpCallbackParam: 'callback'})
 			.then(function(response) {
 				data = response.data;
 				if (data.now) {
@@ -855,7 +1021,7 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 		var inst = dataService.getPistonInstance(pistonId);
 		if (!inst) { inst = dataService.getInstance() };
 		si = store ? store[inst.id] : null;
-    	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/piston/activity?id=' + pistonId + '&log=' + (lastLogTimestamp ? lastLogTimestamp : 0) + '&token=' + (si && si.token ? si.token : ''), {jsonpCallbackParam: 'callback'})
+    	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/piston/activity?' + getAccessToken(si) + 'id=' + pistonId + '&log=' + (lastLogTimestamp ? lastLogTimestamp : 0) + '&token=' + (si && si.token ? si.token : ''), {jsonpCallbackParam: 'callback'})
 			.then(function(response) {
 				return response.data;
 			});
@@ -941,7 +1107,7 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
     dataService.generateNewPistonName = function () {
 		var inst = dataService.getInstance();
 		si = store ? store[inst.id] : null;
-    	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/piston/new?token=' + (si && si.token ? si.token : ''), {jsonpCallbackParam: 'callback'})
+    	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/piston/new?' + getAccessToken(si) + 'token=' + (si && si.token ? si.token : ''), {jsonpCallbackParam: 'callback'})
 			.then(function(response) {
 				return response.data;
 			});
@@ -950,7 +1116,7 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
     dataService.createPiston = function (name, author, backupBin) {
 		var inst = dataService.getInstance();
 		si = store ? store[inst.id] : null;
-    	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/piston/create?author=' + encodeURIComponent(author) + '&name=' + encodeURIComponent(name) + '&bin=' + encodeURIComponent(backupBin ? backupBin : '')  +'&token=' + (si && si.token ? si.token : ''), {jsonpCallbackParam: 'callback'})
+    	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/piston/create?' + getAccessToken(si) + 'author=' + encodeURIComponent(author) + '&name=' + encodeURIComponent(name) + '&bin=' + encodeURIComponent(backupBin ? backupBin : '')  +'&token=' + (si && si.token ? si.token : ''), {jsonpCallbackParam: 'callback'})
 			.then(function(response) {
 				return response.data;
 			});
@@ -961,13 +1127,13 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 	var setPistonChunk = function(si, chunks, chunk, binId) {
 		if (chunk < chunks.length) {
 			status('Saving piston chunk ' + (chunk + 1).toString() + ' of ' + chunks.length.toString() + '...');
-	    	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/piston/set.chunk?chunk=' + chunk.toString() + '&data=' + encodeURIComponent(chunks[chunk]) + '&token=' + (si && si.token ? si.token : ''), {jsonpCallbackParam: 'callback'})
+	    	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/piston/set.chunk?' + getAccessToken(si) + 'chunk=' + chunk.toString() + '&data=' + encodeURIComponent(chunks[chunk]) + '&token=' + (si && si.token ? si.token : ''), {jsonpCallbackParam: 'callback'})
 				.then(function(response) {
 					return setPistonChunk(si, chunks, chunk + 1, binId);
 				});
 		} else {
 			status('Finishing up...');
-	    	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/piston/set.end?bin=' + encodeURIComponent(binId) + '&token=' + (si && si.token ? si.token : ''), {jsonpCallbackParam: 'callback'})
+	    	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/piston/set.end?' + getAccessToken(si) + 'bin=' + encodeURIComponent(binId) + '&token=' + (si && si.token ? si.token : ''), {jsonpCallbackParam: 'callback'})
 				.then(function(response) {
 					status();
 					return response;
@@ -989,7 +1155,7 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 			//var chunks = data.match(/.{1,maxChunkSize}/g);
 			var chunks = [].concat.apply([],data.split('').map(function(x,i){ return i%maxChunkSize ? [] : data.slice(i,i+maxChunkSize) }, data));
 			status('Preparing to save chunked piston...');
-	    	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/piston/set.start?id=' + piston.id + '&chunks=' + chunks.length.toString() + '&token=' + (si && si.token ? si.token : ''), {jsonpCallbackParam: 'callback'})
+	    	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/piston/set.start?' + getAccessToken(si) + 'id=' + piston.id + '&chunks=' + chunks.length.toString() + '&token=' + (si && si.token ? si.token : ''), {jsonpCallbackParam: 'callback'})
 				.then(function(response) {
 					if (response && (response.status == 200) && response.data && (response.data.status == 'ST_READY')) {
 						return setPistonChunk(si, chunks, 0, binId);
@@ -997,7 +1163,7 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 				});
 		} else {
 			status('Saving piston...');
-	    	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/piston/set?id=' + piston.id + '&data=' + encodeURIComponent(data) + '&bin=' + encodeURIComponent(binId) + '&token=' + (si && si.token ? si.token : ''), {jsonpCallbackParam: 'callback'})
+	    	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/piston/set?' + getAccessToken(si) + 'id=' + piston.id + '&data=' + encodeURIComponent(data) + '&bin=' + encodeURIComponent(binId) + '&token=' + (si && si.token ? si.token : ''), {jsonpCallbackParam: 'callback'})
 				.then(function(response) {
 					status();
 					return response;
@@ -1010,7 +1176,7 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 		if (!inst) { inst = dataService.getInstance() };
 		si = store ? store[inst.id] : null;
 		status('Setting piston bin to ' + bin + '...');
-    	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/piston/set.bin?id=' + pid + '&bin=' + bin+ '&token=' + (si && si.token ? si.token : ''), {jsonpCallbackParam: 'callback'})
+    	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/piston/set.bin?' + getAccessToken(si) + 'id=' + pid + '&bin=' + bin+ '&token=' + (si && si.token ? si.token : ''), {jsonpCallbackParam: 'callback'})
 			.then(function(response) {
 				status();
 				return response.data;
@@ -1021,7 +1187,7 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 		var inst = dataService.getPistonInstance(pid);
 		if (!inst) { inst = dataService.getInstance() };
 		si = store ? store[inst.id] : null;
-    	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/piston/tile?id=' + pid + '&tile=' + tile + '&token=' + (si && si.token ? si.token : ''), {jsonpCallbackParam: 'callback'})
+    	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/piston/tile?' + getAccessToken(si) + 'id=' + pid + '&tile=' + tile + '&token=' + (si && si.token ? si.token : ''), {jsonpCallbackParam: 'callback'})
 			.then(function(response) {
 				status();
 				return response.data;
@@ -1033,7 +1199,7 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 		if (!inst) { inst = dataService.getInstance() };
 		si = store ? store[inst.id] : null;
 		status('Setting piston category...');
-    	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/piston/set.category?id=' + pid + '&category=' + category + '&token=' + (si && si.token ? si.token : ''), {jsonpCallbackParam: 'callback'})
+    	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/piston/set.category?' + getAccessToken(si) + 'id=' + pid + '&category=' + category + '&token=' + (si && si.token ? si.token : ''), {jsonpCallbackParam: 'callback'})
 			.then(function(response) {
 				status();
 				return response.data;
@@ -1045,7 +1211,7 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 		if (!inst) { inst = dataService.getInstance() };
 		si = store ? store[inst.id] : null;
 		status('Setting piston logging level to ' + level + '...');
-    	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/piston/logging?id=' + pid + '&level=' + level + '&token=' + (si && si.token ? si.token : ''), {jsonpCallbackParam: 'callback'})
+    	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/piston/logging?' + getAccessToken(si) + 'id=' + pid + '&level=' + level + '&token=' + (si && si.token ? si.token : ''), {jsonpCallbackParam: 'callback'})
 			.then(function(response) {
 				status();
 				return response.data;
@@ -1058,7 +1224,7 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 		if (!inst) { inst = dataService.getInstance() };
 		si = store ? store[inst.id] : null;
 		status('Clearing piston logs...');
-    	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/piston/clear.logs?id=' + pid + '&token=' + (si && si.token ? si.token : ''), {jsonpCallbackParam: 'callback'})
+    	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/piston/clear.logs?' + getAccessToken(si) + 'id=' + pid + '&token=' + (si && si.token ? si.token : ''), {jsonpCallbackParam: 'callback'})
 			.then(function(response) {
 				status();
 				return response.data;
@@ -1070,7 +1236,7 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 		if (!inst) { inst = dataService.getInstance() };
 		si = store ? store[inst.id] : null;
 		status('Pausing piston...');
-    	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/piston/pause?id=' + pid + '&token=' + (si && si.token ? si.token : ''), {jsonpCallbackParam: 'callback'})
+    	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/piston/pause?' + getAccessToken(si) + 'id=' + pid + '&token=' + (si && si.token ? si.token : ''), {jsonpCallbackParam: 'callback'})
 			.then(function(response) {
 				status();
 				return response.data;
@@ -1082,7 +1248,7 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 		if (!inst) { inst = dataService.getInstance() };
 		si = store ? store[inst.id] : null;
 		status('Resuming piston...');
-    	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/piston/resume?id=' + pid + '&token=' + (si && si.token ? si.token : ''), {jsonpCallbackParam: 'callback'})
+    	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/piston/resume?' + getAccessToken(si) + 'id=' + pid + '&token=' + (si && si.token ? si.token : ''), {jsonpCallbackParam: 'callback'})
 			.then(function(response) {
 				status();
 				return response.data;
@@ -1095,26 +1261,37 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 		if (!inst) { inst = dataService.getInstance() };
 		si = store ? store[inst.id] : null;
 		status('Testing piston...');
-    	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/piston/test?id=' + pid + '&token=' + (si && si.token ? si.token : ''), {jsonpCallbackParam: 'callback'})
+    	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/piston/test?' + getAccessToken(si) + 'id=' + pid + '&token=' + (si && si.token ? si.token : ''), {jsonpCallbackParam: 'callback'})
 			.then(function(response) {
 				status();
 				return response.data;
 			});
     }
 
+
+    dataService.createPresenceSensor = function (name, dni) {
+	var inst = dataService.getPistonInstance();
+	if (!inst) { inst = dataService.getInstance() };
+	si = store ? store[inst.id] : null;
+    	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/presence/create?' + getAccessToken(si) + 'name=' + encodeURIComponent(name) + '&dni=' + encodeURIComponent(dni ? dni : '') + '&token=' + (si && si.token ? si.token : ''), {jsonpCallbackParam: 'callback'})
+	    .then(function(response) {
+		return response.data;
+	    });
+    }
+
     dataService.deletePiston = function (pid) {
 		var inst = dataService.getPistonInstance(pid);
 		if (!inst) { inst = dataService.getInstance() };
 		si = store ? store[inst.id] : null;
-    	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/piston/delete?id=' + pid + '&token=' + (si && si.token ? si.token : ''), {jsonpCallbackParam: 'callback'})
+    	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/piston/delete?' + getAccessToken(si) + 'id=' + pid + '&token=' + (si && si.token ? si.token : ''), {jsonpCallbackParam: 'callback'})
 			.then(function(response) {
 				return response.data;
 			});
     }
 
 
-    dataService.setVariable = function (name, value) {
-		var inst = dataService.getInstance();
+    dataService.setVariable = function (name, value, pid) {
+		var inst = pid ? dataService.getPistonInstance(pid) : dataService.getInstance();
 		si = store ? store[inst.id] : null;
 		if (value && value.t) {
 			switch (value.t) {
@@ -1129,7 +1306,7 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 			}
 		}
 		var data = value ? utoa(angular.toJson(value)) : '';
-    	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/variable/set?name=' + name + '&value=' + encodeURIComponent(data) + '&token=' + (si && si.token ? si.token : ''), {jsonpCallbackParam: 'callback'})
+    	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/variable/set?' + getAccessToken(si) + 'name=' + name + '&value=' + encodeURIComponent(data) + (pid ? '&id=' + pid : '') + '&token=' + (si && si.token ? si.token : ''), {jsonpCallbackParam: 'callback'})
 			.then(function(response) {
 				return response.data;
 			});
@@ -1139,7 +1316,7 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 		var inst = dataService.getInstance();
 		si = store ? store[inst.id] : null;
 		var data = settings ? utoa(angular.toJson(settings)) : '';
-    	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/settings/set?settings=' + encodeURIComponent(data) + '&token=' + (si && si.token ? si.token : ''), {jsonpCallbackParam: 'callback'})
+    	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/settings/set?' + getAccessToken(si) + 'settings=' + encodeURIComponent(data) + '&token=' + (si && si.token ? si.token : ''), {jsonpCallbackParam: 'callback'})
 			.then(function(response) {
 				return response.data;
 			});
@@ -1150,7 +1327,7 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 		if (!inst) { inst = dataService.getInstance() };
 		si = store ? store[inst.id] : null;
 		var data = utoa(angular.toJson(expression));
-    	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/piston/evaluate?id=' + pid + '&expression=' + encodeURIComponent(data) + '&dataType=' + (dataType ? encodeURIComponent(dataType) : '') + '&token=' + (si && si.token ? si.token : ''), {jsonpCallbackParam: 'callback'})
+    	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/piston/evaluate?' + getAccessToken(si) + 'id=' + pid + '&expression=' + encodeURIComponent(data) + '&dataType=' + (dataType ? encodeURIComponent(dataType) : '') + '&token=' + (si && si.token ? si.token : ''), {jsonpCallbackParam: 'callback'})
 			.then(function(response) {
 				return response.data;
 			});
@@ -1183,6 +1360,48 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 			return $http(req).then(function(response) {
 					return response.data;
 				});
+		}
+	}
+
+	dataService.login = function(username, password) {
+		var inst = instance || dataService.getInstance(null, true);
+		if (!inst) inst = {id: 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx' + [0,1,2,3,4,5,6,7,8,9,'a','b','c','d','e','f'][Math.floor(Math.random()*16)]};
+		if (inst) {
+			var iid = inst.id;
+			var si = store[inst.id];
+			if (!si) si = {};
+			var region = (si && si.uri && si.uri.startsWith('https://graph-eu')) ? 'eu' : 'us';
+			var req = {
+				method: 'POST',
+				url: 'https://api-' + region + '-' + iid[32] + '.webcore.co:9287/user/login',
+				headers: {
+				'Auth-Token': '|'+ iid
+				},
+				data: { u: username, p: password }
+			}
+			return $http(req).then(function(response) {
+				var data = response.data;
+				store = JSON.parse('{}');//":e1d1f849bf093663be65a380fc6343b3:":{"uri":"https://graph.api.smartthings.com/api/token/7652e3a4-0b1d-4149-8db1-904926b5c1ea/smartapps/installations/3d488355-c7d4-47e5-839c-9f5d5530881f/"},":8d5d2f31e563841c1c95b6b73a6c8b25:":{"uri":"https://graph.api.smartthings.com/api/token/a6f2dfd4-b91b-4bbe-b900-757ad5e6c7a9/smartapps/installations/e035fa0e-0671-406a-9483-d89b15ac3c1b/"}}');
+				for (x in store) {
+				    if (!instances[x] || !instances[x].account) {
+					instances[x] = {id: x, name: 'Unknown', locationId: '?'};
+					locations['?'] = {id: '?', name: 'Unknown'};
+				    }
+				}
+				instance = dataService.getInstance(null, true)
+				writeObject('store', store);
+				writeObject('instances', instances);
+				writeObject('locations', locations);
+				if (instance) writeObject('instance', instance.id);
+				$location.path('/');
+				//$route.reload();
+				if (data && data.result) {
+				    //rewrite all stored keys
+				    store = data.store;
+				    return true;
+				}
+				return false;
+			});
 		}
 	}
 
@@ -1241,6 +1460,27 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 		}
 		return 'unknownDevice';
 	}
+  
+  dataService.getAllCollapsed = function() {
+		return dataService.loadFromStore('collapsed') || [];
+	}
+	
+	dataService.isCollapsed = function(id) {
+		return dataService.getAllCollapsed().indexOf(id) >= 0;
+	}
+	
+	dataService.setCollapsed = function(id, collapsed) {
+		var allCollapsed = dataService.getAllCollapsed();
+		var index = allCollapsed.indexOf(id);
+		
+		if (collapsed && index < 0) {
+			allCollapsed.push(id);
+		} else if (!collapsed && index >= 0) {
+			allCollapsed.splice(index, 1);
+		}
+		
+		dataService.saveToStore('collapsed', allCollapsed);
+	}
 
 
 	var initialize = function() {
@@ -1262,8 +1502,16 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 			instances = {};
 		}
 
+		userId = 0;
+
 		initialized = true;
 		window.ds = dataService;
+
+		if (!!store.user) {
+		    dataService.login(store.user.name, store.user.token).then(function(response) {
+			console.log(response);
+		    });
+		}
 	}
 
     return dataService;
@@ -1564,13 +1812,24 @@ function renderString($sce, value) {
                         if (classList == undefined) {
                             return '[' + result + ']';
                         }
-                        var cls = classList.trim().replace(/\s/g, ',').split(',');
+                        var cls = classList.trim();
+                        // Ensure that unencoded commas in URLs do not get split
+                        // into separate commands
+                        while (/(\bsrc=\S+),/.test(cls)) {
+                          cls = cls.replace(/(\bsrc=\S+),/, '$1:webCoRE-comma:');
+                        }
+                        cls = cls.replace(/'.*? .*?'|".*? .*?"/g, function(match) {
+                            return match.replace(/\s+/g, ':webCoRE-space:');
+                        })
+                        cls = cls.split(/,|\s+/);
                         var className = '';
                         var color = '';
+						var attributes = '';
 						var backColor='';
 						var fontSize = '';
                         for (x in cls) {
 							if (!cls[x]) continue;
+                            cls[x] = cls[x].replace(/:webCoRE-comma:/g, ',').replace(/:webCoRE-space:/g, ' ');
                             switch (cls[x]) {
                                 case 'b': 
                                 case 'u':
@@ -1599,14 +1858,16 @@ function renderString($sce, value) {
 									meta.type = 'video';
 									break;
                                 default:
-									if (/\d+(.\d+)?(x|em)/.test(cls[x])) {
+									if (/^\d+(\.\d+)?(x|em)/.test(cls[x])) {
 										fontSize = cls[x].replace('x', 'em');
-									} else if (cls[x].startsWith('b-')) {
-										backColor = cls[x].substr(2).replace(/[^#0-9a-z]/gi, '');
-									} else if (cls[x].startsWith('bk-') || cls[x].startsWith('bg-')) {
-										backColor = cls[x].substr(3).replace(/[^#0-9a-z]/gi, '');
-									} else if (cls[x].startsWith('back-')) {
-										backColor = cls[x].substr(5).replace(/[^#0-9a-z]/gi, '');
+									} else if (cls[x].startsWith('fa-')) {
+										className += cls[x] + ' ';
+									} else if (cls[x].startsWith('data-fa-')) {
+										attributes += ' ' + cls[x];
+									} else if (cls[x].startsWith('color-')) {
+										color = cls[x].substr(6);
+									} else if (/^(b|bg|bk|back)-/.test(cls[x])) {
+										backColor = cls[x].replace(/^(b|bg|bk|back)-/, '');
 									} else if (cls[x].indexOf('=') > 0) {
 										//options
 										var p = cls[x].indexOf('=');
@@ -1616,10 +1877,11 @@ function renderString($sce, value) {
 									}
                             }
                         }
+						meta.attributes = attributes;
 						meta.className = className;
 						meta.color = color;
 						meta.backColor = backColor;
-                        return '<span ' + (className ? 'class="' + className + '" ' : '') + (!!color || !!backColor || !!fontSize ? 'style="' + (color ? 'color: ' + color + ' !important;' : '') + ' ' + (backColor ? 'background-color: ' + backColor + ' !important;' : '') + ' ' + (fontSize ? 'font-size: ' + fontSize + ' !important;' : '') + '"' : '') + '>' + result + '</span>';
+                        return '<span ' + (className ? 'class="' + className + '" ' : '') + (!!color || !!backColor || !!fontSize ? 'style="' + (color ? 'color: ' + color + ' !important;' : '') + ' ' + (backColor ? 'background-color: ' + backColor + ' !important;' : '') + ' ' + (fontSize ? 'font-size: ' + fontSize + ' !important;' : '') + '"' : '') + attributes + '>' + result + '</span>';
                     default:
                         result += c;
                 }
@@ -1628,9 +1890,20 @@ function renderString($sce, value) {
             return result;
         }
 
-		meta.html = process(value).replace(/\:fa-([a-z0-9\-\s]*)\:/gi, function(match) {
-            return '<i class="fa ' + match.replace(/\:/g, '').toLowerCase() + '"></i>';
-        }).replace(/\:wu-([a-k]|v[1-4])-([a-z0-9_\-]+)\:/gi, function(match) {
+		meta.html = process(value).replace(/\:(fa[blrs5]?)([ -])([a-z0-9\-\s.="']*)\:/gi, function(match, prefix, union, classes) {
+            var attributes = '';
+            // Default deprecated fa5 prefix to solid weight
+            prefix = prefix.toLowerCase();
+            prefix = prefix === 'fa5' ? 'fas' : prefix;
+            // Support shorthand fas-stroopwafel for fas fa-stroopwafel
+            classes = classes.toLowerCase();
+            classes = union === '-' ? 'fa-' + classes : classes;
+            classes = classes.replace(/(data-fa.*?=(?:'.*?'|".*?"))\s*/gi, function(match) {
+                attributes += ' ' + match;
+                return '';
+            });
+            return '<i class="' + prefix.toLowerCase() + ' ' + classes.toLowerCase() + '"' + attributes + '></i>';
+      }).replace(/\:wu-([a-k]|v[1-4])-([a-z0-9_\-]+)\:/gi, function(match) {
 			var iconSet = match[4];
 			if (iconSet == 'v') {
 				iconSet += match[5];
@@ -1737,6 +2010,12 @@ function initBootstrapSelect() {
 	$('select').selectpicker();
 }
 
+// ios-drag-drop mishandles touches on mobile nav menus; stop propagation of the
+// touchstart event in nav menus before it bubbles up to the document level
+$(document.documentElement).on('touchstart', '.navbar-collapse *', function (e) { 
+  e.stopPropagation();
+});
+
 
 window.onerror = function myErrorHandler(errorMsg, url, lineNumber) {
     //alert("Error occured: " + errorMsg + ' at ' + url + ' line ' + lineNumber);//or any message
@@ -1780,4 +2059,57 @@ if (document.selection) {
      document.execCommand("Copy");
 }}
 
-version = function() { return 'v0.2.0e2.20170808'; };
+function loadFontAwesomeFallback() {
+  fontAwesomePro = false;
+  $('head script[src*="pro.fontawesome"]').each(function() {
+    $(this).remove().clone()
+      .attr({
+        src: this.src.replace('pro', 'use'),
+      }).removeAttr('onerror')
+      .appendTo('head');
+  });
+}
+
+// Handle Pro load failure before app loads
+if (!window.fontAwesomePro) {
+  loadFontAwesomeFallback();
+}
+
+
+// Map .far to .fas free icons when Pro is not available
+app.directive('far', function() {
+	var directive = {
+		restrict: 'C',
+		link: function(scope, element) {
+			if (!fontAwesomePro) {
+				element.toggleClass('far fas');
+			}
+		}
+	};
+	return directive;
+});
+
+// Map .fal to .fas free icons when Pro is not available
+app.directive('fal', function() {
+	var directive = {
+		restrict: 'C',
+		link: function(scope, element) {
+			if (!fontAwesomePro) {
+				element.toggleClass('fal fas');
+			}
+		}
+	};
+	return directive;
+});
+
+// Polyfills
+if (!String.prototype.endsWith) {
+	String.prototype.endsWith = function(search, this_len) {
+		if (this_len === undefined || this_len > this.length) {
+			this_len = this.length;
+		}
+		return this.substring(this_len - search.length, this_len) === search;
+	};
+}
+
+version = function() { return 'v0.3.107.20180806'; };
