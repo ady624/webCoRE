@@ -929,6 +929,14 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 		var uploadField = angular.element('#backupFile')[0];
 		var file = uploadField.files[0];
 		var reader = new window.FileReader();
+		var warningConditions = {
+			'executes other pistons': { p: /"c":"executePiston"/, l: 20 },
+			'may require global variables': { p: /[^\w]@\w/, l: 10 },
+			'has tiles': { p: /"c":"setTile/, l: 5 },
+			'requires IFTTT': { p: /"c":"iftttMaker"/, l: 2 },
+			'expects arguments': { p: /"u":"[^\[]|\$args\./, l: 1 },
+			'has devices in expressions': { p: /\[[^\]\{]+:/, l: 1 }
+		};
 		reader.onload = function(e) {
 			var encrypted = e.target.result;
 			if (encrypted) {
@@ -945,7 +953,16 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 						idByName[$scope.instance.pistons[i].name] = $scope.instance.pistons[i].id;
 					}
 					for (var i = 0; i < data.length; i++) {
+						var json = JSON.stringify(data[i].piston);
 						data[i].imported = idByName[data[i].meta.name];
+						data[i].warnings = [];
+						data[i].warningLevel = 0;
+						for (var warning in warningConditions) {
+							if (warningConditions[warning].p && warningConditions[warning].p.test(json)) {
+								data[i].warnings.push(warning);
+								data[i].warningLevel += warningConditions[warning].l;
+							}
+						}
 					}
 					
 					localforage.setItem('import', data);

@@ -449,6 +449,10 @@
               <button type="button" class="btn btn-sm btn-primary pull-right" ng-show="!!data.imported" ng-click="openPiston(data.imported); closeDialog()">View</button>
               <button class="btn btn-sm pull-right" ng-class="data.imported ? 'btn-secondary' : 'btn-primary'" ng-click="restoreImportedPiston(data)">Restore {{data.imported ? ' again' : ''}}</button>
               <strong>{{data.meta.name}}</strong>
+              <div ng-if="data.warnings && data.warnings.length" class="text-warning">
+                <i class="fas fa-exclamation-triangle"></i>
+                {{data.warnings.join(', ')}}
+              </div>
               <p>
                 Created by {{data.meta.author}} on {{data.meta.created | date}}
               </p>
