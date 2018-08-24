@@ -915,6 +915,11 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 		};
 		reader.readAsText(file);
 	};
+	
+	$scope.restartPistonImport = function() {
+		localforage.removeItem('import');
+		$scope.importedPistons = null;
+	};
 
 
 	$scope.getOpacity = function(time) {

@@ -503,6 +503,7 @@
       <footer>
           <button ng-if="designer.type != 'import'" type="button" class="btn btn-info pull-right" ng-disabled="!designer.type || !designer.author || !designer.name || ((designer.type == 'duplicate') && !designer.piston) || ((designer.type == 'restore') && !designer.bin)" ng-click="createPiston();">Create</button>
           <button ng-if="designer.type == 'import' && !importedPistons" type="button" class="btn btn-info pull-right" ng-click="loadBackupFile();">Import</button>
+          <button ng-if="designer.type == 'import' && importedPistons" type="button" class="btn btn-info pull-right" ng-click="restartPistonImport();">New import</button>
           <button type="button" class="btn btn-default" ng-click="prevPage();">Back</button>
       </footer>
   </designer>
