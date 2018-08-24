@@ -686,7 +686,13 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 		$scope.designer.name = data.meta.name;
 		$scope.designer.author = data.meta.author;
 		$scope.designer.piston = data.meta.id;
-		return $scope.createPiston();
+		return $scope.createPiston()
+			.then(function(piston) {
+				// Mark piston as imported and cycle it to the end of the array
+				data.imported = piston.id;
+				data.importedAt = Date.now();
+				localforage.setItem('import', $scope.importedPistons);
+			});
 	}
 
 
@@ -789,18 +795,21 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 		var success = function(data) {
 			$scope.closeDialog();
 			$scope.initialized = false;
-			$location.path("piston/" + data.id).search({description: $scope.designer.description, type: $scope.designer.type, piston: $scope.designer.piston, bin: $scope.designer.bin});
+			setTimeout(function() {
+				$location.path("piston/" + data.id).search({description: $scope.designer.description, type: $scope.designer.type, piston: $scope.designer.piston, bin: $scope.designer.bin});
+			}, 100);
+			return data;
 		};
 		$scope.loading = true;
 		dataService.saveToStore('backup.auto', !!$scope.designer.backup);
 		dataService.saveToStore('author.handle', $scope.designer.author);
 		if ($scope.designer.backup) {
-			dataService.generateBackupBin().then(function(response) {
+			return dataService.generateBackupBin().then(function(response) {
 				var binId = response.data;
 				dataService.createPiston($scope.designer.name, $scope.designer.author, binId).then(success);
 			});
 		} else {
-			dataService.createPiston($scope.designer.name, $scope.designer.author).then(success);
+			return dataService.createPiston($scope.designer.name, $scope.designer.author).then(success);
 		}
     };
 
@@ -908,6 +917,14 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 				} while (password !== null && !data);
 				
 				if (data) {
+					var idByName = {};
+					for (var i = 0; i < $scope.instance.pistons.length; i++) {
+						idByName[$scope.instance.pistons[i].name] = $scope.instance.pistons[i].id;
+					}
+					for (var i = 0; i < data.length; i++) {
+						data[i].imported = idByName[data[i].meta.name];
+					}
+					
 					localforage.setItem('import', data);
 					$scope.importedPistons = data;
 				}
