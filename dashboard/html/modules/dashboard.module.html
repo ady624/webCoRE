@@ -421,25 +421,40 @@
           <p>You may restore public, anonymized backup codes shared by others or private backup codes created by your account. Private backup codes created by a different account cannot be restored.</p>
       </header>
       <header ng-if="designer.type=='import'">
-          <h3>Import a piston from a backup file</h3>
-          <span>Upload your backup file created by the Backup Pistons menu item on the dashboard then restore pistons.</span>
+          <h3>Import pistons from a backup file</h3>
       </header>
       <div ng-if="designer.type == 'import'">
         <form ng-if="!importedPistons">
+          <p>Upload your backup file created by the Backup Pistons menu item on the dashboard then restore pistons.</p>
           <div class="form-group">
             <label for="backupFile">Backup file</label>
             <input id="backupFile" name="backupFile" ng-model="designer.backupFile" type="file" accept=".backup" />
           </div>
         </form>
-        <ol ng-if="importedPistons">
-          <li ng-repeat="data in importedPistons">
-            <button class="btn btn-sm btn-primary pull-right" ng-click="restoreImportedPiston(data)">Restore</button>
-            <strong>{{data.meta.name}}</strong>
-            <p>
-              Created by {{data.meta.author}} on {{data.meta.created | date}}
-            </p>
-          </li>
-        </ol>
+        <div ng-if="importedPistons">
+          <p>The following pistons were included in the backup file. Pistons that you have already restored and existing pistons with a name matching the backup file are displayed at the end of the list.</p>
+          <div class="pull-right form-group form-group-sm form-inline">
+            <label for="import-sort" class="small">Sort by</label>
+            <select id="import-sort" ng-model="importedPistonsSortOrder" ng-change="sortImportedPistons(importedPistonsSortOrder)" class="form-control">
+              <option>safest</option>
+              <option>name</option>
+              <option>category</option>
+              <option>created date</option>
+              <option>last modified</option>
+            </select>
+          </div>
+          <p>Some pistons in this list may show warnings to identify factors that may need to be reviewed when you import the piston. The "safest" sort order shows pistons with the fewest warnings first. Sorry, we can't restore categories, global variables, places, or other global settings... yet.</p>
+          <ol>
+            <li ng-repeat="data in importedPistons track by data.meta.id" ng-class="{ 'text-muted': !!data.imported }">
+              <button type="button" class="btn btn-sm btn-primary pull-right" ng-show="!!data.imported" ng-click="openPiston(data.imported); closeDialog()">View</button>
+              <button class="btn btn-sm pull-right" ng-class="data.imported ? 'btn-secondary' : 'btn-primary'" ng-click="restoreImportedPiston(data)">Restore {{data.imported ? ' again' : ''}}</button>
+              <strong>{{data.meta.name}}</strong>
+              <p>
+                Created by {{data.meta.author}} on {{data.meta.created | date}}
+              </p>
+            </li>
+          </ol>
+        </div>
       </div>
       <form ng-if="designer.type != 'import'">
           <div class="form-group">

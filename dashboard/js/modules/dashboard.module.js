@@ -679,6 +679,7 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 		
 		localforage.getItem('import').then(function(importedPistons) {
 			$scope.importedPistons = importedPistons;
+			$scope.sortImportedPistons();
 		});
     };
 		
@@ -693,6 +694,28 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 				data.importedAt = Date.now();
 				localforage.setItem('import', $scope.importedPistons);
 			});
+	}
+	
+	$scope.sortImportedPistons = function(order) {
+		$scope.importedPistonsSortOrder = $scope.importedPistonsSortOrder || 'safest';
+		$scope.importedPistons.sort(function(a, b) { 
+			var xorImported = !!a.imported - !!b.imported;
+			if (xorImported) return xorImported;
+			
+			switch (order) {
+				case 'category':
+					return (a.meta.category || Infinity) - (b.meta.category || Infinity);
+				case 'name':
+					return a.meta.name.localeCompare(b.meta.name);
+				case 'created':
+					return a.meta.created - b.meta.created;
+				case 'modified':
+					return (a.meta.modified || a.meta.created) - (b.meta.modified || b.meta.created);
+				default:
+					return a.imported ? (a.importedAt - b.importedAt) : (a.warningLevel - b.warningLevel || a.meta.name.localeCompare(b.meta.name))
+					break;
+			}
+		});
 	}
 
 
@@ -927,6 +950,7 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 					
 					localforage.setItem('import', data);
 					$scope.importedPistons = data;
+					$scope.sortImportedPistons();
 				}
 			}
 		};
