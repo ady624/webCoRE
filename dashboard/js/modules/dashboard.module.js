@@ -1,4 +1,4 @@
-config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout', '$interval', '$location', '$sce', '$routeParams', 'ngDialog', '$window', function($scope, $rootScope, dataService, $timeout, $interval, $location, $sce, $routeParams, ngDialog, $window) {
+config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout', '$interval', '$location', '$sce', '$routeParams', 'ngDialog', '$window', '$q', function($scope, $rootScope, dataService, $timeout, $interval, $location, $sce, $routeParams, ngDialog, $window, $q) {
 	var tmrStatus = null;
 	var tmrClock = null;
 	var tmrActivity = null;
@@ -20,6 +20,9 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 	$scope.hostDeviceId = '';
 	$scope.sidebarCollapsed = dataService.isCollapsed('dashboardSidebar');
 	$scope.completedInitialRender = false;
+	dataService.getImportedData().then(function(data) {
+		$scope.canResumeImport = data && data.length;
+	});
 
 	$scope.init = function(instance, uri, pin) {
 		//if (!instance) instance = dataService.getInstance();
@@ -653,35 +656,48 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 
 	$scope.newPiston = function() {
 		$scope.loading = true;
-		dataService.generateNewPistonName().then(function(data) {
-			$scope.loading = false;
-    	    $scope.designer = {};
-			$scope.designer.author = dataService.loadFromStore('author.handle');
-			$scope.designer.name = data.name;
-			$scope.designer.page = 0;
-			$scope.designer.backup = !!dataService.loadFromStore('backup.auto');
-			$scope.designer.disclaimer = !$scope.designer.backup;
-        	$scope.designer.items = [
-	            { type: 'blank', name: 'Create a blank piston', icon: 'code', cssClass: 'wide btn-default' },
-	            { type: 'duplicate', name: 'Create a duplicate piston', icon: 'code', cssClass: 'wide btn-info' },
-    	        // { type: 'template', name: 'Create a piston from a template', icon: 'code', cssClass: 'wide btn-success' },
-        	    { type: 'restore', name: 'Restore a piston using a backup code', icon: 'code', cssClass: 'wide btn-success' },
-        	    { type: 'import', name: 'Import a piston from a backup file', icon: 'code', cssClass: 'wide btn-warning' },
-	        ];
-    	    $scope.designer.dialog = ngDialog.open({
-        	    template: 'dialog-add-piston',
-            	className: 'ngdialog-theme-default ngdialog-large',
-	            closeByDocument: false,
-    	        disableAnimation: true,
-        	    scope: $scope
-	        });
-		});
-		
-		dataService.getImportedData().then(function(importedPistons) {
-			$scope.importedPistons = importedPistons;
-			$scope.sortImportedPistons();
-		});
-    };
+		return $q.all([
+			dataService.generateNewPistonName().then(function(data) {
+				$scope.loading = false;
+				$scope.designer = {};
+				$scope.designer.author = dataService.loadFromStore('author.handle');
+				$scope.designer.name = data.name;
+				$scope.designer.page = 0;
+				$scope.designer.backup = !!dataService.loadFromStore('backup.auto');
+				$scope.designer.disclaimer = !$scope.designer.backup;
+				$scope.designer.items = [
+					{ type: 'blank', name: 'Create a blank piston', icon: 'code', cssClass: 'wide btn-default' },
+					{ type: 'duplicate', name: 'Create a duplicate piston', icon: 'code', cssClass: 'wide btn-info' },
+					// { type: 'template', name: 'Create a piston from a template', icon: 'code', cssClass: 'wide btn-success' },
+					{ type: 'restore', name: 'Restore a piston using a backup code', icon: 'code', cssClass: 'wide btn-success' },
+					{ type: 'import', name: 'Import a piston from a backup file', icon: 'code', cssClass: 'wide btn-warning' },
+				];
+				$scope.designer.dialog = ngDialog.open({
+					template: 'dialog-add-piston',
+					className: 'ngdialog-theme-default ngdialog-large',
+					closeByDocument: false,
+					disableAnimation: true,
+					scope: $scope
+				});
+			}),
+			dataService.getImportedData().then(function(importedPistons) {
+				$scope.importedPistons = importedPistons;
+				if (importedPistons) $scope.sortImportedPistons();
+			})
+		]);
+	};
+	
+	$scope.resumeImport = function() {
+		$scope.newPiston().then(function() {
+			$scope.designer.page = 1;
+			$scope.designer.type = 'import';
+		})
+	};
+	
+	if ($rootScope.dashboardResumeImport) {
+		delete $rootScope.dashboardResumeImport;
+		$scope.resumeImport();
+	}
 		
 	$scope.restoreImportedPiston = function(data) {
 		$scope.designer.name = data.meta.name;
@@ -966,6 +982,7 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 					}
 					
 					dataService.setImportedData(data);
+					$scope.canResumeImport = true;
 					$scope.importedPistons = data;
 					$scope.sortImportedPistons();
 				}
@@ -977,6 +994,7 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 	$scope.restartPistonImport = function() {
 		dataService.clearImportedData();
 		$scope.importedPistons = null;
+		$scope.canResumeImport = false;
 	};
 
 

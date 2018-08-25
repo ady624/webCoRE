@@ -172,6 +172,9 @@
 					<incident ng-repeat="incident in location.incidents" source-type="{{incident.sourceType}}" ng-bind-html="renderIncident(incident)"></incident>
 				</div>
 				<div class="no-animate alert alert-warning" ng-if="instance && permanentStatus" role="alert" ng-bind-html="permanentStatus"></div>
+				<div warning ng-if="canResumeImport" class="alert alert-info">
+					Would you like to resume importing pistons? <a href="#" ng-click="resumeImport()" class="alert-link">Continue your import</a> or if the import is complete <a href="#" ng-click="restartPistonImport()" class="alert-link">reset import data</a>
+				</div>
 				<div class="table-responsive no-animate" ng-repeat="category in categories" ng-if="instance && category.p && category.p.length && (category.t != 'h')">
 					<label ng-if="category.n">{{category.n}} ({{category.p.length}})</label>
 					<table class="table" ng-if="(category.t == 'd') || (category.t == 'dt') || (category.t == 'dm') || (category.t == 'dl')">
@@ -568,6 +571,7 @@
 <designer>
       <header>
           <h3>Backup piston(s)</h3>
+          <span>Use the New Piston button to restore pistons from a backup file. Note that categories, global variables, places, and other global settings are not included in the backup at this time.</span>
       </header>
 	<form ng-if="designer.page==0">
 		<div class="form-group">

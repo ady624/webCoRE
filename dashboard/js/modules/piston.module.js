@@ -33,6 +33,9 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 	};
 	$scope.weekDays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 	$scope.yearMonths = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+	dataService.getImportedData().then(function(data) {
+		$scope.canResumeImport = data && data.length;
+	});
 
 	$scope.render = function(cancelTimer) {
 		//do nothing, but rerenders
@@ -619,6 +622,12 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 			$location.path('/');
 		});
 	}
+	
+	$scope.resumeImport = function() {
+		$rootScope.dashboardResumeImport = true;
+		$location.path('/');
+	}
+	
 	$scope.padComment = function(comment, sz) {
 		if (!comment) comment = '';
 		//replace LEFT-TO-RIGHT marks \u200E - Edge keeps adding them to date/times

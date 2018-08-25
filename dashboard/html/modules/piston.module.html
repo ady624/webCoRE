@@ -123,6 +123,10 @@
 
 	<div class="container" ng-if="mode=='view'">
 		
+		<div warning ng-if="canResumeImport" class="alert alert-info">
+			After reviewing this piston, <a href="#" ng-click="resumeImport()" class="alert-link">continue your import</a>
+		</div>
+		
 		<div warning ng-if="meta.active && !subscriptions.events && !schedules.length && !piston.o.des" class="alert alert-warning">This piston does not subscribe to any events. Unless executed by other means, it will never run on its own.</div>
 
 		<div class="text-right">
