@@ -518,10 +518,6 @@ error button {
 }
 
 
-.btn i {
-	height: 20px;
-	line-height: 20px;
-}
 
 
 label:not(.form-check-label) > input {

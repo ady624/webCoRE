@@ -449,8 +449,11 @@
           <p>Some pistons in this list may show warnings to identify factors that may need to be reviewed when you import the piston. The "safest" sort order shows pistons with the fewest warnings first. Sorry, we can't restore categories, global variables, places, or other global settings... yet.</p>
           <ol>
             <li ng-repeat="data in importedPistons track by data.meta.id" ng-class="{ 'text-muted': !!data.imported }">
-              <button type="button" class="btn btn-sm btn-primary pull-right" ng-show="!!data.imported" ng-click="openPiston(data.imported); closeDialog()">View</button>
-              <button class="btn btn-sm pull-right" ng-class="data.imported ? 'btn-secondary' : 'btn-primary'" ng-click="restoreImportedPiston(data)">Restore {{data.imported ? ' again' : ''}}</button>
+              <div class="btn-group btn-group-sm pull-right">
+                <button class="btn btn-sm" ng-class="data.imported ? 'btn-secondary' : 'btn-primary'" ng-click="restoreImportedPiston(data)">Restore {{data.imported ? ' again' : ''}}</button>
+                <button type="button" class="btn btn-sm btn-primary" ng-show="!!data.imported" ng-click="openPiston(data.imported); closeDialog()">View</button>
+                <button type="button" class="btn btn-sm btn-white" ng-click="removeImportedPiston(data.meta.id)"><i class="far fa-times fa-sm"></i></button>
+              </div>
               <strong>{{data.meta.name}}</strong>
               <div ng-if="data.warnings && data.warnings.length" class="text-warning">
                 <i class="fas fa-exclamation-triangle"></i>

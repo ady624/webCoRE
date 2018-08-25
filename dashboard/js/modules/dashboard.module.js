@@ -712,6 +712,16 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 			});
 	}
 	
+	$scope.removeImportedPiston = function(pistonId) {
+		for (var i = 0; i < $scope.importedPistons.length; i++) {
+			if ($scope.importedPistons[i].meta.id === pistonId) {
+				$scope.importedPistons.splice(i, 1);
+				break;
+			}
+		}
+		return dataService.setImportedData($scope.importedPistons);
+	}
+	
 	$scope.sortImportedPistons = function(order) {
 		$scope.importedPistonsSortOrder = $scope.importedPistonsSortOrder || 'safest';
 		$scope.importedPistons.sort(function(a, b) { 
