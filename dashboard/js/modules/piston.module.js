@@ -291,7 +291,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 									$scope.loading = true;
 									getPiston = $q.all([
 										dataService.loadFromImport($scope.params.piston),
-										localforage.getItem('import')
+										dataService.getImportedData()
 									]).then(function (results) {
 										var pistonData = results[0];
 										var importData = results[1];

@@ -1106,9 +1106,22 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
         });
     }
     
+    dataService.getImportedData = function() {
+      return localforage.getItem('import');
+    }
+    
+    dataService.setImportedData = function(importedData) {
+      return localforage.setItem('import', importedData);
+    }
+    
+    dataService.clearImportedData = function() {
+      return localforage.removeItem('import');
+    }
+    
     dataService.loadFromImport = function (pistonId) {
       status('Loading piston from import...');
       return $q.resolve(localforage.getItem('import')).then(function(pistons) {
+        status();
         if (pistons && pistons.length > 0) {
           return pistons.find(function(data) {
             return data.meta.id === pistonId;

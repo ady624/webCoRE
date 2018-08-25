@@ -677,7 +677,7 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 	        });
 		});
 		
-		localforage.getItem('import').then(function(importedPistons) {
+		dataService.getImportedData().then(function(importedPistons) {
 			$scope.importedPistons = importedPistons;
 			$scope.sortImportedPistons();
 		});
@@ -692,7 +692,7 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 				// Mark piston as imported and cycle it to the end of the array
 				data.imported = piston.id;
 				data.importedAt = Date.now();
-				localforage.setItem('import', $scope.importedPistons);
+				dataService.setImportedData($scope.importedPistons);
 			});
 	}
 	
@@ -965,7 +965,7 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 						}
 					}
 					
-					localforage.setItem('import', data);
+					dataService.setImportedData(data);
 					$scope.importedPistons = data;
 					$scope.sortImportedPistons();
 				}
@@ -975,7 +975,7 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 	};
 	
 	$scope.restartPistonImport = function() {
-		localforage.removeItem('import');
+		dataService.clearImportedData();
 		$scope.importedPistons = null;
 	};
 
