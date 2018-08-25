@@ -587,6 +587,10 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 		return encryptObject(obj, _ek + (password ? password : ''));
 	}
 
+	dataService.decryptBackup = function(obj, password) {
+		return decryptObject(obj, _ek + (password ? password : ''));
+	}
+
     var decryptObject = function(data, ek) {
         try {
             return angular.fromJson($window.sjcl.decrypt(ek ? ek : _ek, atou(data)));
@@ -1100,6 +1104,30 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 				return null;
 			}
         });
+    }
+    
+    dataService.getImportedData = function() {
+      return localforage.getItem('import');
+    }
+    
+    dataService.setImportedData = function(importedData) {
+      return localforage.setItem('import', importedData);
+    }
+    
+    dataService.clearImportedData = function() {
+      return localforage.removeItem('import');
+    }
+    
+    dataService.loadFromImport = function (pistonId) {
+      status('Loading piston from import...');
+      return $q.resolve(localforage.getItem('import')).then(function(pistons) {
+        status();
+        if (pistons && pistons.length > 0) {
+          return pistons.find(function(data) {
+            return data.meta.id === pistonId;
+          }) || null;
+        }
+      });
     }
 
 
