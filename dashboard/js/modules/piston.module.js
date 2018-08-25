@@ -1,4 +1,4 @@
-config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', '$interval', '$location', '$sce', '$routeParams', 'ngDialog', '$window', '$animate', function($scope, $rootScope, dataService, $timeout, $interval, $location, $sce, $routeParams, ngDialog, $window, $animate) {
+config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', '$interval', '$location', '$sce', '$routeParams', 'ngDialog', '$window', '$animate', '$q', function($scope, $rootScope, dataService, $timeout, $interval, $location, $sce, $routeParams, ngDialog, $window, $animate, $q) {
 	var tmrReveal;
 	var tmrStatus;
 	var tmrActivity;
@@ -289,8 +289,52 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 							case 'import':
 								if ($scope.params.piston) {
 									$scope.loading = true;
-									getPiston = dataService.loadFromImport($scope.params.piston).then(function (data) {
-										return data.piston;
+									getPiston = $q.all([
+										dataService.loadFromImport($scope.params.piston),
+										localforage.getItem('import')
+									]).then(function (results) {
+										var pistonData = results[0];
+										var importData = results[1];
+										var queue = [pistonData.piston];
+										var pistonIdQueue = [];
+										// Find executePiston commands
+										while (queue.length) {
+											var obj = queue[0];
+											queue.shift();
+											if (obj instanceof Array) {
+												queue.push.apply(queue, obj);
+											} else if (obj instanceof Object) {
+												if (obj.c === 'executePiston') {
+													pistonIdQueue.push(obj.p[0]);
+												} else {
+													for (var key in obj) {
+														queue.push(obj[key]);
+													}
+												}
+											}
+										}
+										// If any Execute Piston commands found, fix any IDs that
+										// are mapped to an imported piston
+										while (pistonIdQueue.length) {
+											var obj = pistonIdQueue[0];
+											pistonIdQueue.shift();
+											if (typeof obj instanceof Array) {
+												pistonIdQueue.push.apply(pending, obj);
+											} else if (obj instanceof Object) {
+												for (var key in obj) {
+													if (typeof obj[key] === 'string' && obj[key][0] === ':') {
+														for (var i = 0; i < importData.length; i++) {
+															if (importData[i].meta.id === obj[key] && importData[i].imported) {
+																obj[key] = importData[i].imported;
+															}
+														}
+													} else {
+														pistonIdQueue.push(obj[key]);
+													}
+												}
+											}
+										}
+										return pistonData.piston;
 									});
 								}
 								break;
