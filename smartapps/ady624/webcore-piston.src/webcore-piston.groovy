@@ -2973,7 +2973,7 @@ private long vcmd_wolRequest(rtData, device, params) {
     
 	sendHubCommand(HubActionClass().newInstance(
         "wake on lan $mac",
-        Protocol.LAN,
+        HubProtocolClass().LAN,
         null,
         secureCode ? [secureCode: secureCode] : [:]
     ))
@@ -8159,6 +8159,13 @@ private static Class HubActionClass() {
         return 'physicalgraph.device.HubAction' as Class
     } catch(all) {
         return 'hubitat.device.HubAction' as Class
+    }
+}
+private static Class HubProtocolClass() {
+    try {
+        return 'physicalgraph.device.Protocol' as Class
+    } catch(all) {
+        return 'hubitat.device.Protocol' as Class
     }
 }
 private isHubitat(){
