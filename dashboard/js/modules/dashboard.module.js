@@ -815,10 +815,16 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 
 	$scope.saveBackup = function() {
 		var blob = new Blob([dataService.encryptBackup($scope.designer.results, $scope.designer.password)], {type: 'text/plain'});
-	    var link = document.createElement('a');
-	    link.href = window.URL.createObjectURL(blob);
-	    link.download = 'webCoRE.' + (new Date()).toJSON() + '.backup';
+		var link = document.createElement('a');
+		var url = window.URL.createObjectURL(blob);
+		link.href = url;
+		link.download = 'webCoRE.' + (new Date()).toJSON() + '.backup';
+		document.body.appendChild(link);
 		link.click();
+		setTimeout(function(){
+			document.body.removeChild(link);
+			window.URL.revokeObjectURL(link.href);
+		}, 100);  
 		$scope.closeDialog();
 	}
 
