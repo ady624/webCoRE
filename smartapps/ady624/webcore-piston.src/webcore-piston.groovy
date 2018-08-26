@@ -2971,7 +2971,7 @@ private long vcmd_wolRequest(rtData, device, params) {
 	def secureCode = params[1]
 	mac = mac.replace(":", "").replace("-", "").replace(".", "").replace(" ", "").toLowerCase()
     
-	sendHubCommand(HubActionClass.newInstance(
+	sendHubCommand(HubActionClass().newInstance(
         "wake on lan $mac",
         Protocol.LAN,
         null,
@@ -3345,7 +3345,7 @@ private long vcmd_httpRequest(rtData, device, params) {
 				query: useQueryString ? data : null, //thank you @destructure00
 				body: !useQueryString ? data : null //thank you @destructure00
 			]
-			sendHubCommand(HubActionClass.newInstance(requestParams, null, [callback: localHttpRequestHandler]))
+			sendHubCommand(HubActionClass().newInstance(requestParams, null, [callback: localHttpRequestHandler]))
             return 20000
 		} catch (all) {
 			error "Error executing internal web request: ", rtData, null, all
