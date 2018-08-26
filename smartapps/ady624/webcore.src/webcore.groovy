@@ -288,7 +288,7 @@ public static String version() { return "v0.3.107.20180806" }
 /******************************************************************************/
 private static String handle() { return "webCoRE" }
 private static String domain() { return "webcore.co" }
-if(!hubUID) include 'asynchttp_v1'
+if(!isHubitat()) include 'asynchttp_v1'
 definition(
 	name: "${handle()}",
 	namespace: "ady624",
@@ -392,9 +392,9 @@ def pageMain() {
 				input "customEndpoints", "bool", submitOnChange: true, title: "Use custom endpoints?", default: false, required: true
 
                 if(customEndpoints){
-                    if(hubUID) input "customHubUrl", "string", title: "Custom hub url different from ${hubUID ? "https://cloud.hubitat.com" : "https://graph.smartthings.com"}", default: null, required: false
+                    if(isHubitat()) input "customHubUrl", "string", title: "Custom hub url different from ${isHubitat() ? "https://cloud.hubitat.com" : "https://graph.smartthings.com"}", default: null, required: false
                 	input "customWebcoreInstanceUrl", "string", title: "Custom webcore instance url different from dashboard.webcore.co", default: null, required: false   
-                    if(hubUID) paragraph "If you enter a custom url above you will have to use a different webcore instance from dashboard.webcore.co as the site is restricted to hubitat and smartthing's cloud"
+                    if(isHubitat()) paragraph "If you enter a custom url above you will have to use a different webcore instance from dashboard.webcore.co as the site is restricted to hubitat and smartthing's cloud"
                 }
 			}
 		}
@@ -578,7 +578,7 @@ def pageSettings() {
         def storageApp = getStorageApp()
         if (storageApp) {
 			section("Available devices") {
-	        	app([title: hubUID ? 'Do not click' : 'Available Devices', multiple: false, install: true, uninstall: false], 'storage', 'ady624', "${handle()} Storage")
+	        	app([title: isHubitat() ? 'Do not click' : 'Available Devices', multiple: false, install: true, uninstall: false], 'storage', 'ady624', "${handle()} Storage")
 	        }
 		} else {
 			section("Available devices") {
@@ -587,7 +587,7 @@ def pageSettings() {
         	    }
         
         section("Fuel Streams"){
-            input "localFuelStreams", "bool", title: "Use local fuel streams?", defaultValue: hubUID ? true : false, submitOnChange: true
+            input "localFuelStreams", "bool", title: "Use local fuel streams?", defaultValue: isHubitat() ? true : false, submitOnChange: true
             if(settings.localFuelStreams){
                 href "pageFuelStreams", title: "Fuel Streams", description: "Tap here to manage fuel streams"                
             }         	
@@ -614,7 +614,7 @@ def pageSettings() {
 			input "redirectContactBook", "bool", title: "Redirect all Contact Book requests as PUSH notifications", description: "SmartThings has removed the Contact Book feature and as a result, all uses of Contact Book are by default ignored. By enabling this option, you will get all the existing Contact Book uses fall back onto the PUSH notification system, possibly allowing other people to receive these notifications.", defaultValue: false, required: true
 			input "disabled", "bool", title: "Disable all pistons", description: "Disable all pistons belonging to this instance", defaultValue: false, required: false
 			href "pageRebuildCache", title: "Clean up and rebuild data cache", description: "Tap here to change your clean up and rebuild your data cache"
-            input "logPistonExecutions", "bool", title: "Log piston executions?", description: "Tap here to change logging pistons in location events", defaultValue: hubUID ? false : true, required: false
+            input "logPistonExecutions", "bool", title: "Log piston executions?", description: "Tap here to change logging pistons in location events", defaultValue: isHubitat() ? false : true, required: false
 		}
 
 		section(title: "Recovery") {
@@ -632,7 +632,7 @@ def pageSettings() {
 private pageFuelStreams(){
     dynamicPage(name: "pageFuelStreams", title: "", uninstall: false, install: false){
         section(){
-        	app([title: hubUID ? 'Do not click' : 'Fuel Streams', multiple: true, install: true, uninstall: false], 'fuelStreams', 'ady624', "${handle()} Fuel Stream")
+        	app([title: isHubitat() ? 'Do not click' : 'Fuel Streams', multiple: true, install: true, uninstall: false], 'fuelStreams', 'ady624', "${handle()} Fuel Stream")
         }
     }
 }
@@ -854,7 +854,7 @@ private updateEndpoint(accessToken){
         state.endpoint = customServerUrl("?access_token=${accessToken}")
     }
     else {
-        state.endpoint = hubUID ? apiServerUrl("$hubUID/apps/${app.id}/?access_token=${accessToken}") : apiServerUrl("/api/token/${accessToken}/smartapps/installations/${app.id}/")
+        state.endpoint = isHubitat() ? apiServerUrl("$hubUID/apps/${app.id}/?access_token=${accessToken}") : apiServerUrl("/api/token/${accessToken}/smartapps/installations/${app.id}/")
     }
 }
 private initializeWebCoREEndpoint() {
@@ -887,7 +887,7 @@ private subscribeAll() {
 	subscribe(location, "echoSistant", echoSistantHandler)
     subscribe(location, "HubUpdated", hubUpdatedHandler, [filterEvents: false])
     subscribe(location, "summary", summaryHandler, [filterEvents: false])
-    if(hubUID) subscribe(location, "hsmStatus", hsmHandler, [filterEvents: false])
+    if(isHubitat()) subscribe(location, "hsmStatus", hsmHandler, [filterEvents: false])
     setPowerSource(getHub()?.isBatteryInUse() ? 'battery' : 'mains')
 }
 
@@ -967,7 +967,7 @@ private api_get_base_result(deviceVersion = 0, updateCache = false) {
 	    	account: [id: hashId(hubUID ?: app.getAccountId(), updateCache)],
         	pistons: getChildApps().findAll{ it.name == name }.sort{ it.label }.collect{ [ id: hashId(it.id, updateCache), 'name': it.label, 'meta': state[hashId(it.id, updateCache)] ] },
             id: instanceId,
-            locationId: hashId(location.id + (hubUID ? '-L' : ''), updateCache),
+            locationId: hashId(location.id + (isHubitat() ? '-L' : ''), updateCache),
             name: app.label ?: app.name,
             uri: state.endpoint,
             deviceVersion: currentDeviceVersion,
@@ -981,12 +981,12 @@ private api_get_base_result(deviceVersion = 0, updateCache = false) {
         ] + (sendDevices ? [contacts: [:], devices: listAvailableDevices(false, updateCache)] : [:]),
         location: [
             contactBookEnabled: location.getContactBookEnabled(),
-            hubs: location.getHubs().collect{ [id: hashId(it.id, updateCache), name: it.name, firmware: hubUID ? getHubitatVersion()[it.id] : it.getFirmwareVersionString(), physical: it.getType().toString().contains('PHYSICAL'), powerSource: it.isBatteryInUse() ? 'battery' : 'mains' ]},
-            incidents: hubUID ? [] : location.activeIncidents.collect{[date: it.date.time, title: it.getTitle(), message: it.getMessage(), args: it.getMessageArgs(), sourceType: it.getSourceType()]}.findAll{ it.date >= incidentThreshold },
-            id: hashId(location.id + (hubUID ? '-L' : ''), updateCache),
+            hubs: location.getHubs().collect{ [id: hashId(it.id, updateCache), name: it.name, firmware: isHubitat() ? getHubitatVersion()[it.id] : it.getFirmwareVersionString(), physical: it.getType().toString().contains('PHYSICAL'), powerSource: it.isBatteryInUse() ? 'battery' : 'mains' ]},
+            incidents: isHubitat() ? [] : location.activeIncidents.collect{[date: it.date.time, title: it.getTitle(), message: it.getMessage(), args: it.getMessageArgs(), sourceType: it.getSourceType()]}.findAll{ it.date >= incidentThreshold },
+            id: hashId(location.id + (isHubitat() ? '-L' : ''), updateCache),
             mode: hashId(location.getCurrentMode().id, updateCache),
             modes: location.getModes().collect{ [id: hashId(it.id, updateCache), name: it.name ]},
-			shm: hubUID ? transformHsmStatus(location.hsmStatus ?: state.hsmStatus) : location.currentState("alarmSystemStatus")?.value,
+			shm: isHubitat() ? transformHsmStatus(location.hsmStatus ?: state.hsmStatus) : location.currentState("alarmSystemStatus")?.value,
             name: location.name,
             temperatureScale: location.getTemperatureScale(),
             timeZone: tz ? [
@@ -1013,7 +1013,7 @@ private getFuelStreamUrls(iid){
     }    
     
     def baseUrl = isCustomEndpoint() ? customServerUrl("/") : 
-    					hubUID ? apiServerUrl("$hubUID/apps/${app.id}/")
+    					isHubitat() ? apiServerUrl("$hubUID/apps/${app.id}/")
     						: apiServerUrl("/api/token/${state.accessToken}/smartapps/installations/${app.id}/")
     
     def params = baseUrl.contains(state.accessToken) ? "" : "access_token=${state.accessToken}"
@@ -1045,6 +1045,13 @@ private api_intf_dashboard_load() {
     recoveryHandler()
     //install storage app
     def storageApp = getStorageApp(true)
+    if(storageApp && isHubitat()){ //migrate off of storage app
+        storageApp.getStorageSettings().findAll { it.key.startsWith('dev:') }.each {
+            app.updateSetting(it.key, [type: 'capability', value: it.value.collect { it.id }])
+        }
+        state.migratedStorage = true
+        app.deleteChildApp(storageApp.id)
+    }
     //debug "Dashboard: Request received to initialize instance"
 	if (verifySecurityToken(params.token)) {
     	result = api_get_base_result(params.dev, true)
@@ -1102,7 +1109,7 @@ private api_intf_dashboard_piston_create() {
         if (params.author || params.bin) {
         	piston.config([bin: params.bin, author: params.author, initialVersion: version()])
         }
-        if (hubUID && !piston.isInstalled()) piston.installed()
+        if (isHubitat() && !piston.isInstalled()) piston.installed()
         result = [status: "ST_SUCCESS", id: hashId(piston.id)]
 	} else {
     	result = api_get_error_result("ERR_INVALID_TOKEN")
@@ -1150,7 +1157,7 @@ private api_intf_dashboard_piston_get() {
     result.now = now()
     def jsonData = groovy.json.JsonOutput.toJson(result)
     
-    if(hubUID && (!isCustomEndpoint() || customHubUrl.contains(hubUID))){
+    if(isHubitat() && (!isCustomEndpoint() || customHubUrl.contains(hubUID))){
         //data saver for hubitat ~100K limit    
         def responseLength = jsonData.getBytes("UTF-8").length
         if(responseLength > 100 * 1024){ //these are loaded anyway right after loading the piston
@@ -1503,7 +1510,7 @@ private api_intf_dashboard_piston_delete() {
 	if (verifySecurityToken(params.token)) {
 	    def piston = getChildApps().find{ hashId(it.id) == params.id };
 	    if (piston) {
-        	app.deleteChildApp(hubUID ? piston.id : piston)
+        	app.deleteChildApp(isHubitat() ? piston.id : piston)
 			result = [status: "ST_SUCCESS"]
             state.remove(params.id)
             state.remove('sph${params.id}')
@@ -1588,7 +1595,7 @@ public writeToFuelStream(req){
     def streamName = "${(req.c ?: "")}||${req.n}"
     
     def result = getChildApps().find{ it.name == name && it.label.contains(streamName)}
-    def fuelStreams = hubUID ? [] : atomicState.fuelStreams ?: []
+    def fuelStreams = isHubitat() ? [] : atomicState.fuelStreams ?: []
     
     if(!result){
         if(fuelStreams.find{ it.contains(streamName) } ?: false){ //bug in smartthings doesn't remember state,childapps between multiple calls in the same piston
@@ -1598,7 +1605,7 @@ public writeToFuelStream(req){
         def id =  (getChildApps().findAll{ it.name == name }.collect{ it.label.split(' - ')[0].toInteger()}.max() ?: 0) + 1
         try {
             result = addChildApp('ady624', name, "$id - $streamName")
-            if(!hubUID){
+            if(!isHubitat()){
                 fuelStreams = getChildApps().find{ it.name == name }.collect { it.label }
                 fuelStreams << result.label
                 atomicState.fuelStreams = fuelStreams
@@ -1683,7 +1690,7 @@ private api_intf_dashboard_piston_activity() {
 
 def api_ifttt() {
 	def data = [:]
-    def remoteAddr = hubUID ? "UNKNOWN" : request.getHeader("X-FORWARDED-FOR") ?: request.getRemoteAddr()
+    def remoteAddr = isHubitat() ? "UNKNOWN" : request.getHeader("X-FORWARDED-FOR") ?: request.getRemoteAddr()
     if (params) {
     	data.params = [:]
         for(param in params) {
@@ -1715,7 +1722,7 @@ def api_email() {
 private api_execute() {
 	def result = [:]
 	def data = [:]
-    def remoteAddr = hubUID ? "UNKNOWN" : request.getHeader("X-FORWARDED-FOR") ?: request.getRemoteAddr()
+    def remoteAddr = isHubitat() ? "UNKNOWN" : request.getHeader("X-FORWARDED-FOR") ?: request.getRemoteAddr()
     debug "Dashboard: Request received to execute a piston from IP $remoteAddr"
 	if (params) {
     	data = [:]
@@ -1798,6 +1805,7 @@ private cleanUp() {
 }
 
 private getStorageApp(install = false) {
+    if(isHubitat() && state.migratedStorage) return null
 	def name = handle() + ' Storage'
 	def storageApp = getChildApps().find{ it.name == name }
     def label = "${app.label} Devices"
@@ -1808,6 +1816,10 @@ private getStorageApp(install = false) {
     	return storageApp
     }
     if (!install) return null
+    if(isHubitat()){
+    	state.migratedStorage = true
+        return null 
+    }
     try {
     	storageApp = addChildApp("ady624", name, label)
     } catch (all) {
@@ -1828,7 +1840,7 @@ private getStorageApp(install = false) {
 }
 
 private getDashboardApp(install = false) {
-    if(hubUID) return null
+    if(isHubitat()) return null
 	def name = handle() + ' Dashboard'
     def label = app.label + ' (dashboard)'
 	def dashboardApp = getChildApps().find{ it.name == name }
@@ -1870,7 +1882,7 @@ private String getDashboardInitUrl(register = false) {
     else {
         return url + (register ? "register/" : "init/") + 
          (apiServerUrl("").replace("https://", '').replace(".api.smartthings.com", "").replace(":443", "").replace("/", "") + 
-          	((hubUID ?: state.accessToken) + app.id).replace("-", "") + (hubUID ? '/?access_token=' + state.accessToken : '')).bytes.encodeBase64()
+          	((hubUID ?: state.accessToken) + app.id).replace("-", "") + (isHubitat() ? '/?access_token=' + state.accessToken : '')).bytes.encodeBase64()
     }
 }
 
@@ -2064,7 +2076,7 @@ private testLifx() {
 
 private registerInstance() {
 	def accountId = hashId(hubUID ?: app.getAccountId())
-    def locationId = hashId(location.id + (hubUID ? '-L' : ''))
+    def locationId = hashId(location.id + (isHubitat() ? '-L' : ''))
     def instanceId = hashId(app.id)
     def endpoint = state.endpoint
     def region = endpoint.contains('graph-eu') ? 'eu' : 'us';
@@ -2167,8 +2179,9 @@ public Map getRunTimeData(semaphore = null, fetchWrappers = false) {
     semaphore = semaphore ?: 0
    	def semaphoreDelay = 0
    	def semaphoreName = semaphore ? "sph$semaphore" : ''
-    if (semaphore) {
-    	def waited = false
+    
+    def waited = false
+    if (semaphore) {    	
     	//if we need to wait for a semaphore, we do it here
         def lastSemaphore
     	while (semaphore) {
@@ -2213,10 +2226,11 @@ public Map getRunTimeData(semaphore = null, fetchWrappers = false) {
         generatedIn: now() - startTime,
         redirectContactBook: settings.redirectContactBook,
         logPistonExecutions: settings.logPistonExecutions,
-        useLocalFuelStreams : settings.localFuelStreams
-    ] + (hubUID ? [        
-		hsmStatus: state.hsmStatus,
-        deviceIds: allDeviceIds
+        useLocalFuelStreams : settings.localFuelStreams,
+        waitedAtSemaphore : waited
+    ] + (isHubitat() ? [        
+		hsmStatus: state.hsmStatus ?: location.hsmStatus,
+        colors: getColors()
     ] : [:])
 }
 
@@ -2529,7 +2543,7 @@ private debug(message, shift = null, err = null, cmd = null) {
 	} else if (cmd == "warn") {
 		log.warn "$prefix$message", err
 	} else if (cmd == "error") {
-      if (hubUID) { log.error "$prefix$message $err" } else { log.error "$prefix$message", err }
+      if (isHubitat()) { log.error "$prefix$message $err" } else { log.error "$prefix$message", err }
 	} else {
 		log.debug "$prefix$message", err
 	}
@@ -2628,7 +2642,7 @@ private Map capabilities() {
 		voltageMeasurement			: [ n: "Voltage Measurement",			d: "voltmeters",					a: "voltage",																																																								],
 		waterSensor					: [ n: "Water Sensor",					d: "water and leak sensors",		a: "water",																																																									],
 		windowShade					: [ n: "Window Shade",					d: "automatic window shades",		a: "windowShade",						c: ["close", "open", "presetPosition"],																																								]
-	]  + (hubUID ? [
+	]  + (isHubitat() ? [
 		doubleTapableButton			: [ n: "Double Tapable Button",			d: "double tapable buttons",		a: "doubleTapped",						c: ["doubleTap"],																																													],
         holdableButton				: [ n: "Holdable Button",				d: "holdable buttons",				a: "held",								c: ["hold"]																																															],
         momentary					: [ n: "Momentary",						d: "momentary switches",													c: ["pushMomentary"],																																												],
@@ -2636,7 +2650,7 @@ private Map capabilities() {
         
     ] : [:])
     
-    if(hubUID){
+    if(isHubitat()){
      	capabilities.remove('button') 
     }
     
@@ -2739,13 +2753,13 @@ private Map attributes() {
 		speed						: [ n: "speed",					t: "decimal",	r: [null, null],	u: "ft/s",																		],
 		speedMetric					: [ n: "speed (metric)",		t: "decimal",	r: [null, null],	u: "m/s",																		],
 		bearing						: [ n: "bearing",				t: "decimal",	r: [0, 360],		u: "°",																			],
-	]  + (hubUID ? [
+	]  + (isHubitat() ? [
         doubleTapped				: [ n: "double tapped button", 	t: "integer",	c: "doubleTapableButton"																			],
         held						: [ n: "held button", 			t: "integer",	c: "holdableButton"																					],
         pushed						: [ n: "pushed button", 		t: "integer",	c: "pushableButton"																					]
     ] : [:])
     
-    if(hubUID){
+    if(isHubitat()){
     	attrs.remove('button')
         attrs.remove('holdableButton')
     }
@@ -2755,7 +2769,7 @@ private Map attributes() {
 
 /* Push command has multiple overloads in hubitat */
 public Map commandOverrides(){
-	return (hubUID ? [ //s: command signature
+	return (isHubitat() ? [ //s: command signature
      	push : [c: "push", s: null , r: "pushMomentary"],
         flash : [c: "flash", s: null , r: "flashNative"] //flash native command conflicts with flash emulated command. Also needs "o" option on command described later
     ] : [:])
@@ -2879,7 +2893,7 @@ private Map commands() {
 		low							: [ n: "Set to Low",																																																															],
 		med							: [ n: "Set to Medium",																																																															],
 		high						: [ n: "Set to High",																																																															],
-	] + (hubUID ? [
+	] + (isHubitat() ? [
             doubleTap					: [ n: "Double Tap",					d: "Double tap button {0}",						a: "doubleTapped",										p:[[n: "Button #", t: "integer"]]																																																										],
             flashNative					: [ n: "Flash",																	       																																															],
             hold						: [ n: "Hold",							d: "Hold Button {0}",							a: "held",													p: [[n:"Button #", t: "integer"]]																																						],
@@ -2978,7 +2992,7 @@ private Map virtualCommands() {
 		lifxScene: [n: "Activate LIFX scene", p: ["Scene:lifxScenes"], l: true, dd: "Activate LIFX Scene '{0}'", aggregated: true],
 	] : [:])*/        
     
-    if(hubUID){
+    if(isHubitat()){
         commands += [
             setAlarmSystemStatus		: [ n: "Set Hubitat Safety Monitor status...",	a: true, i: "",				d: "Set Hubitat Safety Monitor status to {0}",							p: [[n:"Status", t:"enum", o: getAlarmSystemStatusActions().collect {[n: it.value, v: it.key]}]],																										],
             //keep emulated flash to not break old pistons
@@ -3228,10 +3242,11 @@ private static Map getHubitatAlarmSystemStatusOptions() {
 
 private static Map getAlarmSystemAlertOptions() {
 	return [    
-    	intrusion:	"Intrusion",
-        smoke:		"Smoke",
-        water:		"Water",
-        rule:		"Rule"
+    	intrusion:			"Intrusion Away",
+        "intrusion-home": 	"Intrusion Home",
+        smoke:				"Smoke",
+        water:				"Water",
+        rule:				"Rule"
     ]
 }
 
@@ -3275,20 +3290,12 @@ private Map virtualDevices(updateCache = false) {
         tile:				[ n: 'Piston tile',					t: 'enum',		o: ['1':'1','2':'2','3':'3','4':'4','5':'5','6':'6','7':'7','8':'8','9':'9','10':'10','11':'11','12':'12','13':'13','14':'14','15':'15','16':'16'],		m: true	],
         routine:			[ n: 'Routine',						t: 'enum',		o: getRoutineOptions(updateCache),			m: true],
         alarmSystemStatus:	[ n: 'Smart Home Monitor status',	t: 'enum',		o: getAlarmSystemStatusOptions(),			x: true]
-    ] + (hubUID ? [
+    ] + (isHubitat() ? [
         alarmSystemStatus:	[ n: 'Hubitat Safety Monitor status',t: 'enum',		o: getHubitatAlarmSystemStatusOptions(), ac: getAlarmSystemStatusActions(),			x: true], //ac - actions. hubitat doesn't reuse the status for actions
-        //this one can be confusing to users so it's been commented out. It can subscribe to hsmSetArm, but the safety monitor doesn't actually send these events themselves, only other apps
-        //alarmSystemEvent:	[ n: 'Hubitat Safety Monitor event',t: 'enum',		o: getAlarmSystemStatusActions(),			m: true],
+		alarmSystemEvent:	[ n: 'Hubitat Safety Monitor event',t: 'enum',		o: getAlarmSystemStatusActions(),			m: true],
         alarmSystemAlert: 	[ n: 'Hubitat Safety Monitor alert',t: 'enum',		o: getAlarmSystemAlertOptions(),			m: true],
         alarmSystemRule: 	[ n: 'Hubitat Safety Monitor rule',t: 'enum',		o: getAlarmSystemRuleOptions(),			m: true]    
     ] : [:])
-}
-public Map getColorByName(name){
-    return getColors().find{ it.name == name }
-}
-public Map getRandomColor(){
-	def random = (int)(Math.random() * getColors().size())
-    return getColors()[random]
 }
 
 public List getColors(){
@@ -3436,4 +3443,8 @@ public List getColors(){
 		[name:"Yellow",     rgb:"#FFFF00",     h:60,     s:100,     l:50],
 		[name:"Yellow Green",     rgb:"#9ACD32",     h:80,     s:61,     l:50]
     ]
+}
+
+private isHubitat(){
+ 	return hubUID != null   
 }
