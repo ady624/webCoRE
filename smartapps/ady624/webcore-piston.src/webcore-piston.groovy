@@ -835,8 +835,8 @@ def getPistonLimits(){
         executionTime: 30000,
         taskRemaining: 3000,
         taskDelayMax: 5000,
-        maxStats: settings.maxStats ?: 1,
-        maxLogs: settings.maxLogs ?: 1,
+        maxStats: settings.maxStats ?: 50,
+        maxLogs: settings.maxLogs ?: 50,
         recovery: 45
     ] : [
         schedule: 5000,
@@ -4476,7 +4476,7 @@ private void subscribeAll(rtData) {
             if ((expression.t == 'variable') && expression.x && expression.x.startsWith('@')) {
                 subscriptionId = "${expression.x}"
                 deviceId = rtData.locationId
-                attribute = "${expression.x.startsWith('@@') ? '@@' + handle() : rtData.instanceId}.${expression.x}"
+                attribute = "${expression.x.startsWith('@@') ? '@@' + handle() : rtData.instanceId}${isHubitat() ? "" : ".${expression.x}"}"
             }
             if (subscriptionId && deviceId) {
                 def ct = subscriptions[subscriptionId]?.t ?: null
@@ -4592,7 +4592,7 @@ private void subscribeAll(rtData) {
                 case 'x':
                 	if (operand.x && operand.x.startsWith('@')) {
                     	def subscriptionId = operand.x
-                        def attribute = "${operand.x.startsWith('@@') ? '@@' + handle() : rtData.instanceId}.${operand.x}"
+                        def attribute = "${operand.x.startsWith('@@') ? '@@' + handle() : rtData.instanceId}${ isHubitat() ? "" : ".${operand.x}"}"
                         def ct = subscriptions[subscriptionId]?.t ?: null
                         if ((ct == 'trigger') || (comparisonType == 'trigger')) {
                             ct = 'trigger'
