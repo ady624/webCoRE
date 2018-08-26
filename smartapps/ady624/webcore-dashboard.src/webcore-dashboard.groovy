@@ -21,7 +21,7 @@ public static String version() { return "v0.3.107.20180806" }
 /*** webCoRE DEFINITION														***/
 /******************************************************************************/
 private static String handle() { return "webCoRE" }
-if(!hubUID)include 'asynchttp_v1'
+if(!isHubitat())include 'asynchttp_v1'
 definition(
 	name: "${handle()} Dashboard",
 	namespace: "ady624",
@@ -193,6 +193,10 @@ def String hashId(id) {
         state.hash = hash
     }
     return result
+}
+
+private isHubitat(){
+ 	return hubUID != null   
 }
 
 /******************************************************************************/
