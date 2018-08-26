@@ -1045,6 +1045,13 @@ private api_intf_dashboard_load() {
     recoveryHandler()
     //install storage app
     def storageApp = getStorageApp(true)
+    if(storageApp && hubUID){ //migrate off of storage app
+        storageApp.getStorageSettings().findAll { it.key.startsWith('dev:') }.each {
+            app.updateSetting(it.key, [type: 'capability', value: it.value.collect { it.id }])
+        }
+        state.migratedStorage = true
+        app.deleteChildApp(storageApp.id)
+    }
     //debug "Dashboard: Request received to initialize instance"
 	if (verifySecurityToken(params.token)) {
     	result = api_get_base_result(params.dev, true)
@@ -1798,6 +1805,7 @@ private cleanUp() {
 }
 
 private getStorageApp(install = false) {
+    if(hubUID && state.migratedStorage) return null
 	def name = handle() + ' Storage'
 	def storageApp = getChildApps().find{ it.name == name }
     def label = "${app.label} Devices"
@@ -1808,6 +1816,10 @@ private getStorageApp(install = false) {
     	return storageApp
     }
     if (!install) return null
+    if(hubUID){
+    	state.migratedStorage = true
+        return null 
+    }
     try {
     	storageApp = addChildApp("ady624", name, label)
     } catch (all) {
@@ -2167,8 +2179,9 @@ public Map getRunTimeData(semaphore = null, fetchWrappers = false) {
     semaphore = semaphore ?: 0
    	def semaphoreDelay = 0
    	def semaphoreName = semaphore ? "sph$semaphore" : ''
-    if (semaphore) {
-    	def waited = false
+    
+    def waited = false
+    if (semaphore) {    	
     	//if we need to wait for a semaphore, we do it here
         def lastSemaphore
     	while (semaphore) {
@@ -2213,9 +2226,11 @@ public Map getRunTimeData(semaphore = null, fetchWrappers = false) {
         generatedIn: now() - startTime,
         redirectContactBook: settings.redirectContactBook,
         logPistonExecutions: settings.logPistonExecutions,
-        useLocalFuelStreams : settings.localFuelStreams
+        useLocalFuelStreams : settings.localFuelStreams,
+        waitedAtSemaphore : waited
     ] + (hubUID ? [        
-		hsmStatus: state.hsmStatus
+		hsmStatus: state.hsmStatus ?: location.hsmStatus,
+        colors: getColors()
     ] : [:])
 }
 
@@ -3281,13 +3296,6 @@ private Map virtualDevices(updateCache = false) {
         alarmSystemAlert: 	[ n: 'Hubitat Safety Monitor alert',t: 'enum',		o: getAlarmSystemAlertOptions(),			m: true],
         alarmSystemRule: 	[ n: 'Hubitat Safety Monitor rule',t: 'enum',		o: getAlarmSystemRuleOptions(),			m: true]    
     ] : [:])
-}
-public Map getColorByName(name){
-    return getColors().find{ it.name == name }
-}
-public Map getRandomColor(){
-	def random = (int)(Math.random() * getColors().size())
-    return getColors()[random]
 }
 
 public List getColors(){

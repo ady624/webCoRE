@@ -120,6 +120,9 @@ private initialize() {
 /*** 																		***/
 /******************************************************************************/
 
+public getStorageSettings(){
+ 	settings   
+}
 def initData(devices, contacts) {
     if (devices) {
 		for(item in devices) {
