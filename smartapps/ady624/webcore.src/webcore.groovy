@@ -1001,7 +1001,7 @@ private api_get_base_result(deviceVersion = 0, updateCache = false) {
 }
 
 private getFuelStreamUrls(iid){
-    if(!settings.localFuelStreams){
+    if(!useLocalFuelStreams()){
         def region = state.endpoint.contains('graph-eu') ? 'eu' : 'us'
         def baseUrl = 'https://api-' + region + '-' + iid[32] + '.webcore.co:9287/fuelStreams'
         def headers = [ 'Auth-Token' : iid ]
@@ -1021,6 +1021,10 @@ private getFuelStreamUrls(iid){
         list : [l: true, u: baseUrl + "intf/fuelstreams/list?${params}"],
         get  : [l: true, u: baseUrl + "intf/fuelstreams/get?id={fuelStreamId}${params ? "&" + params : ""}", p: 'fuelStreamId']
     ]
+}
+
+private boolean useLocalFuelStreams(){
+ 	return settings.localFuelStreams != null ? settings.localFuelStreams : (isHubitat() ? true : false)   
 }
 
 private String transformHsmStatus(status){
@@ -2226,7 +2230,7 @@ public Map getRunTimeData(semaphore = null, fetchWrappers = false) {
         generatedIn: now() - startTime,
         redirectContactBook: settings.redirectContactBook,
         logPistonExecutions: settings.logPistonExecutions,
-        useLocalFuelStreams : settings.localFuelStreams,
+        useLocalFuelStreams : useLocalFuelStreams(),
         waitedAtSemaphore : waited
     ] + (isHubitat() ? [        
 		hsmStatus: state.hsmStatus ?: location.hsmStatus,
