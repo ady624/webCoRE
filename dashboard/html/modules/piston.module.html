@@ -458,13 +458,13 @@
 
 
 <script type="text/ng-template" id="variables">
-			<div ng-repeat="variable in variables">
+			<span ng-repeat="variable in variables" dnd-nodrag dnd-draggable="variable" dnd-nodrag dnd-type="'variable'" dnd-dragstart="ok(event)" dnd-moved="drag(variables, $index);" dnd-copied="copyVariable(variables, $index)" dnd-effect-allowed="copyMove">
 				<line com ng-if="variable.z">/* {{variable.z}} */</line>
-				<line pun dnd-nodrag dnd-draggable="variable" dnd-type="'variable'" dnd-moved="drag(variables, $index);" dnd-copied="copyVariable(variables, $index)" dnd-effect-allowed="copyMove">
+				<line pun>
 					<handle dnd-handle><svg class="sprite-icon" symbol="drag-handle"></svg></handle>
 					<span ng-click="editVariable(variable);" dnd-nodrag><span pun ng-if="(variable.a == 's') && (variable.v)">const&nbsp;</span><span typ>{{variable.t}}&nbsp;</span><span var>{{variable.n}}</span><span ng-if="variable.v" pun>&nbsp;=&nbsp;</span><span ng-if="variable.v" ng-bind-html="variable.$$html || (variable.$$html = renderOperand(variable.v))"></span><span pun>;</span><span ng-if="!variable.v" com sensitive>&nbsp;/* <span ng-bind-html="formatVariableValue(variable, variable.n)"></span> */</span></span>
 				</line>
-			</div>
+			</span>
 			<line new data-ng-click="addVariable()">+ add a new variable</line>
 </script>
 
