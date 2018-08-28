@@ -1049,7 +1049,7 @@ private api_intf_dashboard_load() {
     recoveryHandler()
     //install storage app
     def storageApp = getStorageApp(true)
-    if(storageApp && isHubitat()){ //migrate off of storage app
+    if(storageApp && isHubitat() && storageApp.getStorageSettings() != null){ //migrate off of storage app
         storageApp.getStorageSettings().findAll { it.key.startsWith('dev:') }.each {
             app.updateSetting(it.key, [type: 'capability', value: it.value.collect { it.id }])
         }
