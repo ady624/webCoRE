@@ -537,6 +537,7 @@ private pageSelectDevices() {
 
 		section ('Select devices by type') {
         	paragraph "Most devices should fall into one of these two categories"
+            if(isHubitat()) input "dev:all", "capability.*", multiple: true, title: "Which devices", required: false
 			input "dev:actuator", "capability.actuator", multiple: true, title: "Which actuators", required: false
 			input "dev:sensor", "capability.sensor", multiple: true, title: "Which sensors", required: false
 		}
