@@ -7606,6 +7606,16 @@ private localToUtcDate(dateOrTime) {
 	return null
 }
 
+private safeTimeToday(dateOrTimeOrString, tz = null){
+    if(isHubitat()){
+        dateOrTimeOrString = dateOrTimeOrString?.trim() ?: ""
+        if(dateOrTimeOrString.toLowerCase().endsWith('am') || dateOrTimeOrString.toLowerCase().endsWith('pm')){
+         	dateOrTimeOrString = dateOrTimeOrString[0..-3].trim() 
+        }
+    }
+    return timeToday(dateOrTimeOrString, tz)
+}
+
 private localToUtcTime(dateOrTimeOrString) {
 	if (dateOrTimeOrString instanceof Date) {
 		//get unix time
@@ -7632,7 +7642,7 @@ private localToUtcTime(dateOrTimeOrString) {
                         } catch (all4) {
                         }
                     }
-                    long time = timeToday(dateOrTimeOrString, tz).getTime()
+                    long time = safeTimeToday(dateOrTimeOrString, tz).getTime()
                     //adjust for PM - timeToday has no clue....
                     dateOrTimeOrString = dateOrTimeOrString.trim().toLowerCase()
                     def twelve = dateOrTimeOrString.startsWith('12')
