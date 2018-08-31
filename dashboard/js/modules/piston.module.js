@@ -563,6 +563,14 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		var promise = dataService.setPiston(piston, $scope.meta.bin, saveToBinOnly);
 		if (promise) promise.then(function(response) {
 			if (saveToBinOnly) return;
+			// Always pause imported pistons
+			if ($scope.params.type === 'import') {
+				return $scope.pause().then(function() {
+					return response;
+				});
+			}
+			return response;
+		}).then(function(response) {
 			$scope.loading = false;
 			if (response && response.data && response.data.build) {
 				$scope.meta.active = response.data.active;
@@ -572,12 +580,12 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 				$scope.mode = 'view';
 				$scope.init();
 			}
-		});;
+		});
 	}
 
 	$scope.pause = function() {
 		$scope.loading = true;
-		dataService.pausePiston($scope.pistonId).then(function(data) {
+		return dataService.pausePiston($scope.pistonId).then(function(data) {
 			$scope.loading = false;
 			if (data && data.status && (data.status == 'ST_SUCCESS')) {
 				$scope.meta.active = data.active;
