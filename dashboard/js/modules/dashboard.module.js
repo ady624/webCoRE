@@ -734,9 +734,9 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 				case 'name':
 					return a.meta.name.localeCompare(b.meta.name);
 				case 'created':
-					return a.meta.created - b.meta.created;
+					return b.meta.created - a.meta.created;
 				case 'modified':
-					return (a.meta.modified || a.meta.created) - (b.meta.modified || b.meta.created);
+					return (b.meta.modified || b.meta.created) - (a.meta.modified || a.meta.created);
 				default:
 					return a.imported ? (a.importedAt - b.importedAt) : (a.warningLevel - b.warningLevel || a.meta.name.localeCompare(b.meta.name))
 					break;

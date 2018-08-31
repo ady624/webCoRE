@@ -444,11 +444,11 @@
               <option>safest</option>
               <option>name</option>
               <option>category</option>
-              <option>created date</option>
-              <option>last modified</option>
+              <option value="created">created date</option>
+              <option value="modified">last modified</option>
             </select>
           </div>
-          <p>Some pistons in this list may show warnings to identify factors that may need to be reviewed when you import the piston. The "safest" sort order shows pistons with the fewest warnings first. Sorry, we can't restore categories, global variables, places, or other global settings... yet.</p>
+          <p>Some pistons in this list may show warnings to identify factors that may need to be reviewed when you import the piston. The "safest" sort order shows pistons with the fewest warnings first. Sorry, we can't restore categories, global variables, places, or other global settings yet.</p>
           <ol>
             <li ng-repeat="data in importedPistons track by data.meta.id" ng-class="{ 'text-muted': !!data.imported }">
               <div class="btn-group btn-group-sm pull-right">
