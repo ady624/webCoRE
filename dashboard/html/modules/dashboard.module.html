@@ -462,7 +462,8 @@
                 {{data.warnings.join(', ')}}
               </div>
               <p>
-                Created by {{data.meta.author}} on {{data.meta.created | date}}
+                Created by {{data.meta.author}} on {{data.meta.created | date}}<!-- 
+                --><span ng-if="data.meta.modified && data.meta.modified !== data.meta.created">, last edited {{data.meta.modified | date}}</span>
               </p>
             </li>
           </ol>
