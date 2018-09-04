@@ -2115,7 +2115,10 @@ private registerInstance() {
     }
     else {
         params << [contentType: 'application/json', requestContentType: 'application/json']
-        httpPut(params) { res -> }
+        try{
+        	httpPut(params) { res -> }    
+        }
+        catch(e) {}  
     }   
 }
 
