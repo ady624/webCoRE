@@ -1180,8 +1180,10 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 		}
 		if (saveToBinOnly) return;
 		if (data.length > maxChunkSize) {
-			//var chunks = data.match(/.{1,maxChunkSize}/g);
-			var chunks = [].concat.apply([],data.split('').map(function(x,i){ return i%maxChunkSize ? [] : data.slice(i,i+maxChunkSize) }, data));
+			var chunks = [];
+			for (var i = 0; i < data.length; i += maxChunkSize) {
+				chunks.push(data.slice(i, i + maxChunkSize))
+			}
 			status('Preparing to save chunked piston...');
 	    	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/piston/set.start?' + getAccessToken(si) + 'id=' + piston.id + '&chunks=' + chunks.length.toString() + '&token=' + (si && si.token ? si.token : ''), {jsonpCallbackParam: 'callback'})
 				.then(function(response) {
