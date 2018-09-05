@@ -2850,10 +2850,13 @@ private long vcmd_resumePiston(rtData, device, params) {
 }
 
 private long vcmd_executeRoutine(rtData, device, params) {
-	def routineId = params[0]
-    def routine = location.helloHome?.getPhrases().find{ hashId(it.id) == routineId }
-    if (routine) {
-	    location.helloHome?.execute(routine.label)
+    def routineId = params[0]
+    def routines = location.helloHome?.getPhrases()
+    if (routines) {
+        def routine = routines.find{ hashId(it.id) == routineId }
+        if (routine) {
+            location.helloHome?.execute(routine.label)
+        }
     }
     return 0
 }

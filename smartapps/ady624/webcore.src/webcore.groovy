@@ -2939,11 +2939,14 @@ private static Map getAlarmSystemStatusOptions() {
 }
 
 private Map getRoutineOptions(updateCache = false) {
-	def routines = location.helloHome?.getPhrases().sort{ it?.label ?: '' }
+    def routines = location.helloHome?.getPhrases()
     def result = [:]
-    for(routine in routines) {
-    	if (routine && routine?.label)
-    		result[hashId(routine.id, updateCache)] = routine.label
+    if (routines) {
+        routines = routines.sort{ it?.label ?: '' }
+        for(routine in routines) {
+            if (routine && routine?.label)
+                result[hashId(routine.id, updateCache)] = routine.label
+        }
     }
     return result
 }
