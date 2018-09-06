@@ -1,4 +1,4 @@
-config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout', '$interval', '$location', '$sce', '$routeParams', 'ngDialog', '$window', function($scope, $rootScope, dataService, $timeout, $interval, $location, $sce, $routeParams, ngDialog, $window) {
+config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout', '$interval', '$location', '$sce', '$routeParams', 'ngDialog', '$window', '$q', function($scope, $rootScope, dataService, $timeout, $interval, $location, $sce, $routeParams, ngDialog, $window, $q) {
 	var tmrStatus = null;
 	var tmrClock = null;
 	var tmrActivity = null;
@@ -20,6 +20,9 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 	$scope.hostDeviceId = '';
 	$scope.sidebarCollapsed = dataService.isCollapsed('dashboardSidebar');
 	$scope.completedInitialRender = false;
+	dataService.getImportedData().then(function(data) {
+		$scope.canResumeImport = data && data.length;
+	});
 
 	$scope.init = function(instance, uri, pin) {
 		//if (!instance) instance = dataService.getInstance();
@@ -653,30 +656,93 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 
 	$scope.newPiston = function() {
 		$scope.loading = true;
-		dataService.generateNewPistonName().then(function(data) {
-			$scope.loading = false;
-    	    $scope.designer = {};
-			$scope.designer.author = dataService.loadFromStore('author.handle');
-			$scope.designer.name = data.name;
-			$scope.designer.page = 0;
-			$scope.designer.backup = !!dataService.loadFromStore('backup.auto');
-			$scope.designer.disclaimer = !$scope.designer.backup;
-        	$scope.designer.items = [
-	            { type: 'blank', name: 'Create a blank piston', icon: 'code', cssClass: 'wide btn-default' },
-	            { type: 'duplicate', name: 'Create a duplicate piston', icon: 'code', cssClass: 'wide btn-info' },
-    	        // { type: 'template', name: 'Create a piston from a template', icon: 'code', cssClass: 'wide btn-success' },
-        	    { type: 'restore', name: 'Restore a piston using a backup code', icon: 'code', cssClass: 'wide btn-warning' },
-        	    { type: 'import', name: 'Import a piston from an external source', icon: 'code', cssClass: 'wide btn-danger' },
-	        ];
-    	    $scope.designer.dialog = ngDialog.open({
-        	    template: 'dialog-add-piston',
-            	className: 'ngdialog-theme-default ngdialog-large',
-	            closeByDocument: false,
-    	        disableAnimation: true,
-        	    scope: $scope
-	        });
+		return $q.all([
+			dataService.generateNewPistonName().then(function(data) {
+				$scope.loading = false;
+				$scope.designer = {};
+				$scope.designer.author = dataService.loadFromStore('author.handle');
+				$scope.designer.name = data.name;
+				$scope.designer.page = 0;
+				$scope.designer.backup = !!dataService.loadFromStore('backup.auto');
+				$scope.designer.disclaimer = !$scope.designer.backup;
+				$scope.designer.items = [
+					{ type: 'blank', name: 'Create a blank piston', icon: 'code', cssClass: 'wide btn-default' },
+					{ type: 'duplicate', name: 'Create a duplicate piston', icon: 'code', cssClass: 'wide btn-info' },
+					// { type: 'template', name: 'Create a piston from a template', icon: 'code', cssClass: 'wide btn-success' },
+					{ type: 'restore', name: 'Restore a piston using a backup code', icon: 'code', cssClass: 'wide btn-success' },
+					{ type: 'import', name: 'Import a piston from a backup file', icon: 'code', cssClass: 'wide btn-warning' },
+				];
+				$scope.designer.dialog = ngDialog.open({
+					template: 'dialog-add-piston',
+					className: 'ngdialog-theme-default ngdialog-large',
+					closeByDocument: false,
+					disableAnimation: true,
+					scope: $scope
+				});
+			}),
+			dataService.getImportedData().then(function(importedPistons) {
+				$scope.importedPistons = importedPistons;
+				if (importedPistons) $scope.sortImportedPistons();
+			})
+		]);
+	};
+	
+	$scope.resumeImport = function() {
+		$scope.newPiston().then(function() {
+			$scope.designer.page = 1;
+			$scope.designer.type = 'import';
+		})
+	};
+	
+	if ($rootScope.dashboardResumeImport) {
+		delete $rootScope.dashboardResumeImport;
+		$scope.resumeImport();
+	}
+		
+	$scope.restoreImportedPiston = function(data) {
+		$scope.designer.name = data.meta.name;
+		$scope.designer.author = data.meta.author;
+		$scope.designer.piston = data.meta.id;
+		return $scope.createPiston()
+			.then(function(piston) {
+				// Mark piston as imported and cycle it to the end of the array
+				data.imported = piston.id;
+				data.importedAt = Date.now();
+				dataService.setImportedData($scope.importedPistons);
+			});
+	}
+	
+	$scope.removeImportedPiston = function(pistonId) {
+		for (var i = 0; i < $scope.importedPistons.length; i++) {
+			if ($scope.importedPistons[i].meta.id === pistonId) {
+				$scope.importedPistons.splice(i, 1);
+				break;
+			}
+		}
+		return dataService.setImportedData($scope.importedPistons);
+	}
+	
+	$scope.sortImportedPistons = function(order) {
+		$scope.importedPistonsSortOrder = $scope.importedPistonsSortOrder || 'safest';
+		$scope.importedPistons.sort(function(a, b) { 
+			var xorImported = !!a.imported - !!b.imported;
+			if (xorImported) return xorImported;
+			
+			switch (order) {
+				case 'category':
+					return (a.meta.category || Infinity) - (b.meta.category || Infinity);
+				case 'name':
+					return a.meta.name.localeCompare(b.meta.name);
+				case 'created':
+					return b.meta.created - a.meta.created;
+				case 'modified':
+					return (b.meta.modified || b.meta.created) - (a.meta.modified || a.meta.created);
+				default:
+					return a.imported ? (a.importedAt - b.importedAt) : (a.warningLevel - b.warningLevel || a.meta.name.localeCompare(b.meta.name))
+					break;
+			}
 		});
-    };
+	}
 
 
 	$scope.backup = function() {
@@ -749,10 +815,16 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 
 	$scope.saveBackup = function() {
 		var blob = new Blob([dataService.encryptBackup($scope.designer.results, $scope.designer.password)], {type: 'text/plain'});
-	    var link = document.createElement('a');
-	    link.href = window.URL.createObjectURL(blob);
-	    link.download = 'webCoRE.' + (new Date()).toJSON() + '.backup';
+		var link = document.createElement('a');
+		var url = window.URL.createObjectURL(blob);
+		link.href = url;
+		link.download = 'webCoRE.' + (new Date()).toJSON() + '.backup';
+		document.body.appendChild(link);
 		link.click();
+		setTimeout(function(){
+			document.body.removeChild(link);
+			window.URL.revokeObjectURL(link.href);
+		}, 100);  
 		$scope.closeDialog();
 	}
 
@@ -778,18 +850,21 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 		var success = function(data) {
 			$scope.closeDialog();
 			$scope.initialized = false;
-			$location.path("piston/" + data.id).search({description: $scope.designer.description, type: $scope.designer.type, piston: $scope.designer.piston, bin: $scope.designer.bin});
+			setTimeout(function() {
+				$location.path("piston/" + data.id).search({description: $scope.designer.description, type: $scope.designer.type, piston: $scope.designer.piston, bin: $scope.designer.bin});
+			}, 100);
+			return data;
 		};
 		$scope.loading = true;
 		dataService.saveToStore('backup.auto', !!$scope.designer.backup);
 		dataService.saveToStore('author.handle', $scope.designer.author);
 		if ($scope.designer.backup) {
-			dataService.generateBackupBin().then(function(response) {
+			return dataService.generateBackupBin().then(function(response) {
 				var binId = response.data;
 				dataService.createPiston($scope.designer.name, $scope.designer.author, binId).then(success);
 			});
 		} else {
-			dataService.createPiston($scope.designer.name, $scope.designer.author).then(success);
+			return dataService.createPiston($scope.designer.name, $scope.designer.author).then(success);
 		}
     };
 
@@ -881,6 +956,62 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
             $scope.designer.page--;
         }
     }
+		
+	$scope.loadBackupFile = function() {
+		var uploadField = angular.element('#backupFile')[0];
+		var file = uploadField.files[0];
+		var reader = new window.FileReader();
+		var warningConditions = {
+			'executes other pistons': { p: /"c":"executePiston"/, l: 20 },
+			'may require global variables': { p: /[^\w]@\w/, l: 10 },
+			'has tiles': { p: /"c":"setTile/, l: 5 },
+			'requires IFTTT': { p: /"c":"iftttMaker"/, l: 2 },
+			'expects arguments': { p: /"u":"[^\[]|\$args\./, l: 1 },
+			'has devices in expressions': { p: /\[[^\]\{]+:/, l: 1 }
+		};
+		reader.onload = function(e) {
+			var encrypted = e.target.result;
+			if (encrypted) {
+				var data;
+				var password;
+				do {
+					password = prompt('Backup file password');
+					data = dataService.decryptBackup(encrypted, password);
+				} while (password !== null && !data);
+				
+				if (data) {
+					var idByName = {};
+					for (var i = 0; i < $scope.instance.pistons.length; i++) {
+						idByName[$scope.instance.pistons[i].name] = $scope.instance.pistons[i].id;
+					}
+					for (var i = 0; i < data.length; i++) {
+						var json = JSON.stringify(data[i].piston);
+						data[i].imported = idByName[data[i].meta.name];
+						data[i].warnings = [];
+						data[i].warningLevel = 0;
+						for (var warning in warningConditions) {
+							if (warningConditions[warning].p && warningConditions[warning].p.test(json)) {
+								data[i].warnings.push(warning);
+								data[i].warningLevel += warningConditions[warning].l;
+							}
+						}
+					}
+					
+					dataService.setImportedData(data);
+					$scope.canResumeImport = true;
+					$scope.importedPistons = data;
+					$scope.sortImportedPistons();
+				}
+			}
+		};
+		reader.readAsText(file);
+	};
+	
+	$scope.restartPistonImport = function() {
+		dataService.clearImportedData();
+		$scope.importedPistons = null;
+		$scope.canResumeImport = false;
+	};
 
 
 	$scope.getOpacity = function(time) {

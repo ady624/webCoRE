@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.3.107.20180806" }
+public static String version() { return "v0.3.108.20180906" }
 /*
+ *	09/06/2018 >>> v0.3.108.20180906 - BETA M3 - Restore pistons from backup file, hide "(unknown)" SHM status, fixed string to date across DST thanks @bangali, null routines, integer trailing zero cast, saving large pistons and disappearing variables on mobile
  *	08/06/2018 >>> v0.3.107.20180806 - BETA M3 - Font Awesome 5 icons, expanding textareas to fix expression scrolling, boolean date and datetime global variable editor fixes
  *	07/31/2018 >>> v0.3.106.20180731 - BETA M3 - Contact Book removal support
  *	06/28/2018 >>> v0.3.105.20180628 - BETA M3 - Reorder variables, collapse fuel streams, custom web request body, json and urlEncode functions
@@ -2939,11 +2940,14 @@ private static Map getAlarmSystemStatusOptions() {
 }
 
 private Map getRoutineOptions(updateCache = false) {
-	def routines = location.helloHome?.getPhrases().sort{ it?.label ?: '' }
+    def routines = location.helloHome?.getPhrases()
     def result = [:]
-    for(routine in routines) {
-    	if (routine && routine?.label)
-    		result[hashId(routine.id, updateCache)] = routine.label
+    if (routines) {
+        routines = routines.sort{ it?.label ?: '' }
+        for(routine in routines) {
+            if (routine && routine?.label)
+                result[hashId(routine.id, updateCache)] = routine.label
+        }
     }
     return result
 }

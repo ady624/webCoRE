@@ -1,4 +1,4 @@
-config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', '$interval', '$location', '$sce', '$routeParams', 'ngDialog', '$window', '$animate', function($scope, $rootScope, dataService, $timeout, $interval, $location, $sce, $routeParams, ngDialog, $window, $animate) {
+config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', '$interval', '$location', '$sce', '$routeParams', 'ngDialog', '$window', '$animate', '$q', function($scope, $rootScope, dataService, $timeout, $interval, $location, $sce, $routeParams, ngDialog, $window, $animate, $q) {
 	var tmrReveal;
 	var tmrStatus;
 	var tmrActivity;
@@ -33,6 +33,9 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 	};
 	$scope.weekDays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 	$scope.yearMonths = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+	dataService.getImportedData().then(function(data) {
+		$scope.canResumeImport = data && data.length;
+	});
 
 	$scope.render = function(cancelTimer) {
 		//do nothing, but rerenders
@@ -266,50 +269,98 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 					$scope.piston.z = $scope.params && $scope.params.description ? $scope.params.description : '';
 					$scope.mode = 'edit';
 					if ($scope.params && $scope.params.type != 'blank') {
+						var getPiston;
 						switch ($scope.params.type) {
 							case 'duplicate':
 								if ($scope.params.piston) {
 									$scope.loading = true;
-									dataService.getPiston($scope.params.piston).then(function (response) {
-										$scope.loading = false;
-										if (response && response.data && response.data.piston) {
-											$scope.piston.o = response.data.piston.o ? response.data.piston.o : {};
-											$scope.piston.r = response.data.piston.r ? response.data.piston.r : [];
-											$scope.piston.rn = !!response.data.piston.rn;
-											$scope.piston.rop = response.data.piston.rop ? response.data.piston.rop : 'and';
-											$scope.piston.s = response.data.piston.s ? response.data.piston.s : [];
-											$scope.piston.v = response.data.piston.v ? response.data.piston.v : [];
-										}
-										$scope.initialized = true;
-										$scope.loading = false;
+									getPiston = dataService.getPiston($scope.params.piston).then(function (response) {
+										// Do not trigger a rebuild
+										delete response.data.l;
+										return response.data;
 									});
-									return;
 								}
 								break;
 							case 'restore':
 								if ($scope.params.bin) {
 									$scope.loading = true;
-									dataService.loadFromBin($scope.params.bin).then(function (response) {
-										var piston = response.data;
-										$scope.loading = false;
-										if (piston) {
-											$scope.piston.o = piston.o ? piston.o : {};
-											$scope.piston.r = piston.r ? piston.r : [];
-											$scope.piston.rn = !!piston.rn;
-											$scope.piston.rop = piston.rop ? piston.rop : 'and';
-											$scope.piston.s = piston.s ? piston.s : [];
-											$scope.piston.v = piston.v ? piston.v : [];
-											$scope.piston.z = piston.z ? piston.z : '';
-										}
-										$scope.initialized = true;
-										$scope.loading = false;
-										if (!!piston && (piston.l instanceof Object) && ($scope.objectToArray(piston.l).length)) {
-											$scope.rebuildPiston(piston.l);
-										}
+									getPiston = dataService.loadFromBin($scope.params.bin).then(function (response) {
+										return response.data;
 									});
-									return;
 								}
 								break;
+							case 'import':
+								if ($scope.params.piston) {
+									$scope.loading = true;
+									getPiston = $q.all([
+										dataService.loadFromImport($scope.params.piston),
+										dataService.getImportedData()
+									]).then(function (results) {
+										var pistonData = results[0];
+										var importData = results[1];
+										var queue = [pistonData.piston];
+										var pistonIdQueue = [];
+										// Find executePiston commands
+										while (queue.length) {
+											var obj = queue[0];
+											queue.shift();
+											if (obj instanceof Array) {
+												queue.push.apply(queue, obj);
+											} else if (obj instanceof Object) {
+												if (obj.c === 'executePiston') {
+													pistonIdQueue.push(obj.p[0]);
+												} else {
+													for (var key in obj) {
+														queue.push(obj[key]);
+													}
+												}
+											}
+										}
+										// If any Execute Piston commands found, fix any IDs that
+										// are mapped to an imported piston
+										while (pistonIdQueue.length) {
+											var obj = pistonIdQueue[0];
+											pistonIdQueue.shift();
+											if (typeof obj instanceof Array) {
+												pistonIdQueue.push.apply(pending, obj);
+											} else if (obj instanceof Object) {
+												for (var key in obj) {
+													if (typeof obj[key] === 'string' && obj[key][0] === ':') {
+														for (var i = 0; i < importData.length; i++) {
+															if (importData[i].meta.id === obj[key] && importData[i].imported) {
+																obj[key] = importData[i].imported;
+															}
+														}
+													} else {
+														pistonIdQueue.push(obj[key]);
+													}
+												}
+											}
+										}
+										return pistonData.piston;
+									});
+								}
+								break;
+						}
+						
+						if (getPiston) {
+							getPiston.then(function(piston) {
+								if (piston) {
+									$scope.piston.o = piston.o ? piston.o : {};
+									$scope.piston.r = piston.r ? piston.r : [];
+									$scope.piston.rn = !!piston.rn;
+									$scope.piston.rop = piston.rop ? piston.rop : 'and';
+									$scope.piston.s = piston.s ? piston.s : [];
+									$scope.piston.v = piston.v ? piston.v : [];
+									$scope.piston.z = piston.z ? piston.z : '';
+									
+									if ((piston.l instanceof Object) && ($scope.objectToArray(piston.l).length)) {
+										$scope.rebuildPiston(piston.l);
+									}
+								}
+								$scope.initialized = true;
+								$scope.loading = false;
+							});
 						}
 					}
 				}
@@ -512,6 +563,14 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		var promise = dataService.setPiston(piston, $scope.meta.bin, saveToBinOnly);
 		if (promise) promise.then(function(response) {
 			if (saveToBinOnly) return;
+			// Always pause imported pistons
+			if ($scope.params.type === 'import') {
+				return $scope.pause().then(function() {
+					return response;
+				});
+			}
+			return response;
+		}).then(function(response) {
 			$scope.loading = false;
 			if (response && response.data && response.data.build) {
 				$scope.meta.active = response.data.active;
@@ -521,12 +580,12 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 				$scope.mode = 'view';
 				$scope.init();
 			}
-		});;
+		});
 	}
 
 	$scope.pause = function() {
 		$scope.loading = true;
-		dataService.pausePiston($scope.pistonId).then(function(data) {
+		return dataService.pausePiston($scope.pistonId).then(function(data) {
 			$scope.loading = false;
 			if (data && data.status && (data.status == 'ST_SUCCESS')) {
 				$scope.meta.active = data.active;
@@ -571,6 +630,12 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 			$location.path('/');
 		});
 	}
+	
+	$scope.resumeImport = function() {
+		$rootScope.dashboardResumeImport = true;
+		$location.path('/');
+	}
+	
 	$scope.padComment = function(comment, sz) {
 		if (!comment) comment = '';
 		//replace LEFT-TO-RIGHT marks \u200E - Edge keeps adding them to date/times
