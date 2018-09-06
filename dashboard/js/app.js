@@ -2164,4 +2164,4 @@ if (!String.prototype.endsWith) {
 // turned off through markup.
 $.fn.selectpicker.Constructor.DEFAULTS.title = '';
 
-version = function() { return 'v0.3.107.20180806'; };
+version = function() { return 'v0.3.108.20180906'; };
