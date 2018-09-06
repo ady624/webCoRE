@@ -97,6 +97,8 @@
 </viewer>
 
 <viewer class="pistons" ng-if="initialized && ((view == 'piston') || (view == 'settings'))" class="no-animate">
+	<i data-fa-symbol="ellipsis-v" class="far fa-ellipsis-v svg-inline--fa"></i>
+	<i data-fa-symbol="circle" class="fas fa-circle svg-inline--fa"></i>
 	<div class="body container-fluid">
 		<div class="row">
 			<div id="dashboardSidebar" class="sidebar no-ng-animate" ng-class="{ 'sidebar-collapsed': sidebarCollapsed, 'allow-transition': completedInitialRender }" collapse-target collapse-class="">
@@ -168,18 +170,21 @@
 				<div class="table-responsive no-animate topinfo" ng-if="instance">
 					<hub ng-repeat="hub in location.hubs" ng-if="hub.physical" power-source="{{hub.powerSource}}"><i class="fas fa-battery-full" ng-if="hub.powerSource === 'battery'"></i><span>{{hub.name}}</span><span fw>{{hub.firmware}}</span></hub>
 					<location-mode data-toggle="tooltip" title="Location mode is {{getLocationMode()}}">{{getLocationMode()}}</location-mode>
-					<shm-mode data-toggle="tooltip" title="Smart Home Monitor is {{getSHMModeName()}}" ng-if="location.shm" alert="{{location.incidents && (location.incidents.length > 0)}}" mode="{{location.shm}}">{{getSHMModeName()}}</shm-mode>
+					<shm-mode data-toggle="tooltip" title="Smart Home Monitor is {{getSHMModeName()}}" ng-if="location.shm && location.shm !== 'unconfigured'" alert="{{location.incidents && (location.incidents.length > 0)}}" mode="{{location.shm}}">{{getSHMModeName()}}</shm-mode>
 					<incident ng-repeat="incident in location.incidents" source-type="{{incident.sourceType}}" ng-bind-html="renderIncident(incident)"></incident>
 				</div>
 				<div class="no-animate alert alert-warning" ng-if="instance && permanentStatus" role="alert" ng-bind-html="permanentStatus"></div>
+				<div warning ng-if="canResumeImport" class="alert alert-info">
+					Would you like to resume importing pistons? <a href="#" ng-click="resumeImport()" class="alert-link">Continue your import</a> or if the import is complete <a href="#" ng-click="restartPistonImport()" class="alert-link">reset import data</a>
+				</div>
 				<div class="table-responsive no-animate" ng-repeat="category in categories" ng-if="instance && category.p && category.p.length && (category.t != 'h')">
 					<label ng-if="category.n">{{category.n}} ({{category.p.length}})</label>
 					<table class="table" ng-if="(category.t == 'd') || (category.t == 'dt') || (category.t == 'dm') || (category.t == 'dl')">
 						<tbody>
 							<tr ng-repeat="piston in category.p" active="true" ng-if="piston.meta && piston.meta.a" data-toggle="tooltip" title="{{piston.meta.t ? 'Executed ' + timeSince(piston.meta.t) : 'Never executed'}}">
-								<td ng-click="openPiston(piston.id);"><span><i star class="fas fa-circle fa-xs" ng-style="{opacity: piston.opacity}"></i>{{piston.name}}<span state ng-bind-html="renderString(piston.meta.s.new)"></span><!--<span ng-if="piston.meta.s && piston.meta.s.new" state="{{piston.meta.s.new}}">{{piston.meta.s.new}}</span>--></span></td>
+								<td ng-click="openPiston(piston.id);"><span><svg star class="sprite-icon fa-xs" symbol="circle" ng-style="{opacity: piston.opacity}"></svg>{{piston.name}}<span state ng-bind-html="renderString(piston.meta.s.new)"></span><!--<span ng-if="piston.meta.s && piston.meta.s.new" state="{{piston.meta.s.new}}">{{piston.meta.s.new}}</span>--></span></td>
 								<td ng-click="openPiston(piston.id);" dur class="col-md-1 text-right">{{piston.meta.n ? timeCounter(piston.meta.n) : ''}}</td>
-								<td ng-if="!mobile" opt><i class="far fa-ellipsis-v"></i><actions class="animated"><action ng-click="pausePiston(piston.id);" data-toggle="tooltip" title="Pause piston">Pause</action><action ng-click="testPiston(piston.id);" data-toggle="tooltip" title="Test piston">Test</action><action ng-click="openPiston(piston.id);" data-toggle="tooltip" title="View/Edit piston">View</action></actions></td>
+								<td ng-if="!mobile" opt><svg class="sprite-icon" symbol="ellipsis-v"></svg><actions class="animated"><action ng-click="pausePiston(piston.id);" data-toggle="tooltip" title="Pause piston">Pause</action><action ng-click="testPiston(piston.id);" data-toggle="tooltip" title="Test piston">Test</action><action ng-click="openPiston(piston.id);" data-toggle="tooltip" title="View/Edit piston">View</action></actions></td>
 
 							</tr>
 						</tbody>
@@ -201,9 +206,9 @@
 					<table class="table" ng-if="(category.t == 'td') || (category.t == 'tm') || (category.t == 'tl')">
 						<tbody>
 							<tr ng-repeat="piston in category.p" active="true" ng-if="piston.meta && piston.meta.a" data-toggle="tooltip" title="{{piston.meta.t ? 'Executed ' + timeSince(piston.meta.t) : 'Never executed'}}">
-								<td ng-click="openPiston(piston.id);"><span><i star class="fas fa-circle fa-xs" ng-style="{opacity: piston.opacity}"></i>{{piston.name}}<span state ng-bind-html="renderString(piston.meta.s.new)"></span><!--<span ng-if="piston.meta.s && piston.meta.s.new" state="{{piston.meta.s.new}}">{{piston.meta.s.new}}</span>--></span></td>
+								<td ng-click="openPiston(piston.id);"><span><svg star class="sprite-icon fa-xs" symbol="circle" ng-style="{opacity: piston.opacity}"></svg>{{piston.name}}<span state ng-bind-html="renderString(piston.meta.s.new)"></span><!--<span ng-if="piston.meta.s && piston.meta.s.new" state="{{piston.meta.s.new}}">{{piston.meta.s.new}}</span>--></span></td>
 								<td ng-click="openPiston(piston.id);" dur class="col-md-1 text-right">{{piston.meta.n ? timeCounter(piston.meta.n) : ''}}</td>
-								<td ng-if="!mobile" opt><i class="far fa-ellipsis-v"></i><actions class="animated"><action ng-click="pausePiston(piston.id);" data-toggle="tooltip" title="Pause piston">Pause</action><action ng-click="testPiston(piston.id);" data-toggle="tooltip" title="Test piston">Test</action><action ng-click="openPiston(piston.id);" data-toggle="tooltip" title="View/Edit piston">View</action></actions></td>
+								<td ng-if="!mobile" opt><svg class="sprite-icon" symbol="ellipsis-v"></svg><actions class="animated"><action ng-click="pausePiston(piston.id);" data-toggle="tooltip" title="Pause piston">Pause</action><action ng-click="testPiston(piston.id);" data-toggle="tooltip" title="Test piston">Test</action><action ng-click="openPiston(piston.id);" data-toggle="tooltip" title="View/Edit piston">View</action></actions></td>
 
 							</tr>
 						</tbody>
@@ -216,7 +221,7 @@
 							<tr ng-repeat="piston in pausedPistons"  active="false" ng-if="!piston.meta || !piston.meta.a" data-toggle="tooltip" title="{{piston.meta.t ? 'Paused on ' + utcToString(piston.meta.t) : ''}}">
 								<td ng-click="openPiston(piston.id);"><span>{{piston.name}}</span></td>
 								<td ng-click="openPiston(piston.id);" class="col-md-1 text-right">{{piston.meta.n ? timeCounter(piston.meta.n) : ''}}</td>
-								<td ng-if="!mobile" opt><i class="far fa-ellipsis-v"></i><actions class="animated"><action ng-click="resumePiston(piston.id);" data-toggle="tooltip" title="Resume piston">Resume</action><action ng-click="testPiston(piston.id);" data-toggle="tooltip" title="Test piston">Test</action><action ng-click="openPiston(piston.id);" data-toggle="tooltip" title="View/Edit piston">View</action></actions></td>
+								<td ng-if="!mobile" opt><svg class="sprite-icon" symbol="ellipsis-v"></svg><actions class="animated"><action ng-click="resumePiston(piston.id);" data-toggle="tooltip" title="Resume piston">Resume</action><action ng-click="testPiston(piston.id);" data-toggle="tooltip" title="Test piston">Test</action><action ng-click="openPiston(piston.id);" data-toggle="tooltip" title="View/Edit piston">View</action></actions></td>
 							</tr>
 						</tbody>
 					</table>
@@ -409,7 +414,7 @@
 <designer ng-if="designer.page==1">
       <header ng-if="designer.type=='blank'">
           <h3>Create a new blank piston</h3>
-          <span>You are about to create a new piston from scratch. Yey! Click Create to get started.</span>
+          <span>You are about to create a new piston from scratch.</span>
       </header>
       <header ng-if="designer.type=='duplicate'">
           <h3>Create a duplicate piston</h3>
@@ -418,13 +423,53 @@
       <header ng-if="designer.type=='restore'">
           <h3>Restore a piston</h3>
           <span>Please enter the backup bin code below and click Create to get started.</span>
-          <p><b>NOTE:</b> Only backup bin codes created by your account are supported. All others will generate an empty piston.</p>
+          <p>You may restore public, anonymized backup codes shared by others or private backup codes created by your account. Private backup codes created by a different account cannot be restored.</p>
       </header>
       <header ng-if="designer.type=='import'">
-          <h3>Import a new piston</h3>
-          <span>You wanted to import a new piston. The bad news is, there is no way yet :( But the good news is, you can start one from scratch. Yey! Click Next to get started.</span>
+          <h3>Import pistons from a backup file</h3>
       </header>
-      <form>
+      <div ng-if="designer.type == 'import'">
+        <form ng-if="!importedPistons">
+          <p>Upload your backup file created by the Backup Pistons menu item on the dashboard then restore pistons.</p>
+          <div class="form-group">
+            <label for="backupFile">Backup file</label>
+            <input id="backupFile" name="backupFile" ng-model="designer.backupFile" type="file" accept=".backup" />
+          </div>
+        </form>
+        <div ng-if="importedPistons">
+          <p>The following pistons were included in the backup file. Pistons that you have already restored and existing pistons with a name matching the backup file are displayed at the end of the list.</p>
+          <div class="pull-right form-group form-group-sm form-inline">
+            <label for="import-sort" class="small">Sort by</label>
+            <select id="import-sort" ng-model="importedPistonsSortOrder" ng-change="sortImportedPistons(importedPistonsSortOrder)" class="form-control">
+              <option>safest</option>
+              <option>name</option>
+              <option>category</option>
+              <option value="created">created date</option>
+              <option value="modified">last modified</option>
+            </select>
+          </div>
+          <p>Some pistons in this list may show warnings to identify factors that may need to be reviewed when you import the piston. The "safest" sort order shows pistons with the fewest warnings first. Sorry, we can't restore categories, global variables, places, or other global settings yet.</p>
+          <ol>
+            <li ng-repeat="data in importedPistons track by data.meta.id" ng-class="{ 'text-muted': !!data.imported }">
+              <div class="btn-group btn-group-sm pull-right">
+                <button class="btn btn-sm" ng-class="data.imported ? 'btn-secondary' : 'btn-primary'" ng-click="restoreImportedPiston(data)">Restore {{data.imported ? ' again' : ''}}</button>
+                <button type="button" class="btn btn-sm btn-primary" ng-show="!!data.imported" ng-click="openPiston(data.imported); closeDialog()">View</button>
+                <button type="button" class="btn btn-sm btn-white" ng-click="removeImportedPiston(data.meta.id)"><i class="far fa-times fa-sm"></i></button>
+              </div>
+              <strong>{{data.meta.name}}</strong>
+              <div ng-if="data.warnings && data.warnings.length" class="text-warning">
+                <i class="fas fa-exclamation-triangle"></i>
+                {{data.warnings.join(', ')}}
+              </div>
+              <p>
+                Created by {{data.meta.author}} on {{data.meta.created | date}}<!-- 
+                --><span ng-if="data.meta.modified && data.meta.modified !== data.meta.created">, last edited {{data.meta.modified | date}}</span>
+              </p>
+            </li>
+          </ol>
+        </div>
+      </div>
+      <form ng-if="designer.type != 'import'">
           <div class="form-group">
 	            <label for="author">Author</label>
                   <input class="form-control"  id="author" ng-model="designer.author" type="text" />
@@ -484,7 +529,9 @@
       </form>
 
       <footer>
-          <button type="button" class="btn btn-info pull-right" ng-disabled="!designer.type || !designer.author || !designer.name || ((designer.type == 'duplicate') && !designer.piston) || ((designer.type == 'restore') && !designer.bin)" ng-click="createPiston();">Create</button>
+          <button ng-if="designer.type != 'import'" type="button" class="btn btn-info pull-right" ng-disabled="!designer.type || !designer.author || !designer.name || ((designer.type == 'duplicate') && !designer.piston) || ((designer.type == 'restore') && !designer.bin)" ng-click="createPiston();">Create</button>
+          <button ng-if="designer.type == 'import' && !importedPistons" type="button" class="btn btn-info pull-right" ng-click="loadBackupFile();">Import</button>
+          <button ng-if="designer.type == 'import' && importedPistons" type="button" class="btn btn-info pull-right" ng-click="restartPistonImport();">New import</button>
           <button type="button" class="btn btn-default" ng-click="prevPage();">Back</button>
       </footer>
   </designer>
@@ -530,6 +577,7 @@
 <designer>
       <header>
           <h3>Backup piston(s)</h3>
+          <span>Use the New Piston button to restore pistons from a backup file. Note that categories, global variables, places, and other global settings are not included in the backup at this time.</span>
       </header>
 	<form ng-if="designer.page==0">
 		<div class="form-group">

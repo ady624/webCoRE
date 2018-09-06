@@ -587,6 +587,10 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 		return encryptObject(obj, _ek + (password ? password : ''));
 	}
 
+	dataService.decryptBackup = function(obj, password) {
+		return decryptObject(obj, _ek + (password ? password : ''));
+	}
+
     var decryptObject = function(data, ek) {
         try {
             return angular.fromJson($window.sjcl.decrypt(ek ? ek : _ek, atou(data)));
@@ -1101,6 +1105,30 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 			}
         });
     }
+    
+    dataService.getImportedData = function() {
+      return localforage.getItem('import');
+    }
+    
+    dataService.setImportedData = function(importedData) {
+      return localforage.setItem('import', importedData);
+    }
+    
+    dataService.clearImportedData = function() {
+      return localforage.removeItem('import');
+    }
+    
+    dataService.loadFromImport = function (pistonId) {
+      status('Loading piston from import...');
+      return $q.resolve(localforage.getItem('import')).then(function(pistons) {
+        status();
+        if (pistons && pistons.length > 0) {
+          return pistons.find(function(data) {
+            return data.meta.id === pistonId;
+          }) || null;
+        }
+      });
+    }
 
 
 
@@ -1152,8 +1180,10 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 		}
 		if (saveToBinOnly) return;
 		if (data.length > maxChunkSize) {
-			//var chunks = data.match(/.{1,maxChunkSize}/g);
-			var chunks = [].concat.apply([],data.split('').map(function(x,i){ return i%maxChunkSize ? [] : data.slice(i,i+maxChunkSize) }, data));
+			var chunks = [];
+			for (var i = 0; i < data.length; i += maxChunkSize) {
+				chunks.push(data.slice(i, i + maxChunkSize))
+			}
 			status('Preparing to save chunked piston...');
 	    	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/piston/set.start?' + getAccessToken(si) + 'id=' + piston.id + '&chunks=' + chunks.length.toString() + '&token=' + (si && si.token ? si.token : ''), {jsonpCallbackParam: 'callback'})
 				.then(function(response) {
@@ -2165,6 +2195,21 @@ app.directive('fal', function() {
 	return directive;
 });
 
+// For use with data-fa-symbol, older versions of Firefox require the full 
+// pathname in the href
+app.directive('spriteIcon', ['$sce', function($sce) {
+	return {
+		restrict: 'C',
+		scope: {
+			symbol: '@'
+		},
+		link: function(scope) {
+			scope.href = $sce.trustAsUrl(window.location.pathname + '#' + scope.symbol);
+		},
+		template: '<use xlink:href="{{href}}"></use>',
+	};
+}]);
+
 // Polyfills
 if (!String.prototype.endsWith) {
 	String.prototype.endsWith = function(search, this_len) {
@@ -2175,4 +2220,11 @@ if (!String.prototype.endsWith) {
 	};
 }
 
-version = function() { return 'v0.3.107.20180806'; };
+// Set a blank default title to prevent selectpicker from using the title 
+// attribute from the select element as the name of the selected option. The 
+// Chrome browser's autofill-type-predictions feature populates a very confusing
+// value for the title attribute and this type of autofill was not able to be 
+// turned off through markup.
+$.fn.selectpicker.Constructor.DEFAULTS.title = '';
+
+version = function() { return 'v0.3.108.20180906'; };
