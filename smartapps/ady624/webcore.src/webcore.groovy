@@ -289,7 +289,7 @@ public static String version() { return "v0.3.108.20180906" }
 /******************************************************************************/
 private static String handle() { return "webCoRE" }
 private static String domain() { return "webcore.co" }
-include 'asynchttp_v1'
+if(!isHubitat()) include 'asynchttp_v1'
 definition(
 	name: "${handle()}",
 	namespace: "ady624",
@@ -312,6 +312,7 @@ preferences {
 	page(name: "pageInitializeDashboard")
 	page(name: "pageFinishInstall")
 	page(name: "pageSelectDevices")
+    page(name: "pageFuelStreams")
 	page(name: "pageSettings")
     page(name: "pageChangePassword")
     page(name: "pageSavePassword")
@@ -389,6 +390,13 @@ def pageMain() {
 				//trace "*** DO NOT SHARE THIS LINK WITH ANYONE *** Dashboard URL: ${getDashboardInitUrl()}"
 				href "", title: "Dashboard", style: "external", url: getDashboardInitUrl(), description: "Tap to open", image: "https://cdn.rawgit.com/ady624/${handle()}/master/resources/icons/dashboard.png", required: false
 				href "", title: "Register a browser", style: "embedded", url: getDashboardInitUrl(true), description: "Tap to open", image: "https://cdn.rawgit.com/ady624/${handle()}/master/resources/icons/browser-reg.png", required: false
+				input "customEndpoints", "bool", submitOnChange: true, title: "Use custom endpoints?", default: false, required: true
+
+                if(customEndpoints){
+                    if(isHubitat()) input "customHubUrl", "string", title: "Custom hub url different from ${isHubitat() ? "https://cloud.hubitat.com" : "https://graph.smartthings.com"}", default: null, required: false
+                	input "customWebcoreInstanceUrl", "string", title: "Custom webcore instance url different from dashboard.webcore.co", default: null, required: false   
+                    if(isHubitat()) paragraph "If you enter a custom url above you will have to use a different webcore instance from dashboard.webcore.co as the site is restricted to hubitat and smartthing's cloud"
+                }
 			}
 		}
 
@@ -530,6 +538,7 @@ private pageSelectDevices() {
 
 		section ('Select devices by type') {
         	paragraph "Most devices should fall into one of these two categories"
+            if(isHubitat()) input "dev:all", "capability.*", multiple: true, title: "Which devices", required: false
 			input "dev:actuator", "capability.actuator", multiple: true, title: "Which actuators", required: false
 			input "dev:sensor", "capability.sensor", multiple: true, title: "Which sensors", required: false
 		}
@@ -571,13 +580,21 @@ def pageSettings() {
         def storageApp = getStorageApp()
         if (storageApp) {
 			section("Available devices") {
-	        	app([title: 'Available devices', multiple: false, install: true, uninstall: false], 'storage', 'ady624', "${handle()} Storage")
+	        	app([title: isHubitat() ? 'Do not click' : 'Available Devices', multiple: false, install: true, uninstall: false], 'storage', 'ady624', "${handle()} Storage")
 	        }
 		} else {
 			section("Available devices") {
 				href "pageSelectDevices", title: "Available devices", description: "Tap here to select which devices are available to pistons"
 			}
-		}
+        	    }
+        
+        section("Fuel Streams"){
+            input "localFuelStreams", "bool", title: "Use local fuel streams?", defaultValue: isHubitat() ? true : false, submitOnChange: true
+            if(settings.localFuelStreams){
+                href "pageFuelStreams", title: "Fuel Streams", description: "Tap here to manage fuel streams"                
+            }         	
+        }
+        
 /*		section("Integrations") {
 			href "pageIntegrations", title: "Integrations with other services", description: "Tap here to configure your integrations"
 		}*/
@@ -599,6 +616,7 @@ def pageSettings() {
 			input "redirectContactBook", "bool", title: "Redirect all Contact Book requests as PUSH notifications", description: "SmartThings has removed the Contact Book feature and as a result, all uses of Contact Book are by default ignored. By enabling this option, you will get all the existing Contact Book uses fall back onto the PUSH notification system, possibly allowing other people to receive these notifications.", defaultValue: false, required: true
 			input "disabled", "bool", title: "Disable all pistons", description: "Disable all pistons belonging to this instance", defaultValue: false, required: false
 			href "pageRebuildCache", title: "Clean up and rebuild data cache", description: "Tap here to change your clean up and rebuild your data cache"
+            input "logPistonExecutions", "bool", title: "Log piston executions?", description: "Tap here to change logging pistons in location events", defaultValue: isHubitat() ? false : true, required: false
 		}
 
 		section(title: "Recovery") {
@@ -611,6 +629,14 @@ def pageSettings() {
 		}
 
 	}
+}
+
+private pageFuelStreams(){
+    dynamicPage(name: "pageFuelStreams", title: "", uninstall: false, install: false){
+        section(){
+        	app([title: isHubitat() ? 'Do not click' : 'Fuel Streams', multiple: true, install: true, uninstall: false], 'fuelStreams', 'ady624', "${handle()} Fuel Stream")
+        }
+    }
 }
 
 private pageChangePassword() {
@@ -819,15 +845,27 @@ private initialize() {
 		state.settings.remove('lifx_groups')
 		state.settings.remove('lifx_locations')
 	}
+    
+    if(state.accessToken){
+    	updateEndpoint(state.accessToken)
+    }
 }
 
+private updateEndpoint(accessToken){
+    if(isCustomEndpoint()){
+        state.endpoint = customServerUrl("?access_token=${accessToken}")
+    }
+    else {
+        state.endpoint = isHubitat() ? apiServerUrl("$hubUID/apps/${app.id}/?access_token=${accessToken}") : apiServerUrl("/api/token/${accessToken}/smartapps/installations/${app.id}/")
+    }
+}
 private initializeWebCoREEndpoint() {
 	try {
         if (!state.endpoint) {
             try {
                 def accessToken = createAccessToken()
                 if (accessToken) {
-                    state.endpoint = hubUID ? apiServerUrl("$hubUID/apps/${app.id}/?access_token=${state.accessToken}") : apiServerUrl("/api/token/${accessToken}/smartapps/installations/${app.id}/")
+                    updateEndpoint(accessToken)
                 }
             } catch(e) {
                 state.endpoint = null
@@ -851,6 +889,7 @@ private subscribeAll() {
 	subscribe(location, "echoSistant", echoSistantHandler)
     subscribe(location, "HubUpdated", hubUpdatedHandler, [filterEvents: false])
     subscribe(location, "summary", summaryHandler, [filterEvents: false])
+    if(isHubitat()) subscribe(location, "hsmStatus", hsmHandler, [filterEvents: false])
     setPowerSource(getHub()?.isBatteryInUse() ? 'battery' : 'mains')
 }
 
@@ -886,6 +925,8 @@ mappings {
 	path("/intf/dashboard/presence/create") {action: [GET: "api_intf_dashboard_presence_create"]}
 	path("/intf/dashboard/variable/set") {action: [GET: "api_intf_variable_set"]}
 	path("/intf/dashboard/settings/set") {action: [GET: "api_intf_settings_set"]}
+    path("/intf/fuelstreams/list") {action: [GET: "api_intf_fuelstreams_list"]}
+    path("/intf/fuelstreams/get") {action: [GET: "api_intf_fuelstreams_get"]}
 	path("/intf/location/entered") {action: [GET: "api_intf_location_entered"]}
 	path("/intf/location/exited") {action: [GET: "api_intf_location_exited"]}
 	path("/intf/location/updated") {action: [GET: "api_intf_location_updated"]}
@@ -904,19 +945,31 @@ private api_get_error_result(error) {
     ]
 }
 
+private getHubitatVersion(){
+    try{
+        return location.getHubs().collectEntries {[it.id, it.getFirmwareVersionString()]}
+    }
+    catch(e){
+     	return location.getHubs().collectEntries {[it.id, "< 1.1.2.112"]}  
+    }
+}
+
 private api_get_base_result(deviceVersion = 0, updateCache = false) {
 	def tz = location.getTimeZone()
     def currentDeviceVersion = state.deviceVersion
 	def Boolean sendDevices = (deviceVersion != currentDeviceVersion)
     def name = handle() + ' Piston'
     def incidentThreshold = now() - 604800000
+    
+    def instanceId = hashId(app.id, updateCache)
+    
 	return [
         name: location.name + ' \\ ' + (app.label ?: app.name),
         instance: [
 	    	account: [id: hashId(hubUID ?: app.getAccountId(), updateCache)],
         	pistons: getChildApps().findAll{ it.name == name }.sort{ it.label }.collect{ [ id: hashId(it.id, updateCache), 'name': it.label, 'meta': state[hashId(it.id, updateCache)] ] },
-            id: hashId(app.id, updateCache),
-            locationId: hashId(location.id, updateCache),
+            id: instanceId,
+            locationId: hashId(location.id + (isHubitat() ? '-L' : ''), updateCache),
             name: app.label ?: app.name,
             uri: state.endpoint,
             deviceVersion: currentDeviceVersion,
@@ -926,15 +979,16 @@ private api_get_base_result(deviceVersion = 0, updateCache = false) {
             lifx: state.lifx ?: [:],
             virtualDevices: virtualDevices(updateCache),
             globalVars: listAvailableVariables(),
+            fuelStreamUrls: getFuelStreamUrls(instanceId),
         ] + (sendDevices ? [contacts: [:], devices: listAvailableDevices(false, updateCache)] : [:]),
         location: [
             contactBookEnabled: location.getContactBookEnabled(),
-            hubs: location.getHubs().collect{ [id: hashId(it.id, updateCache), name: it.name, firmware: hubUID ? 'unknown' : it.getFirmwareVersionString(), physical: it.getType().toString().contains('PHYSICAL'), powerSource: it.isBatteryInUse() ? 'battery' : 'mains' ]},
-            incidents: hubUID ? [] : location.activeIncidents.collect{[date: it.date.time, title: it.getTitle(), message: it.getMessage(), args: it.getMessageArgs(), sourceType: it.getSourceType()]}.findAll{ it.date >= incidentThreshold },
-            id: hashId(location.id, updateCache),
+            hubs: location.getHubs().collect{ [id: hashId(it.id, updateCache), name: it.name, firmware: isHubitat() ? getHubitatVersion()[it.id] : it.getFirmwareVersionString(), physical: it.getType().toString().contains('PHYSICAL'), powerSource: it.isBatteryInUse() ? 'battery' : 'mains' ]},
+            incidents: isHubitat() ? [] : location.activeIncidents.collect{[date: it.date.time, title: it.getTitle(), message: it.getMessage(), args: it.getMessageArgs(), sourceType: it.getSourceType()]}.findAll{ it.date >= incidentThreshold },
+            id: hashId(location.id + (isHubitat() ? '-L' : ''), updateCache),
             mode: hashId(location.getCurrentMode().id, updateCache),
             modes: location.getModes().collect{ [id: hashId(it.id, updateCache), name: it.name ]},
-            shm: hubUID ? 'off' : location.currentState("alarmSystemStatus")?.value,
+			shm: isHubitat() ? transformHsmStatus(location.hsmStatus ?: state.hsmStatus) : location.currentState("alarmSystemStatus")?.value,
             name: location.name,
             temperatureScale: location.getTemperatureScale(),
             timeZone: tz ? [
@@ -948,11 +1002,62 @@ private api_get_base_result(deviceVersion = 0, updateCache = false) {
     ]
 }
 
+private getFuelStreamUrls(iid){
+    if(!useLocalFuelStreams()){
+        def region = state.endpoint.contains('graph-eu') ? 'eu' : 'us'
+        def baseUrl = 'https://api-' + region + '-' + iid[32] + '.webcore.co:9287/fuelStreams'
+        def headers = [ 'Auth-Token' : iid ]
+
+        return [
+            list : [l: false, m: 'POST', h: headers, u: baseUrl + '/list', d: [i : iid]],
+            get  : [l: false, m: 'POST', h: headers, u: baseUrl + '/get',  d: [ i: iid ], p: 'f']
+        ]
+    }    
+    
+    def baseUrl = isCustomEndpoint() ? customServerUrl("/") : 
+    					isHubitat() ? apiServerUrl("$hubUID/apps/${app.id}/")
+    						: apiServerUrl("/api/token/${state.accessToken}/smartapps/installations/${app.id}/")
+    
+    def params = baseUrl.contains(state.accessToken) ? "" : "access_token=${state.accessToken}"
+    return [
+        list : [l: true, u: baseUrl + "intf/fuelstreams/list?${params}"],
+        get  : [l: true, u: baseUrl + "intf/fuelstreams/get?id={fuelStreamId}${params ? "&" + params : ""}", p: 'fuelStreamId']
+    ]
+}
+
+private boolean useLocalFuelStreams(){
+ 	return settings.localFuelStreams != null ? settings.localFuelStreams : (isHubitat() ? true : false)   
+}
+
+private String transformHsmStatus(status){
+	switch(status){
+		case "disarmed":
+        case "allDisarmed":
+			return "off"
+			break;
+		case "armedHome":
+			return "stay"
+			break;
+		case "armedAway":
+			return "away"
+			break;
+		default:
+			return "Unknown"
+	}
+}
+
 private api_intf_dashboard_load() {
 	def result
     recoveryHandler()
     //install storage app
     def storageApp = getStorageApp(true)
+    if(storageApp && isHubitat() && storageApp.getStorageSettings() != null){ //migrate off of storage app
+        storageApp.getStorageSettings().findAll { it.key.startsWith('dev:') }.each {
+            app.updateSetting(it.key, [type: 'capability', value: it.value.collect { it.id }])
+        }
+        state.migratedStorage = true
+        app.deleteChildApp(storageApp.id)
+    }
     //debug "Dashboard: Request received to initialize instance"
 	if (verifySecurityToken(params.token)) {
     	result = api_get_base_result(params.dev, true)
@@ -1010,7 +1115,7 @@ private api_intf_dashboard_piston_create() {
         if (params.author || params.bin) {
         	piston.config([bin: params.bin, author: params.author, initialVersion: version()])
         }
-      	if (hubUID) piston.installed()
+        if (isHubitat() && !piston.isInstalled()) piston.installed()
         result = [status: "ST_SUCCESS", id: hashId(piston.id)]
 	} else {
     	result = api_get_error_result("ERR_INVALID_TOKEN")
@@ -1044,7 +1149,7 @@ private api_intf_dashboard_piston_get() {
                     comparisons: comparisons(),
                     functions: functions(),
                     colors: [
-                        standard: colorUtil?.ALL
+                        standard: colorUtil?.ALL ?: getColors()
                     ],
                 ]
             }
@@ -1056,7 +1161,24 @@ private api_intf_dashboard_piston_get() {
     }
     //for accuracy, use the time as close as possible to the render
     result.now = now()
-    render contentType: "application/javascript;charset=utf-8", data: "${params.callback}(${groovy.json.JsonOutput.toJson(result)})"
+    def jsonData = groovy.json.JsonOutput.toJson(result)
+    
+    if(isHubitat() && (!isCustomEndpoint() || customHubUrl.contains(hubUID))){
+        //data saver for hubitat ~100K limit    
+        def responseLength = jsonData.getBytes("UTF-8").length
+        if(responseLength > 100 * 1024){ //these are loaded anyway right after loading the piston
+            log.warn "Trimming ${ (int)(responseLength/1024) }KB response to smaller size"
+            result.instance = null
+            result.data?.logs = []
+            result.data?.stats?.timing = [] 
+            //for accuracy, use the time as close as possible to the render
+            result.now = now()
+            jsonData = groovy.json.JsonOutput.toJson(result)
+        } 
+    }	   
+    
+    //log.debug "Trimmed resonse length: ${jsonData.getBytes("UTF-8").length}"        
+    render contentType: "application/javascript;charset=utf-8", data: "${params.callback}(${jsonData})"
 }
 
 
@@ -1224,7 +1346,7 @@ private api_intf_dashboard_piston_pause() {
 	if (verifySecurityToken(params.token)) {
 	    def piston = getChildApps().find{ hashId(it.id) == params.id };
 	    if (piston) {
-        	def rtData = piston.pause()
+        	def rtData = piston.pausePiston()
             updateRunTimeData(rtData)
             //update the state because it will overwrite the atomicState
             //state[piston.id] = state[piston.id]
@@ -1394,7 +1516,7 @@ private api_intf_dashboard_piston_delete() {
 	if (verifySecurityToken(params.token)) {
 	    def piston = getChildApps().find{ hashId(it.id) == params.id };
 	    if (piston) {
-        	app.deleteChildApp(piston);
+        	app.deleteChildApp(isHubitat() ? piston.id : piston)
 			result = [status: "ST_SUCCESS"]
             state.remove(params.id)
             state.remove('sph${params.id}')
@@ -1470,6 +1592,60 @@ private api_intf_variable_set() {
     render contentType: "application/javascript;charset=utf-8", data: "${params.callback}(${groovy.json.JsonOutput.toJson(result)})"
 }
 
+public resetFuelStreamList(){
+	state.fuelStreams = []
+}
+
+public writeToFuelStream(req){
+    def name = "${handle()} Fuel Stream"
+    def streamName = "${(req.c ?: "")}||${req.n}"
+    
+    def result = getChildApps().find{ it.name == name && it.label.contains(streamName)}
+    def fuelStreams = isHubitat() ? [] : atomicState.fuelStreams ?: []
+    
+    if(!result){
+        if(fuelStreams.find{ it.contains(streamName) } ?: false){ //bug in smartthings doesn't remember state,childapps between multiple calls in the same piston
+        	error "Found duplicate stream, not adding point"
+            return
+        }
+        def id =  (getChildApps().findAll{ it.name == name }.collect{ it.label.split(' - ')[0].toInteger()}.max() ?: 0) + 1
+        try {
+            result = addChildApp('ady624', name, "$id - $streamName")
+            if(!isHubitat()){
+                fuelStreams = getChildApps().find{ it.name == name }.collect { it.label }
+                fuelStreams << result.label
+                atomicState.fuelStreams = fuelStreams
+            }            
+       		result.createStream([id: id, name: req.n, canister: req.c ?: ""])
+        }
+        catch(e){
+            error "Please install the webCoRE Fuel Streams app for local Fuel Streams"
+            return
+        }     	
+    }
+    
+    result.updateFuelStream(req)
+}
+
+private api_intf_fuelstreams_list() {
+	def result = []
+    def name = "${handle()} Fuel Stream"
+    result = getChildApps().findAll{ it.name == name }*.getFuelStream()
+    
+   	render contentType: "application/javascript;charset=utf-8", data: "${params.callback}(${groovy.json.JsonOutput.toJson(["fuelStreams" : result])})"
+}
+
+private api_intf_fuelstreams_get() {
+    def result = []  
+    def id = params.id
+    
+    def name = "${handle()} Fuel Stream"
+    def stream = getChildApps().find { it.name == name && it.label.startsWith("$id -")}
+    result = stream.listFuelStreamData()
+    
+   	render contentType: "application/javascript;charset=utf-8", data: "${params.callback}(${groovy.json.JsonOutput.toJson(["points" : result])})"
+}
+
 private api_intf_settings_set() {
 	def result
     debug "Dashboard: Request received to set settings"
@@ -1520,7 +1696,7 @@ private api_intf_dashboard_piston_activity() {
 
 def api_ifttt() {
 	def data = [:]
-    def remoteAddr = request.getHeader("X-FORWARDED-FOR") ?: request.getRemoteAddr()
+    def remoteAddr = isHubitat() ? "UNKNOWN" : request.getHeader("X-FORWARDED-FOR") ?: request.getRemoteAddr()
     if (params) {
     	data.params = [:]
         for(param in params) {
@@ -1533,7 +1709,7 @@ def api_ifttt() {
     data.remoteAddr = remoteAddr
 	def eventName = params?.eventName
 	if (eventName) {
-		if (!hubUID) sendLocationEvent([name: "ifttt", value: eventName, isStateChange: true, linkText: "IFTTT event", descriptionText: "${handle()} has received an IFTTT event: $eventName", data: data])
+		sendLocationEvent([name: "ifttt", value: eventName, isStateChange: true, linkText: "IFTTT event", descriptionText: "${handle()} has received an IFTTT event: $eventName", data: data])
 	}
 	render contentType: "text/html", data: "<!DOCTYPE html><html lang=\"en\">Received event $eventName.<body></body></html>"
 }
@@ -1544,7 +1720,7 @@ def api_email() {
 	def from = data.from ?: ''
 	def pistonId = params?.pistonId
     if (pistonId) {
-		if (!hubUID) sendLocationEvent([name: "email", value: pistonId, isStateChange: true, linkText: "Email event", descriptionText: "${handle()} has received an email from $from", data: data])
+		sendLocationEvent([name: "email", value: pistonId, isStateChange: true, linkText: "Email event", descriptionText: "${handle()} has received an email from $from", data: data])
     }
 	render contentType: "text/plain", data: "OK"
 }
@@ -1552,7 +1728,7 @@ def api_email() {
 private api_execute() {
 	def result = [:]
 	def data = [:]
-    def remoteAddr = request.getHeader("X-FORWARDED-FOR") ?: request.getRemoteAddr()
+    def remoteAddr = isHubitat() ? "UNKNOWN" : request.getHeader("X-FORWARDED-FOR") ?: request.getRemoteAddr()
     debug "Dashboard: Request received to execute a piston from IP $remoteAddr"
 	if (params) {
     	data = [:]
@@ -1567,7 +1743,7 @@ private api_execute() {
 	def pistonIdOrName = params?.pistonIdOrName
     def piston = getChildApps().find{ (it.label == pistonIdOrName) || (hashId(it.id) == pistonIdOrName) };
     if (piston) {
-    	if (!hubUID) sendLocationEvent(name: hashId(piston.id), value: remoteAddr, isStateChange: true, displayed: false, linkText: "Execute event", descriptionText: "External piston execute request from IP $remoteAddr", data: data)
+    	sendLocationEvent(name: hashId(piston.id), value: remoteAddr, isStateChange: true, displayed: false, linkText: "Execute event", descriptionText: "External piston execute request from IP $remoteAddr", data: data)
         result.result = 'OK'
 	} else {
     	result.result = 'ERROR'
@@ -1592,7 +1768,7 @@ def recoveryHandler() {
     if (failedPistons.size()) {
     	for (piston in failedPistons) {
 		    warn "Piston $piston.name was sent a recovery signal because it was ${now() - piston.meta.n}ms late"
-	    	if (!hubUID) sendLocationEvent(name: piston.id, value: 'recovery', isStateChange: true, displayed: false, linkText: "Recovery event", descriptionText: "Recovery event for piston $piston.name")
+	    	sendLocationEvent(name: piston.id, value: 'recovery', isStateChange: true, displayed: false, linkText: "Recovery event", descriptionText: "Recovery event for piston $piston.name")
 	    }
     }
 	if (state.version != version()) {
@@ -1635,17 +1811,23 @@ private cleanUp() {
 }
 
 private getStorageApp(install = false) {
+    if(isHubitat() && state.migratedStorage) return null
 	def name = handle() + ' Storage'
 	def storageApp = getChildApps().find{ it.name == name }
+    def label = "${app.label} Devices"
     if (storageApp) {
-    	if (app.label != storageApp.label) {
-    		storageApp.updateLabel(app.label)
+        if (label != storageApp.label) {
+    		storageApp.updateLabel(label)
         }
     	return storageApp
     }
     if (!install) return null
+    if(isHubitat()){
+    	state.migratedStorage = true
+        return null 
+    }
     try {
-    	storageApp = addChildApp("ady624", name, app.label)
+    	storageApp = addChildApp("ady624", name, label)
     } catch (all) {
     	error "Please install the webCoRE Storage SmartApp for better performance"
         return null
@@ -1664,6 +1846,7 @@ private getStorageApp(install = false) {
 }
 
 private getDashboardApp(install = false) {
+    if(isHubitat()) return null
 	def name = handle() + ' Dashboard'
     def label = app.label + ' (dashboard)'
 	def dashboardApp = getChildApps().find{ it.name == name }
@@ -1681,10 +1864,32 @@ private getDashboardApp(install = false) {
     return dashboardApp
 }
 
+def customServerUrl(path){
+    path ?: ""
+    if(!path.startsWith("/")){
+        path = "/" + path
+    }
+    
+    if(customHubUrl.contains(hubUID)){
+     	return customHubUrl + "/" + app.id + path   
+    }
+    return customHubUrl + "/apps/api/" + app.id + path
+}
+
+
 private String getDashboardInitUrl(register = false) {
 	def url = register ? getDashboardRegistrationUrl() : getDashboardUrl()
     if (!url) return null
-    return url + (register ? "register/" : "init/") + (apiServerUrl("").replace("https://", '').replace(".api.smartthings.com", "").replace(":443", "").replace("/", "") + ((hubUID ?: state.accessToken) + app.id).replace("-", "") + (hubUID ? '/?access_token=' + state.accessToken : '')).bytes.encodeBase64()
+    if(isCustomEndpoint()){
+        return url + (register ? "register/" : "init/") +	(
+            customServerUrl('/?access_token=' + state.accessToken)
+        ).bytes.encodeBase64()
+    }
+    else {
+        return url + (register ? "register/" : "init/") + 
+         (apiServerUrl("").replace("https://", '').replace(".api.smartthings.com", "").replace(":443", "").replace("/", "") + 
+          	((hubUID ?: state.accessToken) + app.id).replace("-", "") + (isHubitat() ? '/?access_token=' + state.accessToken : '')).bytes.encodeBase64()
+    }
 }
 
 private String getDashboardRegistrationUrl() {
@@ -1698,10 +1903,11 @@ public Map listAvailableDevices(raw = false, updateCache = false) {
     if (storageApp) {
     	result = storageApp.listAvailableDevices(raw)
 	} else {
+        def overrides = commandOverrides()
 		if (raw) {
     		result = settings.findAll{ it.key.startsWith("dev:") }.collect{ it.value }.flatten().collectEntries{ dev -> [(hashId(dev.id, updateCache)): dev]}
     	} else {
-    		result = settings.findAll{ it.key.startsWith("dev:") }.collect{ it.value }.flatten().collectEntries{ dev -> [(hashId(dev.id, updateCache)): dev]}.collectEntries{ id, dev -> [ (id): [ n: dev.getDisplayName(), cn: dev.getCapabilities()*.name, a: dev.getSupportedAttributes().unique{ it.name }.collect{def x = [n: it.name, t: it.getDataType(), o: it.getValues()]; try {x.v = dev.currentValue(x.n);} catch(all) {}; x}, c: dev.getSupportedCommands().unique{ it.getName() }.collect{[n: it.getName(), p: it.getArguments()]} ]]}
+    		result = settings.findAll{ it.key.startsWith("dev:") }.collect{ it.value }.flatten().collectEntries{ dev -> [(hashId(dev.id, updateCache)): dev]}.collectEntries{ id, dev -> [ (id): [ n: dev.getDisplayName(), cn: dev.getCapabilities()*.name, a: dev.getSupportedAttributes().unique{ it.name }.collect{def x = [n: it.name, t: it.getDataType(), o: it.getValues()]; try {x.v = dev.currentValue(x.n);} catch(all) {}; x}, c: dev.getSupportedCommands().unique{ transformCommand(it, overrides) }.collect{[n: transformCommand(it, overrides), p: it.getArguments()]} ]]}
 		}
 	}
     List presenceDevices = getChildDevices()
@@ -1715,6 +1921,15 @@ public Map listAvailableDevices(raw = false, updateCache = false) {
     return result
 }
 
+private def transformCommand(command, overrides){
+    def override = overrides[command.getName()]
+    if(override && override.s == command.getArguments()?.toString()){
+    	return override.r
+    }
+    return command.getName()
+}
+
+
 private setPowerSource(powerSource, atomic = true) {
 	if (state.powerSource == powerSource) return
     if (atomic) {
@@ -1722,7 +1937,7 @@ private setPowerSource(powerSource, atomic = true) {
     } else {
     	state.powerSource = powerSource
     }
-	if (!hubUID) sendLocationEvent([name: 'powerSource', value: powerSource, isStateChange: true, linkText: "webCoRE power source event", descriptionText: "${handle()} has detected a new power source: $powerSource"])
+	sendLocationEvent([name: 'powerSource', value: powerSource, isStateChange: true, linkText: "webCoRE power source event", descriptionText: "${handle()} has detected a new power source: $powerSource"])
 }
 
 private Map listAvailableVariables() {
@@ -1796,7 +2011,7 @@ private String generatePistonName() {
 }
 
 private ping() {
-	if (!hubUID) sendLocationEvent( [name: handle(), value: 'ping', isStateChange: true, displayed: false, linkText: "${handle()} ping reply", descriptionText: "${handle()} has received a ping reply and is replying with a pong", data: [id: hashId(app.id), name: app.label]] )
+	sendLocationEvent( [name: handle(), value: 'ping', isStateChange: true, displayed: false, linkText: "${handle()} ping reply", descriptionText: "${handle()} has received a ping reply and is replying with a pong", data: [id: hashId(app.id), name: app.label]] )
 }
 
 private getLogging() {
@@ -1867,7 +2082,7 @@ private testLifx() {
 
 private registerInstance() {
 	def accountId = hashId(hubUID ?: app.getAccountId())
-    def locationId = hashId(location.id)
+    def locationId = hashId(location.id + (isHubitat() ? '-L' : ''))
     def instanceId = hashId(app.id)
     def endpoint = state.endpoint
     def region = endpoint.contains('graph-eu') ? 'eu' : 'us';
@@ -1877,7 +2092,8 @@ private registerInstance() {
     def pa = lpa.size()
     List lpd = pistons.findAll{ !it.a }.collect{ it.id }
     def pd = pistons.size() - pa
-	if (asynchttp_v1) asynchttp_v1.put(instanceRegistrationHandler, [
+    
+    def params = [
         uri: "https://api-${region}-${instanceId[32]}.webcore.co:9247",
         path: '/instance/register',
         headers: ['ST' : instanceId],
@@ -1893,7 +2109,18 @@ private registerInstance() {
             pd: pd,
             lpd: lpd.join(',')
     	]
-    ])
+    ]
+	if (asynchttp_v1)
+    {
+        asynchttp_v1.put(instanceRegistrationHandler, params)
+    }
+    else {
+        params << [contentType: 'application/json', requestContentType: 'application/json']
+        try{
+        	httpPut(params) { res -> }    
+        }
+        catch(e) {}  
+    }   
 }
 
 private initSunriseAndSunset() {
@@ -1934,7 +2161,13 @@ public Boolean isInstalled() {
 
 public String getDashboardUrl() {
 	if (!state.endpoint) return null
-	return "https://dashboard.${domain()}/"
+
+    if(customEndpoints && (customWebcoreInstanceUrl ?: "") != ""){
+        return customWebcoreInstanceUrl + "/"
+    }
+    else {
+       return "https://dashboard.${domain()}/"
+    }
 }
 
 public refreshDevices() {
@@ -1955,8 +2188,9 @@ public Map getRunTimeData(semaphore = null, fetchWrappers = false) {
     semaphore = semaphore ?: 0
    	def semaphoreDelay = 0
    	def semaphoreName = semaphore ? "sph$semaphore" : ''
-    if (semaphore) {
-    	def waited = false
+    
+    def waited = false
+    if (semaphore) {    	
     	//if we need to wait for a semaphore, we do it here
         def lastSemaphore
     	while (semaphore) {
@@ -1980,7 +2214,8 @@ public Map getRunTimeData(semaphore = null, fetchWrappers = false) {
         semaphoreDelay: semaphoreDelay,
 		commands: [
         	physical: commands(),
-			virtual: virtualCommands()
+			virtual: virtualCommands(),
+			overrides: commandOverrides()
 		],
         comparisons: comparisons(),
         coreVersion: version(),
@@ -1998,8 +2233,14 @@ public Map getRunTimeData(semaphore = null, fetchWrappers = false) {
         started: startTime,
         ended: now(),
         generatedIn: now() - startTime,
-        redirectContactBook: settings.redirectContactBook
-    ]
+        redirectContactBook: settings.redirectContactBook,
+        logPistonExecutions: settings.logPistonExecutions,
+        useLocalFuelStreams : useLocalFuelStreams(),
+        waitedAtSemaphore : waited
+    ] + (isHubitat() ? [        
+		hsmStatus: state.hsmStatus ?: location.hsmStatus,
+        colors: getColors()
+    ] : [:])
 }
 
 public void updateRunTimeData(data) {
@@ -2068,7 +2309,7 @@ public void updateRunTimeData(data) {
 public pausePiston(pistonId) {
     def piston = getChildApps().find{ hashId(it.id) == pistonId };
 	if (piston) {
-		def rtData = piston.pause()
+		def rtData = piston.pausePiston()
 		updateRunTimeData(rtData)
     }
 }
@@ -2091,11 +2332,11 @@ public executePiston(pistonId, data, source) {
 }
 
 private sendVariableEvent(variable) {
-	if (!hubUID) sendLocationEvent([name: variable.name.startsWith('@@') ? '@@' + handle() : hashId(app.id), value: variable.name, isStateChange: true, displayed: false, linkText: "${handle()} global variable ${variable.name} changed", descriptionText: "${handle()} global variable ${variable.name} changed", data: [id: hashId(app.id), name: app.label, event: 'variable', variable: variable]])
+	sendLocationEvent([name: variable.name.startsWith('@@') ? '@@' + handle() : hashId(app.id), value: variable.name, isStateChange: true, displayed: false, linkText: "${handle()} global variable ${variable.name} changed", descriptionText: "${handle()} global variable ${variable.name} changed", data: [id: hashId(app.id), name: app.label, event: 'variable', variable: variable]])
 }
 
 private broadcastPistonList() {
-    if (!hubUID) sendLocationEvent([name: handle(), value: 'pistonList', isStateChange: true, displayed: false, data: [id: hashId(app.id), name: app.label, pistons: getChildApps().findAll{ it.name == "${handle()} Piston" }.collect{[id: hashId(it.id), name: it.label]}]])
+    sendLocationEvent([name: handle(), value: 'pistonList', isStateChange: true, displayed: false, data: [id: hashId(app.id), name: app.label, pistons: getChildApps().findAll{ it.name == "${handle()} Piston" }.collect{[id: hashId(it.id), name: it.label]}]])
 }
 
 def webCoREHandler(event) {
@@ -2185,7 +2426,9 @@ def NewIncidentHandler(evt) {
 	//log.error "$evt.name >>> ${evt.jsonData}"
 }
 
-
+def hsmHandler(evt){
+	state.hsmStatus = evt.value
+}
 
 def lifxHandler(response, cbkData) {
 	if ((response.status == 200)) {
@@ -2309,7 +2552,7 @@ private debug(message, shift = null, err = null, cmd = null) {
 	} else if (cmd == "warn") {
 		log.warn "$prefix$message", err
 	} else if (cmd == "error") {
-      if (hubUID) { log.error "$prefix$message" } else { log.error "$prefix$message", err }
+      if (isHubitat()) { log.error "$prefix$message $err" } else { log.error "$prefix$message", err }
 	} else {
 		log.debug "$prefix$message", err
 	}
@@ -2320,19 +2563,15 @@ private warn(message, shift = null, err = null) { debug message, shift, err, 'wa
 private error(message, shift = null, err = null) { debug message, shift, err, 'error' }
 private timer(message, shift = null, err = null) { debug message, shift, err, 'timer' }
 
-
-
-
-
-
-
-
+private isCustomEndpoint(){
+    customEndpoints && (customHubUrl ?: "") != ""
+}
 
 /******************************************************************************/
 /*** DATABASE																***/
 /******************************************************************************/
 
-private static Map capabilities() {
+private Map capabilities() {
     //n = name
     //d = friendly devices name
     //a = default attribute
@@ -2340,7 +2579,7 @@ private static Map capabilities() {
     //m = momentary
     //s = number of subdevices
     //i = subdevice index in event data
-	return [
+	def capabilities = [
 		accelerationSensor			: [ n: "Acceleration Sensor",			d: "acceleration sensors",			a: "acceleration",																																																							],
 		actuator					: [ n: "Actuator", 						d: "actuators",																																																																	],
 		alarm						: [ n: "Alarm",							d: "alarms and sirens",				a: "alarm",								c: ["off", "strobe", "siren", "both"],																																								],
@@ -2411,12 +2650,24 @@ private static Map capabilities() {
 		valve						: [ n: "Valve",							d: "valves",						a: "valve",								c: ["close", "open"],																																												],
 		voltageMeasurement			: [ n: "Voltage Measurement",			d: "voltmeters",					a: "voltage",																																																								],
 		waterSensor					: [ n: "Water Sensor",					d: "water and leak sensors",		a: "water",																																																									],
-		windowShade					: [ n: "Window Shade",					d: "automatic window shades",		a: "windowShade",						c: ["close", "open", "presetPosition"],																																								],
-	]
+		windowShade					: [ n: "Window Shade",					d: "automatic window shades",		a: "windowShade",						c: ["close", "open", "presetPosition"],																																								]
+	]  + (isHubitat() ? [
+		doubleTapableButton			: [ n: "Double Tapable Button",			d: "double tapable buttons",		a: "doubleTapped",						c: ["doubleTap"],																																													],
+        holdableButton				: [ n: "Holdable Button",				d: "holdable buttons",				a: "held",								c: ["hold"]																																															],
+        momentary					: [ n: "Momentary",						d: "momentary switches",													c: ["pushMomentary"],																																												],
+        pushableButton				: [ n: "Pushable Button",				d: "pushable buttons",				a: "pushed",							c: ["push"],																																														]
+        
+    ] : [:])
+    
+    if(isHubitat()){
+     	capabilities.remove('button') 
+    }
+    
+    return capabilities
 }
 
-private static Map attributes() {
-	return [
+private Map attributes() {
+	def attrs = [
 		acceleration				: [ n: "acceleration",			t: "enum",		o: ["active", "inactive"],																			],
 		activities					: [ n: "activities", 			t: "object",																										],
 		alarm						: [ n: "alarm", 				t: "enum",		o: ["both", "off", "siren", "strobe"],																],
@@ -2511,10 +2762,29 @@ private static Map attributes() {
 		speed						: [ n: "speed",					t: "decimal",	r: [null, null],	u: "ft/s",																		],
 		speedMetric					: [ n: "speed (metric)",		t: "decimal",	r: [null, null],	u: "m/s",																		],
 		bearing						: [ n: "bearing",				t: "decimal",	r: [0, 360],		u: "°",																			],
-	]
+	]  + (isHubitat() ? [
+        doubleTapped				: [ n: "double tapped button", 	t: "integer",	c: "doubleTapableButton"																			],
+        held						: [ n: "held button", 			t: "integer",	c: "holdableButton"																					],
+        pushed						: [ n: "pushed button", 		t: "integer",	c: "pushableButton"																					]
+    ] : [:])
+    
+    if(isHubitat()){
+    	attrs.remove('button')
+        attrs.remove('holdableButton')
+    }
+    
+    return attrs
 }
 
-private static Map commands() {
+/* Push command has multiple overloads in hubitat */
+public Map commandOverrides(){
+	return (isHubitat() ? [ //s: command signature
+     	push : [c: "push", s: null , r: "pushMomentary"],
+        flash : [c: "flash", s: null , r: "flashNative"] //flash native command conflicts with flash emulated command. Also needs "o" option on command described later
+    ] : [:])
+}
+
+private Map commands() {
 	return [
 		auto						: [ n: "Set to Auto",																	a: "thermostatMode",				v: "auto",																																			],
 		beep						: [ n: "Beep",																																																																	],
@@ -2632,16 +2902,22 @@ private static Map commands() {
 		low							: [ n: "Set to Low",																																																															],
 		med							: [ n: "Set to Medium",																																																															],
 		high						: [ n: "Set to High",																																																															],
-	]
+	] + (isHubitat() ? [
+            doubleTap					: [ n: "Double Tap",					d: "Double tap button {0}",						a: "doubleTapped",										p:[[n: "Button #", t: "integer"]]																																																										],
+            flashNative					: [ n: "Flash",																	       																																															],
+            hold						: [ n: "Hold",							d: "Hold Button {0}",							a: "held",													p: [[n:"Button #", t: "integer"]]																																						],
+            push						: [ n: "Push",							d: "Push button {0}",							a: "pushed",												p:[[n: "Button #", t: "integer"]]																																																										],
+        	pushMomentary				: [ n: "Push"																																																																						]
+        ] : [:])
 }
 
-private static Map virtualCommands() {
+private Map virtualCommands() {
 	//a = aggregate
     //d = display
 	//n = name
     //t = type
     List tileIndexes = ['1','2','3','4','5','6','7','8','9','10','11','12','13','14','15','16']
-	return [
+	def commands = [
 		noop						: [	n: "No operation",				a: true,	i: "circle",				d: "No operation",																										],
 		wait						: [	n: "Wait...", 					a: true,	i: "clock", is: "r",				d: "Wait {0}",															p: [[n:"Duration", t:"duration"]],				],
 		waitRandom					: [ n: "Wait randomly...",			a: true,	i: "clock", is: "r",				d: "Wait randomly between {0} and {1}",									p: [[n:"At least", t:"duration"],[n:"At most", t:"duration"]],	],
@@ -2723,7 +2999,19 @@ private static Map virtualCommands() {
 	] : [:])
 	+ (getLifxToken() ? [
 		lifxScene: [n: "Activate LIFX scene", p: ["Scene:lifxScenes"], l: true, dd: "Activate LIFX Scene '{0}'", aggregated: true],
-	] : [:])*/
+	] : [:])*/        
+    
+    if(isHubitat()){
+        commands += [
+            setAlarmSystemStatus		: [ n: "Set Hubitat Safety Monitor status...",	a: true, i: "",				d: "Set Hubitat Safety Monitor status to {0}",							p: [[n:"Status", t:"enum", o: getAlarmSystemStatusActions().collect {[n: it.value, v: it.key]}]],																										],
+            //keep emulated flash to not break old pistons
+            emulatedFlash				: [ n: "(Old do not use) Emulated Flash",	 r: ["on", "off"], 			i: "toggle-on",				d: "(Old do not use)Flash on {0} / off {1} for {2} times{3}",							p: [[n:"On duration",t:"duration"],[n:"Off duration",t:"duration"],[n:"Number of flashes",t:"integer"], [n:"Only if switch is...", t:"enum",o:["on","off"], d:" if already {v}"]],																],
+            //add back emulated flash with "o" option so that it overrides the native flash command
+            flash						: [ n: "Flash...",	 r: ["on", "off"], 			i: "toggle-on",				d: "Flash on {0} / off {1} for {2} times{3}",							p: [[n:"On duration",t:"duration"],[n:"Off duration",t:"duration"],[n:"Number of flashes",t:"integer"], [n:"Only if switch is...", t:"enum",o:["on","off"], d:" if already {v}"]],		o: true /*override physical command*/													]
+    	]
+    }
+    
+    return commands
 }
 
 
@@ -2931,13 +3219,53 @@ private Map getLocationModeOptions(updateCache = false) {
 	}
 	return result
 }
+private static Map getAlarmSystemStatusActions() {
+	return [    
+        armAll:			"Arm All",
+        armRules: 		"Arm Monitor Rules",        
+		armHome: 		"Arm Home",
+		armAway:		"Arm Away", 
+        disarmAll:		"Disarm All",
+        disarmRules: 	"Disarm Monitor Rules",        
+		disarm:			"Disarm",
+       	cancelAlerts:	"Cancel Alerts"       
+    ]
+}
+
 private static Map getAlarmSystemStatusOptions() {
-	return [
-    	off:	"Disarmed",
+    return [
+        off:	"Disarmed",
         stay: 	"Armed/Stay",
         away:	"Armed/Away"
     ]
 }
+
+private static Map getHubitatAlarmSystemStatusOptions() {
+    return [    
+        armedAway:		"Armed Away",
+        armedHome: 		"Armed Home",        
+        disarmed: 		"Disarmed",
+        allDisarmed:	"All Disarmed"  
+    ]	
+}
+
+private static Map getAlarmSystemAlertOptions() {
+	return [    
+    	intrusion:			"Intrusion Away",
+        "intrusion-home": 	"Intrusion Home",
+        smoke:				"Smoke",
+        water:				"Water",
+        rule:				"Rule"
+    ]
+}
+
+private static Map getAlarmSystemRuleOptions() {
+	return [    
+    	armedRule: 		"Armed Rule",
+        disarmedRule: 	"Disarmed Rule"
+    ]
+}
+
 
 private Map getRoutineOptions(updateCache = false) {
     def routines = location.helloHome?.getPhrases()
@@ -2973,6 +3301,162 @@ private Map virtualDevices(updateCache = false) {
     	mode:				[ n: 'Location mode',				t: 'enum', 		o: getLocationModeOptions(updateCache),		x: true],
         tile:				[ n: 'Piston tile',					t: 'enum',		o: ['1':'1','2':'2','3':'3','4':'4','5':'5','6':'6','7':'7','8':'8','9':'9','10':'10','11':'11','12':'12','13':'13','14':'14','15':'15','16':'16'],		m: true	],
         routine:			[ n: 'Routine',						t: 'enum',		o: getRoutineOptions(updateCache),			m: true],
-    	alarmSystemStatus:	[ n: 'Smart Home Monitor status',	t: 'enum',		o: getAlarmSystemStatusOptions(),			x: true],
+        alarmSystemStatus:	[ n: 'Smart Home Monitor status',	t: 'enum',		o: getAlarmSystemStatusOptions(),			x: true]
+    ] + (isHubitat() ? [
+        alarmSystemStatus:	[ n: 'Hubitat Safety Monitor status',t: 'enum',		o: getHubitatAlarmSystemStatusOptions(), ac: getAlarmSystemStatusActions(),			x: true], //ac - actions. hubitat doesn't reuse the status for actions
+		alarmSystemEvent:	[ n: 'Hubitat Safety Monitor event',t: 'enum',		o: getAlarmSystemStatusActions(),			m: true],
+        alarmSystemAlert: 	[ n: 'Hubitat Safety Monitor alert',t: 'enum',		o: getAlarmSystemAlertOptions(),			m: true],
+        alarmSystemRule: 	[ n: 'Hubitat Safety Monitor rule',t: 'enum',		o: getAlarmSystemRuleOptions(),			m: true]    
+    ] : [:])
+}
+
+public List getColors(){
+	return [
+		[name:"Alice Blue",     rgb:"#F0F8FF",     h:208,     s:100,     l:97],
+		[name:"Antique White",     rgb:"#FAEBD7",     h:34,     s:78,     l:91],
+		[name:"Aqua",     rgb:"#00FFFF",     h:180,     s:100,     l:50],
+		[name:"Aquamarine",     rgb:"#7FFFD4",     h:160,     s:100,     l:75],
+		[name:"Azure",     rgb:"#F0FFFF",     h:180,     s:100,     l:97],
+		[name:"Beige",     rgb:"#F5F5DC",     h:60,     s:56,     l:91],
+		[name:"Bisque",     rgb:"#FFE4C4",     h:33,     s:100,     l:88],
+		[name:"Blanched Almond",     rgb:"#FFEBCD",     h:36,     s:100,     l:90],
+		[name:"Blue",     rgb:"#0000FF",     h:240,     s:100,     l:50],
+		[name:"Blue Violet",     rgb:"#8A2BE2",     h:271,     s:76,     l:53],
+		[name:"Brown",     rgb:"#A52A2A",     h:0,     s:59,     l:41],
+		[name:"Burly Wood",     rgb:"#DEB887",     h:34,     s:57,     l:70],
+		[name:"Cadet Blue",     rgb:"#5F9EA0",     h:182,     s:25,     l:50],
+		[name:"Chartreuse",     rgb:"#7FFF00",     h:90,     s:100,     l:50],
+		[name:"Chocolate",     rgb:"#D2691E",     h:25,     s:75,     l:47],
+		[name:"Cool White",     rgb:"#F3F6F7",     h:187,     s:19,     l:96],
+		[name:"Coral",     rgb:"#FF7F50",     h:16,     s:100,     l:66],
+		[name:"Corn Flower Blue",     rgb:"#6495ED",     h:219,     s:79,     l:66],
+		[name:"Corn Silk",     rgb:"#FFF8DC",     h:48,     s:100,     l:93],
+		[name:"Crimson",     rgb:"#DC143C",     h:348,     s:83,     l:58],
+		[name:"Cyan",     rgb:"#00FFFF",     h:180,     s:100,     l:50],
+		[name:"Dark Blue",     rgb:"#00008B",     h:240,     s:100,     l:27],
+		[name:"Dark Cyan",     rgb:"#008B8B",     h:180,     s:100,     l:27],
+		[name:"Dark Golden Rod",     rgb:"#B8860B",     h:43,     s:89,     l:38],
+		[name:"Dark Gray",     rgb:"#A9A9A9",     h:0,     s:0,     l:66],
+		[name:"Dark Green",     rgb:"#006400",     h:120,     s:100,     l:20],
+		[name:"Dark Khaki",     rgb:"#BDB76B",     h:56,     s:38,     l:58],
+		[name:"Dark Magenta",     rgb:"#8B008B",     h:300,     s:100,     l:27],
+		[name:"Dark Olive Green",     rgb:"#556B2F",     h:82,     s:39,     l:30],
+		[name:"Dark Orange",     rgb:"#FF8C00",     h:33,     s:100,     l:50],
+		[name:"Dark Orchid",     rgb:"#9932CC",     h:280,     s:61,     l:50],
+		[name:"Dark Red",     rgb:"#8B0000",     h:0,     s:100,     l:27],
+		[name:"Dark Salmon",     rgb:"#E9967A",     h:15,     s:72,     l:70],
+		[name:"Dark Sea Green",     rgb:"#8FBC8F",     h:120,     s:25,     l:65],
+		[name:"Dark Slate Blue",     rgb:"#483D8B",     h:248,     s:39,     l:39],
+		[name:"Dark Slate Gray",     rgb:"#2F4F4F",     h:180,     s:25,     l:25],
+		[name:"Dark Turquoise",     rgb:"#00CED1",     h:181,     s:100,     l:41],
+		[name:"Dark Violet",     rgb:"#9400D3",     h:282,     s:100,     l:41],
+		[name:"Daylight White",     rgb:"#CEF4FD",     h:191,     s:9,     l:90],
+		[name:"Deep Pink",     rgb:"#FF1493",     h:328,     s:100,     l:54],
+		[name:"Deep Sky Blue",     rgb:"#00BFFF",     h:195,     s:100,     l:50],
+		[name:"Dim Gray",     rgb:"#696969",     h:0,     s:0,     l:41],
+		[name:"Dodger Blue",     rgb:"#1E90FF",     h:210,     s:100,     l:56],
+		[name:"Fire Brick",     rgb:"#B22222",     h:0,     s:68,     l:42],
+		[name:"Floral White",     rgb:"#FFFAF0",     h:40,     s:100,     l:97],
+		[name:"Forest Green",     rgb:"#228B22",     h:120,     s:61,     l:34],
+		[name:"Fuchsia",     rgb:"#FF00FF",     h:300,     s:100,     l:50],
+		[name:"Gainsboro",     rgb:"#DCDCDC",     h:0,     s:0,     l:86],
+		[name:"Ghost White",     rgb:"#F8F8FF",     h:240,     s:100,     l:99],
+		[name:"Gold",     rgb:"#FFD700",     h:51,     s:100,     l:50],
+		[name:"Golden Rod",     rgb:"#DAA520",     h:43,     s:74,     l:49],
+		[name:"Gray",     rgb:"#808080",     h:0,     s:0,     l:50],
+		[name:"Green",     rgb:"#008000",     h:120,     s:100,     l:25],
+		[name:"Green Yellow",     rgb:"#ADFF2F",     h:84,     s:100,     l:59],
+		[name:"Honeydew",     rgb:"#F0FFF0",     h:120,     s:100,     l:97],
+		[name:"Hot Pink",     rgb:"#FF69B4",     h:330,     s:100,     l:71],
+		[name:"Indian Red",     rgb:"#CD5C5C",     h:0,     s:53,     l:58],
+		[name:"Indigo",     rgb:"#4B0082",     h:275,     s:100,     l:25],
+		[name:"Ivory",     rgb:"#FFFFF0",     h:60,     s:100,     l:97],
+		[name:"Khaki",     rgb:"#F0E68C",     h:54,     s:77,     l:75],
+		[name:"Lavender",     rgb:"#E6E6FA",     h:240,     s:67,     l:94],
+		[name:"Lavender Blush",     rgb:"#FFF0F5",     h:340,     s:100,     l:97],
+		[name:"Lawn Green",     rgb:"#7CFC00",     h:90,     s:100,     l:49],
+		[name:"Lemon Chiffon",     rgb:"#FFFACD",     h:54,     s:100,     l:90],
+		[name:"Light Blue",     rgb:"#ADD8E6",     h:195,     s:53,     l:79],
+		[name:"Light Coral",     rgb:"#F08080",     h:0,     s:79,     l:72],
+		[name:"Light Cyan",     rgb:"#E0FFFF",     h:180,     s:100,     l:94],
+		[name:"Light Golden Rod Yellow",     rgb:"#FAFAD2",     h:60,     s:80,     l:90],
+		[name:"Light Gray",     rgb:"#D3D3D3",     h:0,     s:0,     l:83],
+		[name:"Light Green",     rgb:"#90EE90",     h:120,     s:73,     l:75],
+		[name:"Light Pink",     rgb:"#FFB6C1",     h:351,     s:100,     l:86],
+		[name:"Light Salmon",     rgb:"#FFA07A",     h:17,     s:100,     l:74],
+		[name:"Light Sea Green",     rgb:"#20B2AA",     h:177,     s:70,     l:41],
+		[name:"Light Sky Blue",     rgb:"#87CEFA",     h:203,     s:92,     l:75],
+		[name:"Light Slate Gray",     rgb:"#778899",     h:210,     s:14,     l:53],
+		[name:"Light Steel Blue",     rgb:"#B0C4DE",     h:214,     s:41,     l:78],
+		[name:"Light Yellow",     rgb:"#FFFFE0",     h:60,     s:100,     l:94],
+		[name:"Lime",     rgb:"#00FF00",     h:120,     s:100,     l:50],
+		[name:"Lime Green",     rgb:"#32CD32",     h:120,     s:61,     l:50],
+		[name:"Linen",     rgb:"#FAF0E6",     h:30,     s:67,     l:94],
+		[name:"Maroon",     rgb:"#800000",     h:0,     s:100,     l:25],
+		[name:"Medium Aquamarine",     rgb:"#66CDAA",     h:160,     s:51,     l:60],
+		[name:"Medium Blue",     rgb:"#0000CD",     h:240,     s:100,     l:40],
+		[name:"Medium Orchid",     rgb:"#BA55D3",     h:288,     s:59,     l:58],
+		[name:"Medium Purple",     rgb:"#9370DB",     h:260,     s:60,     l:65],
+		[name:"Medium Sea Green",     rgb:"#3CB371",     h:147,     s:50,     l:47],
+		[name:"Medium Slate Blue",     rgb:"#7B68EE",     h:249,     s:80,     l:67],
+		[name:"Medium Spring Green",     rgb:"#00FA9A",     h:157,     s:100,     l:49],
+		[name:"Medium Turquoise",     rgb:"#48D1CC",     h:178,     s:60,     l:55],
+		[name:"Medium Violet Red",     rgb:"#C71585",     h:322,     s:81,     l:43],
+		[name:"Midnight Blue",     rgb:"#191970",     h:240,     s:64,     l:27],
+		[name:"Mint Cream",     rgb:"#F5FFFA",     h:150,     s:100,     l:98],
+		[name:"Misty Rose",     rgb:"#FFE4E1",     h:6,     s:100,     l:94],
+		[name:"Moccasin",     rgb:"#FFE4B5",     h:38,     s:100,     l:85],
+		[name:"Navajo White",     rgb:"#FFDEAD",     h:36,     s:100,     l:84],
+		[name:"Navy",     rgb:"#000080",     h:240,     s:100,     l:25],
+		[name:"Old Lace",     rgb:"#FDF5E6",     h:39,     s:85,     l:95],
+		[name:"Olive",     rgb:"#808000",     h:60,     s:100,     l:25],
+		[name:"Olive Drab",     rgb:"#6B8E23",     h:80,     s:60,     l:35],
+		[name:"Orange",     rgb:"#FFA500",     h:39,     s:100,     l:50],
+		[name:"Orange Red",     rgb:"#FF4500",     h:16,     s:100,     l:50],
+		[name:"Orchid",     rgb:"#DA70D6",     h:302,     s:59,     l:65],
+		[name:"Pale Golden Rod",     rgb:"#EEE8AA",     h:55,     s:67,     l:80],
+		[name:"Pale Green",     rgb:"#98FB98",     h:120,     s:93,     l:79],
+		[name:"Pale Turquoise",     rgb:"#AFEEEE",     h:180,     s:65,     l:81],
+		[name:"Pale Violet Red",     rgb:"#DB7093",     h:340,     s:60,     l:65],
+		[name:"Papaya Whip",     rgb:"#FFEFD5",     h:37,     s:100,     l:92],
+		[name:"Peach Puff",     rgb:"#FFDAB9",     h:28,     s:100,     l:86],
+		[name:"Peru",     rgb:"#CD853F",     h:30,     s:59,     l:53],
+		[name:"Pink",     rgb:"#FFC0CB",     h:350,     s:100,     l:88],
+		[name:"Plum",     rgb:"#DDA0DD",     h:300,     s:47,     l:75],
+		[name:"Powder Blue",     rgb:"#B0E0E6",     h:187,     s:52,     l:80],
+		[name:"Purple",     rgb:"#800080",     h:300,     s:100,     l:25],
+		[name:"Red",     rgb:"#FF0000",     h:0,     s:100,     l:50],
+		[name:"Rosy Brown",     rgb:"#BC8F8F",     h:0,     s:25,     l:65],
+		[name:"Royal Blue",     rgb:"#4169E1",     h:225,     s:73,     l:57],
+		[name:"Saddle Brown",     rgb:"#8B4513",     h:25,     s:76,     l:31],
+		[name:"Salmon",     rgb:"#FA8072",     h:6,     s:93,     l:71],
+		[name:"Sandy Brown",     rgb:"#F4A460",     h:28,     s:87,     l:67],
+		[name:"Sea Green",     rgb:"#2E8B57",     h:146,     s:50,     l:36],
+		[name:"Sea Shell",     rgb:"#FFF5EE",     h:25,     s:100,     l:97],
+		[name:"Sienna",     rgb:"#A0522D",     h:19,     s:56,     l:40],
+		[name:"Silver",     rgb:"#C0C0C0",     h:0,     s:0,     l:75],
+		[name:"Sky Blue",     rgb:"#87CEEB",     h:197,     s:71,     l:73],
+		[name:"Slate Blue",     rgb:"#6A5ACD",     h:248,     s:53,     l:58],
+		[name:"Slate Gray",     rgb:"#708090",     h:210,     s:13,     l:50],
+		[name:"Snow",     rgb:"#FFFAFA",     h:0,     s:100,     l:99],
+		[name:"Soft White",     rgb:"#B6DA7C",     h:83,     s:44,     l:67],
+		[name:"Spring Green",     rgb:"#00FF7F",     h:150,     s:100,     l:50],
+		[name:"Steel Blue",     rgb:"#4682B4",     h:207,     s:44,     l:49],
+		[name:"Tan",     rgb:"#D2B48C",     h:34,     s:44,     l:69],
+		[name:"Teal",     rgb:"#008080",     h:180,     s:100,     l:25],
+		[name:"Thistle",     rgb:"#D8BFD8",     h:300,     s:24,     l:80],
+		[name:"Tomato",     rgb:"#FF6347",     h:9,     s:100,     l:64],
+		[name:"Turquoise",     rgb:"#40E0D0",     h:174,     s:72,     l:56],
+		[name:"Violet",     rgb:"#EE82EE",     h:300,     s:76,     l:72],
+		[name:"Warm White",     rgb:"#DAF17E",     h:72,     s:20,     l:72],
+		[name:"Wheat",     rgb:"#F5DEB3",     h:39,     s:77,     l:83],
+		[name:"White",     rgb:"#FFFFFF",     h:0,     s:0,     l:100],
+		[name:"White Smoke",     rgb:"#F5F5F5",     h:0,     s:0,     l:96],
+		[name:"Yellow",     rgb:"#FFFF00",     h:60,     s:100,     l:50],
+		[name:"Yellow Green",     rgb:"#9ACD32",     h:80,     s:61,     l:50]
     ]
+}
+
+private isHubitat(){
+ 	return hubUID != null   
 }

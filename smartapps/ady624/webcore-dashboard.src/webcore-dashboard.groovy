@@ -21,7 +21,7 @@ public static String version() { return "v0.3.108.20180906" }
 /*** webCoRE DEFINITION														***/
 /******************************************************************************/
 private static String handle() { return "webCoRE" }
-include 'asynchttp_v1'
+if(!isHubitat())include 'asynchttp_v1'
 definition(
 	name: "${handle()} Dashboard",
 	namespace: "ady624",
@@ -147,17 +147,21 @@ private void broadcastEvent(deviceId, eventName, eventValue, eventTime) {
 	def iid = state.instanceId
     def region = state.region ?: 'us'
     if (!iid || !iid.startsWith(':') || !iid.endsWith(':')) return
-    asynchttp_v1.put(null, [
-        uri: "https://api-${region}-${iid[32]}.webcore.co:9237",
-        path: '/event/sink',
-        headers: ['ST' : state.instanceId],
-        body: [
-        	d: deviceId,
-        	n: eventName,
-        	v: eventValue,
-        	t: eventTime
-    	]
-    ])
+    
+    def params = [
+            uri: "https://api-${region}-${iid[32]}.webcore.co:9237",
+            path: '/event/sink',
+            requestContentType: "application/json",
+            headers: ['ST' : state.instanceId],
+            body: [d: deviceId, n: eventName, v: eventValue, t: eventTime]
+        ]
+    
+    if(asynchttp_v1){
+        asynchttp_v1.put(null, params)
+    }
+    //else {
+    //    asynchttpPut((String)null, params)
+    //}
 }
 
 /******************************************************************************/
@@ -189,6 +193,10 @@ def String hashId(id) {
         state.hash = hash
     }
     return result
+}
+
+private isHubitat(){
+ 	return hubUID != null   
 }
 
 /******************************************************************************/

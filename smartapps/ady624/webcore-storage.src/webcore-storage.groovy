@@ -120,6 +120,9 @@ private initialize() {
 /*** 																		***/
 /******************************************************************************/
 
+public getStorageSettings(){
+ 	settings   
+}
 def initData(devices, contacts) {
     if (devices) {
 		for(item in devices) {
@@ -133,11 +136,20 @@ def initData(devices, contacts) {
 }
 
 def Map listAvailableDevices(raw = false) {
+    def overrides = commandOverrides()
 	if (raw) {
     	return settings.findAll{ it.key.startsWith("dev:") }.collect{ it.value }.flatten().collectEntries{ dev -> [(hashId(dev.id)): dev]}
     } else {
-    	return settings.findAll{ it.key.startsWith("dev:") }.collect{ it.value }.flatten().collectEntries{ dev -> [(hashId(dev.id)): dev]}.collectEntries{ id, dev -> [ (id): [ n: dev.getDisplayName(), cn: dev.getCapabilities()*.name, a: dev.getSupportedAttributes().unique{ it.name }.collect{def x = [n: it.name, t: it.getDataType(), o: it.getValues()]; try {x.v = dev.currentValue(x.n);} catch(all) {}; x}, c: dev.getSupportedCommands().unique{ it.getName() }.collect{[n: it.getName(), p: it.getArguments()]} ]]}
+    	return settings.findAll{ it.key.startsWith("dev:") }.collect{ it.value }.flatten().collectEntries{ dev -> [(hashId(dev.id)): dev]}.collectEntries{ id, dev -> [ (id): [ n: dev.getDisplayName(), cn: dev.getCapabilities()*.name, a: dev.getSupportedAttributes().unique{ it.name }.collect{def x = [n: it.name, t: it.getDataType(), o: it.getValues()]; try {x.v = dev.currentValue(x.n);} catch(all) {}; x}, c: dev.getSupportedCommands().unique{ transformCommand(it, overrides) }.collect{[n: transformCommand(it, overrides), p: it.getArguments()]} ]]}
 	}
+}
+
+private def transformCommand(command, overrides){
+    def override = overrides[command.getName()]
+    if(override && override.s == command.getArguments()?.toString()){
+    	return override.r
+    }
+    return command.getName()
 }
 
 def Map getDashboardData() {
@@ -156,6 +168,14 @@ def Map getDashboardData() {
 public String mem(showBytes = true) {
 	def bytes = state.toString().length()
 	return Math.round(100.00 * (bytes/ 100000.00)) + "%${showBytes ? " ($bytes bytes)" : ""}"
+}
+
+/* Push command has multiple overloads in hubitat */
+public Map commandOverrides(){
+	return (isHubitat() ? [
+     	push : [c: "push", s: null , r: "pushMomentary"],
+        flash : [c: "flash", s: null , r: "flashNative"],//s: command signature
+    ] : [:])
 }
 
 /******************************************************************************/
@@ -187,6 +207,10 @@ def String hashId(id) {
         state.hash = hash
     }
     return result
+}
+
+private isHubitat(){
+ 	return hubUID != null   
 }
 
 /******************************************************************************/
