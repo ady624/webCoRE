@@ -2157,11 +2157,4 @@ if (!String.prototype.endsWith) {
 	};
 }
 
-// Set a blank default title to prevent selectpicker from using the title 
-// attribute from the select element as the name of the selected option. The 
-// Chrome browser's autofill-type-predictions feature populates a very confusing
-// value for the title attribute and this type of autofill was not able to be 
-// turned off through markup.
-$.fn.selectpicker.Constructor.DEFAULTS.title = '';
-
 version = function() { return 'v0.3.108.20180906'; };

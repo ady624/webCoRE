@@ -276,8 +276,8 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 									$scope.loading = true;
 									getPiston = dataService.getPiston($scope.params.piston).then(function (response) {
 										// Do not trigger a rebuild
-										delete response.data.l;
-										return response.data;
+										delete response.data.piston.l;
+										return response.data.piston;
 									});
 								}
 								break;
