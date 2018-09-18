@@ -2101,7 +2101,6 @@ private broadcastPistonList() {
 def webCoREHandler(event) {
     if (!event || (!event.name.endsWith(handle()))) return;
     def data = event.jsonData ?: null
-    log.error "GOT EVENT WITH DATA $data"
     if (data && data.variable && (data.event == 'variable') && event.value && event.value.startsWith('@')) {
     	Map vars = atomicState.vars ?: [:]
         Map variable = data.variable
