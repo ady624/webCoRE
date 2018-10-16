@@ -18,8 +18,11 @@
  *
  *  Version history
 */
-public static String version() { return "v0.3.105.20180628" }
+public static String version() { return "v0.3.108.20180906" }
 /*
+ *	09/06/2018 >>> v0.3.108.20180906 - BETA M3 - Restore pistons from backup file, hide "(unknown)" SHM status, fixed string to date across DST thanks @bangali, null routines, integer trailing zero cast, saving large pistons and disappearing variables on mobile
+ *	08/06/2018 >>> v0.3.107.20180806 - BETA M3 - Font Awesome 5 icons, expanding textareas to fix expression scrolling, boolean date and datetime global variable editor fixes
+ *	07/31/2018 >>> v0.3.106.20180731 - BETA M3 - Contact Book removal support
  *	06/28/2018 >>> v0.3.105.20180628 - BETA M3 - Reorder variables, collapse fuel streams, custom web request body, json and urlEncode functions
  *	03/23/2018 >>> v0.3.104.20180323 - BETA M3 - Fixed unexpected dashboard logouts, updating image urls in tiles, 12 am/pm in time(), unary negation following another operator
  *	02/24/2018 >>> v0.3.000.20180224 - BETA M3 - Dashboard redesign by @acd37, collapsible sidebar, fix "was" conditions on decimal attributes and log failures due to duration threshold
@@ -2782,18 +2785,11 @@ private long vcmd_sendSMSNotification(rtData, device, params) {
 }
 
 private long vcmd_sendNotificationToContacts(rtData, device, params) {
+	// Contact Book has been disabled and we're falling back onto PUSH notifications, if the option is enabled in the SmartApp's settings
+    if (!rtData.redirectContactBook) return 0
 	def message = params[0]
-    List contacts = (params[1] instanceof List ? params[1] : params[1].toString().tokenize(',')).unique();
-	List recipients = rtData.contacts.findAll{ it.key in contacts }.collect{ it.value }
-    if (recipients.size()) {
-        if (recipients && recipients.size()) {
-			def save = !!params[2]
-			sendNotificationToContacts(message, recipients, [event: save, view: [name: "webCoRE", data: [:]]])
-        }
-	} else {
-    	error "Invalid list of contacts: ${params[1]}", rtData
-    }
-    return 0
+    def save = !!params[2]
+    return vcmd_sendPushNotification(rtData, devices, [message, save])
 }
 
 
@@ -2855,10 +2851,13 @@ private long vcmd_resumePiston(rtData, device, params) {
 }
 
 private long vcmd_executeRoutine(rtData, device, params) {
-	def routineId = params[0]
-    def routine = location.helloHome?.getPhrases().find{ hashId(it.id) == routineId }
-    if (routine) {
-	    location.helloHome?.execute(routine.label)
+    def routineId = params[0]
+    def routines = location.helloHome?.getPhrases()
+    if (routines) {
+        def routine = routines.find{ hashId(it.id) == routineId }
+        if (routine) {
+            location.helloHome?.execute(routine.label)
+        }
     }
     return 0
 }
@@ -4069,7 +4068,7 @@ private boolean valueWas(rtData, comparisonValue, rightValue, rightValue2, timeV
     }
     if (!duration) return false
     result = (timeValue.f == 'l') ? duration < threshold : duration >= threshold
-    debug "Duration ${duration}ms for ${func.replace('is_', 'was_')} ${timeValue.f == 'l' ? '<' : '>='} ${threshold}ms threshold = ${result}", rtData
+    if (rtData.logging > 2) debug "Duration ${duration}ms for ${func.replace('is_', 'was_')} ${timeValue.f == 'l' ? '<' : '>='} ${threshold}ms threshold = ${result}", rtData
     return result
 }
 
@@ -7287,7 +7286,8 @@ private cast(rtData, value, dataType, srcDataType = null) {
             	case 'boolean': return value ? "true" : "false";
             	case 'decimal':
                 	//if (value instanceof Double) return sprintf('%f', value)
-                    return value.toString().replaceFirst(/\.?(0+)$/, '')
+                    // strip trailing zeroes (e.g. 5.00 to 5 and 5.030 to 5.03)
+                    return value.toString().replaceFirst(/(?:\.|(\.\d*?))0+$/, '$1')
             	case 'integer':
             	case 'long': break; if (value > 9999999999) { return formatLocalTime(value) }; break;
                 case 'time': return formatLocalTime(value, 'h:mm:ss a z');
@@ -7480,7 +7480,11 @@ private localToUtcTime(dateOrTimeOrString) {
 	if (dateOrTimeOrString instanceof String) {
 		//get unix time
         try {
-        	return (new Date()).parse(dateOrTimeOrString + (!(dateOrTimeOrString =~ /(\s[A-Z]{3}((\+|\-)[0-9]{2}\:[0-9]{2}|\s[0-9]{4})?$)/)? ' ' + formatLocalTime(now(), 'z') : ''))
+            if (!(dateOrTimeOrString =~ /(\s[A-Z]{3}((\+|\-)[0-9]{2}\:[0-9]{2}|\s[0-9]{4})?$)/)) {
+                def newDate = (new Date()).parse(dateOrTimeOrString + ' ' + formatLocalTime(now(), 'Z'))
+                return newDate + (location.timeZone.getOffset(now()) - location.timeZone.getOffset(newDate))
+            }
+            return (new Date()).parse(dateOrTimeOrString)
 		} catch (all) {
         	try {
 	        	return (new Date(dateOrTimeOrString)).getTime()

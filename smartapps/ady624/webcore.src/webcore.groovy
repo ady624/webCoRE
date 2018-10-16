@@ -18,8 +18,11 @@
  *
  *  Version history
 */
-public static String version() { return "v0.3.105.20180628" }
+public static String version() { return "v0.3.108.20180906" }
 /*
+ *	09/06/2018 >>> v0.3.108.20180906 - BETA M3 - Restore pistons from backup file, hide "(unknown)" SHM status, fixed string to date across DST thanks @bangali, null routines, integer trailing zero cast, saving large pistons and disappearing variables on mobile
+ *	08/06/2018 >>> v0.3.107.20180806 - BETA M3 - Font Awesome 5 icons, expanding textareas to fix expression scrolling, boolean date and datetime global variable editor fixes
+ *	07/31/2018 >>> v0.3.106.20180731 - BETA M3 - Contact Book removal support
  *	06/28/2018 >>> v0.3.105.20180628 - BETA M3 - Reorder variables, collapse fuel streams, custom web request body, json and urlEncode functions
  *	03/23/2018 >>> v0.3.104.20180323 - BETA M3 - Fixed unexpected dashboard logouts, updating image urls in tiles, 12 am/pm in time(), unary negation following another operator
  *	02/24/2018 >>> v0.3.000.20180224 - BETA M3 - Dashboard redesign by @acd37, collapsible sidebar, fix "was" conditions on decimal attributes and log failures due to duration threshold
@@ -309,7 +312,6 @@ preferences {
 	page(name: "pageInitializeDashboard")
 	page(name: "pageFinishInstall")
 	page(name: "pageSelectDevices")
-	page(name: "pageSelectContacts")
 	page(name: "pageSettings")
     page(name: "pageChangePassword")
     page(name: "pageSavePassword")
@@ -512,7 +514,7 @@ private pageEngineBlock() {
 
 private pageSelectDevices() {
 	state.deviceVersion = now().toString()
-	dynamicPage(name: "pageSelectDevices", title: "", nextPage: state.installed ? null : (location.getContactBookEnabled() ? "pageSelectContacts" : "pageFinishInstall")) {
+	dynamicPage(name: "pageSelectDevices", title: "", nextPage: state.installed ? null : "pageFinishInstall") {
 		section() {
 			paragraph "${state.installed ? "Select the devices you want ${handle()} to have access to." : "Great, now let's select some devices."}"
             paragraph "It is a good idea to only select the devices you plan on using with ${handle()} pistons. Pistons will only have access to the devices you selected."
@@ -543,26 +545,6 @@ private pageSelectDevices() {
 	}
 }
 
-private pageSelectContacts() {
-	state.deviceVersion = now().toString()
-	dynamicPage(name: "pageSelectContacts", title: "", nextPage: state.installed ? null : "pageFinishInstall") {
-		section() {
-			paragraph "${state.installed ? "Select the contacts you want ${handle()} to have access to." : "Great, now let's select some contacts."}"
-        }
-        if (!state.installed) {
-        	section (Note) {
-            	paragraph "Remember, you can always come back to ${handle()} and add or remove contacts as needed.", required: true
-            }
-        	section() {
-            	paragraph "So go ahead, select a few contacts, then tap Next"
-            }
-        }
-        section () {
-			input "contacts", "contact", multiple: true, title: "Which contacts", required: false
-		}
-	}
-}
-
 private pageFinishInstall() {
 	initTokens()
 	dynamicPage(name: "pageFinishInstall", title: "", install: true) {
@@ -588,19 +570,12 @@ def pageSettings() {
 
         def storageApp = getStorageApp()
         if (storageApp) {
-			section("Available devices and contacts") {
-	        	app([title: 'Available devices and contacts', multiple: false, install: true, uninstall: false], 'storage', 'ady624', "${handle()} Storage")
+			section("Available devices") {
+	        	app([title: 'Available devices', multiple: false, install: true, uninstall: false], 'storage', 'ady624', "${handle()} Storage")
 	        }
 		} else {
 			section("Available devices") {
 				href "pageSelectDevices", title: "Available devices", description: "Tap here to select which devices are available to pistons"
-			}
-			section("Available contacts") {
-				if (location.getContactBookEnabled()) {
-					href "pageSelectContacts", title: "Available contacts", description: "Tap here to select which contacts are available to pistons"
-				} else {
-    	        	paragraph "Your contact book is not enabled."
-        	    }
 			}
 		}
 /*		section("Integrations") {
@@ -621,6 +596,7 @@ def pageSettings() {
 
 		section(title: "Maintenance") {
 			paragraph "Memory usage is at ${mem()}", required: false
+			input "redirectContactBook", "bool", title: "Redirect all Contact Book requests as PUSH notifications", description: "SmartThings has removed the Contact Book feature and as a result, all uses of Contact Book are by default ignored. By enabling this option, you will get all the existing Contact Book uses fall back onto the PUSH notification system, possibly allowing other people to receive these notifications.", defaultValue: false, required: true
 			input "disabled", "bool", title: "Disable all pistons", description: "Disable all pistons belonging to this instance", defaultValue: false, required: false
 			href "pageRebuildCache", title: "Clean up and rebuild data cache", description: "Tap here to change your clean up and rebuild your data cache"
 		}
@@ -950,7 +926,7 @@ private api_get_base_result(deviceVersion = 0, updateCache = false) {
             lifx: state.lifx ?: [:],
             virtualDevices: virtualDevices(updateCache),
             globalVars: listAvailableVariables(),
-        ] + (sendDevices ? [contacts: listAvailableContacts(false, updateCache), devices: listAvailableDevices(false, updateCache)] : [:]),
+        ] + (sendDevices ? [contacts: [:], devices: listAvailableDevices(false, updateCache)] : [:]),
         location: [
             contactBookEnabled: location.getContactBookEnabled(),
             hubs: location.getHubs().collect{ [id: hashId(it.id, updateCache), name: it.name, firmware: hubUID ? 'unknown' : it.getFirmwareVersionString(), physical: it.getType().toString().contains('PHYSICAL'), powerSource: it.isBatteryInUse() ? 'battery' : 'mains' ]},
@@ -1739,21 +1715,6 @@ public Map listAvailableDevices(raw = false, updateCache = false) {
     return result
 }
 
-private Map listAvailableContacts(raw = false, updateCache = false) {
-	def storageApp = getStorageApp()
-    if (storageApp) return storageApp.listAvailableContacts(raw)
-    def contacts = [:]
-    for(contact in settings.contacts) {
-        def contactId = hashId(contact.id, updateCache);
-        if (raw) {
-            contacts[contactId] = contact
-        } else {
-            contacts[contactId] = [t: contact.name, f: contact.contact.firstName, l: contact.contact.lastName, p: "$contact".endsWith('PUSH')]
-        }
-    }
-    return contacts
-}
-
 private setPowerSource(powerSource, atomic = true) {
 	if (state.powerSource == powerSource) return
     if (atomic) {
@@ -2023,7 +1984,7 @@ public Map getRunTimeData(semaphore = null, fetchWrappers = false) {
 		],
         comparisons: comparisons(),
         coreVersion: version(),
-    	contacts: (!!fetchWrappers ? (storageApp ? storageApp.listAvailableContacts(true) : listAvailableContacts(true)) : [:]),
+    	contacts: [:],
     	devices: (!!fetchWrappers ? (storageApp ? storageApp.listAvailableDevices(true) : listAvailableDevices(true)) : [:]),
         virtualDevices: virtualDevices(),
         globalVars: listAvailableVariables(),
@@ -2036,7 +1997,8 @@ public Map getRunTimeData(semaphore = null, fetchWrappers = false) {
         sunTimes: getSunTimes(),
         started: startTime,
         ended: now(),
-        generatedIn: now() - startTime
+        generatedIn: now() - startTime,
+        redirectContactBook: settings.redirectContactBook
     ]
 }
 
@@ -2559,8 +2521,8 @@ private static Map commands() {
 		both						: [ n: "Strobe and Siren",																a: "alarm",							v: "both",																																			],
 		cancel						: [ n: "Cancel",																																																																],
 		close						: [ n: "Close",																			a: "doore",							v: "close",																																			],
-		configure					: [ n: "Configure",						i: 'gear',																																																										],
-		cool						: [ n: "Set to Cool",					i: 'asterisk',									a: "thermostatMode",				v: "cool",																																			],
+		configure					: [ n: "Configure",						i: 'cog',																																																										],
+		cool						: [ n: "Set to Cool",					i: 'snowflake', is: 'l',									a: "thermostatMode",				v: "cool",																																			],
 		deviceNotification			: [ n: "Send device notification...",	d: "Send device notification \"{0}\"",																		p: [[n:"Message",t:"string"]],  																							],
 		emergencyHeat				: [ n: "Set to Emergency Heat",															a: "thermostatMode",				v: "emergency heat",																																	],
 		fanAuto						: [ n: "Set fan to Auto",																a: "thermostatFanMode",				v: "auto",																																			],
@@ -2575,7 +2537,7 @@ private static Map commands() {
 		lock						: [ n: "Lock",							i: "lock",										a: "lock",							v: "locked",																																		],
 		mute						: [ n: "Mute",							i: 'volume-off',								a: "mute",							v: "muted",																																			],
 		nextTrack					: [ n: "Next track",																																																															],
-		off							: [ n: "Turn off",						i: "circle-o-notch",							a: "switch",						v: "off",																																			],
+		off							: [ n: "Turn off",						i: 'circle-notch',							a: "switch",						v: "off",																																			],
 		on							: [ n: "Turn on",						i: "power-off",									a: "switch",						v: "on",																																			],
 		open						: [ n: "Open",																			a: "door",							v: "open",																																			],
 		pause						: [ n: "Pause",																																																																	],
@@ -2590,15 +2552,15 @@ private static Map commands() {
 		presetPosition				: [ n: "Move to preset position",														a: "windowShade",					v: "partially open",																																],
 		previousTrack				: [ n: "Previous track",																																																														],
 		push						: [ n: "Push",																																																																	],
-		refresh						: [ n: "Refresh",					i: 'refresh',																																																											],
+		refresh						: [ n: "Refresh",					i: 'sync',																																																											],
 		restoreTrack				: [ n: "Restore track...",				d: "Restore track <uri>{0}</uri>",																			p: [[n:"Track URL",t:"url"]],  																								],
 		resumeTrack					: [ n: "Resume track...",				d: "Resume track <uri>{0}</uri>",																			p: [[n:"Track URL",t:"url"]],  																								],
-		setColor					: [ n: "Set color...",				i: 'barcode',	d: "Set color to {0}{1}",						a: "color",													p: [[n:"Color",t:"color"], [n:"Only if switch is...", t:"enum",o:["on","off"], d:" if already {v}"]],  							],
+		setColor					: [ n: "Set color...",				i: 'palette', is: "l",	d: "Set color to {0}{1}",						a: "color",													p: [[n:"Color",t:"color"], [n:"Only if switch is...", t:"enum",o:["on","off"], d:" if already {v}"]],  							],
 		setColorTemperature			: [ n: "Set color temperature...",		d: "Set color temperature to {0}°K{1}",			a: "colorTemperature",										p: [[n:"Color Temperature", t:"colorTemperature"], [n:"Only if switch is...", t:"enum",o:["on","off"], d:" if already {v}"]],	],
 		setConsumableStatus			: [ n: "Set consumable status...",		d: "Set consumable status to {0}",																			p: [[n:"Status", t:"consumable"]],																							],
 		setCoolingSetpoint			: [ n: "Set cooling point...",			d: "Set cooling point at {0}{T}",				a: "thermostatCoolingSetpoint",								p: [[n:"Desired temperature", t:"thermostatSetpoint"]], 																	],
 		setHeatingSetpoint			: [ n: "Set heating point...",			d: "Set heating point at {0}{T}",				a: "thermostatHeatingSetpoint",								p: [[n:"Desired temperature", t:"thermostatSetpoint"]], 																	],
-		setHue						: [ n: "Set hue...",				i: 'barcode',	d: "Set hue to {0}°{1}",			a: "hue",													p: [[n:"Hue", t:"hue"], [n:"Only if switch is...", t:"enum",o:["on","off"], d:" if already {v}"]], 								],
+		setHue						: [ n: "Set hue...",				i: 'palette', is: "l",	d: "Set hue to {0}°{1}",			a: "hue",													p: [[n:"Hue", t:"hue"], [n:"Only if switch is...", t:"enum",o:["on","off"], d:" if already {v}"]], 								],
 		setInfraredLevel			: [ n: "Set infrared level...",		i: 'signal',	d: "Set infrared level to {0}%{1}",	a: "infraredLevel",											p: [[n:"Level",t:"infraredLevel"], [n:"Only if switch is...", t:"enum",o:["on","off"], d:" if already {v}"]], 					],
 		setLevel					: [ n: "Set level...",				i: 'signal',	d: "Set level to {0}%{1}",			a: "level",													p: [[n:"Level",t:"level"], [n:"Only if switch is...", t:"enum",o:["on","off"], d:" if already {v}"]], 							],
 		setSaturation				: [ n: "Set saturation...",				d: "Set saturation to {0}{1}",					a: "saturation",											p: [[n:"Saturation", t:"saturation"], [n:"Only if switch is...", t:"enum",o:["on","off"], d:" if already {v}"]],					],
@@ -2680,34 +2642,34 @@ private static Map virtualCommands() {
     //t = type
     List tileIndexes = ['1','2','3','4','5','6','7','8','9','10','11','12','13','14','15','16']
 	return [
-		noop						: [	n: "No operation",				a: true,	i: 'circle',				d: "No operation",																										],
-		wait						: [	n: "Wait...", 					a: true,	i: "clock-o",				d: "Wait {0}",															p: [[n:"Duration", t:"duration"]],				],
-		waitRandom					: [ n: "Wait randomly...",			a: true,	i: "clock-o",				d: "Wait randomly between {0} and {1}",									p: [[n:"At least", t:"duration"],[n:"At most", t:"duration"]],	],
-		waitForTime					: [ n: "Wait for time...",			a: true,	i: "clock-o",				d: "Wait until {0}",													p: [[n:"Time", t:"time"]],	],
-		waitForDateTime				: [ n: "Wait for date & time...",	a: true,	i: "clock-o",				d: "Wait until {0}",													p: [[n:"Date & Time", t:"datetime"]],	],
-		executePiston				: [ n: "Execute piston...",			a: true,	i: "clock-o",				d: "Execute piston \"{0}\"{1}",											p: [[n:"Piston", t:"piston"], [n:"Arguments", t:"variables", d:" with arguments {v}"],[n:"Wait for execution",t:"boolean",d:" and wait for execution to finish",w:"webCoRE can only wait on piston executions of pistons within the same instance as the caller. Please note that global variables updated in the callee piston do NOT get reflected immediately in the caller piston, the new values will be available on the next run."]],	],
-		pausePiston					: [ n: "Pause piston...",			a: true,	i: "clock-o",				d: "Pause piston \"{0}\"",												p: [[n:"Piston", t:"piston"]],	],
-		resumePiston				: [ n: "Resume piston...",			a: true,	i: "clock-o",				d: "Resume piston \"{0}\"",												p: [[n:"Piston", t:"piston"]],	],
-		executeRoutine				: [ n: "Execute routine...",		a: true,	i: "clock-o",				d: "Execute routine \"{0}\"",											p: [[n:"Routine", t:"routine"]],	],
+		noop						: [	n: "No operation",				a: true,	i: "circle",				d: "No operation",																										],
+		wait						: [	n: "Wait...", 					a: true,	i: "clock", is: "r",				d: "Wait {0}",															p: [[n:"Duration", t:"duration"]],				],
+		waitRandom					: [ n: "Wait randomly...",			a: true,	i: "clock", is: "r",				d: "Wait randomly between {0} and {1}",									p: [[n:"At least", t:"duration"],[n:"At most", t:"duration"]],	],
+		waitForTime					: [ n: "Wait for time...",			a: true,	i: "clock", is: "r",				d: "Wait until {0}",													p: [[n:"Time", t:"time"]],	],
+		waitForDateTime				: [ n: "Wait for date & time...",	a: true,	i: "clock", is: "r",				d: "Wait until {0}",													p: [[n:"Date & Time", t:"datetime"]],	],
+		executePiston				: [ n: "Execute piston...",			a: true,	i: "clock", is: "r",				d: "Execute piston \"{0}\"{1}",											p: [[n:"Piston", t:"piston"], [n:"Arguments", t:"variables", d:" with arguments {v}"],[n:"Wait for execution",t:"boolean",d:" and wait for execution to finish",w:"webCoRE can only wait on piston executions of pistons within the same instance as the caller. Please note that global variables updated in the callee piston do NOT get reflected immediately in the caller piston, the new values will be available on the next run."]],	],
+		pausePiston					: [ n: "Pause piston...",			a: true,	i: "clock", is: "r",				d: "Pause piston \"{0}\"",												p: [[n:"Piston", t:"piston"]],	],
+		resumePiston				: [ n: "Resume piston...",			a: true,	i: "clock", is: "r",				d: "Resume piston \"{0}\"",												p: [[n:"Piston", t:"piston"]],	],
+		executeRoutine				: [ n: "Execute routine...",		a: true,	i: "clock", is: "r",				d: "Execute routine \"{0}\"",											p: [[n:"Routine", t:"routine"]],	],
 		toggle						: [ n: "Toggle", r: ["on", "off"], 				i: "toggle-on"																				],
 		toggleRandom				: [ n: "Random toggle", r: ["on", "off"], 		i: "toggle-on",				d: "Random toggle{0}",													p: [[n:"Probability for on", t:"level", d:" with a {v}% probability for on"]],	],
 		setSwitch					: [ n: "Set switch...", r: ["on", "off"], 			i: "toggle-on",			d: "Set switch to {0}",													p: [[n:"Switch value", t:"switch"]],																],
-		setHSLColor					: [ n: "Set color... (hsl)", 					i: "barcode",				d: "Set color to H:{0}° / S:{1}% / L%:{2}{3}",				r: ["setColor"],				p: [[n:"Hue",t:"hue"], [n:"Saturation",t:"saturation"], [n:"Level",t:"level"], [n:"Only if switch is...", t:"enum",o:["on","off"], d:" if already {v}"]],  							],
+		setHSLColor					: [ n: "Set color... (hsl)", 					i: "palette", is: "l",				d: "Set color to H:{0}° / S:{1}% / L%:{2}{3}",				r: ["setColor"],				p: [[n:"Hue",t:"hue"], [n:"Saturation",t:"saturation"], [n:"Level",t:"level"], [n:"Only if switch is...", t:"enum",o:["on","off"], d:" if already {v}"]],  							],
 		toggleLevel					: [ n: "Toggle level...", 						i: "toggle-off",			d: "Toggle level between 0% and {0}%",	r: ["on", "off", "setLevel"],	p: [[n:"Level", t:"level"]],																																	],
-		sendNotification			: [ n: "Send notification...",		a: true,	i: "commenting-o",			d: "Send notification \"{0}\"",											p: [[n:"Message", t:"string"]],												],
-		sendPushNotification		: [ n: "Send PUSH notification...",	a: true,	i: "commenting-o",			d: "Send PUSH notification \"{0}\"{1}",									p: [[n:"Message", t:"string"],[n:"Store in Messages", t:"boolean", d:" and store in Messages", s:1]],	],
-		sendSMSNotification			: [ n: "Send SMS notification...",	a: true,	i: "commenting-o",			d: "Send SMS notification \"{0}\" to {1}{2}",							p: [[n:"Message", t:"string"],[n:"Phone number",t:"phone"],[n:"Store in Messages", t:"boolean", d:" and store in Messages", s:1]],	],
-		sendNotificationToContacts	: [ n: "Send notification to contacts...",a: true,i: "commenting-o",		d: "Send notification \"{0}\" to {1}{2}",								p: [[n:"Message", t:"string"],[n:"Contacts",t:"contacts"],[n:"Store in Messages", t:"boolean", d:" and store in Messages", s:1]],	],
+		sendNotification			: [ n: "Send notification...",		a: true,	i: "comment-alt", is: "r",			d: "Send notification \"{0}\"",											p: [[n:"Message", t:"string"]],												],
+		sendPushNotification		: [ n: "Send PUSH notification...",	a: true,	i: "comment-alt", is: "r",			d: "Send PUSH notification \"{0}\"{1}",									p: [[n:"Message", t:"string"],[n:"Store in Messages", t:"boolean", d:" and store in Messages", s:1]],	],
+		sendSMSNotification			: [ n: "Send SMS notification...",	a: true,	i: "comment-alt", is: "r",			d: "Send SMS notification \"{0}\" to {1}{2}",							p: [[n:"Message", t:"string"],[n:"Phone number",t:"phone"],[n:"Store in Messages", t:"boolean", d:" and store in Messages", s:1]],	],
+		sendNotificationToContacts	: [ n: "Send notification to contacts...",a: true,i: "comment-alt", is: "r",		d: "Send notification \"{0}\" to {1}{2}",								p: [[n:"Message", t:"string"],[n:"Contacts",t:"contacts"],[n:"Store in Messages", t:"boolean", d:" and store in Messages", s:1]],	],
 		log							: [ n: "Log to console...",			a: true,	i: "bug",					d: "Log {0} \"{1}\"{2}",												p: [[n:"Log type", t:"enum", o:["info","trace","debug","warn","error"]],[n:"Message",t:"string"],[n:"Store in Messages", t:"boolean", d:" and store in Messages", s:1]],	],
-		httpRequest					: [ n: "Make a web request",		a: true, 	i: "anchor",				d: "Make a {1} request to {0}",				        p: [[n:"URL", t:"uri"],[n:"Method", t:"enum", o:["GET","POST","PUT","DELETE","HEAD"]],[n:"Request body type", t:"enum", o:["JSON","FORM","CUSTOM"]],[n:"Send variables", t:"variables", d:"data {v}"],[n:"Request body", t:"string", d:"data {v}"],[n:"Request content type", t:"enum", o:["text/plain","text/html","application/json","application/x-www-form-urlencoded","application/xml"]],[n:"Authorization header", t:"string", d:"{v}"]],	],
-        setVariable					: [ n: "Set variable...",			a: true,	i: "superscript",			d: "Set variable {0} = {1}",											p: [[n:"Variable",t:"variable"],[n:"Value", t:"dynamic"]],	],
-        setState					: [ n: "Set piston state...",		a: true,	i: "superscript",			d: "Set piston state to \"{0}\"",										p: [[n:"State",t:"string"]],	],
-        setTileColor				: [ n: "Set piston tile colors...",	a: true,	i: "superscript",			d: "Set piston tile #{0} colors to {1} over {2}{3}",					p: [[n:"Tile Index",t:"enum",o:tileIndexes],[n:"Text Color",t:"color"],[n:"Background Color",t:"color"],[n:"Flash mode",t:"boolean",d:" (flashing)"]],	],
-        setTileTitle				: [ n: "Set piston tile title...",	a: true,	i: "superscript",			d: "Set piston tile #{0} title to \"{1}\"",								p: [[n:"Tile Index",t:"enum",o:tileIndexes],[n:"Title",t:"string"]],	],
-        setTileText					: [ n: "Set piston tile text...",	a: true,	i: "superscript",			d: "Set piston tile #{0} text to \"{1}\"",								p: [[n:"Tile Index",t:"enum",o:tileIndexes],[n:"Text",t:"string"]],	],
-        setTileFooter				: [ n: "Set piston tile footer...",	a: true,	i: "superscript",			d: "Set piston tile #{0} footer to \"{1}\"",							p: [[n:"Tile Index",t:"enum",o:tileIndexes],[n:"Footer",t:"string"]],	],
-        setTile						: [ n: "Set piston tile...",		a: true,	i: "superscript",			d: "Set piston tile #{0} title  to \"{1}\", text to \"{2}\", footer to \"{3}\", and colors to {4} over {5}{6}",		p: [[n:"Tile Index",t:"enum",o:tileIndexes],[n:"Title",t:"string"],[n:"Text",t:"string"],[n:"Footer",t:"string"],[n:"Text Color",t:"color"],[n:"Background Color",t:"color"],[n:"Flash mode",t:"boolean",d:" (flashing)"]],	],
-        clearTile					: [ n: "Clear piston tile...",		a: true,	i: "superscript",			d: "Clear piston tile #{0}",											p: [[n:"Tile Index",t:"enum",o:tileIndexes]],	],
+		httpRequest					: [ n: "Make a web request",		a: true, 	i: "anchor", is: "r",				d: "Make a {1} request to {0}",				        p: [[n:"URL", t:"uri"],[n:"Method", t:"enum", o:["GET","POST","PUT","DELETE","HEAD"]],[n:"Request body type", t:"enum", o:["JSON","FORM","CUSTOM"]],[n:"Send variables", t:"variables", d:"data {v}"],[n:"Request body", t:"string", d:"data {v}"],[n:"Request content type", t:"enum", o:["text/plain","text/html","application/json","application/x-www-form-urlencoded","application/xml"]],[n:"Authorization header", t:"string", d:"{v}"]],	],
+        setVariable					: [ n: "Set variable...",			a: true,	i: "superscript", is:"r",			d: "Set variable {0} = {1}",											p: [[n:"Variable",t:"variable"],[n:"Value", t:"dynamic"]],	],
+        setState					: [ n: "Set piston state...",		a: true,	i: "align-left", is:"l",			d: "Set piston state to \"{0}\"",										p: [[n:"State",t:"string"]],	],
+        setTileColor				: [ n: "Set piston tile colors...",	a: true,	i: "info-square", is:"l",			d: "Set piston tile #{0} colors to {1} over {2}{3}",					p: [[n:"Tile Index",t:"enum",o:tileIndexes],[n:"Text Color",t:"color"],[n:"Background Color",t:"color"],[n:"Flash mode",t:"boolean",d:" (flashing)"]],	],
+        setTileTitle				: [ n: "Set piston tile title...",	a: true,	i: "info-square", is:"l",			d: "Set piston tile #{0} title to \"{1}\"",								p: [[n:"Tile Index",t:"enum",o:tileIndexes],[n:"Title",t:"string"]],	],
+        setTileText					: [ n: "Set piston tile text...",	a: true,	i: "info-square", is:"l",			d: "Set piston tile #{0} text to \"{1}\"",								p: [[n:"Tile Index",t:"enum",o:tileIndexes],[n:"Text",t:"string"]],	],
+        setTileFooter				: [ n: "Set piston tile footer...",	a: true,	i: "info-square", is:"l",			d: "Set piston tile #{0} footer to \"{1}\"",							p: [[n:"Tile Index",t:"enum",o:tileIndexes],[n:"Footer",t:"string"]],	],
+        setTile						: [ n: "Set piston tile...",		a: true,	i: "info-square", is:"l",			d: "Set piston tile #{0} title  to \"{1}\", text to \"{2}\", footer to \"{3}\", and colors to {4} over {5}{6}",		p: [[n:"Tile Index",t:"enum",o:tileIndexes],[n:"Title",t:"string"],[n:"Text",t:"string"],[n:"Footer",t:"string"],[n:"Text Color",t:"color"],[n:"Background Color",t:"color"],[n:"Flash mode",t:"boolean",d:" (flashing)"]],	],
+        clearTile					: [ n: "Clear piston tile...",		a: true,	i: "info-square", is:"l",			d: "Clear piston tile #{0}",											p: [[n:"Tile Index",t:"enum",o:tileIndexes]],	],
 		setLocationMode				: [ n: "Set location mode...",		a: true,	i: "", 						d: "Set location mode to {0}", 											p: [[n:"Mode",t:"mode"]],																														],
 		setAlarmSystemStatus		: [ n: "Set Smart Home Monitor status...",	a: true, i: "",					d: "Set Smart Home Monitor status to {0}",								p: [[n:"Status", t:"alarmSystemStatus"]],																										],
 		sendEmail					: [ n: "Send email...",				a: true,	i: "envelope", 				d: "Send email with subject \"{1}\" to {0}", 							p: [[n:"Recipient",t:"email"],[n:"Subject",t:"string"],[n:"Message body",t:"string"]],																							],
@@ -2978,11 +2940,14 @@ private static Map getAlarmSystemStatusOptions() {
 }
 
 private Map getRoutineOptions(updateCache = false) {
-	def routines = location.helloHome?.getPhrases().sort{ it?.label ?: '' }
+    def routines = location.helloHome?.getPhrases()
     def result = [:]
-    for(routine in routines) {
-    	if (routine && routine?.label)
-    		result[hashId(routine.id, updateCache)] = routine.label
+    if (routines) {
+        routines = routines.sort{ it?.label ?: '' }
+        for(routine in routines) {
+            if (routine && routine?.label)
+                result[hashId(routine.id, updateCache)] = routine.label
+        }
     }
     return result
 }
