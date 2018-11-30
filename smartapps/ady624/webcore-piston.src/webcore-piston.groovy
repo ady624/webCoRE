@@ -3211,6 +3211,7 @@ private long vcmd_httpRequest(rtData, device, params) {
     }
     if (!uri) return false
 	def protocol = "https"
+	def requestContentType = (method == "GET" || requestBodyType == "FORM") ? "application/x-www-form-urlencoded" : (requestBodyType == "JSON") ? "application/json" : contentType
     def userPart = ""
 	def uriParts = uri.split("://").toList()
 	if (uriParts.size() > 2) {
@@ -3256,6 +3257,7 @@ private long vcmd_httpRequest(rtData, device, params) {
 				path: (uri.indexOf("/") > 0) ? uri.substring(uri.indexOf("/")) : "",
 				headers: [
 					HOST: userPart + ip,
+					'Content-Type': requestContentType
 				] + (auth ? [Authorization: auth] : [:]),
 				query: useQueryString ? data : null, //thank you @destructure00
 				body: !useQueryString ? data : null //thank you @destructure00
@@ -3272,7 +3274,7 @@ private long vcmd_httpRequest(rtData, device, params) {
 				uri:  "${protocol}://${userPart}${uri}",
 				query: useQueryString ? data : null,
                 headers: (auth ? [Authorization: auth] : [:]),
-				requestContentType: (method == "GET" || requestBodyType == "FORM") ? "application/x-www-form-urlencoded" : (requestBodyType == "JSON") ? "application/json" : contentType,
+				requestContentType: requestContentType,
 				body: !useQueryString ? data : null
 			]
 			def func = ""
