@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.3.108.20180906" }
+public static String version() { return "v0.3.109.20181207" }
 /*
+ *	12/07/2018 >>> v0.3.109.20181207 - BETA M3 - Dirty fix for dashboard timeouts: seems like ST has a lot of trouble reading the list of devices/commands/attributes/values these days, so giving up on reading values makes this much faster - temporarily?!
  *	09/06/2018 >>> v0.3.108.20180906 - BETA M3 - Restore pistons from backup file, hide "(unknown)" SHM status, fixed string to date across DST thanks @bangali, null routines, integer trailing zero cast, saving large pistons and disappearing variables on mobile
  *	08/06/2018 >>> v0.3.107.20180806 - BETA M3 - Font Awesome 5 icons, expanding textareas to fix expression scrolling, boolean date and datetime global variable editor fixes
  *	07/31/2018 >>> v0.3.106.20180731 - BETA M3 - Contact Book removal support
