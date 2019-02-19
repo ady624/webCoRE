@@ -4980,6 +4980,31 @@ private Map getWeather(rtData, name) {
 	return getJsonData(rtData, rtData.weather, name)
 }
 
+private Map getTwcWeather(rtData, name) {
+	List parts = name.tokenize('.');
+    rtData.twcWeather = rtData.twcWeather ?: [:]
+    if (parts.size() > 0) {
+    	def dataFeature = parts[0]
+        if (rtData.twcWeather[dataFeature] == null) {
+            switch (dataFeature) {
+                case 'alerts':
+                    rtData.twcWeather[dataFeature] = app.getTwcAlerts()?.alerts
+                    break
+                case 'conditions':
+                    rtData.twcWeather[dataFeature] = app.getTwcConditions()
+                    break
+                case 'forecast':
+                    rtData.twcWeather[dataFeature] = app.getTwcForecast()
+                    break
+                case 'location':
+                    rtData.twcWeather[dataFeature] = app.getTwcLocation()?.location
+                    break
+            }
+        }
+    }
+	return getJsonData(rtData, rtData.twcWeather, name)
+}
+
 private Map getNFLDataFeature(dataFeature) {
 	def requestParams = [
         uri:  "https://api.webcore.co/nfl/$dataFeature",
@@ -5052,6 +5077,8 @@ private Map getVariable(rtData, name) {
             	result = getNFL(rtData, name.substring(5))
             } else if (name.startsWith('$weather.') && (name.size() > 9)) {
             	result = getWeather(rtData, name.substring(9))
+            } else if (name.startsWith('$twcweather.') && (name.size() > 12)) {
+            	result = getTwcWeather(rtData, name.substring(12))
         	} else if (name.startsWith('$incidents.') && (name.size() > 11)) {
             	result = getIncidents(rtData, name.substring(11))
         	} else if (name.startsWith('$incidents[') && (name.size() > 11)) {
@@ -7843,6 +7870,7 @@ private static Map getSystemVariables() {
         '$places': [t: "dynamic", d: true],
         '$response': [t: "dynamic", d: true],
         '$weather': [t: "dynamic", d: true],
+        '$twcweather': [t: "dynamic", d: true],
         '$nfl': [t: "dynamic", d: true],
         '$incidents': [t: "dynamic", d: true],
         '$shmTripped': [t: "boolean", d: true],
@@ -7931,6 +7959,7 @@ private getSystemVariableValue(rtData, name) {
     	case '$places': return "${rtData.settings?.places}".toString()
     	case '$response': return "${rtData.response}".toString()
         case '$weather': return "${rtData.weather}".toString()
+        case '$twcweather': return "${rtData.twcWeather}".toString()
         case '$nfl': return "${rtData.nfl}".toString()
         case '$incidents': return "${rtData.incidents}".toString()
         case '$shmTripped': initIncidents(rtData); return !!((rtData.incidents instanceof List) && (rtData.incidents.size()))
