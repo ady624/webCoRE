@@ -4969,6 +4969,7 @@ private Map getResponse(rtData, name) {
 }
 
 private Map getWeather(rtData, name) {
+    warn 'The Weather Underground data source used by $weather will soon be shut down; please see https://wiki.webcore.co/TWC_Weather', rtData
 	List parts = name.tokenize('.');
     rtData.weather = rtData.weather ?: [:]
     if (parts.size() > 0) {
