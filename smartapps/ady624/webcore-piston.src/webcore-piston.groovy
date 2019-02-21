@@ -5850,6 +5850,26 @@ private func_fahrenheit(rtData, params) {
     return [t: "decimal", v: (double) t * 9.0 / 5.0 + 32.0]
 }
 
+
+/******************************************************************************/
+/*** fahrenheit converts temperature between Celsius and Fahrenheit if the  ***/
+/*** units differ from location.temperatureScale                            ***/
+/*** Usage: convertTemperatureIfNeeded(celsiusTemperature, 'C')             ***/
+/******************************************************************************/
+private func_converttemperatureifneeded(rtData, params) {
+    if (!params || !(params instanceof List) || (params.size() < 2)) {
+        return [t: "error", v: "Invalid parameters. Expecting convertTemperatureIfNeeded(temperature, unit)"];
+    }
+    double t = evaluateExpression(rtData, params[0], 'decimal').v
+    def u = evaluateExpression(rtData, params[1], 'string').v.toUpperCase()
+    //convert temperature to Fahrenheit
+    switch (location.temperatureScale) {
+       case u: return [t: "decimal", v: t]
+       case 'F': return func_celsius(rtData, [params[0]])
+       case 'C': return func_fahrenheit(rtData, [params[0]])
+   }
+}
+
 /******************************************************************************/
 /*** integer converts a decimal value to it's integer value					***/
 /*** Usage: integer(decimal or string)										***/

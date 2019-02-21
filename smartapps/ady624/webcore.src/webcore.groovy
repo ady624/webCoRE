@@ -2867,6 +2867,7 @@ private static Map functions() {
         dewpoint		: [ t: "decimal",	d: "dewPoint",		],
         fahrenheit		: [ t: "decimal",						],
         celsius			: [ t: "decimal",						],
+        converttemperatureifneeded : [ t: "decimal", d: "convertTemperatureIfNeeded", ],
         dateAdd			: [ t: "time",		d: "dateAdd",		],
         startswith		: [ t: "boolean",	d: "startsWith",	],
         endswith		: [ t: "boolean",	d: "endsWith",		],
