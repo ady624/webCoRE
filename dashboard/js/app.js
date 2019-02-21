@@ -1943,7 +1943,7 @@ function renderString($sce, value) {
 			return '<img class="wu" src="https://icons.wxug.com/i/c/' + iconSet + '/' + icon + ext + '" />';
 		}).replace(/\:twc-(\d+)\:/gi, function(match, iconCode) {
 			iconCode = (iconCode.length > 1 ? '' : '0') + iconCode
-			return '<img class="twc" src="https://smartthings-twc-icons.s3.amazonaws.com/' + iconCode + '.png" />';
+			return '<img class="twc wu" src="https://smartthings-twc-icons.s3.amazonaws.com/' + iconCode + '.png" />';
 		}).replace(/(?![^<]*[>])#[a-z0-9]{6}/gi, function(match) {
 			return '<span class="swatch" style="background-color:' + match + '">&nbsp;&nbsp;&nbsp;&nbsp;</span>' + match;
 		}).replace(/\\[rn]/gi, '<br/>');
