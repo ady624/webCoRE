@@ -967,7 +967,8 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 			'has tiles': { p: /"c":"setTile/, l: 5 },
 			'requires IFTTT': { p: /"c":"iftttMaker"/, l: 2 },
 			'expects arguments': { p: /"u":"[^\[]|\$args\./, l: 1 },
-			'has devices in expressions': { p: /\[[^\]\{]+:/, l: 1 }
+			'has devices in expressions': { p: /\[[^\]\{]+:/, l: 1 },
+			'uses deprecated $weather variable': { p: /[^\w]\$weather[^\w]/, l: 1 }
 		};
 		reader.onload = function(e) {
 			var encrypted = e.target.result;

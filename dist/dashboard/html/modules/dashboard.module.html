@@ -173,6 +173,11 @@
 					<shm-mode data-toggle="tooltip" title="Smart Home Monitor is {{getSHMModeName()}}" ng-if="location.shm && location.shm !== 'unconfigured'" alert="{{location.incidents && (location.incidents.length > 0)}}" mode="{{location.shm}}">{{getSHMModeName()}}</shm-mode>
 					<incident ng-repeat="incident in location.incidents" source-type="{{incident.sourceType}}" ng-bind-html="renderIncident(incident)"></incident>
 				</div>
+				<div id="wuTerminated" collapse-target class="alert alert-warning collapse in">
+					<span class="fas fa-times pull-right collapse-control" data-toggle="collapse" collapse-control data-target="#wuTerminated" aria-expanded="true" small title="Hide warning"></span>
+					The API powering <code>$weather</code> has been shut down by Weather Underground. SmartThings users can switch to <code>$twcweather</code>, which uses data from The Weather Company, or weather smart apps.<br/><br/>
+					Learn more in the <a href="https://wiki.webcore.co/TWC_Weather" target="_blank" class="alert-link">wiki</a> and <a href="https://community.webcore.co" target="_blank" class="alert-link">community forum</a>.
+				</div>
 				<div class="no-animate alert alert-warning" ng-if="instance && permanentStatus" role="alert" ng-bind-html="permanentStatus"></div>
 				<div warning ng-if="canResumeImport" class="alert alert-info">
 					Would you like to resume importing pistons? <a href="#" ng-click="resumeImport()" class="alert-link">Continue your import</a> or if the import is complete <a href="#" ng-click="restartPistonImport()" class="alert-link">reset import data</a>
