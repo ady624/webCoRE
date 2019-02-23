@@ -4990,7 +4990,7 @@ private Map getTwcWeather(rtData, name) {
         if (rtData.twcWeather[dataFeature] == null) {
             switch (dataFeature) {
                 case 'alerts':
-                    rtData.twcWeather[dataFeature] = app.getTwcAlerts()?.alerts
+                    rtData.twcWeather[dataFeature] = app.getTwcAlerts()
                     break
                 case 'conditions':
                     rtData.twcWeather[dataFeature] = app.getTwcConditions()
