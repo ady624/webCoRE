@@ -4983,7 +4983,7 @@ private Map getWeather(rtData, name) {
 }
 
 private Map getTwcWeather(rtData, name) {
-	List parts = name.tokenize('.');
+	List parts = name.tokenize('.[');
     rtData.twcWeather = rtData.twcWeather ?: [:]
     if (parts.size() > 0) {
     	def dataFeature = parts[0]
