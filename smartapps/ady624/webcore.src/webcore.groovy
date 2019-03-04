@@ -912,12 +912,13 @@ private api_get_base_result(deviceVersion = 0, updateCache = false) {
 	def Boolean sendDevices = (deviceVersion != currentDeviceVersion)
     def name = handle() + ' Piston'
     def incidentThreshold = now() - 604800000
+    def instanceId = hashId(app.id, updateCache)
 	return [
         name: location.name + ' \\ ' + (app.label ?: app.name),
         instance: [
 	    	account: [id: hashId(hubUID ?: app.getAccountId(), updateCache)],
         	pistons: getChildApps().findAll{ it.name == name }.sort{ it.label }.collect{ [ id: hashId(it.id, updateCache), 'name': it.label, 'meta': state[hashId(it.id, updateCache)] ] },
-            id: hashId(app.id, updateCache),
+            id: instanceId,
             locationId: hashId(location.id, updateCache),
             name: app.label ?: app.name,
             uri: state.endpoint,
@@ -927,7 +928,8 @@ private api_get_base_result(deviceVersion = 0, updateCache = false) {
             settings: state.settings ?: [:],
             lifx: state.lifx ?: [:],
             virtualDevices: virtualDevices(updateCache),
-            globalVars: listAvailableVariables(),
+            globalVars: listAvailableVariables(),            
+            fuelStreamUrls: getFuelStreamUrls(instanceId),
         ] + (sendDevices ? [contacts: [:], devices: listAvailableDevices(false, updateCache)] : [:]),
         location: [
             contactBookEnabled: location.getContactBookEnabled(),
@@ -947,6 +949,17 @@ private api_get_base_result(deviceVersion = 0, updateCache = false) {
             zipCode: location.getZipCode(),
         ],
         now: now(),
+    ]
+}
+
+private getFuelStreamUrls(iid){
+    def region = state.endpoint.contains('graph-eu') ? 'eu' : 'us'
+    def baseUrl = 'https://api-' + region + '-' + iid[32] + '.webcore.co:9287/fuelStreams'
+    def headers = [ 'Auth-Token' : iid ]
+    
+    return [
+		list : [l: false, m: 'POST', h: headers, u: baseUrl + '/list', d: [i : iid]],
+        get  : [l: false, m: 'POST', h: headers, u: baseUrl + '/get',  d: [ i: iid ], p: 'f']
     ]
 }
 
