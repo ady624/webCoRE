@@ -18,8 +18,10 @@
  *
  *  Version history
 */
-public static String version() { return "v0.3.108.20180906" }
+public static String version() { return "v0.3.10a.20190223" }
 /*
+ *	02/23/2019 >>> v0.3.10a.20190223 - BETA M3 - Added $twcweather to replace discontinued $weather, added new :twc-[iconCode]: weather icon set, fixed content type for local HTTP requests
+ *	12/07/2018 >>> v0.3.109.20181207 - BETA M3 - Dirty fix for dashboard timeouts: seems like ST has a lot of trouble reading the list of devices/commands/attributes/values these days, so giving up on reading values makes this much faster - temporarily?!
  *	09/06/2018 >>> v0.3.108.20180906 - BETA M3 - Restore pistons from backup file, hide "(unknown)" SHM status, fixed string to date across DST thanks @bangali, null routines, integer trailing zero cast, saving large pistons and disappearing variables on mobile
  *	08/06/2018 >>> v0.3.107.20180806 - BETA M3 - Font Awesome 5 icons, expanding textareas to fix expression scrolling, boolean date and datetime global variable editor fixes
  *	07/31/2018 >>> v0.3.106.20180731 - BETA M3 - Contact Book removal support
@@ -2101,7 +2103,6 @@ private broadcastPistonList() {
 def webCoREHandler(event) {
     if (!event || (!event.name.endsWith(handle()))) return;
     def data = event.jsonData ?: null
-    log.error "GOT EVENT WITH DATA $data"
     if (data && data.variable && (data.event == 'variable') && event.value && event.value.startsWith('@')) {
     	Map vars = atomicState.vars ?: [:]
         Map variable = data.variable
@@ -2867,6 +2868,7 @@ private static Map functions() {
         dewpoint		: [ t: "decimal",	d: "dewPoint",		],
         fahrenheit		: [ t: "decimal",						],
         celsius			: [ t: "decimal",						],
+        converttemperatureifneeded : [ t: "decimal", d: "convertTemperatureIfNeeded", ],
         dateAdd			: [ t: "time",		d: "dateAdd",		],
         startswith		: [ t: "boolean",	d: "startsWith",	],
         endswith		: [ t: "boolean",	d: "endsWith",		],
