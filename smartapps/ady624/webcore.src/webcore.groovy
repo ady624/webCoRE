@@ -18,8 +18,10 @@
  *
  *  Version history
 */
-public static String version() { return "v0.3.10a.20190223" }
+public static String version() { return "v0.3.10c.20190522" }
 /*
+ *	05/22/2019 >>> v0.3.10c.20190522 - BETA M3 - Changed the device selection page in main app to fix timeout issues in Asia-Pacific
+ *	05/14/2019 >>> v0.3.10b.20190514 - BETA M3 - Changed the device selection page to fix timeout issues in Asia-Pacific
  *	02/23/2019 >>> v0.3.10a.20190223 - BETA M3 - Added $twcweather to replace discontinued $weather, added new :twc-[iconCode]: weather icon set, fixed content type for local HTTP requests
  *	12/07/2018 >>> v0.3.109.20181207 - BETA M3 - Dirty fix for dashboard timeouts: seems like ST has a lot of trouble reading the list of devices/commands/attributes/values these days, so giving up on reading values makes this much faster - temporarily?!
  *	09/06/2018 >>> v0.3.108.20180906 - BETA M3 - Restore pistons from backup file, hide "(unknown)" SHM status, fixed string to date across DST thanks @bangali, null routines, integer trailing zero cast, saving large pistons and disappearing variables on mobile
@@ -314,6 +316,7 @@ preferences {
 	page(name: "pageInitializeDashboard")
 	page(name: "pageFinishInstall")
 	page(name: "pageSelectDevices")
+	page(name: "pageSelectMoreDevices")
 	page(name: "pageSettings")
     page(name: "pageChangePassword")
     page(name: "pageSavePassword")
@@ -535,12 +538,20 @@ private pageSelectDevices() {
 			input "dev:actuator", "capability.actuator", multiple: true, title: "Which actuators", required: false
 			input "dev:sensor", "capability.sensor", multiple: true, title: "Which sensors", required: false
 		}
+        
+        section () {
+	        href "pageSelectMoreDevices", title: "Select devices by capability", description: "If you cannot find a device by type, you may try looking for it by capability"
+        }
+	}
+}
 
+private pageSelectMoreDevices() {
+	dynamicPage(name: "pageSelectMoreDevices", title: "") {
 		section ('Select devices by capability') {
-        	paragraph "If you cannot find a device by type, you may try looking for it by category below"
+        	paragraph "If you cannot find a device by type, you may try looking for it by capability below"
 			def d
 			for (capability in capabilities().findAll{ (!(it.value.d in [null, 'actuators', 'sensors'])) }.sort{ it.value.d }) {
-				if (capability.value.d != d) input "dev:${capability.key}", "capability.${capability.key}", multiple: true, title: "Which ${capability.value.d}", required: false
+				if (capability.value.d != d) input "dev:${capability.key}", "capability.${capability.key}", multiple: true, title: "Which ${capability.value.d}", required: false, submitOnChange: true
 				d = capability.value.d
 			}
 		}

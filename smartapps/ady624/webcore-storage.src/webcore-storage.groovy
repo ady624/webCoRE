@@ -16,7 +16,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-public static String version() { return "v0.3.10a.20190223" }
+public static String version() { return "v0.3.10c.20190522" }
 /******************************************************************************/
 /*** webCoRE DEFINITION														***/
 /******************************************************************************/
@@ -38,6 +38,7 @@ preferences {
 	//UI pages
 	page(name: "pageSettings")
 	page(name: "pageSelectDevices")
+	page(name: "pageSelectMoreDevices")
 }
 
 
@@ -77,9 +78,17 @@ private pageSelectDevices() {
 			input "dev:actuator", "capability.actuator", multiple: true, title: "Which actuators", required: false, submitOnChange: true
 			input "dev:sensor", "capability.sensor", multiple: true, title: "Which sensors", required: false, submitOnChange: true
 		}
+        
+        section () {
+	        href "pageSelectMoreDevices", title: "Select devices by capability", description: "If you cannot find a device by type, you may try looking for it by capability"
+        }
+	}
+}
 
+private pageSelectMoreDevices() {
+	dynamicPage(name: "pageSelectMoreDevices", title: "") {
 		section ('Select devices by capability') {
-        	paragraph "If you cannot find a device by type, you may try looking for it by category below"
+        	paragraph "If you cannot find a device by type, you may try looking for it by capability below"
 			def d
 			for (capability in parent.capabilities().findAll{ (!(it.value.d in [null, 'actuators', 'sensors'])) }.sort{ it.value.d }) {
 				if (capability.value.d != d) input "dev:${capability.key}", "capability.${capability.key}", multiple: true, title: "Which ${capability.value.d}", required: false, submitOnChange: true
@@ -88,7 +97,6 @@ private pageSelectDevices() {
 		}
 	}
 }
-
 
 /******************************************************************************/
 /*** 																		***/
