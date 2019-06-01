@@ -37,7 +37,7 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 				if ($scope.$$destroyed) return;
 				if (currentRequestId != $scope.requestId) { return };
 				if (data) {
-					$scope.endpoint=data.endpoint + 'execute/:pistonId:';
+					$scope.endpoint=data.endpoint + 'execute/:pistonId:' + (data.accessToken ? '?access_token=' + data.accessToken : '');
 					$scope.rawEndpoint=data.endpoint;
 					$scope.rawAccessToken=data.accessToken;
 					if (data.error) {
