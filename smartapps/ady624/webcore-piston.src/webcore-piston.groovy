@@ -18,8 +18,12 @@
  *
  *  Version history
 */
-public static String version() { return "v0.3.108.20180906" }
+public static String version() { return "v0.3.10c.20190522" }
 /*
+ *	05/22/2019 >>> v0.3.10c.20190522 - BETA M3 - Changed the device selection page in main app to fix timeout issues in Asia-Pacific
+ *	05/14/2019 >>> v0.3.10b.20190514 - BETA M3 - Changed the device selection page to fix timeout issues in Asia-Pacific
+ *	02/23/2019 >>> v0.3.10a.20190223 - BETA M3 - Added $twcweather to replace discontinued $weather, added new :twc-[iconCode]: weather icon set, fixed content type for local HTTP requests
+ *	12/07/2018 >>> v0.3.109.20181207 - BETA M3 - Dirty fix for dashboard timeouts: seems like ST has a lot of trouble reading the list of devices/commands/attributes/values these days, so giving up on reading values makes this much faster - temporarily?!
  *	09/06/2018 >>> v0.3.108.20180906 - BETA M3 - Restore pistons from backup file, hide "(unknown)" SHM status, fixed string to date across DST thanks @bangali, null routines, integer trailing zero cast, saving large pistons and disappearing variables on mobile
  *	08/06/2018 >>> v0.3.107.20180806 - BETA M3 - Font Awesome 5 icons, expanding textareas to fix expression scrolling, boolean date and datetime global variable editor fixes
  *	07/31/2018 >>> v0.3.106.20180731 - BETA M3 - Contact Book removal support
@@ -3211,6 +3215,7 @@ private long vcmd_httpRequest(rtData, device, params) {
     }
     if (!uri) return false
 	def protocol = "https"
+	def requestContentType = (method == "GET" || requestBodyType == "FORM") ? "application/x-www-form-urlencoded" : (requestBodyType == "JSON") ? "application/json" : contentType
     def userPart = ""
 	def uriParts = uri.split("://").toList()
 	if (uriParts.size() > 2) {
@@ -3256,6 +3261,7 @@ private long vcmd_httpRequest(rtData, device, params) {
 				path: (uri.indexOf("/") > 0) ? uri.substring(uri.indexOf("/")) : "",
 				headers: [
 					HOST: userPart + ip,
+					'Content-Type': requestContentType
 				] + (auth ? [Authorization: auth] : [:]),
 				query: useQueryString ? data : null, //thank you @destructure00
 				body: !useQueryString ? data : null //thank you @destructure00
@@ -3272,7 +3278,7 @@ private long vcmd_httpRequest(rtData, device, params) {
 				uri:  "${protocol}://${userPart}${uri}",
 				query: useQueryString ? data : null,
                 headers: (auth ? [Authorization: auth] : [:]),
-				requestContentType: (method == "GET" || requestBodyType == "FORM") ? "application/x-www-form-urlencoded" : (requestBodyType == "JSON") ? "application/json" : contentType,
+				requestContentType: requestContentType,
 				body: !useQueryString ? data : null
 			]
 			def func = ""
@@ -4966,6 +4972,7 @@ private Map getResponse(rtData, name) {
 }
 
 private Map getWeather(rtData, name) {
+    warn 'The Weather Underground data source used by $weather will soon be shut down; please see https://wiki.webcore.co/TWC_Weather', rtData
 	List parts = name.tokenize('.');
     rtData.weather = rtData.weather ?: [:]
     if (parts.size() > 0) {
@@ -4975,6 +4982,31 @@ private Map getWeather(rtData, name) {
         }
     }
 	return getJsonData(rtData, rtData.weather, name)
+}
+
+private Map getTwcWeather(rtData, name) {
+	List parts = name.tokenize('.[');
+    rtData.twcWeather = rtData.twcWeather ?: [:]
+    if (parts.size() > 0) {
+    	def dataFeature = parts[0]
+        if (rtData.twcWeather[dataFeature] == null) {
+            switch (dataFeature) {
+                case 'alerts':
+                    rtData.twcWeather[dataFeature] = app.getTwcAlerts()
+                    break
+                case 'conditions':
+                    rtData.twcWeather[dataFeature] = app.getTwcConditions()
+                    break
+                case 'forecast':
+                    rtData.twcWeather[dataFeature] = app.getTwcForecast()
+                    break
+                case 'location':
+                    rtData.twcWeather[dataFeature] = app.getTwcLocation()?.location
+                    break
+            }
+        }
+    }
+	return getJsonData(rtData, rtData.twcWeather, name)
 }
 
 private Map getNFLDataFeature(dataFeature) {
@@ -5049,6 +5081,8 @@ private Map getVariable(rtData, name) {
             	result = getNFL(rtData, name.substring(5))
             } else if (name.startsWith('$weather.') && (name.size() > 9)) {
             	result = getWeather(rtData, name.substring(9))
+            } else if (name.startsWith('$twcweather.') && (name.size() > 12)) {
+            	result = getTwcWeather(rtData, name.substring(12))
         	} else if (name.startsWith('$incidents.') && (name.size() > 11)) {
             	result = getIncidents(rtData, name.substring(11))
         	} else if (name.startsWith('$incidents[') && (name.size() > 11)) {
@@ -5817,6 +5851,26 @@ private func_fahrenheit(rtData, params) {
     double t = evaluateExpression(rtData, params[0], 'decimal').v
     //convert temperature to Fahrenheit
     return [t: "decimal", v: (double) t * 9.0 / 5.0 + 32.0]
+}
+
+
+/******************************************************************************/
+/*** fahrenheit converts temperature between Celsius and Fahrenheit if the  ***/
+/*** units differ from location.temperatureScale                            ***/
+/*** Usage: convertTemperatureIfNeeded(celsiusTemperature, 'C')             ***/
+/******************************************************************************/
+private func_converttemperatureifneeded(rtData, params) {
+    if (!params || !(params instanceof List) || (params.size() < 2)) {
+        return [t: "error", v: "Invalid parameters. Expecting convertTemperatureIfNeeded(temperature, unit)"];
+    }
+    double t = evaluateExpression(rtData, params[0], 'decimal').v
+    def u = evaluateExpression(rtData, params[1], 'string').v.toUpperCase()
+    //convert temperature to Fahrenheit
+    switch (location.temperatureScale) {
+       case u: return [t: "decimal", v: t]
+       case 'F': return func_celsius(rtData, [params[0]])
+       case 'C': return func_fahrenheit(rtData, [params[0]])
+   }
 }
 
 /******************************************************************************/
@@ -7840,6 +7894,7 @@ private static Map getSystemVariables() {
         '$places': [t: "dynamic", d: true],
         '$response': [t: "dynamic", d: true],
         '$weather': [t: "dynamic", d: true],
+        '$twcweather': [t: "dynamic", d: true],
         '$nfl': [t: "dynamic", d: true],
         '$incidents': [t: "dynamic", d: true],
         '$shmTripped': [t: "boolean", d: true],
@@ -7917,7 +7972,8 @@ private static Map getSystemVariables() {
 		"\$iftttStatusOk": [t: "boolean", v: null],
 		"\$locationMode": [t: "string", d: true],
 		"\$shmStatus": [t: "string", d: true],
-        "\$version": [t: "string", d: true]
+		"\$version": [t: "string", d: true],
+		"\$temperatureScale": [t: "string", d: true]
 	].sort{it.key}
 }
 
@@ -7928,6 +7984,7 @@ private getSystemVariableValue(rtData, name) {
     	case '$places': return "${rtData.settings?.places}".toString()
     	case '$response': return "${rtData.response}".toString()
         case '$weather': return "${rtData.weather}".toString()
+        case '$twcweather': return "${rtData.twcWeather}".toString()
         case '$nfl': return "${rtData.nfl}".toString()
         case '$incidents': return "${rtData.incidents}".toString()
         case '$shmTripped': initIncidents(rtData); return !!((rtData.incidents instanceof List) && (rtData.incidents.size()))
@@ -7970,6 +8027,7 @@ private getSystemVariableValue(rtData, name) {
 		case "\$randomHue": def result = getRandomValue("\$randomHue") ?: (int)Math.round(360 * Math.random()); setRandomValue("\$randomHue", result); return result
   		case "\$locationMode": return location.getMode()
 		case "\$shmStatus": switch (hubUID ? 'off' : location.currentState("alarmSystemStatus")?.value) { case 'off': return 'Disarmed'; case 'stay': return 'Armed/Stay'; case 'away': return 'Armed/Away'; }; return null;
+		case "\$temperatureScale": return location.getTemperatureScale()
     }
 }
 

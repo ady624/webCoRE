@@ -16,7 +16,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-public static String version() { return "v0.3.108.20180906" }
+public static String version() { return "v0.3.10c.20190522" }
 /******************************************************************************/
 /*** webCoRE DEFINITION														***/
 /******************************************************************************/
@@ -38,6 +38,7 @@ preferences {
 	//UI pages
 	page(name: "pageSettings")
 	page(name: "pageSelectDevices")
+	page(name: "pageSelectMoreDevices")
 }
 
 
@@ -77,9 +78,17 @@ private pageSelectDevices() {
 			input "dev:actuator", "capability.actuator", multiple: true, title: "Which actuators", required: false, submitOnChange: true
 			input "dev:sensor", "capability.sensor", multiple: true, title: "Which sensors", required: false, submitOnChange: true
 		}
+        
+        section () {
+	        href "pageSelectMoreDevices", title: "Select devices by capability", description: "If you cannot find a device by type, you may try looking for it by capability"
+        }
+	}
+}
 
+private pageSelectMoreDevices() {
+	dynamicPage(name: "pageSelectMoreDevices", title: "") {
 		section ('Select devices by capability') {
-        	paragraph "If you cannot find a device by type, you may try looking for it by category below"
+        	paragraph "If you cannot find a device by type, you may try looking for it by capability below"
 			def d
 			for (capability in parent.capabilities().findAll{ (!(it.value.d in [null, 'actuators', 'sensors'])) }.sort{ it.value.d }) {
 				if (capability.value.d != d) input "dev:${capability.key}", "capability.${capability.key}", multiple: true, title: "Which ${capability.value.d}", required: false, submitOnChange: true
@@ -88,7 +97,6 @@ private pageSelectDevices() {
 		}
 	}
 }
-
 
 /******************************************************************************/
 /*** 																		***/
@@ -133,11 +141,15 @@ def initData(devices, contacts) {
 }
 
 def Map listAvailableDevices(raw = false) {
+	def time = now()
+    def response = [:]
 	if (raw) {
-    	return settings.findAll{ it.key.startsWith("dev:") }.collect{ it.value }.flatten().collectEntries{ dev -> [(hashId(dev.id)): dev]}
+    	response = settings.findAll{ it.key.startsWith("dev:") }.collect{ it.value }.flatten().collectEntries{ dev -> [(hashId(dev.id)): dev]}
     } else {
-    	return settings.findAll{ it.key.startsWith("dev:") }.collect{ it.value }.flatten().collectEntries{ dev -> [(hashId(dev.id)): dev]}.collectEntries{ id, dev -> [ (id): [ n: dev.getDisplayName(), cn: dev.getCapabilities()*.name, a: dev.getSupportedAttributes().unique{ it.name }.collect{def x = [n: it.name, t: it.getDataType(), o: it.getValues()]; try {x.v = dev.currentValue(x.n);} catch(all) {}; x}, c: dev.getSupportedCommands().unique{ it.getName() }.collect{[n: it.getName(), p: it.getArguments()]} ]]}
+    	response = settings.findAll{ it.key.startsWith("dev:") }.collect{ it.value }.flatten().collectEntries{ dev -> [(hashId(dev.id)): dev]}.collectEntries{ id, dev -> [ (id): [ n: dev.getDisplayName(), cn: dev.getCapabilities()*.name, a: dev.getSupportedAttributes().unique{ it.name }.collect{def x = [n: it.name, t: it.getDataType(), o: it.getValues()]; try {x.v = dev.currentValue(x.n);} catch(all) {}; x}, c: dev.getSupportedCommands().unique{ it.getName() }.collect{[n: it.getName(), p: it.getArguments()]} ]]}
 	}
+    log.debug "Generated list of devices in ${now() - time}ms. Data size is ${response.toString().size()}"
+    return response
 }
 
 def Map getDashboardData() {
