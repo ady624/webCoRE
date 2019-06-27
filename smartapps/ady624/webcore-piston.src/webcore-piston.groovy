@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.3.10c.20190522" }
+public static String version() { return "v0.3.10d.20190627" }
 /*
+ *	06/27/2019 >>> v0.3.10d.20190627 - BETA M3 - Reverted attempted fix for dashboard timeouts, fixes NaN device status on piston editing, dashboard tweaks for Hubitat by E_Sch
  *	05/22/2019 >>> v0.3.10c.20190522 - BETA M3 - Changed the device selection page in main app to fix timeout issues in Asia-Pacific
  *	05/14/2019 >>> v0.3.10b.20190514 - BETA M3 - Changed the device selection page to fix timeout issues in Asia-Pacific
  *	02/23/2019 >>> v0.3.10a.20190223 - BETA M3 - Added $twcweather to replace discontinued $weather, added new :twc-[iconCode]: weather icon set, fixed content type for local HTTP requests
