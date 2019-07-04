@@ -79,23 +79,31 @@ private pageSelectDevices() {
 			input "dev:sensor", "capability.sensor", multiple: true, title: "Which sensors", required: false, submitOnChange: true
 		}
         
-        section () {
-	        href "pageSelectMoreDevices", title: "Select devices by capability", description: "If you cannot find a device by type, you may try looking for it by capability"
+        section ('Select devices by capability') {
+			int segments = 3
+			def caps = capabilitiesSegments(segments)
+			for (page in (0..<segments)) {
+				href "pageSelectMoreDevices", title: "Capability group ${page + 1}", description: "${caps[page].values()[0].d} through ${caps[page].values()[-1].d}", params: [ page: page, segments: segments ]
+			}
         }
 	}
 }
 
-private pageSelectMoreDevices() {
+private pageSelectMoreDevices(params) {
 	dynamicPage(name: "pageSelectMoreDevices", title: "") {
-		section ('Select devices by capability') {
-        	paragraph "If you cannot find a device by type, you may try looking for it by capability below"
-			def d
-			for (capability in parent.capabilities().findAll{ (!(it.value.d in [null, 'actuators', 'sensors'])) }.sort{ it.value.d }) {
-				if (capability.value.d != d) input "dev:${capability.key}", "capability.${capability.key}", multiple: true, title: "Which ${capability.value.d}", required: false, submitOnChange: true
-				d = capability.value.d
+		section ("Select devices by capability (group ${params.page})") {
+			for (capability in capabilitiesSegments(params.segments)[params.page]) {
+				input "dev:${capability.key}", "capability.${capability.key}", multiple: true, title: "Which ${capability.value.d}", required: false, submitOnChange: true
 			}
 		}
 	}
+}
+
+private capabilitiesSegments(segments) {
+	def caps = parent.capabilities().findAll{ (!(it.value.d in [null, 'actuators', 'sensors'])) }.sort{ it.value.d }
+	def capsPerPage = caps.size() / segments as Integer
+	def keys = caps.keySet() as List
+	return keys.collate(capsPerPage).collect{ caps.subMap(it) }
 }
 
 /******************************************************************************/
