@@ -38,7 +38,9 @@ preferences {
 	//UI pages
 	page(name: "pageSettings")
 	page(name: "pageSelectDevices")
-	page(name: "pageSelectMoreDevices")
+	page(name: "pageSelectMoreDevices1")
+	page(name: "pageSelectMoreDevices2")
+	page(name: "pageSelectMoreDevices3")
 }
 
 
@@ -80,26 +82,37 @@ private pageSelectDevices() {
 		}
         
         section ('Select devices by capability') {
-			int segments = 3
-			def caps = capabilitiesSegments(segments)
-			for (page in (0..<segments)) {
-				href "pageSelectMoreDevices", title: "Capability group ${page + 1}", description: "${caps[page].values()[0].d} through ${caps[page].values()[-1].d}", params: [ page: page, segments: segments ]
+			def capSegments = capabilitiesSegments()
+			capSegments.eachWithIndex { capabilities, page ->
+				href "pageSelectMoreDevices${page + 1}", title: "Capability group ${page + 1}", description: "${capabilities.values()[0].d} through ${capabilities.values()[-1].d}"
 			}
         }
 	}
 }
 
-private pageSelectMoreDevices(params) {
-	dynamicPage(name: "pageSelectMoreDevices", title: "") {
-		section ("Select devices by capability (group ${params.page})") {
-			for (capability in capabilitiesSegments(params.segments)[params.page]) {
+private pageSelectMoreDevices(page) {
+	dynamicPage(name: "pageSelectMoreDevices${page}", title: "") {
+		section ("Select devices by capability (group ${page})") {
+			for (capability in capabilitiesSegments()[page - 1]) {
 				input "dev:${capability.key}", "capability.${capability.key}", multiple: true, title: "Which ${capability.value.d}", required: false, submitOnChange: true
 			}
 		}
 	}
 }
 
-private capabilitiesSegments(segments) {
+private pageSelectMoreDevices1() {
+	pageSelectMoreDevices(1)
+}
+
+private pageSelectMoreDevices2() {
+	pageSelectMoreDevices(2)
+}
+
+private pageSelectMoreDevices3() {
+	pageSelectMoreDevices(3)
+}
+
+private capabilitiesSegments(segments = 3) {
 	def caps = parent.capabilities().findAll{ (!(it.value.d in [null, 'actuators', 'sensors'])) }.sort{ it.value.d }
 	def capsPerPage = caps.size() / segments as Integer
 	def keys = caps.keySet() as List
