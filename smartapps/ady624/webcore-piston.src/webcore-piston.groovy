@@ -3264,7 +3264,7 @@ private long vcmd_httpRequest(rtData, device, params) {
 				headers: [
 					HOST: userPart + ip,
 					'Content-Type': requestContentType
-				] + (auth ? [Authorization: auth] : [:]),
+				] + (auth ? ((auth.startsWith('{') && auth.endsWith('}')) ? ( new groovy.json.JsonSlurper().parseText( auth ) ) : [Authorization : auth]) : [:]),
 				query: useQueryString ? data : null, //thank you @destructure00
 				body: !useQueryString ? data : null //thank you @destructure00
 			]
@@ -3279,7 +3279,7 @@ private long vcmd_httpRequest(rtData, device, params) {
 			def requestParams = [
 				uri:  "${protocol}://${userPart}${uri}",
 				query: useQueryString ? data : null,
-                headers: (auth ? [Authorization: auth] : [:]),
+				headers: (auth ? ((auth.startsWith('{') && auth.endsWith('}')) ? ( new groovy.json.JsonSlurper().parseText( auth ) ) : [Authorization : auth]) : [:]),
 				requestContentType: requestContentType,
 				body: !useQueryString ? data : null
 			]
