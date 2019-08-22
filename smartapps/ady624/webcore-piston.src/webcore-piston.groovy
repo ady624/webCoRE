@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.3.10e.20190628" }
+public static String version() { return "v0.3.10f.20190822" }
 /*
+ *	08/22/2019 >>> v0.3.10f.20190822 - BETA M3 - Custom headers on web requests by @Bloodtick_Jones (write as JSON in Authorization header field), capabilities split into three pages to fix device selection errors
  *	06/28/2019 >>> v0.3.10e.20190628 - BETA M3 - Reinstated dirty fix for dashboard timeouts after reports of increased error rates, NaN device status is back
  *	06/27/2019 >>> v0.3.10d.20190627 - BETA M3 - Reverted attempted fix for dashboard timeouts, fixes NaN device status on piston editing, dashboard tweaks for Hubitat by E_Sch
  *	05/22/2019 >>> v0.3.10c.20190522 - BETA M3 - Changed the device selection page in main app to fix timeout issues in Asia-Pacific
@@ -3264,7 +3265,7 @@ private long vcmd_httpRequest(rtData, device, params) {
 				headers: [
 					HOST: userPart + ip,
 					'Content-Type': requestContentType
-				] + (auth ? [Authorization: auth] : [:]),
+				] + (auth ? ((auth.startsWith('{') && auth.endsWith('}')) ? ( new groovy.json.JsonSlurper().parseText( auth ) ) : [Authorization : auth]) : [:]),
 				query: useQueryString ? data : null, //thank you @destructure00
 				body: !useQueryString ? data : null //thank you @destructure00
 			]
@@ -3279,7 +3280,7 @@ private long vcmd_httpRequest(rtData, device, params) {
 			def requestParams = [
 				uri:  "${protocol}://${userPart}${uri}",
 				query: useQueryString ? data : null,
-                headers: (auth ? [Authorization: auth] : [:]),
+				headers: (auth ? ((auth.startsWith('{') && auth.endsWith('}')) ? ( new groovy.json.JsonSlurper().parseText( auth ) ) : [Authorization : auth]) : [:]),
 				requestContentType: requestContentType,
 				body: !useQueryString ? data : null
 			]
