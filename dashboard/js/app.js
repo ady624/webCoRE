@@ -646,6 +646,7 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 		if (inst.devices) {
 			//rewrite devices
 			instance.devices = inst.devices;
+			instance.deviceVersion = inst.deviceVersion;
 			initial = true;
 		}
 		instance.devices = instance.devices ? instance.devices : (instances[instance.id] && instances[instance.id].devices ? instances[instance.id].devices : []);
@@ -666,6 +667,7 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 		instance.pistons = inst.pistons;
 		instance.globalVars = inst.globalVars;
 		instance.coreVersion = inst.coreVersion;
+		instance.heVersion = inst.heVersion;
 		instance.name = inst.name;
 		instance.settings = inst.settings ? inst.settings : {};
 		instance.lifx = inst.lifx ? inst.lifx : {};
