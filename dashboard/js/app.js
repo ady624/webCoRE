@@ -2269,4 +2269,4 @@ if (!String.prototype.endsWith) {
 	};
 }
 
-version = function() { return 'v0.3.10e.20190628'; };
+version = function() { return 'v0.3.10f.20190822'; };
