@@ -879,6 +879,7 @@ private subscribeAll() {
 mappings {
 	//path("/dashboard") {action: [GET: "api_dashboard"]}
 	path("/intf/dashboard/load") {action: [GET: "api_intf_dashboard_load"]}
+	path("/intf/dashboard/devices") {action: [GET: "api_intf_dashboard_devices"]}
 	path("/intf/dashboard/refresh") {action: [GET: "api_intf_dashboard_refresh"]}
 	path("/intf/dashboard/piston/new") {action: [GET: "api_intf_dashboard_piston_new"]}
 	path("/intf/dashboard/piston/create") {action: [GET: "api_intf_dashboard_piston_create"]}
@@ -920,10 +921,9 @@ private api_get_error_result(error) {
     ]
 }
 
-private api_get_base_result(deviceVersion = 0, updateCache = false) {
+private api_get_base_result(updateCache = false) {
 	def tz = location.getTimeZone()
     def currentDeviceVersion = state.deviceVersion
-	def Boolean sendDevices = (deviceVersion != currentDeviceVersion)
     def name = handle() + ' Piston'
     def incidentThreshold = now() - 604800000
 	return [
@@ -942,7 +942,7 @@ private api_get_base_result(deviceVersion = 0, updateCache = false) {
             lifx: state.lifx ?: [:],
             virtualDevices: virtualDevices(updateCache),
             globalVars: listAvailableVariables(),
-        ] + (sendDevices ? [contacts: [:], devices: listAvailableDevices(false, updateCache)] : [:]),
+        ],
         location: [
             contactBookEnabled: location.getContactBookEnabled(),
             hubs: location.getHubs().collect{ [id: hashId(it.id, updateCache), name: it.name, firmware: hubUID ? 'unknown' : it.getFirmwareVersionString(), physical: it.getType().toString().contains('PHYSICAL'), powerSource: it.isBatteryInUse() ? 'battery' : 'mains' ]},
@@ -964,6 +964,13 @@ private api_get_base_result(deviceVersion = 0, updateCache = false) {
     ]
 }
 
+private api_get_devices_result(updateCache = false) {
+	return [
+		complete: true,
+		devices: listAvailableDevices(false, updateCache),
+	]
+}
+
 private api_intf_dashboard_load() {
 	def result
     recoveryHandler()
@@ -971,7 +978,7 @@ private api_intf_dashboard_load() {
     def storageApp = getStorageApp(true)
     //debug "Dashboard: Request received to initialize instance"
 	if (verifySecurityToken(params.token)) {
-    	result = api_get_base_result(params.dev, true)
+    	result = api_get_base_result(true)
     	if (params.dashboard == "1") {
             startDashboard()
          } else {
@@ -987,6 +994,18 @@ private api_intf_dashboard_load() {
             }
         }
         if (!result) result = api_get_error_result("ERR_INVALID_TOKEN")
+    }
+    //for accuracy, use the time as close as possible to the render
+    result.now = now()
+	render contentType: "application/javascript;charset=utf-8", data: "${params.callback}(${groovy.json.JsonOutput.toJson(result)})"
+}
+
+private api_intf_dashboard_devices() {
+	def result
+	if (verifySecurityToken(params.token)) {
+    	result = api_get_devices_result()
+    } else {
+        result = api_get_error_result("ERR_INVALID_TOKEN")
     }
     //for accuracy, use the time as close as possible to the render
     result.now = now()
@@ -1043,7 +1062,7 @@ private api_intf_dashboard_piston_get() {
         def clientDbVersion = params.db
         def requireDb = serverDbVersion != clientDbVersion
         if (pistonId) {
-            result = api_get_base_result(requireDb ? 0 : params.dev, true)
+            result = api_get_base_result(true)
             def piston = getChildApps().find{ hashId(it.id) == pistonId };
             if (piston) {
             	result.data = piston.get() ?: [:]
@@ -1645,7 +1664,7 @@ private cleanUp() {
         state.remove('modules')
         state.remove('globalVars')
         state.remove('devices')
-        api_get_base_result(1, true)
+        api_get_base_result(true)
 	} catch (all) {
     }
 }

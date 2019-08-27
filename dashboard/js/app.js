@@ -931,17 +931,45 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 				if (data.location) {
 					setLocation(data.location);
 				}
-				if (data.instance) {
-					data.instance = setInstance(data.instance);
-				}
 				data.endpoint = si.uri;
 				data.accessToken = si.accessToken;
+				if (data.instance && data.instance.deviceVersion !== deviceVersion) {
+					return dataService.getDevices(data.instance).then(function(devices) {
+						data.instance.devices = devices;
+						return data;
+					});
+				}
 				return data;	
 			}, function(error) {
 				status('There was a problem loading the dashboard data. The data shown below may be outdated; please log out if this problem persists.');
 				return error;
+			}).then(function(data) {
+				if (data.instance) {
+					data.instance = setInstance(data.instance);
+				}
+				return data;
 			});
     };
+
+	dataService.getDevices = function(inst, page, devices) {
+		var si = inst ? store[inst.id] : null;
+		page = page || 0;
+		devices = devices || [];
+		return $http.jsonp(
+			(si ? si.uri : 'about:blank/') + 'intf/dashboard/devices?' + getAccessToken(si) + 'token=' + (si && si.token ? si.token : '') + '&page=' + page, 
+			{jsonpCallbackParam: 'callback'}
+		).then(function(response) {
+			var data = response.data;
+			devices.push.apply(devices, data.devices);
+			if (!data.complete) {
+				return dataService.getDevices(inst, page + 1, devices);
+			}
+			return devices;
+		}, function(error) {
+			status('There was a problem loading your devices. The data shown below may be outdated; please refresh the page to try again.');
+			return error;
+		});
+	}
 
     dataService.tap = function (tapId) {
         return $http({
