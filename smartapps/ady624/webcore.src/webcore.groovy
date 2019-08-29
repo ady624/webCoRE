@@ -964,10 +964,9 @@ private api_get_base_result(updateCache = false) {
     ]
 }
 
-private api_get_devices_result(updateCache = false) {
-	return [
-		complete: true,
-		devices: listAvailableDevices(false, updateCache),
+private api_get_devices_result(offset = 0, updateCache = false) {
+	return listAvailableDevices(false, updateCache, offset) + [
+		deviceVersion: state.deviceVersion,
 	]
 }
 
@@ -1003,7 +1002,8 @@ private api_intf_dashboard_load() {
 private api_intf_dashboard_devices() {
 	def result
 	if (verifySecurityToken(params.token)) {
-    	result = api_get_devices_result()
+		def offset = "${params.offset}"
+    	result = api_get_devices_result(offset.isInteger() ? offset.toInteger() : 0)
     } else {
         result = api_get_error_result("ERR_INVALID_TOKEN")
     }
@@ -1727,11 +1727,11 @@ private String getDashboardRegistrationUrl() {
 	return "https://api.${domain()}/dashboard/"
 }
 
-public Map listAvailableDevices(raw = false, updateCache = false) {
+public Map listAvailableDevices(raw = false, updateCache = false, offset = 0) {
 	def storageApp = getStorageApp()
     Map result = [:]
     if (storageApp) {
-    	result = storageApp.listAvailableDevices(raw)
+    	result = storageApp.listAvailableDevices(raw, offset)
 	} else {
 		if (raw) {
     		result = settings.findAll{ it.key.startsWith("dev:") }.collect{ it.value }.flatten().collectEntries{ dev -> [(hashId(dev.id, updateCache)): dev]}

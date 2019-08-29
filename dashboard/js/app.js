@@ -951,18 +951,19 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 			});
     };
 
-	dataService.getDevices = function(inst, page, devices) {
+	dataService.getDevices = function(inst, offset, devices) {
 		var si = inst ? store[inst.id] : null;
-		page = page || 0;
-		devices = devices || [];
+		offset = offset || 0;
+		devices = devices || {};
 		return $http.jsonp(
-			(si ? si.uri : 'about:blank/') + 'intf/dashboard/devices?' + getAccessToken(si) + 'token=' + (si && si.token ? si.token : '') + '&page=' + page, 
+			(si ? si.uri : 'about:blank/') + 'intf/dashboard/devices?' + getAccessToken(si) + 'token=' + (si && si.token ? si.token : '') + '&offset=' + offset, 
 			{jsonpCallbackParam: 'callback'}
 		).then(function(response) {
 			var data = response.data;
-			devices.push.apply(devices, data.devices);
+			Object.assign(devices, data.devices);
+			inst.deviceVersion = data.deviceVersion;
 			if (!data.complete) {
-				return dataService.getDevices(inst, page + 1, devices);
+				return dataService.getDevices(inst, data.nextOffset, devices);
 			}
 			return devices;
 		}, function(error) {

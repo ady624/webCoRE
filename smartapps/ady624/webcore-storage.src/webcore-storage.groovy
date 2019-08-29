@@ -161,17 +161,43 @@ def initData(devices, contacts) {
 	}
 }
 
-def Map listAvailableDevices(raw = false) {
+def Map listAvailableDevices(raw = false, offset = 0) {
 	def time = now()
-    def response = [:]
+	def response = [:]
+	def devices = settings.findAll{ it.key.startsWith("dev:") }.collect{ it.value }.flatten()
+	def deviceCount = devices.size()
 	if (raw) {
-    	response = settings.findAll{ it.key.startsWith("dev:") }.collect{ it.value }.flatten().collectEntries{ dev -> [(hashId(dev.id)): dev]}
-    } else {
-    	//response = settings.findAll{ it.key.startsWith("dev:") }.collect{ it.value }.flatten().collectEntries{ dev -> [(hashId(dev.id)): dev]}.collectEntries{ id, dev -> [ (id): [ n: dev.getDisplayName(), cn: dev.getCapabilities()*.name, a: dev.getSupportedAttributes().unique{ it.name }.collect{def x = [n: it.name, t: it.getDataType(), o: it.getValues()]; try {x.v = dev.currentValue(x.n);} catch(all) {}; x}, c: dev.getSupportedCommands().unique{ it.getName() }.collect{[n: it.getName(), p: it.getArguments()]} ]]}
-    	response = settings.findAll{ it.key.startsWith("dev:") }.collect{ it.value }.flatten().collectEntries{ dev -> [(hashId(dev.id)): dev]}.collectEntries{ id, dev -> [ (id): [ n: dev.getDisplayName(), cn: dev.getCapabilities()*.name, a: dev.getSupportedAttributes().unique{ it.name }.collect{def x = [n: it.name, t: it.getDataType(), o: it.getValues()]; /*try {x.v = dev.currentValue(x.n);} catch(all) {};*/ x}, c: dev.getSupportedCommands().unique{ it.getName() }.collect{[n: it.getName(), p: it.getArguments()]} ]]}
+		response = devices.collectEntries{ dev -> [(hashId(dev.id)): dev]}
+	} else {
+		devices = devices[offset..-1]
+		response.devices = [:]
+		response.complete = !devices.indexed().find{ idx, dev ->
+			log.debug "Loaded device at ${idx} after ${now() - time}ms. Data size is ${response.toString().size()}"
+			response.devices[hashId(dev.id)] = [
+				n: dev.getDisplayName(), 
+				cn: dev.getCapabilities()*.name, 
+				a: dev.getSupportedAttributes().unique{ it.name }.collect{
+					def x = [n: it.name, t: it.getDataType(), o: it.getValues()]
+					try {
+						x.v = dev.currentValue(x.n)
+					} catch(all) {} 
+					x
+				}, 
+				c: dev.getSupportedCommands().unique{ it.getName() }.collect{[
+					n: it.getName(), 
+					p: it.getArguments()
+				]} 
+			]
+			// Stop after 10 seconds
+			if (idx < devices.size() - 1 && now() - time > 10000) {
+				response.nextOffset = offset + idx + 1
+				return true
+			}
+			false
+		}
 	}
-    log.debug "Generated list of devices in ${now() - time}ms. Data size is ${response.toString().size()}"
-    return response
+	log.debug "Generated list of ${offet}-${offset + devices.size()} of ${deviceCount} devices in ${now() - time}ms. Data size is ${response.toString().size()}"
+	return response
 }
 
 def Map getDashboardData() {
