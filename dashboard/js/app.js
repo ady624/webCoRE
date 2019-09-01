@@ -648,6 +648,7 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 			instance.devices = inst.devices;
 			initial = true;
 		}
+		instance.deviceVersion = inst.deviceVersion;
 		instance.devices = instance.devices ? instance.devices : (instances[instance.id] && instances[instance.id].devices ? instances[instance.id].devices : []);
 		if (!!instance.pistons) {
 			for (i = 0; i < inst.pistons.length; i++) {
@@ -961,7 +962,6 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 		).then(function(response) {
 			var data = response.data;
 			Object.assign(devices, data.devices);
-			inst.deviceVersion = data.deviceVersion;
 			if (!data.complete) {
 				return dataService.getDevices(inst, data.nextOffset, devices);
 			}
