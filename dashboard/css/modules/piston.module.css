@@ -1159,35 +1159,7 @@ div[dev]+div[dev] {
 }
 
 div[dev] div[col] {
-	display: inline-block;
-	float: left;
-	width: 60%;
 	line-height: 17px;
-}
-
-div[dev] div[col]+div[col] {
-	float: right;
-	width: 8%;
-	height: 17px;
-	text-align: center;
-}
-
-div[dev] div[col][battery="0"],
-div[dev] div[col][battery="1"],
-div[dev] div[col][motion="active"],
-div[dev] div[col][presence="present"],
-div[dev] div[col][switch="on"],
-div[dev] div[col][temperature] {
-    color: #444;
-}
-
-div[dev] div[col][battery="2"],
-div[dev] div[col][battery="3"],
-div[dev] div[col][battery="4"],
-div[dev] div[col][motion="inactive"],
-div[dev] div[col][presence="not present"],
-div[dev] div[col][switch="off"] {
-    color: #999;
 }
 
 label[var] {

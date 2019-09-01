@@ -176,13 +176,11 @@ def Map listAvailableDevices(raw = false, offset = 0) {
 			response.devices[hashId(dev.id)] = [
 				n: dev.getDisplayName(), 
 				cn: dev.getCapabilities()*.name, 
-				a: dev.getSupportedAttributes().unique{ it.name }.collect{
-					def x = [n: it.name, t: it.getDataType(), o: it.getValues()]
-					try {
-						x.v = dev.currentValue(x.n)
-					} catch(all) {} 
-					x
-				}, 
+				a: dev.getSupportedAttributes().unique{ it.name }.collect{[
+					n: it.name, 
+					t: it.getDataType(), 
+					o: it.getValues()
+				]}, 
 				c: dev.getSupportedCommands().unique{ it.getName() }.collect{[
 					n: it.getName(), 
 					p: it.getArguments()
