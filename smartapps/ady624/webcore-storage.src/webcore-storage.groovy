@@ -164,7 +164,7 @@ def initData(devices, contacts) {
 def Map listAvailableDevices(raw = false, offset = 0) {
 	def time = now()
 	def response = [:]
-	def devices = settings.findAll{ it.key.startsWith("dev:") }.collect{ it.value }.flatten()
+	def devices = settings.findAll{ it.key.startsWith("dev:") }.collect{ it.value }.flatten().sort{ it.getDisplayName() }
 	def deviceCount = devices.size()
 	if (raw) {
 		response = devices.collectEntries{ dev -> [(hashId(dev.id)): dev]}
@@ -172,7 +172,6 @@ def Map listAvailableDevices(raw = false, offset = 0) {
 		devices = devices[offset..-1]
 		response.devices = [:]
 		response.complete = !devices.indexed().find{ idx, dev ->
-			log.debug "Loaded device at ${idx} after ${now() - time}ms. Data size is ${response.toString().size()}"
 			response.devices[hashId(dev.id)] = [
 				n: dev.getDisplayName(), 
 				cn: dev.getCapabilities()*.name, 
