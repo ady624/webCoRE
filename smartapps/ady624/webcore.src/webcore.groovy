@@ -1729,14 +1729,38 @@ private String getDashboardRegistrationUrl() {
 
 public Map listAvailableDevices(raw = false, updateCache = false, offset = 0) {
 	def storageApp = getStorageApp()
-    Map result = [:]
-    if (storageApp) {
-    	result = storageApp.listAvailableDevices(raw, offset)
+	Map result = [:]
+	if (storageApp) {
+		result = storageApp.listAvailableDevices(raw, offset)
 	} else {
+		def devices = settings.findAll{ it.key.startsWith("dev:") }.collect{ it.value }.flatten().sort{ it.getDisplayName() }
 		if (raw) {
-    		result = settings.findAll{ it.key.startsWith("dev:") }.collect{ it.value }.flatten().collectEntries{ dev -> [(hashId(dev.id, updateCache)): dev]}
-    	} else {
-    		result = settings.findAll{ it.key.startsWith("dev:") }.collect{ it.value }.flatten().collectEntries{ dev -> [(hashId(dev.id, updateCache)): dev]}.collectEntries{ id, dev -> [ (id): [ n: dev.getDisplayName(), cn: dev.getCapabilities()*.name, a: dev.getSupportedAttributes().unique{ it.name }.collect{def x = [n: it.name, t: it.getDataType(), o: it.getValues()]; try {x.v = dev.currentValue(x.n);} catch(all) {}; x}, c: dev.getSupportedCommands().unique{ it.getName() }.collect{[n: it.getName(), p: it.getArguments()]} ]]}
+			result = devices.collectEntries{ dev -> [(hashId(dev.id, updateCache)): dev]}
+		} else {
+			def deviceCount = devices.size()
+			devices = devices[offset..-1]
+			result.devices = [:]
+			result.complete = !devices.indexed().find{ idx, dev ->
+				result.devices[hashId(dev.id)] = [
+					n: dev.getDisplayName(), 
+					cn: dev.getCapabilities()*.name, 
+					a: dev.getSupportedAttributes().unique{ it.name }.collect{[
+						n: it.name, 
+						t: it.getDataType(), 
+						o: it.getValues()
+					]}, 
+					c: dev.getSupportedCommands().unique{ it.getName() }.collect{[
+						n: it.getName(), 
+						p: it.getArguments()
+					]} 
+				]
+				// Stop after 10 seconds
+				if (idx < devices.size() - 1 && now() - time > 10000) {
+					result.nextOffset = offset + idx + 1
+					return true
+				}
+				false
+			}
 		}
 	}
 	if (raw || result.complete) {
