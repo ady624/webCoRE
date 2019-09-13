@@ -1062,7 +1062,7 @@ private api_intf_dashboard_piston_get() {
         def clientDbVersion = params.db
         def requireDb = serverDbVersion != clientDbVersion
         if (pistonId) {
-            result = api_get_base_result(true)
+            result = [:]
             def piston = getChildApps().find{ hashId(it.id) == pistonId };
             if (piston) {
             	result.data = piston.get() ?: [:]

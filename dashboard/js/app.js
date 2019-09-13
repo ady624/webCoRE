@@ -1007,11 +1007,26 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
         var dbVersion = readObject('db.version', _dk);
 		status('Loading piston...');
     	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/piston/get?' + getAccessToken(si) + 'id=' + pistonId + '&db=' + dbVersion + '&token=' + (si && si.token ? si.token : '') + '&dev=' + deviceVersion, {jsonpCallbackParam: 'callback'})
+			// Base response is no longer included with the piston
+			.then(function(response) {
+				var data = response.data;
+				if (!data.instance) {
+					return dataService.loadInstance(inst).then(function(instData) {
+						const mergedData = Object.assign({}, data, instData);
+						return Object.assign({}, response, { data: mergedData });
+					});
+				}
+
+				if (data.location) {
+					setLocation(data.location);
+				}
+				if (data.instance) {
+					data.instance = setInstance(data.instance);
+				}
+				return response;
+			})
 			.then(function(response) {
 				data = response.data;
-				if (data.now) {
-					adjustTimeOffset(data.now);
-				}
 				if (data.dbVersion) {
 					writeObject('db.version', data.dbVersion, _dk);
 					writeObject('db', data.db);
@@ -1020,13 +1035,6 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 					data.db = readObject('db');
 					status();
 				}
-				if (data.location) {
-					setLocation(data.location);
-				}
-				if (data.instance) {
-					data.instance = setInstance(data.instance);
-				}
-				data.endpoint = si.uri;
 				return data;
 			}, function(error) {
 				return null;
