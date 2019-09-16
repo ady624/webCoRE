@@ -16,7 +16,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-public static String version() { return "v0.3.10e.20190628" }
+public static String version() { return "v0.3.10f.20190822" }
 /******************************************************************************/
 /*** webCoRE DEFINITION														***/
 /******************************************************************************/
@@ -38,7 +38,9 @@ preferences {
 	//UI pages
 	page(name: "pageSettings")
 	page(name: "pageSelectDevices")
-	page(name: "pageSelectMoreDevices")
+	page(name: "pageSelectMoreDevices1")
+	page(name: "pageSelectMoreDevices2")
+	page(name: "pageSelectMoreDevices3")
 }
 
 
@@ -79,23 +81,42 @@ private pageSelectDevices() {
 			input "dev:sensor", "capability.sensor", multiple: true, title: "Which sensors", required: false, submitOnChange: true
 		}
         
-        section () {
-	        href "pageSelectMoreDevices", title: "Select devices by capability", description: "If you cannot find a device by type, you may try looking for it by capability"
+        section ('Select devices by capability') {
+			def capSegments = capabilitiesSegments()
+			capSegments.eachWithIndex { capabilities, page ->
+				href "pageSelectMoreDevices${page + 1}", title: "Capability group ${page + 1}", description: "${capabilities.values()[0].d} through ${capabilities.values()[-1].d}"
+			}
         }
 	}
 }
 
-private pageSelectMoreDevices() {
-	dynamicPage(name: "pageSelectMoreDevices", title: "") {
-		section ('Select devices by capability') {
-        	paragraph "If you cannot find a device by type, you may try looking for it by capability below"
-			def d
-			for (capability in parent.capabilities().findAll{ (!(it.value.d in [null, 'actuators', 'sensors'])) }.sort{ it.value.d }) {
-				if (capability.value.d != d) input "dev:${capability.key}", "capability.${capability.key}", multiple: true, title: "Which ${capability.value.d}", required: false, submitOnChange: true
-				d = capability.value.d
+private pageSelectMoreDevices(page) {
+	dynamicPage(name: "pageSelectMoreDevices${page}", title: "") {
+		section ("Select devices by capability (group ${page})") {
+			for (capability in capabilitiesSegments()[page - 1]) {
+				input "dev:${capability.key}", "capability.${capability.key}", multiple: true, title: "Which ${capability.value.d}", required: false, submitOnChange: true
 			}
 		}
 	}
+}
+
+private pageSelectMoreDevices1() {
+	pageSelectMoreDevices(1)
+}
+
+private pageSelectMoreDevices2() {
+	pageSelectMoreDevices(2)
+}
+
+private pageSelectMoreDevices3() {
+	pageSelectMoreDevices(3)
+}
+
+private capabilitiesSegments(segments = 3) {
+	def caps = parent.capabilities().findAll{ (!(it.value.d in [null, 'actuators', 'sensors'])) }.sort{ it.value.d }
+	def capsPerPage = caps.size() / segments as Integer
+	def keys = caps.keySet() as List
+	return keys.collate(capsPerPage).collect{ caps.subMap(it) }
 }
 
 /******************************************************************************/
