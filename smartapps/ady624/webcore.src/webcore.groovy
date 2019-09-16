@@ -1948,6 +1948,11 @@ public Boolean isInstalled() {
 	return !!state.installed
 }
 
+public String getEndpoint() {
+	if (!state.endpoint) return null
+	return state.endpoint
+}
+
 public String getDashboardUrl() {
 	if (!state.endpoint) return null
 	return "https://dashboard.${domain()}/"
