@@ -16,7 +16,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-public static String version() { return "v0.3.10c.20190522" }
+public static String version() { return "v0.3.10f.20190822" }
 /******************************************************************************/
 /*** webCoRE DEFINITION														***/
 /******************************************************************************/
@@ -38,7 +38,9 @@ preferences {
 	//UI pages
 	page(name: "pageSettings")
 	page(name: "pageSelectDevices")
-	page(name: "pageSelectMoreDevices")
+	page(name: "pageSelectMoreDevices1")
+	page(name: "pageSelectMoreDevices2")
+	page(name: "pageSelectMoreDevices3")
 }
 
 
@@ -79,23 +81,42 @@ private pageSelectDevices() {
 			input "dev:sensor", "capability.sensor", multiple: true, title: "Which sensors", required: false, submitOnChange: true
 		}
         
-        section () {
-	        href "pageSelectMoreDevices", title: "Select devices by capability", description: "If you cannot find a device by type, you may try looking for it by capability"
+        section ('Select devices by capability') {
+			def capSegments = capabilitiesSegments()
+			capSegments.eachWithIndex { capabilities, page ->
+				href "pageSelectMoreDevices${page + 1}", title: "Capability group ${page + 1}", description: "${capabilities.values()[0].d} through ${capabilities.values()[-1].d}"
+			}
         }
 	}
 }
 
-private pageSelectMoreDevices() {
-	dynamicPage(name: "pageSelectMoreDevices", title: "") {
-		section ('Select devices by capability') {
-        	paragraph "If you cannot find a device by type, you may try looking for it by capability below"
-			def d
-			for (capability in parent.capabilities().findAll{ (!(it.value.d in [null, 'actuators', 'sensors'])) }.sort{ it.value.d }) {
-				if (capability.value.d != d) input "dev:${capability.key}", "capability.${capability.key}", multiple: true, title: "Which ${capability.value.d}", required: false, submitOnChange: true
-				d = capability.value.d
+private pageSelectMoreDevices(page) {
+	dynamicPage(name: "pageSelectMoreDevices${page}", title: "") {
+		section ("Select devices by capability (group ${page})") {
+			for (capability in capabilitiesSegments()[page - 1]) {
+				input "dev:${capability.key}", "capability.${capability.key}", multiple: true, title: "Which ${capability.value.d}", required: false, submitOnChange: true
 			}
 		}
 	}
+}
+
+private pageSelectMoreDevices1() {
+	pageSelectMoreDevices(1)
+}
+
+private pageSelectMoreDevices2() {
+	pageSelectMoreDevices(2)
+}
+
+private pageSelectMoreDevices3() {
+	pageSelectMoreDevices(3)
+}
+
+private capabilitiesSegments(segments = 3) {
+	def caps = parent.capabilities().findAll{ (!(it.value.d in [null, 'actuators', 'sensors'])) }.sort{ it.value.d }
+	def capsPerPage = caps.size() / segments as Integer
+	def keys = caps.keySet() as List
+	return keys.collate(capsPerPage).collect{ caps.subMap(it) }
 }
 
 /******************************************************************************/
@@ -140,16 +161,40 @@ def initData(devices, contacts) {
 	}
 }
 
-def Map listAvailableDevices(raw = false) {
+def Map listAvailableDevices(raw = false, offset = 0) {
 	def time = now()
-    def response = [:]
+	def response = [:]
+	def devices = settings.findAll{ it.key.startsWith("dev:") }.collect{ it.value }.flatten().sort{ it.getDisplayName() }
+	def deviceCount = devices.size()
 	if (raw) {
-    	response = settings.findAll{ it.key.startsWith("dev:") }.collect{ it.value }.flatten().collectEntries{ dev -> [(hashId(dev.id)): dev]}
-    } else {
-    	response = settings.findAll{ it.key.startsWith("dev:") }.collect{ it.value }.flatten().collectEntries{ dev -> [(hashId(dev.id)): dev]}.collectEntries{ id, dev -> [ (id): [ n: dev.getDisplayName(), cn: dev.getCapabilities()*.name, a: dev.getSupportedAttributes().unique{ it.name }.collect{def x = [n: it.name, t: it.getDataType(), o: it.getValues()]; try {x.v = dev.currentValue(x.n);} catch(all) {}; x}, c: dev.getSupportedCommands().unique{ it.getName() }.collect{[n: it.getName(), p: it.getArguments()]} ]]}
+		response = devices.collectEntries{ dev -> [(hashId(dev.id)): dev]}
+	} else {
+		devices = devices[offset..-1]
+		response.devices = [:]
+		response.complete = !devices.indexed().find{ idx, dev ->
+			response.devices[hashId(dev.id)] = [
+				n: dev.getDisplayName(), 
+				cn: dev.getCapabilities()*.name, 
+				a: dev.getSupportedAttributes().unique{ it.name }.collect{[
+					n: it.name, 
+					t: it.getDataType(), 
+					o: it.getValues()
+				]}, 
+				c: dev.getSupportedCommands().unique{ it.getName() }.collect{[
+					n: it.getName(), 
+					p: it.getArguments()
+				]} 
+			]
+			// Stop after 10 seconds
+			if (idx < devices.size() - 1 && now() - time > 10000) {
+				response.nextOffset = offset + idx + 1
+				return true
+			}
+			false
+		}
 	}
-    log.debug "Generated list of devices in ${now() - time}ms. Data size is ${response.toString().size()}"
-    return response
+	log.debug "Generated list of ${offet}-${offset + devices.size()} of ${deviceCount} devices in ${now() - time}ms. Data size is ${response.toString().size()}"
+	return response
 }
 
 def Map getDashboardData() {
