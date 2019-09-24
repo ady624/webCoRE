@@ -961,6 +961,10 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 			{jsonpCallbackParam: 'callback'}
 		).then(function(response) {
 			var data = response.data;
+			if (data.error) {
+				status('There was a problem loading your devices. Please log out and try again.');
+				return null;
+			}
 			Object.assign(devices, data.devices);
 			if (!data.complete) {
 				return dataService.getDevices(inst, data.nextOffset, devices);
@@ -968,7 +972,7 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 			return devices;
 		}, function(error) {
 			status('There was a problem loading your devices. The data shown below may be outdated; please refresh the page to try again.');
-			return error;
+			return null;
 		});
 	}
 
