@@ -2240,13 +2240,11 @@ if (document.selection) {
 
 function loadFontAwesomeFallback() {
   fontAwesomePro = false;
-  $('head script[src*="pro.fontawesome"]').each(function() {
-    $(this).remove().clone()
-      .attr({
-        src: this.src.replace('pro', 'use'),
-      }).removeAttr('onerror')
-      .appendTo('head');
-  });
+  var shim = $('head script[src*="pro.fontawesome"]').remove().clone().removeAttr('onerror');
+  var faFreeSrc = shim.attr('src').replace('pro', 'use');
+  shim.attr('src', faFreeSrc);
+  shim.clone().attr('src', faFreeSrc.replace('v4-shims', 'all')).appendTo('head');
+  shim.appendTo('head');
 }
 
 // Handle Pro load failure before app loads
