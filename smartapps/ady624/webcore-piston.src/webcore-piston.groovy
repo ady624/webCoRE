@@ -5090,6 +5090,8 @@ private Map getVariable(rtData, name) {
             	result = getIncidents(rtData, name.substring(11))
         	} else if (name.startsWith('$incidents[') && (name.size() > 11)) {
             	result = getIncidents(rtData, name.substring(10))
+            } else if (name == '$endpoint') {
+                result = [t: 'string', v: "${parent.getEndpoint()}execute/${hashId(app.id)}".toString()]
             } else {
 				result = rtData.systemVars[name]
             	if (!(result instanceof Map)) result = [t: "error", v: "Variable '$name' not found"]
@@ -8033,7 +8035,7 @@ private getSystemVariableValue(rtData, name) {
   		case "\$locationMode": return location.getMode()
 		case "\$shmStatus": switch (hubUID ? 'off' : location.currentState("alarmSystemStatus")?.value) { case 'off': return 'Disarmed'; case 'stay': return 'Armed/Stay'; case 'away': return 'Armed/Away'; }; return null;
 		case "\$temperatureScale": return location.getTemperatureScale()
-		case "\$endpoint": return "${parent.getEndpoint()}execute/${hashId(app.id)}".toString()
+        case "\$endpoint": return "${rtData.endpoint}".toString()
 		case "\$randomUUID": def result = getRandomValue("\$randomUUID") ?: UUID.randomUUID().toString(); setRandomValue("\$randomUUID", result); return result
     }
 }
