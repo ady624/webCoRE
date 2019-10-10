@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.3.10f.20190822" }
+public static String version() { return "v0.3.110.20191009" }
 /*
+ *	10/09/2019 >>> v0.3.110.20191009 - BETA M3 - Load devices into dashboard in multiple batches when necessary, switch to FontAwesome Kit to always use latest version
  *	08/22/2019 >>> v0.3.10f.20190822 - BETA M3 - Custom headers on web requests by @Bloodtick_Jones (write as JSON in Authorization header field), capabilities split into three pages to fix device selection errors
  *	06/28/2019 >>> v0.3.10e.20190628 - BETA M3 - Reinstated dirty fix for dashboard timeouts after reports of increased error rates, NaN device status is back
  *	06/27/2019 >>> v0.3.10d.20190627 - BETA M3 - Reverted attempted fix for dashboard timeouts, fixes NaN device status on piston editing, dashboard tweaks for Hubitat by E_Sch
@@ -879,6 +880,7 @@ private subscribeAll() {
 mappings {
 	//path("/dashboard") {action: [GET: "api_dashboard"]}
 	path("/intf/dashboard/load") {action: [GET: "api_intf_dashboard_load"]}
+	path("/intf/dashboard/devices") {action: [GET: "api_intf_dashboard_devices"]}
 	path("/intf/dashboard/refresh") {action: [GET: "api_intf_dashboard_refresh"]}
 	path("/intf/dashboard/piston/new") {action: [GET: "api_intf_dashboard_piston_new"]}
 	path("/intf/dashboard/piston/create") {action: [GET: "api_intf_dashboard_piston_create"]}
@@ -920,10 +922,9 @@ private api_get_error_result(error) {
     ]
 }
 
-private api_get_base_result(deviceVersion = 0, updateCache = false) {
+private api_get_base_result(updateCache = false) {
 	def tz = location.getTimeZone()
     def currentDeviceVersion = state.deviceVersion
-	def Boolean sendDevices = (deviceVersion != currentDeviceVersion)
     def name = handle() + ' Piston'
     def incidentThreshold = now() - 604800000
 	return [
@@ -942,7 +943,7 @@ private api_get_base_result(deviceVersion = 0, updateCache = false) {
             lifx: state.lifx ?: [:],
             virtualDevices: virtualDevices(updateCache),
             globalVars: listAvailableVariables(),
-        ] + (sendDevices ? [contacts: [:], devices: listAvailableDevices(false, updateCache)] : [:]),
+        ],
         location: [
             contactBookEnabled: location.getContactBookEnabled(),
             hubs: location.getHubs().collect{ [id: hashId(it.id, updateCache), name: it.name, firmware: hubUID ? 'unknown' : it.getFirmwareVersionString(), physical: it.getType().toString().contains('PHYSICAL'), powerSource: it.isBatteryInUse() ? 'battery' : 'mains' ]},
@@ -964,6 +965,12 @@ private api_get_base_result(deviceVersion = 0, updateCache = false) {
     ]
 }
 
+private api_get_devices_result(offset = 0, updateCache = false) {
+	return listAvailableDevices(false, updateCache, offset) + [
+		deviceVersion: state.deviceVersion,
+	]
+}
+
 private api_intf_dashboard_load() {
 	def result
     recoveryHandler()
@@ -971,7 +978,7 @@ private api_intf_dashboard_load() {
     def storageApp = getStorageApp(true)
     //debug "Dashboard: Request received to initialize instance"
 	if (verifySecurityToken(params.token)) {
-    	result = api_get_base_result(params.dev, true)
+    	result = api_get_base_result(true)
     	if (params.dashboard == "1") {
             startDashboard()
          } else {
@@ -987,6 +994,19 @@ private api_intf_dashboard_load() {
             }
         }
         if (!result) result = api_get_error_result("ERR_INVALID_TOKEN")
+    }
+    //for accuracy, use the time as close as possible to the render
+    result.now = now()
+	render contentType: "application/javascript;charset=utf-8", data: "${params.callback}(${groovy.json.JsonOutput.toJson(result)})"
+}
+
+private api_intf_dashboard_devices() {
+	def result
+	if (verifySecurityToken(params.token)) {
+		def offset = "${params.offset}"
+    	result = api_get_devices_result(offset.isInteger() ? offset.toInteger() : 0)
+    } else {
+        result = api_get_error_result("ERR_INVALID_TOKEN")
     }
     //for accuracy, use the time as close as possible to the render
     result.now = now()
@@ -1043,7 +1063,7 @@ private api_intf_dashboard_piston_get() {
         def clientDbVersion = params.db
         def requireDb = serverDbVersion != clientDbVersion
         if (pistonId) {
-            result = api_get_base_result(requireDb ? 0 : params.dev, true)
+            result = [:]
             def piston = getChildApps().find{ hashId(it.id) == pistonId };
             if (piston) {
             	result.data = piston.get() ?: [:]
@@ -1645,7 +1665,7 @@ private cleanUp() {
         state.remove('modules')
         state.remove('globalVars')
         state.remove('devices')
-        api_get_base_result(1, true)
+        api_get_base_result(true)
 	} catch (all) {
     }
 }
@@ -1708,26 +1728,52 @@ private String getDashboardRegistrationUrl() {
 	return "https://api.${domain()}/dashboard/"
 }
 
-public Map listAvailableDevices(raw = false, updateCache = false) {
+public Map listAvailableDevices(raw = false, updateCache = false, offset = 0) {
 	def storageApp = getStorageApp()
-    Map result = [:]
-    if (storageApp) {
-    	result = storageApp.listAvailableDevices(raw)
+	Map result = [:]
+	if (storageApp) {
+		result = storageApp.listAvailableDevices(raw, offset)
 	} else {
+		def devices = settings.findAll{ it.key.startsWith("dev:") }.collect{ it.value }.flatten().sort{ it.getDisplayName() }
 		if (raw) {
-    		result = settings.findAll{ it.key.startsWith("dev:") }.collect{ it.value }.flatten().collectEntries{ dev -> [(hashId(dev.id, updateCache)): dev]}
-    	} else {
-    		result = settings.findAll{ it.key.startsWith("dev:") }.collect{ it.value }.flatten().collectEntries{ dev -> [(hashId(dev.id, updateCache)): dev]}.collectEntries{ id, dev -> [ (id): [ n: dev.getDisplayName(), cn: dev.getCapabilities()*.name, a: dev.getSupportedAttributes().unique{ it.name }.collect{def x = [n: it.name, t: it.getDataType(), o: it.getValues()]; try {x.v = dev.currentValue(x.n);} catch(all) {}; x}, c: dev.getSupportedCommands().unique{ it.getName() }.collect{[n: it.getName(), p: it.getArguments()]} ]]}
+			result = devices.collectEntries{ dev -> [(hashId(dev.id, updateCache)): dev]}
+		} else {
+			def deviceCount = devices.size()
+			devices = devices[offset..-1]
+			result.devices = [:]
+			result.complete = !devices.indexed().find{ idx, dev ->
+				result.devices[hashId(dev.id)] = [
+					n: dev.getDisplayName(), 
+					cn: dev.getCapabilities()*.name, 
+					a: dev.getSupportedAttributes().unique{ it.name }.collect{[
+						n: it.name, 
+						t: it.getDataType(), 
+						o: it.getValues()
+					]}, 
+					c: dev.getSupportedCommands().unique{ it.getName() }.collect{[
+						n: it.getName(), 
+						p: it.getArguments()
+					]} 
+				]
+				// Stop after 10 seconds
+				if (idx < devices.size() - 1 && now() - time > 10000) {
+					result.nextOffset = offset + idx + 1
+					return true
+				}
+				false
+			}
 		}
 	}
-    List presenceDevices = getChildDevices()
-    if (presenceDevices && presenceDevices.size()) {
-		if (raw) {
-    		result << presenceDevices.collectEntries{ dev -> [(hashId(dev.id, updateCache)): dev]}
-    	} else {
-    		result << presenceDevices.collectEntries{ dev -> [(hashId(dev.id, updateCache)): dev]}.collectEntries{ id, dev -> [ (id): [ n: dev.getDisplayName(), cn: dev.getCapabilities()*.name, a: dev.getSupportedAttributes().unique{ it.name }.collect{def x = [n: it.name, t: it.getDataType(), o: it.getValues()]; try {x.v = dev.currentValue(x.n);} catch(all) {}; x}, c: dev.getSupportedCommands().unique{ it.getName() }.collect{[n: it.getName(), p: it.getArguments()]} ]]}
+	if (raw || result.complete) {
+		List presenceDevices = getChildDevices()
+		if (presenceDevices && presenceDevices.size()) {
+			if (raw) {
+				result << presenceDevices.collectEntries{ dev -> [(hashId(dev.id, updateCache)): dev]}
+			} else {
+				result.devices << presenceDevices.collectEntries{ dev -> [(hashId(dev.id, updateCache)): dev]}.collectEntries{ id, dev -> [ (id): [ n: dev.getDisplayName(), cn: dev.getCapabilities()*.name, a: dev.getSupportedAttributes().unique{ it.name }.collect{def x = [n: it.name, t: it.getDataType(), o: it.getValues()]; try {x.v = dev.currentValue(x.n);} catch(all) {}; x}, c: dev.getSupportedCommands().unique{ it.getName() }.collect{[n: it.getName(), p: it.getArguments()]} ]]}
+			}
 		}
-    }
+	}
     return result
 }
 

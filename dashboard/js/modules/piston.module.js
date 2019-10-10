@@ -2203,66 +2203,8 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 );
 	}
 
-
-	$scope.getDeviceAttributeValue = function(device, attributeName) {
-		for(i in device.a) {
-			if (device.a[i].n == attributeName) {
-				var result = {v: device.a[i].v, t: device.a[i].v};
-				if (result.v == undefined) result.v = '';
-				if ((attributeName == 'battery') && (!isNaN(result.v))) {
-					result.t = result.t + '%';
-					result.v = Math.floor(parseInt(result.v) / 20);
-					if (result.v > 4) result.v = 4;
-				}
-				if ((attributeName == 'temperature') && (!isNaN(result.v))) {
-					result.v = Math.round(parseFloat(result.v)).toString() + '°';
-					result.t = result.v;
-				}
-				return result;
-			}
-		}
-		return {v:'', t:''};
-	}
-	
-	var attributeIcons = {
-		battery: {
-			0: 'battery-empty',
-			1: 'battery-quarter',
-			2: 'battery-half',
-			3: 'battery-three-quarters',
-			4: 'battery-full',
-		},
-		motion: 'exchange-alt',
-		presence: 'child',
-		'switch': {
-			'on': 'toggle-on',
-			'off': 'toggle-off',
-		}
-	};
-
 	$scope.renderDevice = function(device) {
-//		var result = '<div class="col-sm-7">' + device.n + '</div><div class="col-sm-1">1</div>' + '<div class="col-sm-1">2</div>' + '<div class="col-sm-1">3</div>' + '<div class="col-sm-1">4</div>' + '<div class="col-sm-1">5</div>';
-		var sSwitch = $scope.getDeviceAttributeValue(device, 'switch');
-		var sSwitch = sSwitch ? 'class="fa fa-toggle-off" switch="' + sSwitch + '"' : '';
-		var attributes = ['temperature', 'battery', 'switch', 'motion', 'presence'];
 		var result = '<div col>' + device.n + '</div>';
-		for (a in attributes) {
-			var value = $scope.getDeviceAttributeValue(device, attributes[a]);
-			var icon = attributeIcons[attributes[a]];
-			result += '<div col ' + attributes[a] + '="' + value.v + '" title="' + value.t + '">'
-			if (value.v !== '') {
-				if (icon && typeof icon !== 'string') {
-					icon = icon[value.v];
-				}
-				if (icon) {
-					result += '<i class="fas fa-' + icon + '"></i>';
-				} else {
-					result += value.v;
-				}
-			}
-			result += '</div>';
-		}
-//<div col ' + sSwitch + '> </div>' + '<div col motion="' + $scope.getDeviceAttributeValue(device, 'motion') + '"> </div>' + '<div col>3</div>' + '<div col>4</div>' + '<div col>5</div>';
 		return $sce.trustAsHtml(result);
 	}
 
