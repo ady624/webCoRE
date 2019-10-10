@@ -648,6 +648,7 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 			instance.devices = inst.devices;
 			initial = true;
 		}
+		instance.deviceVersion = inst.deviceVersion;
 		instance.devices = instance.devices ? instance.devices : (instances[instance.id] && instances[instance.id].devices ? instances[instance.id].devices : []);
 		if (!!instance.pistons) {
 			for (i = 0; i < inst.pistons.length; i++) {
@@ -931,17 +932,49 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 				if (data.location) {
 					setLocation(data.location);
 				}
-				if (data.instance) {
-					data.instance = setInstance(data.instance);
-				}
 				data.endpoint = si.uri;
 				data.accessToken = si.accessToken;
+				if (data.instance && !data.instance.devices && data.instance.deviceVersion !== deviceVersion) {
+					return dataService.getDevices(data.instance).then(function(devices) {
+						data.instance.devices = devices;
+						return data;
+					});
+				}
 				return data;	
 			}, function(error) {
 				status('There was a problem loading the dashboard data. The data shown below may be outdated; please log out if this problem persists.');
 				return error;
+			}).then(function(data) {
+				if (data.instance) {
+					data.instance = setInstance(data.instance);
+				}
+				return data;
 			});
     };
+
+	dataService.getDevices = function(inst, offset, devices) {
+		var si = inst ? store[inst.id] : null;
+		offset = offset || 0;
+		devices = devices || {};
+		return $http.jsonp(
+			(si ? si.uri : 'about:blank/') + 'intf/dashboard/devices?' + getAccessToken(si) + 'token=' + (si && si.token ? si.token : '') + '&offset=' + offset, 
+			{jsonpCallbackParam: 'callback'}
+		).then(function(response) {
+			var data = response.data;
+			if (data.error) {
+				status('There was a problem loading your devices. Please log out and try again.');
+				return null;
+			}
+			Object.assign(devices, data.devices);
+			if (!data.complete) {
+				return dataService.getDevices(inst, data.nextOffset, devices);
+			}
+			return devices;
+		}, function(error) {
+			status('There was a problem loading your devices. The data shown below may be outdated; please refresh the page to try again.');
+			return null;
+		});
+	}
 
     dataService.tap = function (tapId) {
         return $http({
@@ -978,11 +1011,26 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
         var dbVersion = readObject('db.version', _dk);
 		status('Loading piston...');
     	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/piston/get?' + getAccessToken(si) + 'id=' + pistonId + '&db=' + dbVersion + '&token=' + (si && si.token ? si.token : '') + '&dev=' + deviceVersion, {jsonpCallbackParam: 'callback'})
+			// Base response is no longer included with the piston
+			.then(function(response) {
+				var data = response.data;
+				if (!data.instance) {
+					return dataService.loadInstance(inst).then(function(instData) {
+						const mergedData = Object.assign({}, data, instData);
+						return Object.assign({}, response, { data: mergedData });
+					});
+				}
+
+				if (data.location) {
+					setLocation(data.location);
+				}
+				if (data.instance) {
+					data.instance = setInstance(data.instance);
+				}
+				return response;
+			})
 			.then(function(response) {
 				data = response.data;
-				if (data.now) {
-					adjustTimeOffset(data.now);
-				}
 				if (data.dbVersion) {
 					writeObject('db.version', data.dbVersion, _dk);
 					writeObject('db', data.db);
@@ -991,13 +1039,6 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 					data.db = readObject('db');
 					status();
 				}
-				if (data.location) {
-					setLocation(data.location);
-				}
-				if (data.instance) {
-					data.instance = setInstance(data.instance);
-				}
-				data.endpoint = si.uri;
 				return data;
 			}, function(error) {
 				return null;
@@ -2203,13 +2244,11 @@ if (document.selection) {
 
 function loadFontAwesomeFallback() {
   fontAwesomePro = false;
-  $('head script[src*="pro.fontawesome"]').each(function() {
-    $(this).remove().clone()
-      .attr({
-        src: this.src.replace('pro', 'use'),
-      }).removeAttr('onerror')
-      .appendTo('head');
-  });
+  var shim = $('head script[src*="pro.fontawesome"]').remove().clone().removeAttr('onerror');
+  var faFreeSrc = shim.attr('src').replace('pro', 'use');
+  shim.attr('src', faFreeSrc);
+  shim.clone().attr('src', faFreeSrc.replace('v4-shims', 'all')).appendTo('head');
+  shim.appendTo('head');
 }
 
 // Handle Pro load failure before app loads
@@ -2269,4 +2308,4 @@ if (!String.prototype.endsWith) {
 	};
 }
 
-version = function() { return 'v0.3.10f.20190822'; };
+version = function() { return 'v0.3.110.20191009'; };
