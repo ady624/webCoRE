@@ -3305,35 +3305,42 @@ private long vcmd_httpRequest(rtData, device, params) {
 			}
 			if (func) {
 				"$func"(requestParams) { response ->
-					setSystemVariableValue(rtData, "\$httpContentType", response.contentType)
 					setSystemVariableValue(rtData, "\$httpStatusCode", response.status)
 					setSystemVariableValue(rtData, "\$httpStatusOk", (response.status >= 200) && (response.status <= 299))
-                    def binary = false
-                    def mediaType = response.contentType.toLowerCase()
-                    switch (mediaType) {
-                    	case 'image/jpeg':
-                    	case 'image/png':
-                    	case 'image/gif':
-                        	binary = true
-                    }
-					if ((response.status == 200) && response.data && !binary) {
-						try {
-							rtData.response = response.data instanceof Map ? response.data : (LinkedHashMap) new groovy.json.JsonSlurper().parseText(response.data)
-						} catch (all) {
-                        	rtData.response = response.data
-						}
-					} else {
-                    	rtData.response = null
-                        if (response.data && (response.data instanceof java.io.ByteArrayInputStream)) {
-	                        rtData.mediaType = mediaType
-    	                    rtData.mediaData = response.data.getBytes()
-                        } else {
-	                        rtData.mediaType = null
-    	                    rtData.mediaData = null
+                    if (response.status == 204) {
+                        rtData.mediaData = null
+                        rtData.mediaType = null
+                        rtData.mediaUrl = null
+                        rtData.response = null
+                    } else {
+                        setSystemVariableValue(rtData, "\$httpContentType", response.contentType)
+                        def binary = false
+                        def mediaType = response.contentType.toLowerCase()
+                        switch (mediaType) {
+                            case 'image/jpeg':
+                            case 'image/png':
+                            case 'image/gif':
+                                binary = true
                         }
-                        rtData.mediaUrl = null;
+                        if ((response.status == 200) && response.data && !binary) {
+                            try {
+                                rtData.response = response.data instanceof Map ? response.data : (LinkedHashMap) new groovy.json.JsonSlurper().parseText(response.data)
+                            } catch (all) {
+                                rtData.response = response.data
+                            }
+                        } else {
+                            rtData.response = null
+                            if (response.data && (response.data instanceof java.io.ByteArrayInputStream)) {
+                                rtData.mediaType = mediaType
+                                rtData.mediaData = response.data.getBytes()
+                            } else {
+                                rtData.mediaType = null
+                                rtData.mediaData = null
+                            }
+                            rtData.mediaUrl = null;
+                        }
                     }
-				}
+                }
 			}
 		} catch (all) {
 			error "Error executing external web request: ", rtData, null, all
