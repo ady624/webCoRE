@@ -18,7 +18,7 @@
  *
  *  Version history
 */
-public static String version() { return "v0.3.110.20191009" }
+public static String version() { return "v0.3.110.20191124" }
 /*
  *	10/09/2019 >>> v0.3.110.20191009 - BETA M3 - Load devices into dashboard in multiple batches when necessary, switch to FontAwesome Kit to always use latest version
  *	08/22/2019 >>> v0.3.10f.20190822 - BETA M3 - Custom headers on web requests by @Bloodtick_Jones (write as JSON in Authorization header field), capabilities split into three pages to fix device selection errors
@@ -430,7 +430,17 @@ def updated() {
 	return true
 }
 
+private addPistonSwitch(){
+   	def data = [
+        name: "Piston Switch",
+		label: "Piston: ${app.label}",
+	]
+	log.info "Adding device ${data.name} label ${data.label} for network id: ${app.id}"
+    addChildDevice("mlong/webcore", "Piston Switch", "webcore:${app.id}", null,  data)
+}
+
 def initialize() {
+	createSwitch()
 	if (!!state.active) {
     	resume()
     }
@@ -678,6 +688,15 @@ def test() {
     return [:]
 }
 
+private createSwitch() {
+	log.info "Creating switch"
+    def size = app.getChildDevices(true).size();
+    log.info "Size $size"
+	if(size < 1){
+    	addPistonSwitch()
+    }
+}
+
 def execute(data, source) {
 	handleEvents([date: new Date(), device: location, name: 'execute', value: source ?: now(), jsonData: data])
     return [:]
@@ -800,6 +819,7 @@ def executeHandler(event) {
 
 //entry point for all events
 def handleEvents(event) {
+	createSwitch()
 	//cancel all pending jobs, we'll handle them later
 	//unschedule(timeHandler)
     if (!state.active) return
@@ -2823,6 +2843,13 @@ private long vcmd_setVariable(rtData, device, params) {
     def value = params[1]
 	setVariable(rtData, name, value)
     return 0
+}
+
+public executeSelf()
+{
+	def selfId = hashId(app.id)
+	//parent.executePiston(selfId, [:], selfId)
+    execute([:], selfId)
 }
 
 private long vcmd_executePiston(rtData, device, params) {
