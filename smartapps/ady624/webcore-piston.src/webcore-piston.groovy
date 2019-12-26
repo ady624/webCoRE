@@ -3322,7 +3322,7 @@ private long vcmd_httpRequest(rtData, device, params) {
                             case 'image/gif':
                                 binary = true
                         }
-                        if ((response.status == 200) && response.data && !binary) {
+                        if ((response.status < 300) && response.data && !binary) {
                             try {
                                 rtData.response = response.data instanceof Map ? response.data : (LinkedHashMap) new groovy.json.JsonSlurper().parseText(response.data)
                             } catch (all) {
