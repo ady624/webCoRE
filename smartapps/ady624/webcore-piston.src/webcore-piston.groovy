@@ -4167,9 +4167,9 @@ private boolean comp_executes						(rtData, lv, rv = null, rv2 = null, tv = null
 private boolean comp_arrives						(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return (rtData.event.name == 'email') && match(rtData.event?.jsonData?.from ?: '', evaluateExpression(rtData, rv.v, 'string').v) && match(rtData.event?.jsonData?.message ?: '', evaluateExpression(rtData, rv2.v, 'string').v) }
 private boolean comp_happens_daily_at				(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return rtData.wakingUp }
 
-private boolean comp_changes						(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return valueCacheChanged(rtData, lv) && matchDeviceInteraction(lv.p, rtData.currentEvent.physical); }
-private boolean comp_changes_to						(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return valueCacheChanged(rtData, lv) && ("${lv.v.v}" == "${rv.v.v}") && matchDeviceInteraction(lv.p, rtData.currentEvent.physical); }
-private boolean comp_changes_away_from				(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { def oldValue = valueCacheChanged(rtData, lv); return oldValue && ("${oldValue.v.v}" == "${rv.v.v}") && matchDeviceInteraction(lv.p, rtData.currentEvent.physical); }
+private boolean comp_changes						(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return valueCacheChanged(rtData, lv) && matchDeviceInteraction(lv.v.p, rtData.currentEvent.physical); }
+private boolean comp_changes_to						(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return valueCacheChanged(rtData, lv) && ("${lv.v.v}" == "${rv.v.v}") && matchDeviceInteraction(lv.v.p, rtData.currentEvent.physical); }
+private boolean comp_changes_away_from				(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { def oldValue = valueCacheChanged(rtData, lv); return oldValue && ("${oldValue.v.v}" == "${rv.v.v}") && matchDeviceInteraction(lv.v.p, rtData.currentEvent.physical); }
 private boolean comp_drops							(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { def oldValue = valueCacheChanged(rtData, lv); return oldValue && (cast(rtData, oldValue.v.v, 'decimal') > cast(rtData, lv.v.v, 'decimal')); }
 private boolean comp_does_not_drop					(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return !comp_drops(rtData, lv, rv, rv2, tv, tv2); }
 private boolean comp_drops_below					(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { def oldValue = valueCacheChanged(rtData, lv); return oldValue && (cast(rtData, oldValue.v.v, 'decimal') >= cast(rtData, rv.v.v, 'decimal')) && (cast(rtData, lv.v.v, 'decimal') < cast(rtData, rv.v.v, 'decimal')); }
@@ -4191,8 +4191,8 @@ private boolean comp_becomes_odd					(rtData, lv, rv = null, rv2 = null, tv = nu
 private boolean comp_remains_even					(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { def oldValue = valueCacheChanged(rtData, lv); return oldValue && (cast(rtData, oldValue.v.v, 'integer').mod(2) == 0) && (cast(rtData, lv.v.v, 'integer').mod(2) == 0); }
 private boolean comp_remains_odd					(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { def oldValue = valueCacheChanged(rtData, lv); return oldValue && (cast(rtData, oldValue.v.v, 'integer').mod(2) != 0) && (cast(rtData, lv.v.v, 'integer').mod(2) != 0); }
 
-private boolean comp_changes_to_any_of				(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return !!valueCacheChanged(rtData, lv) && comp_is_any_of(rtData, lv, rv, rv2, tv, tv2) && matchDeviceInteraction(lv.p, rtData.currentEvent.physical); }
-private boolean comp_changes_away_from_any_of		(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { def oldValue = valueCacheChanged(rtData, lv); return !!oldValue && comp_is_any_of(rtData, oldValue, rv, rv2) && matchDeviceInteraction(lv.p, rtData.currentEvent.physical); }
+private boolean comp_changes_to_any_of				(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return !!valueCacheChanged(rtData, lv) && comp_is_any_of(rtData, lv, rv, rv2, tv, tv2) && matchDeviceInteraction(lv.v.p, rtData.currentEvent.physical); }
+private boolean comp_changes_away_from_any_of		(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { def oldValue = valueCacheChanged(rtData, lv); return !!oldValue && comp_is_any_of(rtData, oldValue, rv, rv2) && matchDeviceInteraction(lv.v.p, rtData.currentEvent.physical); }
 
 private boolean comp_stays							(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return comp_is(rtData, lv, rv, rv2, tv, tv2); }
 private boolean comp_stays_unchanged				(rtData, lv, rv = null, rv2 = null, tv = null, tv2 = null) { return true; }
