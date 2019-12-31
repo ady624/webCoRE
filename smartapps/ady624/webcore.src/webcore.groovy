@@ -1739,6 +1739,7 @@ public Map listAvailableDevices(raw = false, updateCache = false, offset = 0) {
 			result = devices.collectEntries{ dev -> [(hashId(dev.id, updateCache)): dev]}
 		} else {
 			def deviceCount = devices.size()
+			def time = now()
 			devices = devices[offset..-1]
 			result.devices = [:]
 			result.complete = !devices.indexed().find{ idx, dev ->
