@@ -5162,12 +5162,16 @@ private Map setVariable(rtData, name, value) {
             if (variable.t.endsWith(']')) {
             	//we're dealing with a list
                 variable.v = (variable.v instanceof Map) ? variable.v : [:]
-                Map indirectVar = getVariable(rtData, var.index)
-                //indirect variable addressing
-                if (indirectVar && (indirectVar.t != 'error')) {
-                    var.index = cast(rtData, indirectVar.v, 'string', indirectVar.t)
+                if (var.index == "*CLEAR")	{
+                    variable.v.clear()
+                } else {
+                    Map indirectVar = getVariable(rtData, var.index)
+                    //indirect variable addressing
+                    if (indirectVar && (indirectVar.t != 'error')) {
+                        var.index = cast(rtData, indirectVar.v, 'string', indirectVar.t)
+                    }
+                    variable.v[var.index] = cast(rtData, value, variable.t.replace('[]', ''))
                 }
-                variable.v[var.index] = cast(rtData, value, variable.t.replace('[]', ''))
             } else {
             	variable.v = cast(rtData, value, variable.t)
             }
