@@ -175,6 +175,9 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 				if (response.activity.globalVars) {
 					$scope.updateGlobalVars(response.activity.globalVars);
 				}
+				if (response.activity.systemVars) {
+					$scope.updateSystemVars(response.activity.systemVars);
+				}
 			}
 			tmrActivity = $timeout($scope.updateActivity, 3000);
 		}, function (error) {
@@ -185,7 +188,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 
 	$scope.updateGlobalVars = function(globalVars) {
 		$scope.globalVars = $scope.globalVars instanceof Object ? $scope.globalVars : {};
-		for (varName in globalVars) {
+		for (var varName in globalVars) {
 			var varType = globalVars[varName].t;
 			var varValue = globalVars[varName].v;
 			var v = $scope.globalVars[varName];
@@ -196,8 +199,28 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 				if (v.v != varValue) v.v = varValue;
 			}
 		}
-		for (varName in $scope.globalVars) {
+		for (var varName in $scope.globalVars) {
 			if (!globalVars[varName]) delete($scope.globalVars[varName]);
+		}
+	}
+
+	$scope.updateSystemVars = function(systemVars) {
+		$scope.systemVars = $scope.systemVars instanceof Object ? $scope.systemVars : {};
+		for (var varName in systemVars) {
+			var varType = systemVars[varName].t;
+			var varValue = systemVars[varName].v;
+			var varValD = systemVars[varName].d;
+			var v = $scope.systemVars[varName];
+			if (!v) {
+				if (varValD) {
+					$scope.systemVars[varName] = {t: varType, v: varValue, d: true};
+				} else {
+					$scope.systemVars[varName] = {t: varType, v: varValue};
+				}
+			} else {
+				if (v.t != varType) v.t = varType;
+				if (v.v != varValue) v.v = varValue;
+			}
 		}
 	}
 
