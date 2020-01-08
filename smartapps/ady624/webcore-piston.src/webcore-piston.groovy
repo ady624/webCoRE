@@ -1383,8 +1383,8 @@ private Boolean executeStatement(rtData, statement, async = false) {
 	                        rtData.cache["f:${statement.$}"] = index
                         }
                         setSystemVariableValue(rtData, '$index', index)
-						if ((statement.t == 'each') && !rtData.fastForward) setSystemVariableValue(rtData, '$device', (index < devices.size() ? [devices[(int) index]] : []))
-                        if (counterVariable && !rtData.fastForward) setVariable(rtData, counterVariable, (statement.t == 'each') ? (index < devices.size() ? [devices[(int) index]] : []) : index)
+						if ((statement.t == 'each') && !rtData.fastForwardTo) setSystemVariableValue(rtData, '$device', (index < devices.size() ? [devices[(int) index]] : []))
+                        if (counterVariable && !rtData.fastForwardTo) setVariable(rtData, counterVariable, (statement.t == 'each') ? (index < devices.size() ? [devices[(int) index]] : []) : index)
                         //do the loop
                         perform = executeStatements(rtData, statement.s, async)
                         if (!perform) {
@@ -1402,8 +1402,8 @@ private Boolean executeStatement(rtData, statement, async = false) {
                         if (!!rtData.fastForwardTo) break
                         index = index + stepValue
                         setSystemVariableValue(rtData, '$index', index)
-						if ((statement.t == 'each') && !rtData.fastForward) setSystemVariableValue(rtData, '$device', (index < devices.size() ? [devices[(int) index]] : []))
-                        if (counterVariable && !rtData.fastForward) setVariable(rtData, counterVariable, (statement.t == 'each') ? (index < devices.size() ? [devices[(int) index]] : []) : index)
+						if ((statement.t == 'each') && !rtData.fastForwardTo) setSystemVariableValue(rtData, '$device', (index < devices.size() ? [devices[(int) index]] : []))
+                        if (counterVariable && !rtData.fastForwardTo) setVariable(rtData, counterVariable, (statement.t == 'each') ? (index < devices.size() ? [devices[(int) index]] : []) : index)
                         rtData.cache["f:${statement.$}"] = index
                         if (((stepValue > 0 ) && (index > endValue)) || ((stepValue < 0 ) && (index < endValue))) {
                         	perform = false
