@@ -1367,12 +1367,14 @@ private Boolean executeStatement(rtData, statement, async = false) {
                     double endValue = 0
                     double stepValue = 1
                     if (statement.t == 'each') {
-                        devices = evaluateOperand(rtData, null, statement.lo).v ?: []
+                        def t0 = evaluateOperand(rtData, null, statement.lo).v
+                        devices = t0 ?: []
                         endValue = devices.size() - 1
                     } else {
                     	startValue = evaluateScalarOperand(rtData, statement, statement.lo, null, 'decimal').v
                     	endValue = evaluateScalarOperand(rtData, statement, statement.lo2, null, 'decimal').v
-                    	stepValue = evaluateScalarOperand(rtData, statement, statement.lo3, null, 'decimal').v ?: 1.0
+                    	Double t0 = evaluateScalarOperand(rtData, statement, statement.lo3, null, 'decimal').v
+                    	stepValue = t0 ?: 1.0
                     }
                     String counterVariable = getVariable(rtData, statement.x).t != 'error' ? statement.x : null
                     if (((startValue <= endValue) && (stepValue > 0)) || ((startValue >= endValue) && (stepValue < 0)) || !!rtData.fastForwardTo) {
@@ -1383,8 +1385,8 @@ private Boolean executeStatement(rtData, statement, async = false) {
 	                        rtData.cache["f:${statement.$}"] = index
                         }
                         setSystemVariableValue(rtData, '$index', index)
-						if ((statement.t == 'each') && !rtData.fastForward) setSystemVariableValue(rtData, '$device', (index < devices.size() ? [devices[(int) index]] : []))
-                        if (counterVariable && !rtData.fastForward) setVariable(rtData, counterVariable, (statement.t == 'each') ? (index < devices.size() ? [devices[(int) index]] : []) : index)
+						if ((statement.t == 'each') && !rtData.fastForwardTo) setSystemVariableValue(rtData, '$device', (index < devices.size() ? [devices[(int) index]] : []))
+                        if (counterVariable && !rtData.fastForwardTo) setVariable(rtData, counterVariable, (statement.t == 'each') ? (index < devices.size() ? [devices[(int) index]] : []) : index)
                         //do the loop
                         perform = executeStatements(rtData, statement.s, async)
                         if (!perform) {
@@ -1402,8 +1404,8 @@ private Boolean executeStatement(rtData, statement, async = false) {
                         if (!!rtData.fastForwardTo) break
                         index = index + stepValue
                         setSystemVariableValue(rtData, '$index', index)
-						if ((statement.t == 'each') && !rtData.fastForward) setSystemVariableValue(rtData, '$device', (index < devices.size() ? [devices[(int) index]] : []))
-                        if (counterVariable && !rtData.fastForward) setVariable(rtData, counterVariable, (statement.t == 'each') ? (index < devices.size() ? [devices[(int) index]] : []) : index)
+						if ((statement.t == 'each') && !rtData.fastForwardTo) setSystemVariableValue(rtData, '$device', (index < devices.size() ? [devices[(int) index]] : []))
+                        if (counterVariable && !rtData.fastForwardTo) setVariable(rtData, counterVariable, (statement.t == 'each') ? (index < devices.size() ? [devices[(int) index]] : []) : index)
                         rtData.cache["f:${statement.$}"] = index
                         if (((stepValue > 0 ) && (index > endValue)) || ((stepValue < 0 ) && (index < endValue))) {
                         	perform = false
@@ -1501,7 +1503,9 @@ private Boolean executeStatement(rtData, statement, async = false) {
         }
     }
 	if (!rtData.fastForwardTo) {
-    	def schedule = (statement.t == 'every') ? (rtData.schedules.find{ it.s == statement.$} ?: state.schedules.find{ it.s == statement.$ }) : null
+    	Boolean tt0 = (String)statement.t == 'every'
+    	def t0 = tt0 ? rtData.schedules.find{ it.s == statement.$} : null
+    	def schedule = tt0 ? (t0!=null ? t0 : state.schedules.find{ it.s == statement.$ }) : null
         if (schedule) {
         	//timers need to show the remaining time
     		tracePoint(rtData, "s:${statement.$}", now() - t, now() - schedule.t)
@@ -5198,7 +5202,8 @@ private Map setVariable(rtData, name, value) {
 def setLocalVariable(name, value) {
 	name = sanitizeVariableName(name)
     if (!name || name.startsWith('@')) return
-	def vars = atomicState.vars ?: [:]
+	def t0 = atomicState.vars
+	def vars = t0!=null ? t0 : [:]
     vars[name] = value
     atomicState.vars = vars
     return vars
