@@ -3312,6 +3312,7 @@ private long vcmd_httpRequest(rtData, device, params) {
 					setSystemVariableValue(rtData, "\$httpStatusCode", response.status)
 					setSystemVariableValue(rtData, "\$httpStatusOk", (response.status >= 200) && (response.status <= 299))
                     if (response.status == 204) {
+                        setSystemVariableValue(rtData, "\$httpContentType", "")
                         rtData.mediaData = null
                         rtData.mediaType = null
                         rtData.mediaUrl = null
