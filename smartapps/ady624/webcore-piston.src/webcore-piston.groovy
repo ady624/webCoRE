@@ -3326,6 +3326,7 @@ private long vcmd_httpRequest(rtData, device, params) {
 
 public void ahttpRequestHandler(response, callbackData){
 	def data
+	def json
 	Map setRtData=[mediaData:null, mediaType:null, mediaUrl:null] as Map
 	String callBackC=(String)callbackData?.command
 	def responseCode = response.status
@@ -3343,14 +3344,21 @@ public void ahttpRequestHandler(response, callbackData){
 			binary = true
 		}
 		if(!binary) {
+			def theData
 			try{
-				data=response.getData()
+				theData=response.getData()
+				data = theData
 				if (data && data instanceof Map ) {
 				} else {
-					data=(LinkedHashMap) new groovy.json.JsonSlurper().parseText(response.data)
+					try{
+						json=response.getJson()
+						if(json!=null) data=json
+					} catch (all1){
+						json=[:]
+					}
 				}
 			} catch (all){
-				data = [:]
+				data=response.data
 			}
 		} else {
 			if(response.data && response.data instanceof java.io.ByteArrayInputStream){
