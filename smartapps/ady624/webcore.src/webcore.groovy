@@ -168,7 +168,7 @@ public static String version() { return "v0.3.110.20191009" }
  *	04/21/2017 >>> v0.0.07d.20170421 - ALPHA - Lots of improvements for device variables
  *	04/20/2017 >>> v0.0.07c.20170420 - ALPHA - Timed conditions are finally working (was* and changed/not changed), basic tests performed
  *	04/19/2017 >>> v0.0.07b.20170419 - ALPHA - First attempt to get 'was' conditions up and running
- *	04/19/2017 >>> v0.0.07a.20170419 - ALPHA - Minor bug fixes, triggers inside timers no longer subscribe to events (the timer is a trigger itself) - triggers should not normally be used inside timers
+ *	04/19/2017 >>> v0.0.07a.20170419 - ALPHA - Minor bug fixes, triggers inside timers no longer to events (the timer is a trigger itself) - triggers should not normally be used inside timers
  *	04/19/2017 >>> v0.0.079.20170419 - ALPHA - Time condition restrictions are now working, added date and date&time conditions, offsets still missing
  *	04/18/2017 >>> v0.0.078.20170418 - ALPHA - Time conditions now subscribe for time events - added restrictions to UI dialog, but not yet implemented
  *	04/18/2017 >>> v0.0.077.20170418 - ALPHA - Implemented time conditions - no date or datetime yet, also, no subscriptions for time events yet
@@ -867,8 +867,9 @@ private subscribeAll() {
 	subscribe(location, "askAlexa", askAlexaHandler)
 	subscribe(location, "echoSistant", echoSistantHandler)
 	subscribe(location, "hubInfo", hubInfoHandler, [filterEvents: false])
+	subscribe(location, "HubUpdated", hubUpdatedHandler, [filterEvents: false])
     subscribe(location, "summary", summaryHandler, [filterEvents: false])
-    setPowerSource(getHub().isBatteryInUse() ? 'battery' : 'mains')
+    setPowerSource(getHub()?.isBatteryInUse() ? 'battery' : 'mains')
 }
 
 /******************************************************************************/
@@ -2232,6 +2233,7 @@ def echoSistantHandler(evt) {
 	}
 }
 
+// Used for current hubs
 def hubInfoHandler(evt) {
     //log.debug "Hub info event received"
     def hubInfo = evt.value
@@ -2252,6 +2254,13 @@ def hubInfoHandler(evt) {
             log.error "Unrecognized hub power source value of ${powerSource}"
             break
        }
+}
+
+// Used for legacy hubs
+def hubUpdatedHandler(evt) {
+	if (evt.jsonData && (evt.jsonData.hubType == 'PHYSICAL') && evt.jsonData.data && evt.jsonData.data.batteryInUse) {
+    	setPowerSource(evt.jsonData.data.batteryInUse ? 'battery' : 'mains')
+    }
 }
 
 def summaryHandler(evt) {
