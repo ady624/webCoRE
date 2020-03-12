@@ -325,6 +325,7 @@ preferences {
     page(name: "pageChangePassword")
     page(name: "pageSavePassword")
     page(name: "pageRebuildCache")
+    page(name: "pageResetEndpoint")
 	page(name: "pageRemove")
 }
 
@@ -644,7 +645,11 @@ private pageSectionPIN() {
         input "PIN", "password", title: "Choose a security password for your dashboard", required: true
         input "expiry", "enum", options: ["Every hour", "Every day", "Every week", "Every month (recommended)", "Every three months", "Never (not recommended)"], defaultValue: "Every month (recommended)", title: "Choose how often the dashboard login expires", required: true
     }
-
+    section() {
+        paragraph "The webCoRE dashboard uses an access token to communicate with the smart apps on your SmartThings account. In some cases SmartThings may invalidate an access token, or you may choose to invalidate it periodically for increased security.", required: false
+        paragraph "If your dashboard fails to load and no log messages appear in Live Logging when you refresh the dashboard, resetting the access token may restore access to webCoRE.", required: false
+        href "pageResetEndpoint", title: "Reset access token", description: "WARNING: External URLs for triggering pistons will need to be updated"
+    }
 }
 
 private pageSavePassword() {
@@ -663,6 +668,18 @@ def pageRebuildCache() {
     		paragraph "Success! Data cache has been cleaned up and rebuilt."
         }
     }
+}
+
+def pageResetEndpoint() {
+	revokeAccessToken()
+	state.endpoint = null
+	initializeWebCoREEndpoint()
+	dynamicPage(name: "pageResetEndpoint", title: "", install: false, uninstall: false) {
+		section() {
+			paragraph "Success! Please sign out and back in to the webCoRE dashboard."
+			paragraph "If you use external URLs to trigger pistons, these URLs must be updated. See the piston detail page for an updated external URL; all pistons will use the same new token."
+		}
+	}
 }
 
 def pageIntegrations() {

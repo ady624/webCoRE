@@ -623,7 +623,8 @@ Map pause() {
     if (rtData.logging) info "Stopping piston...", rtData, 0
     checkVersion(rtData)
     state.schedules = []
-    rtData.stats.nextSchedule = 0
+    rtData.stats.nextSchedule = 0L
+    state.nextSchedule = 0L
     unsubscribe()
     unschedule()
     app.updateSetting('dev', null)
@@ -714,7 +715,7 @@ private getRunTimeData(rtData = null, semaphore = null, fetchWrappers = false) {
 	    rtData.id = appId
 		rtData.active = state.active;
         rtData.category = state.category;
-	    rtData.stats = [nextScheduled: 0]
+	    rtData.stats = [nextSchedule: 0]
 	    //we're reading the cache from atomicState because we might have waited at a semaphore
 	    rtData.cache = atomicState.cache ?: [:]
 	    rtData.newCache = [:]
@@ -818,6 +819,10 @@ def handleEvents(event) {
     if (!rtData.enabled) {
 		warn "Kill switch is active, aborting piston execution."
     	return;
+    }
+    if(event.name!='time' && (Long)state.nextSchedule!=0L){
+	unschedule(timeHandler)
+	state.nextSchedule=0L
     }
     checkVersion(rtData)
     setTimeoutRecoveryHandler('timeoutRecoveryHandler_webCoRE')
@@ -1156,7 +1161,7 @@ private processSchedules(rtData, scheduleJob = false) {
     }
     if (rtData.piston.o?.pep) atomicState.schedules = schedules
     state.schedules = schedules
-    state.schedules = schedules
+    //state.schedules = schedules
     state.nextSchedule = rtData.stats.nextSchedule
     rtData.schedules = []
 }
@@ -3292,60 +3297,25 @@ private long vcmd_httpRequest(rtData, device, params) {
 			def func = ""
 			switch(method) {
 				case "GET":
-					func = "httpGet"
+					func = "get"
 					break
 				case "POST":
-					func = "httpPost"
+					func = "post"
 					break
 				case "PUT":
-					func = "httpPut"
+					func = "put"
 					break
 				case "DELETE":
-					func = "httpDelete"
+					func = "delete"
 					break
 				case "HEAD":
-					func = "httpHead"
+					func = "head"
 					break
 			}
 			if (func) {
-				"$func"(requestParams) { response ->
-					setSystemVariableValue(rtData, "\$httpStatusCode", response.status)
-					setSystemVariableValue(rtData, "\$httpStatusOk", (response.status >= 200) && (response.status <= 299))
-                    if (response.status == 204) {
-                        setSystemVariableValue(rtData, "\$httpContentType", "")
-                        rtData.mediaData = null
-                        rtData.mediaType = null
-                        rtData.mediaUrl = null
-                        rtData.response = null
-                    } else {
-                        setSystemVariableValue(rtData, "\$httpContentType", response.contentType)
-                        def binary = false
-                        def mediaType = response.contentType.toLowerCase()
-                        switch (mediaType) {
-                            case 'image/jpeg':
-                            case 'image/png':
-                            case 'image/gif':
-                                binary = true
-                        }
-                        if ((response.status < 300) && response.data && !binary) {
-                            try {
-                                rtData.response = response.data instanceof Map ? response.data : (LinkedHashMap) new groovy.json.JsonSlurper().parseText(response.data)
-                            } catch (all) {
-                                rtData.response = response.data
-                            }
-                        } else {
-                            rtData.response = null
-                            if (response.data && (response.data instanceof java.io.ByteArrayInputStream)) {
-                                rtData.mediaType = mediaType
-                                rtData.mediaData = response.data.getBytes()
-                            } else {
-                                rtData.mediaType = null
-                                rtData.mediaData = null
-                            }
-                            rtData.mediaUrl = null;
-                        }
-                    }
-                }
+    //if (asynchttp_v1) asynchttp_v1.put(asyncHttpRequestHandler, requestParams, [command: 'storeMedia'])
+				asynchttp_v1."$func"(ahttpRequestHandler, requestParams, [command: 'httpRequest'])
+				return 24000
 			}
 		} catch (all) {
 			error "Error executing external web request: ", rtData, null, all
@@ -3354,6 +3324,57 @@ private long vcmd_httpRequest(rtData, device, params) {
 	return 0
 }
 
+public void ahttpRequestHandler(response, callbackData){
+	def data
+	def json
+	Map setRtData=[mediaData:null, mediaType:null, mediaUrl:null] as Map
+	String callBackC=(String)callbackData?.command
+	def responseCode = response.status
+	String mediaType = ""
+	if(responseCode == 204) {
+	}else if(responseCode >= 200 && responseCode < 300 && response.data ){ 
+		Boolean binary = false
+		def t0=response.getHeaders()
+		String t1=t0 && t0."Content-Type" ? t0."Content-Type":(String)null
+		mediaType=t1 ? (String)(t1.toLowerCase()?.tokenize(';')[0]):(String)null
+		switch (mediaType) {
+			case 'image/jpeg':
+			case 'image/png':
+			case 'image/gif':
+			binary = true
+		}
+		if(!binary) {
+			def theData
+			try{
+				theData=response.getData()
+				data = theData
+				if (data && data instanceof Map ) {
+				} else {
+					try{
+						json=response.getJson()
+						if(json!=null) data=json
+					} catch (all1){
+						json=[:]
+					}
+				}
+			} catch (all){
+				data=response.data
+			}
+		} else {
+			if(response.data && response.data instanceof java.io.ByteArrayInputStream){
+				setRtData.mediaType=mediaType
+				setRtData.mediaData=response.data.getBytes()
+			}
+		}
+	}
+	if (response.hasError()) {
+		String msg =  "Status $response.status raw response: $response.errorData,  error on response: $response.errorMessage"
+		error "Error executing external web request: "+msg, [:]
+		if(!responseCode) responseCode=500
+	}
+
+	handleEvents([date: new Date(), device: location, name: 'wc_async_reply', value: 'httpRequest', contentType: mediaType, responseData: data, jsonData: [:], responseCode: responseCode, setRtData: setRtData])
+}
 
 private long vcmd_writeToFuelStream(rtData, device, params) {
 	def canister = params[0]
@@ -7714,7 +7735,7 @@ private List hexToRgbArray(hex) {
 /******************************************************************************/
 /*** DEBUG FUNCTIONS														***/
 /******************************************************************************/
-private log(message, rtData = null, shift = null, err = null, cmd = null, force = false) {
+private Map log(message, rtData = null, shift = null, err = null, cmd = null, force = false) {
     if (cmd == "timer") {
     	return [m: message, t: now(), s: shift, e: err]
     }
@@ -7780,12 +7801,12 @@ private log(message, rtData = null, shift = null, err = null, cmd = null, force 
 		log."$cmd" "$prefix $message", err
     }
 }
-private info(message, rtData = null, shift = null, err = null) { log message, rtData, shift, err, 'info' }
-private trace(message, rtData = null, shift = null, err = null) { log message, rtData, shift, err, 'trace' }
-private debug(message, rtData = null, shift = null, err = null) { log message, rtData, shift, err, 'debug' }
-private warn(message, rtData = null, shift = null, err = null) { log message, rtData, shift, err, 'warn' }
-private error(message, rtData = null, shift = null, err = null) { log message, rtData, shift, err, 'error' }
-private timer(message, rtData = null, shift = null, err = null) { log message, rtData, shift, err, 'timer' }
+private void info(message, rtData = null, shift = null, err = null) { def a=log message, rtData, shift, err, 'info' }
+private void trace(message, rtData = null, shift = null, err = null) { def a=log message, rtData, shift, err, 'trace' }
+private void debug(message, rtData = null, shift = null, err = null) { def a=log message, rtData, shift, err, 'debug' }
+private void warn(message, rtData = null, shift = null, err = null) { def a=log message, rtData, shift, err, 'warn' }
+private void error(message, rtData = null, shift = null, err = null) { def a=log message, rtData, shift, err, 'error' }
+private Map timer(message, rtData = null, shift = null, err = null) { log message, rtData, shift, err, 'timer' }
 
 private tracePoint(rtData, objectId, duration, value) {
 	if (objectId && rtData && rtData.trace) {
