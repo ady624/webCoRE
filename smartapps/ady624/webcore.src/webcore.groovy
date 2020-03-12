@@ -645,11 +645,13 @@ private pageSectionPIN() {
         input "PIN", "password", title: "Choose a security password for your dashboard", required: true
         input "expiry", "enum", options: ["Every hour", "Every day", "Every week", "Every month (recommended)", "Every three months", "Never (not recommended)"], defaultValue: "Every month (recommended)", title: "Choose how often the dashboard login expires", required: true
     }
-    section() {
-        paragraph "The webCoRE dashboard uses an access token to communicate with the smart apps on your SmartThings account. In some cases SmartThings may invalidate an access token, or you may choose to invalidate it periodically for increased security.", required: false
-        paragraph "If your dashboard fails to load and no log messages appear in Live Logging when you refresh the dashboard, resetting the access token may restore access to webCoRE.", required: false
-        href "pageResetEndpoint", title: "Reset access token", description: "WARNING: External URLs for triggering pistons will need to be updated"
-    }
+	if (settings.PIN) {
+		section() {
+			paragraph "The webCoRE dashboard uses an access token to communicate with the smart apps on your SmartThings account. In some cases SmartThings may invalidate an access token, or you may choose to invalidate it periodically for increased security.", required: false
+			paragraph "If your dashboard fails to load and no log messages appear in Live Logging when you refresh the dashboard, resetting the access token may restore access to webCoRE.", required: false
+			href "pageResetEndpoint", title: "Reset access token", description: "WARNING: External URLs for triggering pistons will need to be updated"
+		}
+	}
 }
 
 private pageSavePassword() {
