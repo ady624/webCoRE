@@ -4211,7 +4211,8 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		suffix = (aggregation == 'any' ? 'or' : 'and');
 		var prefix = '';
 		if (devices instanceof Array) {
-			if (devices.length > 1) {
+			var isVariable = !$scope.getDeviceById(devices[0]);
+			if (devices.length > 1 || isVariable) {
 				switch (aggregation) {
 					case 'any':
 						prefix = 'Any of ';
