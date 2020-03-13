@@ -676,6 +676,8 @@ def pageResetEndpoint() {
 	revokeAccessToken()
 	state.endpoint = null
 	initializeWebCoREEndpoint()
+	initTokens()
+	registerInstance()
 	dynamicPage(name: "pageResetEndpoint", title: "", install: false, uninstall: false) {
 		section() {
 			paragraph "Success! Please sign out and back in to the webCoRE dashboard."
