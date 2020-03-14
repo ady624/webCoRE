@@ -1628,7 +1628,8 @@ private Boolean executeTask(rtData, devices, statement, task, async) {
     	def p
     	switch (param.vt) {
         	case 'variable':
-            	p = param.x instanceof List ? param.x : (param.x + (param.xi != null ? '[' + param.xi + ']' : ''));
+                if (param.t != 'x') continue
+                p = param.x instanceof List ? param.x : (param.x + (param.xi != null ? '[' + param.xi + ']' : ''));
                 break;
             default:
             	def v = evaluateOperand(rtData, null, param)
