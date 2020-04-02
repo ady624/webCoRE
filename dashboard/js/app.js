@@ -935,6 +935,7 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 				data.endpoint = si.uri;
 				data.accessToken = si.accessToken;
 				if (data.instance && !data.instance.devices && data.instance.deviceVersion !== deviceVersion) {
+					data.instance = setInstance(data.instance);
 					return dataService.getDevices(data.instance).then(function(devices) {
 						data.instance.devices = devices;
 						return data;
