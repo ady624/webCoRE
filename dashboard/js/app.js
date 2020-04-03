@@ -627,15 +627,19 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 		return si;
 	}
 
-	var setInstance = function(inst) {
-		var initial = (!instance);
-		if (!instance || (instance.id != inst.id)) instance = inst;
+	var setSI = function(inst) {
 		//preserve the token, unless a new one is given
-		var si = store[instance.id];
+		var si = store[inst.id];
 		if (!si) si = {};
 		si.token = inst.token ? inst.token : si.token;
 		si.uri = inst.uri ? inst.uri.replace(':443', '') : si.uri;
-		store[instance.id] = fixSI(si);
+		store[inst.id] = fixSI(si);
+	}
+
+	var setInstance = function(inst) {
+		var initial = (!instance);
+		if (!instance || (instance.id != inst.id)) instance = inst;
+		setSI(inst);
 		delete(instance.token);
 		delete(instance.uri);
 		if (inst.contacts) {
@@ -935,7 +939,7 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 				data.endpoint = si.uri;
 				data.accessToken = si.accessToken;
 				if (data.instance && !data.instance.devices && data.instance.deviceVersion !== deviceVersion) {
-					data.instance = setInstance(data.instance);
+					setSI(data.instance);
 					return dataService.getDevices(data.instance).then(function(devices) {
 						data.instance.devices = devices;
 						return data;
