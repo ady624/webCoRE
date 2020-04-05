@@ -1756,7 +1756,8 @@ public Map listAvailableDevices(raw = false, updateCache = false, offset = 0) {
 	if (storageApp) {
 		result = storageApp.listAvailableDevices(raw, offset)
 	} else {
-		def devices = settings.findAll{ it.key.startsWith("dev:") }.collect{ it.value }.flatten().sort{ it.getDisplayName() }
+		def myDevices = settings.findAll{ it.key.startsWith("dev:") }.collect{ it.value }.flatten().sort{ it.getDisplayName() }
+		def devices = myDevices.unique{ it.id }
 		if (raw) {
 			result = devices.collectEntries{ dev -> [(hashId(dev.id, updateCache)): dev]}
 		} else {
