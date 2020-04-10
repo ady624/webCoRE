@@ -164,7 +164,8 @@ def initData(devices, contacts) {
 def Map listAvailableDevices(raw = false, offset = 0) {
 	def time = now()
 	def response = [:]
-	def devices = settings.findAll{ it.key.startsWith("dev:") }.collect{ it.value }.flatten().sort{ it.getDisplayName() }
+	def myDevices = settings.findAll{ it.key.startsWith("dev:") }.collect{ it.value }.flatten().sort{ it.getDisplayName() }
+	def devices = myDevices.unique{ it.id }
 	def deviceCount = devices.size()
 	if (raw) {
 		response = devices.collectEntries{ dev -> [(hashId(dev.id)): dev]}
