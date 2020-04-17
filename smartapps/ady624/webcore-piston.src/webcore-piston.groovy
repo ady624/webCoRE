@@ -715,7 +715,7 @@ private getRunTimeData(rtData = null, semaphore = null, fetchWrappers = false) {
 	    rtData.id = appId
 		rtData.active = state.active;
         rtData.category = state.category;
-	    rtData.stats = [nextSchedule: 0]
+	    rtData.stats = [nextSchedule: 0L]
 	    //we're reading the cache from atomicState because we might have waited at a semaphore
 	    rtData.cache = atomicState.cache ?: [:]
 	    rtData.newCache = [:]
@@ -819,10 +819,6 @@ def handleEvents(event) {
     if (!rtData.enabled) {
 		warn "Kill switch is active, aborting piston execution."
     	return;
-    }
-    if(event.name!='time' && (Long)state.nextSchedule!=0L){
-	unschedule(timeHandler)
-	state.nextSchedule=0L
     }
     checkVersion(rtData)
     setTimeoutRecoveryHandler('timeoutRecoveryHandler_webCoRE')
@@ -1145,24 +1141,29 @@ private processSchedules(rtData, scheduleJob = false) {
         }
     }*/
     if (scheduleJob) {
+        Long nextT=0L
         if (schedules.size()) {
-    		def next = schedules.sort{ it.t }[0]
-        	def t = (next.t - now()) / 1000
-        	t = (t < 1 ? 1 : t)
-        	rtData.stats.nextSchedule = next.t
-        	if (rtData.logging) info "Setting up scheduled job for ${formatLocalTime(next.t)} (in ${t}s)" + (schedules.size() > 1 ? ', with ' + (schedules.size() - 1).toString() + ' more job' + (schedules.size() > 2 ? 's' : '') + ' pending' : ''), rtData
-        	runIn(t, timeHandler, [data: next])
-        	//runIn(t + 30, timeRecoveryHandler, [data: next])
-    	} else {
-	    	rtData.stats.nextSchedule = 0
+    		def tnext = schedules.sort{ it.t }[0]
+		nextT=(Long)tnext.t
+        	Long t = (nextT - now()) / 1000
+        	t = (t < 1L ? 1L : t)
+        	if (rtData.logging) info "Setting up scheduled job for ${formatLocalTime(nextT)} (in ${t}s)" + (schedules.size() > 1 ? ', with ' + (schedules.size() - 1).toString() + ' more job' + (schedules.size() > 2 ? 's' : '') + ' pending' : ''), rtData
+		Integer t1=Math.round(t)
+        	runIn(t1, timeHandler, [data: tnext])
+        	//runIn(t + 30, timeRecoveryHandler, [data: tnext])
+    	}
+    	if(nextT==0L && (Long)state.nextSchedule!=0L){
+                unschedule(timeHandler)
             //remove the recovery
     		//unschedule(timeRecoveryHandler)
-	    }
+	}
+        	rtData.stats.nextSchedule = nextT
+	state.nextSchedule=nextT
     }
     if (rtData.piston.o?.pep) atomicState.schedules = schedules
     state.schedules = schedules
     //state.schedules = schedules
-    state.nextSchedule = rtData.stats.nextSchedule
+    //state.nextSchedule = rtData.stats.nextSchedule
     rtData.schedules = []
 }
 
@@ -3345,21 +3346,14 @@ public void ahttpRequestHandler(response, callbackData){
 			binary = true
 		}
 		if(!binary) {
-			def theData
-			try{
-				theData=response.getData()
-				data = theData
-				if (data && data instanceof Map ) {
-				} else {
-					try{
-						json=response.getJson()
-						if(json!=null) data=json
-					} catch (all1){
-						json=[:]
-					}
+			data = response.data
+			if (data && data instanceof Map ) {
+			} else {
+				try{
+					data=(LinkedHashMap) new groovy.json.JsonSlurper().parseText(response.data)
+				} catch (all){
+					data=response.data
 				}
-			} catch (all){
-				data=response.data
 			}
 		} else {
 			if(response.data && response.data instanceof java.io.ByteArrayInputStream){
@@ -3374,7 +3368,7 @@ public void ahttpRequestHandler(response, callbackData){
 		if(!responseCode) responseCode=500
 	}
 
-	handleEvents([date: new Date(), device: location, name: 'wc_async_reply', value: 'httpRequest', contentType: mediaType, responseData: data, jsonData: [:], responseCode: responseCode, setRtData: setRtData])
+	handleEvents([date: new Date(), device: location, name: 'wc_async_reply', value: 'httpRequest', contentType: mediaType, responseData: data, jsonData: json, responseCode: responseCode, setRtData: setRtData])
 }
 
 private long vcmd_writeToFuelStream(rtData, device, params) {
