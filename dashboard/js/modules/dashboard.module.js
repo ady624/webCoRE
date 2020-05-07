@@ -1284,7 +1284,12 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 	}
 
 	$scope.initializeDashboardTheme = function() {
-		$rootScope.setDashboardTheme(dataService.getDashboardTheme() || 'light');
+		let userTheme = dataService.getDashboardTheme();
+		// if user didn't choose a default theme, try to infer from the OS or defaults to light
+		if (!userTheme) {
+			userTheme = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
+		}
+		$rootScope.setDashboardTheme(userTheme);
 	}
 
 	$scope.toggleDarkMode = function() {
