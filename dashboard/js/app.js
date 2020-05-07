@@ -1613,6 +1613,14 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 		dataService.saveToStore('collapsed', allCollapsed);
 	}
 
+	dataService.getDashboardTheme = function() {
+		return dataService.loadFromStore('dashboard.theme');
+	}
+
+	dataService.setDashboardTheme = function(theme) {
+		return dataService.saveToStore('dashboard.theme', theme);
+	}
+
 
 	var initialize = function() {
 		//initialize store
@@ -1696,7 +1704,15 @@ app.run(['$rootScope', '$window', '$location', function($rootScope, $window, $lo
         if (bytes == 0) return '0 Byte';
         var i = parseInt(Math.floor(Math.log(bytes) / Math.log(1024)));
         return (bytes / Math.pow(1024, i)).toFixed(i == 0 ? 0 : 2) + ' ' + sizes[i];
-    };
+	};
+
+	$rootScope.theme = 'light'; // defaults to light
+	$rootScope.getDashboardTheme = function() {
+		return $rootScope.theme;
+	}
+	$rootScope.setDashboardTheme = function(theme) {
+		$rootScope.theme = theme;
+	}
 }]);
 
 

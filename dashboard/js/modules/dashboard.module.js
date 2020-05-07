@@ -53,6 +53,7 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 						$scope.currentInstanceId = $scope.instance.id;
 						$scope.instanceCount = dataService.getInstanceCount();
 						$scope.sidebarCollapsed = dataService.isCollapsed('dashboardSidebar');
+						$scope.initializeDashboardTheme();
     		            if (!$scope.devices) $scope.devices = $scope.listAvailableDevices();
 	    	            if (!$scope.virtualDevices) $scope.virtualDevices = $scope.listAvailableVirtualDevices();
 						window.scope = $scope;
@@ -1282,6 +1283,15 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 		$scope.sidebarCollapsed = !$scope.sidebarCollapsed;
 	}
 
+	$scope.initializeDashboardTheme = function() {
+		$rootScope.setDashboardTheme(dataService.getDashboardTheme() || 'light');
+	}
+
+	$scope.toggleDarkMode = function() {
+		let newTheme = ($rootScope.getDashboardTheme() == 'light' ? 'dark' : 'light');
+		$rootScope.setDashboardTheme(newTheme);
+		dataService.saveToStore('dashboard.theme', newTheme);
+	}
 
     //init
 	var userAgent = navigator.userAgent || navigator.vendor || window.opera;

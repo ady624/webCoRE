@@ -1,3 +1,23 @@
+:root {
+  --text-color: #444; /* #444 */
+  --page-background: #fff;
+  --background-featured: #eee;
+  --table-odd-background: #fff;
+  --table-even-background: rgba(0, 160, 220, 0.1);
+  --table-hover-background: #eee;
+  --table-inactive-text: #bcbcbc;
+}
+
+[data-theme="dark"] {
+  --text-color: #C9CACC;
+  --page-background: #282c34;
+  --background-featured: #181A1F;
+  --table-odd-background: rgb(35, 40, 46); /* to update */
+  --table-even-background: #282C34;
+  --table-hover-background: #24282F;
+  --table-inactive-text: rgb(93, 95, 105);
+}
+
 html, body {
     position: absolute;
     left: 0px;
@@ -10,13 +30,13 @@ html, body {
 }
 
 h2 {
-    color: #444;
+    color: var(--text-color);
     font-weight: 300;
     font-size: 22px;
 }
 
 h3 {
-    color: #444;
+    color: var(--text-color);
     font-weight: 300;
     font-size: 22px;
     vertical-align: middle;
@@ -27,8 +47,8 @@ body {
 	font-family: Verdana;
 	font-size: 12px;
 	font-weight: normal;
-	color: #444;
-    -webkit-overflow-scrolling: touch;
+	color: var(--text-color);
+  -webkit-overflow-scrolling: touch;
 }
 
 ng-view > logo {
@@ -110,7 +130,7 @@ viewer {
 
 viewer {
 	position: absolute;
-	background: #fff;
+  background: var(--page-background);
 	display: none;
 	top: 50px;
 	overflow-y: auto;
@@ -275,7 +295,7 @@ info {
 
 .bootstrap-select>.dropdown-toggle.btn-warning.bs-placeholder,
 .bootstrap-select>.dropdown-toggle.btn-info.bs-placeholder {
-    color: #eee;
+    color: var(--background-featured);
 }
 
 .input-group-addon {
@@ -379,10 +399,11 @@ wiki {
 }
 
 wiki:hover {
-	color: #444;
+	color: var(--text-color);
 }
 
 #preloader {
+    background-color: var(--page-background);
     position: fixed;
     top: 0;
     left: 0;
@@ -465,7 +486,7 @@ status {
 	height: auto;
 	text-align: left;
 	font-size: 1.5em;
-	color: #eee;
+	color: var(--background-featured);
 	z-index: 99999;
 	line-height: 18px;
 }
@@ -502,7 +523,7 @@ error {
 	height: auto;
 	max-height: 400px;
 	padding: 32px;
-	background: #eee;
+	background: var(--background-featured);
 	border-radius: 8px;
 	text-align: center;
 	z-index: 99999;
@@ -534,14 +555,14 @@ label:not(.form-check-label) > input {
 }
 
 ul .dropdown-menu {
-    background-color: #fff;
-    border: 1px solid #eee;
+    background-color: var(--page-background);
+    border: 1px solid var(--background-featured);
     border-radius: 7px;
 }
 
 ul .dropdown-menu:hover {
-    background-color: #fff;
-    border: 1px solid #eee;
+    background-color: var(--page-background);
+    border: 1px solid var(--background-featured);
 }
 
 ul .dropdown li {
@@ -781,9 +802,9 @@ span.s-up {
    z-index: 12000;
 }
 
-.tooltip .tooltip-inner { color: #444; background-color:#eee; border: solid 1px #444;}
-.tooltip.top .tooltip-arrow { border-top-color: #444 ; }
-.tooltip.bottom .tooltip-arrow { border-bottom-color: #444 ; }
+.tooltip .tooltip-inner { color: var(--text-color); background-color:var(--background-featured); border: solid 1px var(--text-color);}
+.tooltip.top .tooltip-arrow { border-top-color: var(--text-color) ; }
+.tooltip.bottom .tooltip-arrow { border-bottom-color: var(--text-color) ; }
 
 @media only screen and (max-width: 767px) {
 
@@ -864,7 +885,7 @@ span.s-up {
 		background: none !important;
 	}
 	a:hover {
-		background: #eee !important;
+		background: var(--background-featured) !important;
 		color: #333 !important;
 		text-shadow: none !important;
 	}
@@ -1038,7 +1059,7 @@ button .btn .btn-default active{
 
 .btn-primary:active,
 .btn-primary:focus,
-.btn-primary:hover, {
+.btn-primary:hover {
     background-color: #15acff !important;
 }
 
@@ -1142,7 +1163,7 @@ li[instance] {
 .nav-sidebar > li > a {
   white-space: nowrap;
   padding: 25px 20px;
-  color: #444;
+  color: var(--text-color);
   font-size: 15px;
   margin-top: -1px;
 }
@@ -1168,8 +1189,8 @@ li[instance] {
 .nav-sidebar > .active > a,
 .nav-sidebar > .active > a:hover,
 .nav-sidebar > .active > a:focus {
-  color: #fff;
-  background-color: #eee;
+  color: var(--page-background);
+  background-color: var(--background-featured);
   transition-duration: 0.3s;
 }
 
@@ -1184,8 +1205,8 @@ li[instance] {
     padding-left: 20px;
     overflow-x: hidden;
     overflow-y: auto; /* Scrollable contents if viewport is shorter than content. */
-    background-color: #ffffff;
-    border-right: 1px solid #eee;
+    background-color: var(--page-background);
+    border-right: 1px solid var(--background-featured);
   }
 
   /* Sidebar collapsing and transitions */
@@ -1203,8 +1224,8 @@ li[instance] {
   .main > .collapse-control {
     position: fixed;
     display: block;
-    background: #eee;
-    border: 1px solid #fff;
+    background: var(--background-featured);
+    border: 1px solid var(--page-background);
     border-left: 0;
     top: 58px;
     left: 275px;
