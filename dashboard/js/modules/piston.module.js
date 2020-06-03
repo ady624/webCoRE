@@ -230,7 +230,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		$scope.initialized = false;
 		$scope.loading = true;
 		if ($scope.piston) $scope.loading = true;
-		dataService.getPiston($scope.pistonId).then(function (response) {
+		dataService.getPiston($scope.pistonId, true).then(function (response) {
 			if ($scope.$$destroyed) return;
 			$scope.endpoint = data.endpoint + 'execute/' + $scope.pistonId + (si.accessToken ? '?access_token=' + si.accessToken : '');
 			try {

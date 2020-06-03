@@ -1008,7 +1008,7 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 			});
     }
 
-    dataService.getPiston = function (pistonId) {
+    dataService.getPiston = function (pistonId, shouldSetInstance) {
 		var inst = dataService.getPistonInstance(pistonId);
 		if (!inst) { inst = dataService.getInstance() };
 		si = store && inst ? store[inst.id] : null;
@@ -1019,17 +1019,19 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 			// Base response is no longer included with the piston
 			.then(function(response) {
 				var data = response.data;
-				if (data.location) {
-					setLocation(data.location);
-				}
-				data.endpoint = si.uri;
-				if (data.instance) {
-					data.instance = setInstance(data.instance);
-				} else {
-					return dataService.loadInstance(inst).then(function(instData) {
-						const mergedData = Object.assign({}, data, instData);
-						return Object.assign({}, response, { data: mergedData });
-					});
+				if (shouldSetInstance) {
+					if (data.location) {
+						setLocation(data.location);
+					}
+					data.endpoint = si.uri;
+					if (data.instance) {
+						data.instance = setInstance(data.instance);
+					} else {
+						return dataService.loadInstance(inst).then(function(instData) {
+							const mergedData = Object.assign({}, data, instData);
+							return Object.assign({}, response, { data: mergedData });
+						});
+					}
 				}
 				return response;
 			})
