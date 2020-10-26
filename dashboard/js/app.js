@@ -1919,7 +1919,14 @@ function adjustTimeOffset(time) {
 
 
 
+var memoizedRenders = {};
+app.filter('renderString', ['$sce', function($sce) { 
+	return renderString.bind(null, $sce);
+}]);
 function renderString($sce, value) {
+		if (memoizedRenders[value]) {
+			return memoizedRenders[value];
+		}
         var i = 0;
         if (!value) return '';
 		var meta = {type: null, options: {}};
@@ -2060,6 +2067,10 @@ function renderString($sce, value) {
 		meta.text = tmp.textContent || tmp.innerText || "";
         var result = $sce.trustAsHtml(meta.html);
 		result.meta = meta;
+		if (Object.keys(memoizedRenders).length > 500) {
+			memoizedRenders = {};
+		}
+		memoizedRenders[value] = result;
 		return result;
     };
 
