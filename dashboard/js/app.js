@@ -2063,10 +2063,6 @@ var renderString = nanomemoize(function renderString($sce, value) {
 		meta.text = tmp.textContent || tmp.innerText || "";
         var result = $sce.trustAsHtml(meta.html);
 		result.meta = meta;
-		if (Object.keys(memoizedRenders).length > 500) {
-			memoizedRenders = {};
-		}
-		memoizedRenders[value] = result;
 		return result;
     });
 
