@@ -686,7 +686,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		});
 	};
 
-	$scope.formatVariableValue = function(variable, name) {
+	$scope.formatVariableValue = nanomemoize(function(variable, name) {
 		if ((variable.v == null) && !!name && $scope.localVars) {
 			variable = $scope.copy(variable);
             variable.v = $scope.localVars[name];
@@ -709,7 +709,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 			return angular.toJson(variable.v);
 		}
 		return variable.v;
-	}
+	});
 
 	$scope.deleteDialog = function() {
 		$scope.designer.dialog = ngDialog.open({

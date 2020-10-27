@@ -1816,17 +1816,17 @@ function fixTime(timestamp) {
 	return timestamp;
 }
 
-function utcToString(timestamp) {
+var utcToString = nanomemoize(function utcToString(timestamp) {
 	return (new Date(fixTime(timestamp))).toLocaleString();
-}
+});
 
-function utcToTimeString(timestamp) {
+var utcToTimeString = nanomemoize(function utcToTimeString(timestamp) {
 	return (new Date(fixTime(timestamp))).toLocaleTimeString();
-}
+});
 
-function utcToDateString(timestamp) {
+var utcToDateString = nanomemoize(function utcToDateString(timestamp) {
 	return (new Date(fixTime(timestamp))).toLocaleDateString();
-}
+});
 
 function timeSince(time){
 	if (!time) return "never";
@@ -1919,14 +1919,10 @@ function adjustTimeOffset(time) {
 
 
 
-var memoizedRenders = {};
 app.filter('renderString', ['$sce', function($sce) { 
 	return renderString.bind(null, $sce);
 }]);
-function renderString($sce, value) {
-		if (memoizedRenders[value]) {
-			return memoizedRenders[value];
-		}
+var renderString = nanomemoize(function renderString($sce, value) {
         var i = 0;
         if (!value) return '';
 		var meta = {type: null, options: {}};
@@ -2072,7 +2068,7 @@ function renderString($sce, value) {
 		}
 		memoizedRenders[value] = result;
 		return result;
-    };
+    });
 
 var wuIconForTwcCode = {
 	0:  'tstorms',          // Tornado
