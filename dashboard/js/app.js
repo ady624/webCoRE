@@ -51,12 +51,12 @@ app.directive('ngWheel', ['$parse', function($parse) {
 
 
 app.directive('refresh',['$interval', function($interval){
-		var refreshTime_=0;
-		var onRefresh_=null;
-		var iv_=null;
 		return {
 			restrict:'A',
 			link:function(scope,elem,attrs){
+				var refreshTime_=0;
+				var onRefresh_=null;
+				var iv_=null;
 				elem.on('$destroy', function(){
     	            if (iv_!=null) $interval.cancel(iv_);
 				});
@@ -64,7 +64,8 @@ app.directive('refresh',['$interval', function($interval){
 					refreshTime_=attrs.refresh;
 				if(angular.isDefined(attrs.onRefresh) && angular.isFunction(scope[attrs.onRefresh])){
 					onRefresh_=scope[attrs.onRefresh];
-					iv_=$interval(function() { onRefresh_(elem[0]) },refreshTime_ * 1000);
+					if(refreshTime_>0)
+						iv_=$interval(function() { onRefresh_(elem[0]); console.log('refresh', elem[0]) },refreshTime_ * 1000);
 					attrs.$observe('refresh',function(new_iv){
 						if(!angular.equals(new_iv,refreshTime_)){
 							if(iv_!=null) $interval.cancel(iv_);
