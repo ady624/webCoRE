@@ -3648,7 +3648,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 
 		comparison.timed = comp ? comp.t : 0;
 
-		if ((comparison.parameterCount > 0) || (comparison.dataType == 'email')) {
+		if (comparison.right && ((comparison.parameterCount > 0) || (comparison.dataType == 'email'))) {
 			comparison.right.multiple = comparison.multiple;
 			comparison.right.disableAggregation = comparison.multiple;
 			comparison.right.dataType = (comparison.dataType == 'email' ? 'string' : comparison.left.selectedDataType);
@@ -3664,7 +3664,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 			comparison.valid = comparison.valid && comparison.right.valid;
 		}
 
-		if ((comparison.parameterCount > 1) || (comparison.dataType == 'email')) {
+		if (comparison.right2 && ((comparison.parameterCount > 1) || (comparison.dataType == 'email'))) {
 			comparison.right2.multiple = comparison.multiple;
 			comparison.right2.disableAggregation = comparison.multiple;
 			comparison.right2.dataType = (comparison.dataType == 'email' ? 'string' : comparison.left.selectedDataType);
