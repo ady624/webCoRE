@@ -68,7 +68,7 @@ piston > gutter:after {
 	bottom: 0px;
 	height: 100%;
 	width: 12px;
-	background: #e7e7e7;
+	background: var(--utilities-background);
 	border-left: solid 1px #ccc;
 }
 
@@ -648,7 +648,7 @@ label span.error {
 
 line[new],
 span[new] {
-    color: rgba(0, 0, 0, 0.2);
+    color: var(--piston-line-new);
 	cursor: pointer;
 }
 
@@ -764,7 +764,7 @@ piston dnd-nodrag > bar {
     border-top: solid 1px;
     border-left: solid 1px;
     border-bottom: solid 1px;
-    border-color: #07d;
+    border-color: var(--piston-dnd-border);
     margin-right: 4px;
     margin-top: 8px;
     margin-bottom: 7px;
@@ -854,11 +854,12 @@ piston .dndPlaceholder::before {
 	position: absolute;
 	counter-increment: line;
 	left: 0px;
-    color: #aaa;
+    color: var(--piston-line-number);
     width: 35px;
     text-align: right;
 	content: counter(line);
 	padding-right: 2px;
+	font-style: normal;
 }
 
 line:hover::before,
@@ -990,7 +991,7 @@ parameter[optional=true] label.control-label::after {
 	}
 
 	piston[mode=edit] line[new]:hover {
-	    color: rgba(0, 0, 0, 0.5);
+	    color: var(--piston-line-new-hover);
 	}
 
 	designer > item:hover {
@@ -1123,7 +1124,7 @@ div[items] div[item] item {
 	position: relative;
 	display: block;
 	min-height: 192px;
-	background: rgba(0, 0, 0, 0.05);
+	background: var(--piston-div-items-bg);
 	border-radius: 8px;
 	padding: 16px;
 	margin: 0px;
@@ -1299,8 +1300,8 @@ piston[printing] dnd-nodrag[disabled] {
 
 
 dnd-nodrag[disabled] * {
-	color: rgba(0, 0, 0, 0.2) !important;
-	border-color: rgba(0, 0, 0, 0.05) !important;
+	color: var(--piston-line-disabled) !important;
+	border-color: var(--piston-line-disabled-border) !important;
 	font-style: italic;
 }
 
