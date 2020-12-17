@@ -1628,11 +1628,11 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 	}
 
 	dataService.getDashboardTheme = function() {
-		return dataService.loadFromStore('dashboard.theme');
+		return dataService.loadFromStore('dashboard.colorscheme');
 	}
 
 	dataService.setDashboardTheme = function(theme) {
-		return dataService.saveToStore('dashboard.theme', theme);
+		return dataService.saveToStore('dashboard.colorscheme', theme);
 	}
 
 
@@ -1670,12 +1670,31 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
     return dataService;
 }]);
 
+app.factory('ColorSchemeService', ['dataService', '$rootScope', function(dataService, $rootScope) {
+	var colorSchemeService = {};
+
+	colorSchemeService.initialize = async function() {
+		let promise = await dataService.whenReady();
+
+		let userTheme = dataService.getDashboardTheme();
+		// if user didn't choose a default theme, try to infer from the OS or defaults to light
+		if (!userTheme) {
+			userTheme = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
+		}
+		$rootScope.setDashboardTheme(userTheme);
+	}
+
+	colorSchemeService.toggleDarkMode = function() {
+		let newTheme = ($rootScope.getDashboardTheme() == 'light' ? 'dark' : 'light');
+		$rootScope.setDashboardTheme(newTheme);
+		dataService.setDashboardTheme(newTheme);
+	}
+
+	return colorSchemeService;
+  }]);
 
 
-
-
-
-app.run(['$rootScope', '$window', '$location', function($rootScope, $window, $location) {
+app.run(['$rootScope', '$window', '$location', 'ColorSchemeService', function($rootScope, $window, $location, ColorSchemeService) {
     $rootScope.getTime = function (date) {
         if (date) {
             return date.format('h:mmtt');                
@@ -1720,7 +1739,7 @@ app.run(['$rootScope', '$window', '$location', function($rootScope, $window, $lo
         return (bytes / Math.pow(1024, i)).toFixed(i == 0 ? 0 : 2) + ' ' + sizes[i];
 	};
 
-	$rootScope.theme = 'light'; // defaults to light
+	ColorSchemeService.initialize();
 	$rootScope.getDashboardTheme = function() {
 		return $rootScope.theme;
 	}

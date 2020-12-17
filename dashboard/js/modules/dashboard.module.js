@@ -1,4 +1,4 @@
-config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout', '$interval', '$location', '$sce', '$routeParams', 'ngDialog', '$window', '$q', function($scope, $rootScope, dataService, $timeout, $interval, $location, $sce, $routeParams, ngDialog, $window, $q) {
+config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout', '$interval', '$location', '$sce', '$routeParams', 'ngDialog', '$window', '$q', 'ColorSchemeService', function($scope, $rootScope, dataService, $timeout, $interval, $location, $sce, $routeParams, ngDialog, $window, $q, ColorSchemeService) {
 	var tmrStatus = null;
 	var tmrClock = null;
 	var tmrActivity = null;
@@ -53,7 +53,6 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 						$scope.currentInstanceId = $scope.instance.id;
 						$scope.instanceCount = dataService.getInstanceCount();
 						$scope.sidebarCollapsed = dataService.isCollapsed('dashboardSidebar');
-						$scope.initializeDashboardTheme();
     		            if (!$scope.devices) $scope.devices = $scope.listAvailableDevices();
 	    	            if (!$scope.virtualDevices) $scope.virtualDevices = $scope.listAvailableVirtualDevices();
 						window.scope = $scope;
@@ -1283,22 +1282,12 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 		$scope.sidebarCollapsed = !$scope.sidebarCollapsed;
 	}
 
-	$scope.initializeDashboardTheme = function() {
-		let userTheme = dataService.getDashboardTheme();
-		// if user didn't choose a default theme, try to infer from the OS or defaults to light
-		if (!userTheme) {
-			userTheme = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
-		}
-		$rootScope.setDashboardTheme(userTheme);
-	}
 
 	$scope.toggleDarkMode = function() {
-		let newTheme = ($rootScope.getDashboardTheme() == 'light' ? 'dark' : 'light');
-		$rootScope.setDashboardTheme(newTheme);
-		dataService.saveToStore('dashboard.theme', newTheme);
+		ColorSchemeService.toggleDarkMode();
 	}
 
-    //init
+	//init
 	var userAgent = navigator.userAgent || navigator.vendor || window.opera;
 	if( userAgent.match( /Android/i ) ) {
 		$scope.android = true;
@@ -1310,7 +1299,7 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
     $scope.utcToString = utcToString;
 	//$scope.$$postDigest(function() {$window.FB.XFBML.parse()});
 	dataService.whenReady().then(function() {
-			$scope.init();
+		$scope.init();
 	});
 
 	if (navigator.geolocation) {
