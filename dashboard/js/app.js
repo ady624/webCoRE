@@ -51,12 +51,12 @@ app.directive('ngWheel', ['$parse', function($parse) {
 
 
 app.directive('refresh',['$interval', function($interval){
-		var refreshTime_=0;
-		var onRefresh_=null;
-		var iv_=null;
 		return {
 			restrict:'A',
 			link:function(scope,elem,attrs){
+				var refreshTime_=0;
+				var onRefresh_=null;
+				var iv_=null;
 				elem.on('$destroy', function(){
     	            if (iv_!=null) $interval.cancel(iv_);
 				});
@@ -64,7 +64,8 @@ app.directive('refresh',['$interval', function($interval){
 					refreshTime_=attrs.refresh;
 				if(angular.isDefined(attrs.onRefresh) && angular.isFunction(scope[attrs.onRefresh])){
 					onRefresh_=scope[attrs.onRefresh];
-					iv_=$interval(function() { onRefresh_(elem[0]) },refreshTime_ * 1000);
+					if(refreshTime_>0)
+						iv_=$interval(function() { onRefresh_(elem[0]); console.log('refresh', elem[0]) },refreshTime_ * 1000);
 					attrs.$observe('refresh',function(new_iv){
 						if(!angular.equals(new_iv,refreshTime_)){
 							if(iv_!=null) $interval.cancel(iv_);
@@ -626,15 +627,19 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 		return si;
 	}
 
-	var setInstance = function(inst) {
-		var initial = (!instance);
-		if (!instance || (instance.id != inst.id)) instance = inst;
+	var setSI = function(inst) {
 		//preserve the token, unless a new one is given
-		var si = store[instance.id];
+		var si = store[inst.id];
 		if (!si) si = {};
 		si.token = inst.token ? inst.token : si.token;
 		si.uri = inst.uri ? inst.uri.replace(':443', '') : si.uri;
-		store[instance.id] = fixSI(si);
+		store[inst.id] = fixSI(si);
+	}
+
+	var setInstance = function(inst) {
+		var initial = (!instance);
+		if (!instance || (instance.id != inst.id)) instance = inst;
+		setSI(inst);
 		delete(instance.token);
 		delete(instance.uri);
 		if (inst.contacts) {
@@ -946,6 +951,7 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 				data.endpoint = si.uri;
 				data.accessToken = si.accessToken;
 				if (data.instance && !data.instance.devices && data.instance.deviceVersion !== deviceVersion) {
+					setSI(data.instance);
 					return dataService.getDevices(data.instance).then(function(devices) {
 						data.instance.devices = devices;
 						return data;
@@ -1014,7 +1020,7 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 			});
     }
 
-    dataService.getPiston = function (pistonId) {
+    dataService.getPiston = function (pistonId, shouldSetInstance) {
 		var inst = dataService.getPistonInstance(pistonId);
 		if (!inst) { inst = dataService.getInstance() };
 		si = store && inst ? store[inst.id] : null;
@@ -1025,17 +1031,19 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 			// Base response is no longer included with the piston
 			.then(function(response) {
 				var data = response.data;
-				if (data.location) {
-					setLocation(data.location);
-				}
-				data.endpoint = si.uri;
-				if (data.instance) {
-					data.instance = setInstance(data.instance);
-				} else {
-					return dataService.loadInstance(inst).then(function(instData) {
-						const mergedData = Object.assign({}, data, instData);
-						return Object.assign({}, response, { data: mergedData });
-					});
+				if (shouldSetInstance) {
+					if (data.location) {
+						setLocation(data.location);
+					}
+					data.endpoint = si.uri;
+					if (data.instance) {
+						data.instance = setInstance(data.instance);
+					} else {
+						return dataService.loadInstance(inst).then(function(instData) {
+							const mergedData = Object.assign({}, data, instData);
+							return Object.assign({}, response, { data: mergedData });
+						});
+					}
 				}
 				return response;
 			})
@@ -1857,17 +1865,17 @@ function fixTime(timestamp) {
 	return timestamp;
 }
 
-function utcToString(timestamp) {
+var utcToString = nanomemoize(function utcToString(timestamp) {
 	return (new Date(fixTime(timestamp))).toLocaleString();
-}
+});
 
-function utcToTimeString(timestamp) {
+var utcToTimeString = nanomemoize(function utcToTimeString(timestamp) {
 	return (new Date(fixTime(timestamp))).toLocaleTimeString();
-}
+});
 
-function utcToDateString(timestamp) {
+var utcToDateString = nanomemoize(function utcToDateString(timestamp) {
 	return (new Date(fixTime(timestamp))).toLocaleDateString();
-}
+});
 
 function timeSince(time){
 	if (!time) return "never";
@@ -1960,7 +1968,10 @@ function adjustTimeOffset(time) {
 
 
 
-function renderString($sce, value) {
+app.filter('renderString', ['$sce', function($sce) { 
+	return renderString.bind(null, $sce);
+}]);
+var renderString = nanomemoize(function renderString($sce, value) {
         var i = 0;
         if (!value) return '';
 		var meta = {type: null, options: {}};
@@ -2102,7 +2113,7 @@ function renderString($sce, value) {
         var result = $sce.trustAsHtml(meta.html);
 		result.meta = meta;
 		return result;
-    };
+    });
 
 var wuIconForTwcCode = {
 	0:  'tstorms',          // Tornado

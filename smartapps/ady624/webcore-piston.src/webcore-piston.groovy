@@ -623,7 +623,8 @@ Map pause() {
     if (rtData.logging) info "Stopping piston...", rtData, 0
     checkVersion(rtData)
     state.schedules = []
-    rtData.stats.nextSchedule = 0
+    rtData.stats.nextSchedule = 0L
+    state.nextSchedule = 0L
     unsubscribe()
     unschedule()
     app.updateSetting('dev', null)
@@ -714,7 +715,7 @@ private getRunTimeData(rtData = null, semaphore = null, fetchWrappers = false) {
 	    rtData.id = appId
 		rtData.active = state.active;
         rtData.category = state.category;
-	    rtData.stats = [nextScheduled: 0]
+	    rtData.stats = [nextSchedule: 0L]
 	    //we're reading the cache from atomicState because we might have waited at a semaphore
 	    rtData.cache = atomicState.cache ?: [:]
 	    rtData.newCache = [:]
@@ -1140,24 +1141,29 @@ private processSchedules(rtData, scheduleJob = false) {
         }
     }*/
     if (scheduleJob) {
+        Long nextT=0L
         if (schedules.size()) {
-    		def next = schedules.sort{ it.t }[0]
-        	def t = (next.t - now()) / 1000
-        	t = (t < 1 ? 1 : t)
-        	rtData.stats.nextSchedule = next.t
-        	if (rtData.logging) info "Setting up scheduled job for ${formatLocalTime(next.t)} (in ${t}s)" + (schedules.size() > 1 ? ', with ' + (schedules.size() - 1).toString() + ' more job' + (schedules.size() > 2 ? 's' : '') + ' pending' : ''), rtData
-        	runIn(t, timeHandler, [data: next])
-        	//runIn(t + 30, timeRecoveryHandler, [data: next])
-    	} else {
-	    	rtData.stats.nextSchedule = 0
+    		def tnext = schedules.sort{ it.t }[0]
+		nextT=(Long)tnext.t
+        	Long t = (nextT - now()) / 1000
+        	t = (t < 1L ? 1L : t)
+        	if (rtData.logging) info "Setting up scheduled job for ${formatLocalTime(nextT)} (in ${t}s)" + (schedules.size() > 1 ? ', with ' + (schedules.size() - 1).toString() + ' more job' + (schedules.size() > 2 ? 's' : '') + ' pending' : ''), rtData
+		Integer t1=Math.round(t)
+        	runIn(t1, timeHandler, [data: tnext])
+        	//runIn(t + 30, timeRecoveryHandler, [data: tnext])
+    	}
+    	if(nextT==0L && (Long)state.nextSchedule!=0L){
+                unschedule(timeHandler)
             //remove the recovery
     		//unschedule(timeRecoveryHandler)
-	    }
+	}
+        	rtData.stats.nextSchedule = nextT
+	state.nextSchedule=nextT
     }
     if (rtData.piston.o?.pep) atomicState.schedules = schedules
     state.schedules = schedules
-    state.schedules = schedules
-    state.nextSchedule = rtData.stats.nextSchedule
+    //state.schedules = schedules
+    //state.nextSchedule = rtData.stats.nextSchedule
     rtData.schedules = []
 }
 
@@ -1367,12 +1373,14 @@ private Boolean executeStatement(rtData, statement, async = false) {
                     double endValue = 0
                     double stepValue = 1
                     if (statement.t == 'each') {
-                        devices = evaluateOperand(rtData, null, statement.lo).v ?: []
+                        def t0 = evaluateOperand(rtData, null, statement.lo).v
+                        devices = t0 ?: []
                         endValue = devices.size() - 1
                     } else {
                     	startValue = evaluateScalarOperand(rtData, statement, statement.lo, null, 'decimal').v
                     	endValue = evaluateScalarOperand(rtData, statement, statement.lo2, null, 'decimal').v
-                    	stepValue = evaluateScalarOperand(rtData, statement, statement.lo3, null, 'decimal').v ?: 1.0
+                    	Double t0 = evaluateScalarOperand(rtData, statement, statement.lo3, null, 'decimal').v
+                    	stepValue = t0 ?: 1.0
                     }
                     String counterVariable = getVariable(rtData, statement.x).t != 'error' ? statement.x : null
                     if (((startValue <= endValue) && (stepValue > 0)) || ((startValue >= endValue) && (stepValue < 0)) || !!rtData.fastForwardTo) {
@@ -1383,8 +1391,8 @@ private Boolean executeStatement(rtData, statement, async = false) {
 	                        rtData.cache["f:${statement.$}"] = index
                         }
                         setSystemVariableValue(rtData, '$index', index)
-						if ((statement.t == 'each') && !rtData.fastForward) setSystemVariableValue(rtData, '$device', (index < devices.size() ? [devices[(int) index]] : []))
-                        if (counterVariable && !rtData.fastForward) setVariable(rtData, counterVariable, (statement.t == 'each') ? (index < devices.size() ? [devices[(int) index]] : []) : index)
+						if ((statement.t == 'each') && !rtData.fastForwardTo) setSystemVariableValue(rtData, '$device', (index < devices.size() ? [devices[(int) index]] : []))
+                        if (counterVariable && !rtData.fastForwardTo) setVariable(rtData, counterVariable, (statement.t == 'each') ? (index < devices.size() ? [devices[(int) index]] : []) : index)
                         //do the loop
                         perform = executeStatements(rtData, statement.s, async)
                         if (!perform) {
@@ -1402,8 +1410,8 @@ private Boolean executeStatement(rtData, statement, async = false) {
                         if (!!rtData.fastForwardTo) break
                         index = index + stepValue
                         setSystemVariableValue(rtData, '$index', index)
-						if ((statement.t == 'each') && !rtData.fastForward) setSystemVariableValue(rtData, '$device', (index < devices.size() ? [devices[(int) index]] : []))
-                        if (counterVariable && !rtData.fastForward) setVariable(rtData, counterVariable, (statement.t == 'each') ? (index < devices.size() ? [devices[(int) index]] : []) : index)
+						if ((statement.t == 'each') && !rtData.fastForwardTo) setSystemVariableValue(rtData, '$device', (index < devices.size() ? [devices[(int) index]] : []))
+                        if (counterVariable && !rtData.fastForwardTo) setVariable(rtData, counterVariable, (statement.t == 'each') ? (index < devices.size() ? [devices[(int) index]] : []) : index)
                         rtData.cache["f:${statement.$}"] = index
                         if (((stepValue > 0 ) && (index > endValue)) || ((stepValue < 0 ) && (index < endValue))) {
                         	perform = false
@@ -1501,7 +1509,9 @@ private Boolean executeStatement(rtData, statement, async = false) {
         }
     }
 	if (!rtData.fastForwardTo) {
-    	def schedule = (statement.t == 'every') ? (rtData.schedules.find{ it.s == statement.$} ?: state.schedules.find{ it.s == statement.$ }) : null
+    	Boolean tt0 = (String)statement.t == 'every'
+    	def t0 = tt0 ? rtData.schedules.find{ it.s == statement.$} : null
+    	def schedule = tt0 ? (t0!=null ? t0 : state.schedules.find{ it.s == statement.$ }) : null
         if (schedule) {
         	//timers need to show the remaining time
     		tracePoint(rtData, "s:${statement.$}", now() - t, now() - schedule.t)
@@ -1619,7 +1629,7 @@ private Boolean executeTask(rtData, devices, statement, task, async) {
     	def p
     	switch (param.vt) {
         	case 'variable':
-            	p = param.x instanceof List ? param.x : (param.x + (param.xi != null ? '[' + param.xi + ']' : ''));
+                if (param.t == 'x') p = param.x instanceof List ? param.x : (param.x + (param.xi != null ? '[' + param.xi + ']' : ''));
                 break;
             default:
             	def v = evaluateOperand(rtData, null, param)
@@ -3288,59 +3298,25 @@ private long vcmd_httpRequest(rtData, device, params) {
 			def func = ""
 			switch(method) {
 				case "GET":
-					func = "httpGet"
+					func = "get"
 					break
 				case "POST":
-					func = "httpPost"
+					func = "post"
 					break
 				case "PUT":
-					func = "httpPut"
+					func = "put"
 					break
 				case "DELETE":
-					func = "httpDelete"
+					func = "delete"
 					break
 				case "HEAD":
-					func = "httpHead"
+					func = "head"
 					break
 			}
 			if (func) {
-				"$func"(requestParams) { response ->
-					setSystemVariableValue(rtData, "\$httpStatusCode", response.status)
-					setSystemVariableValue(rtData, "\$httpStatusOk", (response.status >= 200) && (response.status <= 299))
-                    if (response.status == 204) {
-                        rtData.mediaData = null
-                        rtData.mediaType = null
-                        rtData.mediaUrl = null
-                        rtData.response = null
-                    } else {
-                        setSystemVariableValue(rtData, "\$httpContentType", response.contentType)
-                        def binary = false
-                        def mediaType = response.contentType.toLowerCase()
-                        switch (mediaType) {
-                            case 'image/jpeg':
-                            case 'image/png':
-                            case 'image/gif':
-                                binary = true
-                        }
-                        if ((response.status < 300) && response.data && !binary) {
-                            try {
-                                rtData.response = response.data instanceof Map ? response.data : (LinkedHashMap) new groovy.json.JsonSlurper().parseText(response.data)
-                            } catch (all) {
-                                rtData.response = response.data
-                            }
-                        } else {
-                            rtData.response = null
-                            if (response.data && (response.data instanceof java.io.ByteArrayInputStream)) {
-                                rtData.mediaType = mediaType
-                                rtData.mediaData = response.data.getBytes()
-                            } else {
-                                rtData.mediaType = null
-                                rtData.mediaData = null
-                            }
-                            rtData.mediaUrl = null;
-                        }
-                    }
-                }
+    //if (asynchttp_v1) asynchttp_v1.put(asyncHttpRequestHandler, requestParams, [command: 'storeMedia'])
+				asynchttp_v1."$func"(ahttpRequestHandler, requestParams, [command: 'httpRequest'])
+				return 24000
 			}
 		} catch (all) {
 			error "Error executing external web request: ", rtData, null, all
@@ -3349,6 +3325,50 @@ private long vcmd_httpRequest(rtData, device, params) {
 	return 0
 }
 
+public void ahttpRequestHandler(response, callbackData){
+	def data
+	def json
+	Map setRtData=[mediaData:null, mediaType:null, mediaUrl:null] as Map
+	String callBackC=(String)callbackData?.command
+	def responseCode = response.status
+	String mediaType = ""
+	if(responseCode == 204) {
+	}else if(responseCode >= 200 && responseCode < 300 && response.data ){ 
+		Boolean binary = false
+		def t0=response.getHeaders()
+		String t1=t0 && t0."Content-Type" ? t0."Content-Type":(String)null
+		mediaType=t1 ? (String)(t1.toLowerCase()?.tokenize(';')[0]):(String)null
+		switch (mediaType) {
+			case 'image/jpeg':
+			case 'image/png':
+			case 'image/gif':
+			binary = true
+		}
+		if(!binary) {
+			data = response.data
+			if (data && data instanceof Map ) {
+			} else {
+				try{
+					data=(LinkedHashMap) new groovy.json.JsonSlurper().parseText(response.data)
+				} catch (all){
+					data=response.data
+				}
+			}
+		} else {
+			if(response.data && response.data instanceof java.io.ByteArrayInputStream){
+				setRtData.mediaType=mediaType
+				setRtData.mediaData=response.data.getBytes()
+			}
+		}
+	}
+	if (response.hasError()) {
+		String msg =  "Status $response.status raw response: $response.errorData,  error on response: $response.errorMessage"
+		error "Error executing external web request: "+msg, [:]
+		if(!responseCode) responseCode=500
+	}
+
+	handleEvents([date: new Date(), device: location, name: 'wc_async_reply', value: 'httpRequest', contentType: mediaType, responseData: data, jsonData: json, responseCode: responseCode, setRtData: setRtData])
+}
 
 private long vcmd_writeToFuelStream(rtData, device, params) {
 	def canister = params[0]
@@ -5169,12 +5189,16 @@ private Map setVariable(rtData, name, value) {
             if (variable.t.endsWith(']')) {
             	//we're dealing with a list
                 variable.v = (variable.v instanceof Map) ? variable.v : [:]
-                Map indirectVar = getVariable(rtData, var.index)
-                //indirect variable addressing
-                if (indirectVar && (indirectVar.t != 'error')) {
-                    var.index = cast(rtData, indirectVar.v, 'string', indirectVar.t)
+                if (var.index == "*CLEAR")	{
+                    variable.v.clear()
+                } else {
+                    Map indirectVar = getVariable(rtData, var.index)
+                    //indirect variable addressing
+                    if (indirectVar && (indirectVar.t != 'error')) {
+                        var.index = cast(rtData, indirectVar.v, 'string', indirectVar.t)
+                    }
+                    variable.v[var.index] = cast(rtData, value, variable.t.replace('[]', ''))
                 }
-                variable.v[var.index] = cast(rtData, value, variable.t.replace('[]', ''))
             } else {
             	variable.v = cast(rtData, value, variable.t)
             }
@@ -5194,7 +5218,8 @@ private Map setVariable(rtData, name, value) {
 def setLocalVariable(name, value) {
 	name = sanitizeVariableName(name)
     if (!name || name.startsWith('@')) return
-	def vars = atomicState.vars ?: [:]
+	def t0 = atomicState.vars
+	def vars = t0!=null ? t0 : [:]
     vars[name] = value
     atomicState.vars = vars
     return vars
@@ -7704,7 +7729,7 @@ private List hexToRgbArray(hex) {
 /******************************************************************************/
 /*** DEBUG FUNCTIONS														***/
 /******************************************************************************/
-private log(message, rtData = null, shift = null, err = null, cmd = null, force = false) {
+private Map log(message, rtData = null, shift = null, err = null, cmd = null, force = false) {
     if (cmd == "timer") {
     	return [m: message, t: now(), s: shift, e: err]
     }
@@ -7770,12 +7795,12 @@ private log(message, rtData = null, shift = null, err = null, cmd = null, force 
 		log."$cmd" "$prefix $message", err
     }
 }
-private info(message, rtData = null, shift = null, err = null) { log message, rtData, shift, err, 'info' }
-private trace(message, rtData = null, shift = null, err = null) { log message, rtData, shift, err, 'trace' }
-private debug(message, rtData = null, shift = null, err = null) { log message, rtData, shift, err, 'debug' }
-private warn(message, rtData = null, shift = null, err = null) { log message, rtData, shift, err, 'warn' }
-private error(message, rtData = null, shift = null, err = null) { log message, rtData, shift, err, 'error' }
-private timer(message, rtData = null, shift = null, err = null) { log message, rtData, shift, err, 'timer' }
+private void info(message, rtData = null, shift = null, err = null) { def a=log message, rtData, shift, err, 'info' }
+private void trace(message, rtData = null, shift = null, err = null) { def a=log message, rtData, shift, err, 'trace' }
+private void debug(message, rtData = null, shift = null, err = null) { def a=log message, rtData, shift, err, 'debug' }
+private void warn(message, rtData = null, shift = null, err = null) { def a=log message, rtData, shift, err, 'warn' }
+private void error(message, rtData = null, shift = null, err = null) { def a=log message, rtData, shift, err, 'error' }
+private Map timer(message, rtData = null, shift = null, err = null) { log message, rtData, shift, err, 'timer' }
 
 private tracePoint(rtData, objectId, duration, value) {
 	if (objectId && rtData && rtData.trace) {
