@@ -1309,12 +1309,9 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 	$scope.formatTime = formatTime;
     $scope.utcToString = utcToString;
 	//$scope.$$postDigest(function() {$window.FB.XFBML.parse()});
-	var tmrInit = setInterval(function() {
-		if (dataService.ready()) {
-			clearInterval(tmrInit);
+	dataService.whenReady().then(function() {
 			$scope.init();
-		}
-	}, 1);
+	});
 
 	if (navigator.geolocation) {
 	    navigator.geolocation.getCurrentPosition($scope.updateLocation);

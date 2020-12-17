@@ -513,8 +513,7 @@ config.factory('$exceptionHandler',
 );
 */
 
-
-config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$q', function ($http, $location, $rootScope, $window, $q) {
+config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$q', '$interval', function ($http, $location, $rootScope, $window, $q, $interval) {
     var dataService = {};
 	var initialInstanceUri = '';
 	var location = null;
@@ -757,6 +756,21 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 
 	dataService.ready = function() {
 		return !!initialized;
+	}
+
+	dataService.whenReady = function() {
+		var deferred = $q.defer();
+		if (!!initialized) {
+			deferred.resolve();
+		} else {
+			var tmrInit = $interval(function() {
+				if (!!initialized) {
+					$interval.cancel(tmrInit);
+					deferred.resolve();
+				}
+			}, 1);
+		}
+		return deferred.promise;
 	}
 
 	dataService.logout = function() {
