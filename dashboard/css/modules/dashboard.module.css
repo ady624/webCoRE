@@ -300,19 +300,8 @@ nav[fixed] a {
 
 
 
-
-.table-striped>tbody>tr:nth-of-type(odd) {
-    background-color: var(--table-odd-background);
-}
-
-.table-striped>tbody>tr:nth-of-type(even) {
-    background-color: var(--table-even-background);
-}
-
 .table>tbody>tr>td, .table>tbody>tr>th, .table>tfoot>tr>td, .table>tfoot>tr>th, .table>thead>tr>td, .table>thead>tr>th {
 	padding: 0.750em;
-    border-bottom: 1px solid var(--background-featured);
-    border-top: 1px solid var(--background-featured);
 }
 
 table {

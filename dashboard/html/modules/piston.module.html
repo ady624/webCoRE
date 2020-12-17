@@ -1,5 +1,5 @@
 <status ng-if="status" ng-animate ng-bind-html="status" ng-click="setStatus()"></status>
-<logo ng-if="view != 'dashboard'"><img src="https://community.webcore.co/uploads/default/original/2X/d/d82aa5d0f719318d1f35bafdec06e2c8cf3c54be.svg"></logo>
+<logo ng-if="view != 'dashboard'"><img src="/img/webCoRE-text-{{ theme }}.svg"></logo>
 	<div id="preloader">
   		<div id="loader"></div>
 	</div>
@@ -34,19 +34,19 @@
 					<span class="title btn" title="Back to piston list" ng-click="home()"><i class="fa fa-chevron-left"></i>&nbsp;Back</span>
 			</div>
 			<div ng-if="mode=='view'" class="collapse navbar-collapse" id="navbar-view-collapse">
-       	<ul class="nav navbar-nav">
-        	<li class="dropdown">
-						<ul class="dropdown-menu">
-							<li class="dropdown"><a href="" ng-click="edit();" title="Edit the piston"><i class="fas fa-pencil fa-lg fa-fw"></i> Edit</a></li>
-							<li class="dropdown"><a href="" ng-click="test();" title="Test the piston"><i class="fas fa-play-circle fa-lg fa-fw"></i> Test</a></li>
-							<li class="dropdown"><a href="" ng-click="snapshot(true);" title="Take an anonymized snapshot of the piston"><i class="fas fa-camera fa-lg fa-fw"></i> Anonymized Snapshot</a></li>
-							<li class="dropdown"><a href="" ng-click="snapshot();" title="Take a snapshot of the piston"><i class="fas fa-camera fa-lg fa-fw"></i> Snapshot</a></li>
-							<li class="dropdown"><a href="" ng-click="textSnapshot();" title="Copy piston to clipboard"><i class="fal fa-copy fa-lg fa-fw"></i> Copy Piston</a></li>
-							<li ng-if="trace && trace.points"><a href="" ng-click="view.trace = !view.trace; toggleView(null);"><checkbox checked="view.trace" icon-class="fa-lg fa-fw"></checkbox> Trace</a></li>
-							<li class="dropdown"><a href="" ng-click="deleteDialog();" title="Delete piston"><i class="fal fa-times fa-lg fa-fw"></i> Delete</a></li>
-						</ul>
-					</li>
-        </ul>
+				<ul class="nav navbar-nav">
+					<li class="dropdown">
+								<ul class="dropdown-menu">
+									<li class="dropdown"><a href="" ng-click="edit();" title="Edit the piston"><i class="fas fa-pencil fa-lg fa-fw"></i> Edit</a></li>
+									<li class="dropdown"><a href="" ng-click="test();" title="Test the piston"><i class="fas fa-play-circle fa-lg fa-fw"></i> Test</a></li>
+									<li class="dropdown"><a href="" ng-click="snapshot(true);" title="Take an anonymized snapshot of the piston"><i class="fas fa-camera fa-lg fa-fw"></i> Anonymized Snapshot</a></li>
+									<li class="dropdown"><a href="" ng-click="snapshot();" title="Take a snapshot of the piston"><i class="fas fa-camera fa-lg fa-fw"></i> Snapshot</a></li>
+									<li class="dropdown"><a href="" ng-click="textSnapshot();" title="Copy piston to clipboard"><i class="fal fa-copy fa-lg fa-fw"></i> Copy Piston</a></li>
+									<li ng-if="trace && trace.points"><a href="" ng-click="view.trace = !view.trace; toggleView(null);"><checkbox checked="view.trace" icon-class="fa-lg fa-fw"></checkbox> Trace</a></li>
+									<li class="dropdown"><a href="" ng-click="deleteDialog();" title="Delete piston"><i class="fal fa-times fa-lg fa-fw"></i> Delete</a></li>
+								</ul>
+							</li>
+				</ul>
 			</div>
 
 <!-- End view mode -->
@@ -68,6 +68,9 @@
 			</div>
 		</div>
 
+		<ul class="nav navbar-nav navbar-right hidden-xs">
+			<li><a href="#" aria-expanded="false" ng-click="toggleDarkMode()" title="Toggle Dark Mode"><i class="fa fa-adjust"></i>&nbsp;&nbsp;</a></li>
+		</ul>
 <!-- Collect the nav links, forms, and other content for toggling -->
 
 		<div ng-if="mode=='edit'" class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">

@@ -1,4 +1,4 @@
-config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout', '$interval', '$location', '$sce', '$routeParams', 'ngDialog', '$window', '$q', 'ColorSchemeService', function($scope, $rootScope, dataService, $timeout, $interval, $location, $sce, $routeParams, ngDialog, $window, $q, ColorSchemeService) {
+config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout', '$interval', '$location', '$sce', '$routeParams', 'ngDialog', '$window', '$q', 'colorSchemeService', function($scope, $rootScope, dataService, $timeout, $interval, $location, $sce, $routeParams, ngDialog, $window, $q, colorSchemeService) {
 	var tmrStatus = null;
 	var tmrClock = null;
 	var tmrActivity = null;
@@ -1282,9 +1282,8 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 		$scope.sidebarCollapsed = !$scope.sidebarCollapsed;
 	}
 
-
 	$scope.toggleDarkMode = function() {
-		ColorSchemeService.toggleDarkMode();
+		colorSchemeService.toggleDarkMode();
 	}
 
 	//init

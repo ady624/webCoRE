@@ -763,12 +763,9 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 		if (!!initialized) {
 			deferred.resolve();
 		} else {
-			var tmrInit = $interval(function() {
-				if (!!initialized) {
-					$interval.cancel(tmrInit);
-					deferred.resolve();
-				}
-			}, 1);
+			$rootScope.$on('dataService.initialized', function() {
+				deferred.resolve()
+			});
 		}
 		return deferred.promise;
 	}
@@ -1665,12 +1662,13 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 			console.log(response);
 		    });
 		}
+		$rootScope.$broadcast('dataService.initialized');
 	}
 
     return dataService;
 }]);
 
-app.factory('ColorSchemeService', ['dataService', '$rootScope', function(dataService, $rootScope) {
+app.factory('colorSchemeService', ['dataService', '$rootScope', function(dataService, $rootScope) {
 	var colorSchemeService = {};
 
 	colorSchemeService.initialize = async function() {
@@ -1694,7 +1692,7 @@ app.factory('ColorSchemeService', ['dataService', '$rootScope', function(dataSer
   }]);
 
 
-app.run(['$rootScope', '$window', '$location', 'ColorSchemeService', function($rootScope, $window, $location, ColorSchemeService) {
+app.run(['$rootScope', '$window', '$location', 'colorSchemeService', function($rootScope, $window, $location, colorSchemeService) {
     $rootScope.getTime = function (date) {
         if (date) {
             return date.format('h:mmtt');                
@@ -1739,7 +1737,8 @@ app.run(['$rootScope', '$window', '$location', 'ColorSchemeService', function($r
         return (bytes / Math.pow(1024, i)).toFixed(i == 0 ? 0 : 2) + ' ' + sizes[i];
 	};
 
-	ColorSchemeService.initialize();
+	// $rootScope.theme = 'light';
+	colorSchemeService.initialize();
 	$rootScope.getDashboardTheme = function() {
 		return $rootScope.theme;
 	}

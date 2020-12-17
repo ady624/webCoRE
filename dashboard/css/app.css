@@ -1,4 +1,23 @@
 :root {
+  --solarized-base03: #002b36;
+  --solarized-base02: #073642;
+  --solarized-base01: #586e75;
+  --solarized-base00: #657b83;
+  --solarized-base0: #839496;
+  --solarized-base1: #93a1a1;
+  --solarized-base2: #eee8d5;
+  --solarized-base3: #fdf6e3;
+  --solarized-yellow: #b58900;
+  --solarized-orange: #cb4b16;
+  --solarized-red: #dc322f;
+  --solarized-magenta: #d33682;
+  --solarized-violet: #6c71c4;
+  --solarized-blue: #268bd2;
+  --solarized-cyan: #2aa198;
+  --solarized-green: #859900;
+}
+
+:root {
   --text-color: #444; /* #444 */
   --page-background: #fff;
   --background-featured: #eee;
@@ -6,6 +25,23 @@
   --table-even-background: rgba(0, 160, 220, 0.1);
   --table-hover-background: #eee;
   --table-inactive-text: #bcbcbc;
+  --utilities-background: #f8f8f8;
+  --piston-background: #fffcf0;
+  --piston-line-pun: #000000;
+  --piston-line-kwd: #0000ff;
+  --piston-line-dev: blueviolet;
+  --piston-line-cnt: blueviolet;
+  --piston-line-vdev: blueviolet;
+  --piston-line-attr: #15a3a3;
+  --piston-line-lit: #a31515;
+  --piston-line-num: #1515ff;
+  --piston-line-phn: #ff15ff;
+  --piston-line-uri: #3399ff;
+  --piston-line-exp: #15a315;
+  --piston-line-com: #008000;
+  --piston-line-warn: orange;
+  --piston-line-nul: #ccc;
+  --piston-line-hover: rgb(192, 224, 255);
 }
 
 [data-theme="dark"] {
@@ -16,6 +52,25 @@
   --table-even-background: #282C34;
   --table-hover-background: #24282F;
   --table-inactive-text: rgb(93, 95, 105);
+  --utilities-background: #070707;
+
+  --piston-background: var(--solarized-base03);
+  --piston-line-pun: var(--solarized-base0);
+  --piston-line-kwd: var(--solarized-green);
+  --piston-line-dev: blueviolet;
+  --piston-line-cnt: blueviolet;
+  --piston-line-vdev: blueviolet;
+  --piston-line-attr: var(--solarized-base1);
+  --piston-line-lit: #a31515;
+  --piston-line-num: #1515ff;
+  --piston-line-phn: #ff15ff;
+  --piston-line-uri: #3399ff;
+  --piston-line-exp: #15a315;
+  --piston-line-com: var(--solarized-base01);
+  --piston-line-warn: orange;
+  --piston-line-nul: #ccc;
+  --piston-line-hover: var(--solarized-base02);
+  
 }
 
 html, body {
@@ -1293,4 +1348,19 @@ li[instance] {
   .sidebar.sidebar-collapsed .adsbygoogle {
     display: none !important;
   }
+}
+
+
+.table-striped>tbody>tr:nth-of-type(odd) {
+  background-color: var(--table-odd-background);
+}
+
+.table-striped>tbody>tr:nth-of-type(even) {
+  background-color: var(--table-even-background);
+}
+
+.table>tbody>tr>td, .table>tbody>tr>th, .table>tfoot>tr>td, .table>tfoot>tr>th, .table>thead>tr>td, .table>thead>tr>th {
+padding: 0.750em;
+  border-bottom: 1px solid var(--background-featured);
+  border-top: 1px solid var(--background-featured);
 }
