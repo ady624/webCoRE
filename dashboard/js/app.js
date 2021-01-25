@@ -484,11 +484,6 @@ var config = app.config(['$routeProvider', '$locationProvider', '$sceDelegatePro
         controller: 'fuel',
         css: cdn + theme + 'css/modules/fuel' + ext + '?v=' + version()
     }).
-    when('/visors', {
-        templateUrl: cdn + theme + 'html/modules/visors.module.html?v=' + version(),
-        controller: 'visors',
-        css: cdn + theme + 'css/modules/visors' + ext + '?v=' + version()
-    }).
     when('/init/:instId1/:instId2', {
         redirectTo: function(params) {
 			app.initialInstanceUri = atou(params.instId1 + '/' +  params.instId2);
