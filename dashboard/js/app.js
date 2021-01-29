@@ -680,10 +680,18 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 		writeObject('instances', instances);
 		writeObject('store', store);
 		writeObject('instance', instance.id, _dk);
-		if ((instance.coreVersion) && (version() != instance.coreVersion) && !nagged) {
+		var coreVersionComparison = compareVersions(version(), instance.coreVersion);
+		if ((instance.coreVersion) && coreVersionComparison !== 0 && !nagged) {
 			nagged = true;
-			if (version() > instance.coreVersion) {
-				status('A newer SmartApp version (' + version() + ') is available, please update and publish all the webCoRE SmartApps in the SmartThings IDE.', true);
+			if (compareVersions(minCoreVersion, instance.coreVersion) > 0) {
+				status('A newer SmartApp version (' + version() + ') is available.<br><strong>Please update and publish all the webCoRE SmartApps in the SmartThings IDE.</strong>', true);
+			} else if (coreVersionComparison > 0) {
+				localforage.getItem('lastOptionalVersion').then(function(lastOptionalVersion) {
+					if (lastOptionalVersion !== version()) {
+						status('A newer SmartApp version (' + version() + ') is available.<br>This is an <strong>optional</strong> update; consider updating the webCoRE SmartApps in the SmartThings IDE.', true);
+						localforage.setItem('lastOptionalVersion', version());
+					}
+				});
 			} else {
 				status('A newer UI version (' + instance.coreVersion + ') is available, please hard reload this web page to get the newest version.', true);
 			}
@@ -2226,6 +2234,35 @@ function atou(str) {
     return decodeURIComponent(escape(window.atob(str)));
 }
 
+// Split version parts for numeric and lexical comparison (e.g. v0.9.1ff < v0.10.1ff)
+function comparableVersion(version) {
+	var parts = version.split('.');
+	return [
+		// Numeric major version, without v prefix
+		+parts[0].substr(1),
+		// Numeric minor version
+		+parts[1],
+		// Hex build number remains a string
+		parts[2],
+	];
+}
+
+// Compare webCoRE version number format for sorting from oldest to newest
+function compareVersions(a, b) {
+	var aParts = comparableVersion(a);
+	var bParts = comparableVersion(b);
+
+	for (var i = 0; i < aParts.length; i++) {
+		if (aParts[i] < bParts[i]) {
+			return -1;
+		}
+		if (aParts[i] > bParts[i]) {
+			return 1;
+		}
+	}
+	return 0;
+}
+
 //document.documentElement.addEventListener('touchstart', function (event) {
 //    if (event.touches.length > 1) {
 //        event.preventDefault();
@@ -2313,4 +2350,6 @@ if (!String.prototype.endsWith) {
 	};
 }
 
-version = function() { return 'v0.3.110.20191009'; };
+// Minimum version to display as an optional upgrade
+minCoreVersion = 'v0.3.110.20191009';
+version = function() { return 'v0.3.110.20191010'; };
