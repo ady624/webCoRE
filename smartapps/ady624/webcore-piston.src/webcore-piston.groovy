@@ -3850,7 +3850,6 @@ private Boolean evaluateCondition(rtData, condition, collection, async) {
                 if (lo) for (value in lo.values) updateCache(rtData, value)
                 if (ro) for (value in ro.values) updateCache(rtData, value)
                 if (ro2) for (value in ro2.values) updateCache(rtData, value)
-                if (rtData.fastForwardTo == null) tracePoint(rtData, "c:${condition.$}", now() - t, result)
                 if (lo.operand.dm && options.devices) setVariable(rtData, lo.operand.dm, options.devices?.matched ?: [])
                 if (lo.operand.dn && options.devices) setVariable(rtData, lo.operand.dn, options.devices?.unmatched ?: [])
                 //do the stay logic here
@@ -3903,6 +3902,7 @@ private Boolean evaluateCondition(rtData, condition, collection, async) {
                 result = oldResult
             }
         }
+        if (rtData.fastForwardTo == null) tracePoint(rtData, "c:${condition.$}", now() - t, result)
     }
     rtData.wakingUp = false
     rtData.conditionStateChanged = oldResult != result
