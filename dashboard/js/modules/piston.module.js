@@ -1,4 +1,4 @@
-config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', '$interval', '$location', '$sce', '$routeParams', 'ngDialog', '$window', '$animate', '$q', function($scope, $rootScope, dataService, $timeout, $interval, $location, $sce, $routeParams, ngDialog, $window, $animate, $q) {
+config.controller('piston', ['$scope', '$rootScope', 'dataService', 'colorSchemeService', '$timeout', '$interval', '$location', '$sce', '$routeParams', 'ngDialog', '$window', '$animate', '$q', function($scope, $rootScope, dataService, colorSchemeService, $timeout, $interval, $location, $sce, $routeParams, ngDialog, $window, $animate, $q) {
 	var tmrReveal;
 	var tmrStatus;
 	var tmrActivity;
@@ -604,6 +604,10 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 				$scope.init();
 			}
 		});
+	}
+
+	$scope.toggleDarkMode = function() {
+		colorSchemeService.toggleDarkMode();
 	}
 
 	$scope.pause = function() {
@@ -5351,12 +5355,9 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 	$scope.formatLogTime = function(timestamp, offset) { return utcToString(timestamp) + '+' + offset; };
 	$scope.md5 = window.md5;
 	//init
-    var tmrInit = setInterval(function() {
-        if (dataService.ready()) {
-            clearInterval(tmrInit);
-            $scope.init();
-        }
-    }, 1);
+	dataService.whenReady().then(function() {
+		$scope.init();
+	});
 
 }]);
 

@@ -50,5 +50,12 @@ config.controller('register', ['$scope', '$rootScope', 'dataService', '$timeout'
 	$scope.mobile = window.mobileCheck();
 	$scope.tablet = (!$scope.mobile) && (window.mobileOrTabletCheck());
 	$scope.formatTime = formatTime;
-    $scope.utcToString = utcToString;
+	$scope.utcToString = utcToString;
+	
+	// i dont understand why those 2 blocks were required here to
+	// trigger an AngularJS 2-way binding to be updated ¯\_(ツ)_/¯
+	$rootScope.$on('dataService.initialized', function(event){ 
+		$scope.$apply();
+	});	
+	dataService.whenReady().then(function() {});
 }]);

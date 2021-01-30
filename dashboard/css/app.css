@@ -1,3 +1,97 @@
+:root {
+  /* colors from https://ethanschoonover.com/solarized/ */
+  --solarized-base03: #002b36;
+  --solarized-base02: #073642;
+  --solarized-base01: #586e75;
+  --solarized-base00: #657b83;
+  --solarized-base0: #839496;
+  --solarized-base1: #93a1a1;
+  --solarized-base2: #eee8d5;
+  --solarized-base3: #fdf6e3;
+  --solarized-yellow: #b58900;
+  --solarized-orange: #cb4b16;
+  --solarized-red: #dc322f;
+  --solarized-magenta: #d33682;
+  --solarized-violet: #6c71c4;
+  --solarized-blue: #268bd2;
+  --solarized-cyan: #2aa198;
+  --solarized-green: #859900;
+}
+
+:root {
+  --text-color: #444; /* #444 */
+  --page-background: #fff;
+  --background-featured: #eee;
+  --info-pane-bg: #ddd;
+  --table-odd-background: #fff;
+  --table-even-background: rgba(0, 160, 220, 0.1);
+  --table-hover-background: #eee;
+  --table-inactive-text: #bcbcbc;
+  --utilities-background: #f8f8f8;
+
+  /* configuration for pistons */
+  --piston-background: #fffcf0;
+  --piston-line-pun: #000000;
+  --piston-line-kwd: #0000ff;
+  --piston-line-dev: blueviolet;
+  --piston-line-cnt: blueviolet;
+  --piston-line-vdev: blueviolet;
+  --piston-line-attr: #15a3a3;
+  --piston-line-lit: #a31515;
+  --piston-line-num: #1515ff;
+  --piston-line-phn: #ff15ff;
+  --piston-line-uri: #3399ff;
+  --piston-line-exp: #15a315;
+  --piston-line-com: #008000;
+  --piston-line-warn: orange;
+  --piston-line-nul: #ccc;
+  --piston-line-hover: rgb(192, 224, 255);
+  --piston-line-new: rgba(0, 0, 0, 0.2);
+  --piston-line-new-hover: rgba(0, 0, 0, 0.5);
+  --piston-line-disabled: rgba(0, 0, 0, 0.2);
+  --piston-line-disabled-border: rgba(0, 0, 0, 0.05);
+  --piston-line-number: #aaa;
+  --piston-dnd-border: #07d;
+  --piston-div-items-bg: rgba(0, 0, 0, 0.05);
+}
+
+[data-theme="dark"] {
+  --text-color: #C9CACC;
+  --page-background: #282c34;
+  --background-featured: #181A1F;
+  --info-pane-bg: #444;
+  --table-odd-background: rgb(35, 40, 46); /* to update */
+  --table-even-background: #282C34;
+  --table-hover-background: #24282F;
+  --table-inactive-text: rgb(93, 95, 105);
+  --utilities-background: #070707;
+
+  /* configuration for pistons */
+  --piston-background: var(--solarized-base03);
+  --piston-line-pun: var(--solarized-base1);
+  --piston-line-kwd: var(--solarized-green);
+  --piston-line-dev: var(--solarized-cyan);
+  --piston-line-cnt: var(--solarized-cyan);
+  --piston-line-vdev: var(--solarized-cyan);
+  --piston-line-attr: var(--solarized-base1);
+  --piston-line-lit: var(--solarized-violet);
+  --piston-line-num: var(--solarized-yellow);
+  --piston-line-phn: var(--solarized-magenta);
+  --piston-line-uri: #3399ff;
+  --piston-line-exp: #15a315;
+  --piston-line-com: var(--solarized-base01);
+  --piston-line-warn: orange;
+  --piston-line-nul: #ccc;
+  --piston-line-hover: var(--solarized-base02);
+  --piston-line-new: rgba(253, 246, 227, 0.3); /* based on --solarized-base3 */
+  --piston-line-new-hover: rgba(253, 246, 227, 0.4); /* based on --solarized-base3 */
+  --piston-line-disabled: rgba(88, 110, 117, 0.2); /* based on --solarized-base01 */
+  --piston-line-disabled-border: rgba(88, 110, 117, 0.05);
+  --piston-line-number: var(--solarized-base01);
+  --piston-dnd-border: var(--solarized-blue);
+  --piston-div-items-bg: rgba(250, 250, 250, 0.15);
+}
+
 html, body {
     position: absolute;
     left: 0px;
@@ -10,13 +104,13 @@ html, body {
 }
 
 h2 {
-    color: #444;
+    color: var(--text-color);
     font-weight: 300;
     font-size: 22px;
 }
 
 h3 {
-    color: #444;
+    color: var(--text-color);
     font-weight: 300;
     font-size: 22px;
     vertical-align: middle;
@@ -27,8 +121,8 @@ body {
 	font-family: Verdana;
 	font-size: 12px;
 	font-weight: normal;
-	color: #444;
-    -webkit-overflow-scrolling: touch;
+	color: var(--text-color);
+  -webkit-overflow-scrolling: touch;
 }
 
 ng-view > logo {
@@ -110,7 +204,7 @@ viewer {
 
 viewer {
 	position: absolute;
-	background: #fff;
+  background: var(--page-background);
 	display: none;
 	top: 50px;
 	overflow-y: auto;
@@ -170,11 +264,15 @@ footer button.btn + button.btn {
 
 .ngdialog.ngdialog-large .ngdialog-content {
 	width: 768px;
-  background-color: #fff;
+  background-color: var(--page-background);
 }
 
 .ngdialog.ngdialog-wiki .ngdialog-content {
 	height: 100%;
+}
+
+.ngdialog.ngdialog-theme-default .ngdialog-content {
+  color: var(--text-color);
 }
 
 .ngdialog.ngdialog-auto-size {
@@ -237,7 +335,7 @@ a-ckolor-wheel {
 info {
 	display: block;
 	padding: 8px;
-	background: #ddd;
+	background: var(--info-pane-bg);
 	border: solid 1px #ccc;
 	border-radius: 4px;
 	margin-bottom: 16px;
@@ -275,7 +373,7 @@ info {
 
 .bootstrap-select>.dropdown-toggle.btn-warning.bs-placeholder,
 .bootstrap-select>.dropdown-toggle.btn-info.bs-placeholder {
-    color: #eee;
+    color: var(--background-featured);
 }
 
 .input-group-addon {
@@ -379,10 +477,11 @@ wiki {
 }
 
 wiki:hover {
-	color: #444;
+	color: var(--text-color);
 }
 
 #preloader {
+    background-color: var(--page-background);
     position: fixed;
     top: 0;
     left: 0;
@@ -465,7 +564,7 @@ status {
 	height: auto;
 	text-align: left;
 	font-size: 1.5em;
-	color: #eee;
+	color: var(--background-featured);
 	z-index: 99999;
 	line-height: 18px;
 }
@@ -502,7 +601,7 @@ error {
 	height: auto;
 	max-height: 400px;
 	padding: 32px;
-	background: #eee;
+	background: var(--background-featured);
 	border-radius: 8px;
 	text-align: center;
 	z-index: 99999;
@@ -534,19 +633,23 @@ label:not(.form-check-label) > input {
 }
 
 ul .dropdown-menu {
-    background-color: #fff;
-    border: 1px solid #eee;
+    background-color: var(--background-featured);
+    border: 1px solid var(--page-background);
     border-radius: 7px;
 }
 
 ul .dropdown-menu:hover {
-    background-color: #fff;
-    border: 1px solid #eee;
+    background-color: var(--background-featured);
+    border: 1px solid var(--page-background);
 }
 
 ul .dropdown li {
     vertical-align: middle;
     cursor: pointer;
+}
+
+.dropdown-menu > li > a {
+  color: var(--text-color);
 }
 
 .dropdown-menu .divider {
@@ -781,9 +884,9 @@ span.s-up {
    z-index: 12000;
 }
 
-.tooltip .tooltip-inner { color: #444; background-color:#eee; border: solid 1px #444;}
-.tooltip.top .tooltip-arrow { border-top-color: #444 ; }
-.tooltip.bottom .tooltip-arrow { border-bottom-color: #444 ; }
+.tooltip .tooltip-inner { color: var(--text-color); background-color:var(--background-featured); border: solid 1px var(--text-color);}
+.tooltip.top .tooltip-arrow { border-top-color: var(--text-color) ; }
+.tooltip.bottom .tooltip-arrow { border-bottom-color: var(--text-color) ; }
 
 @media only screen and (max-width: 767px) {
 
@@ -864,7 +967,7 @@ span.s-up {
 		background: none !important;
 	}
 	a:hover {
-		background: #eee !important;
+		background: var(--background-featured) !important;
 		color: #333 !important;
 		text-shadow: none !important;
 	}
@@ -1038,7 +1141,7 @@ button .btn .btn-default active{
 
 .btn-primary:active,
 .btn-primary:focus,
-.btn-primary:hover, {
+.btn-primary:hover {
     background-color: #15acff !important;
 }
 
@@ -1142,7 +1245,7 @@ li[instance] {
 .nav-sidebar > li > a {
   white-space: nowrap;
   padding: 25px 20px;
-  color: #444;
+  color: var(--text-color);
   font-size: 15px;
   margin-top: -1px;
 }
@@ -1168,8 +1271,8 @@ li[instance] {
 .nav-sidebar > .active > a,
 .nav-sidebar > .active > a:hover,
 .nav-sidebar > .active > a:focus {
-  color: #fff;
-  background-color: #eee;
+  color: var(--page-background);
+  background-color: var(--background-featured);
   transition-duration: 0.3s;
 }
 
@@ -1184,8 +1287,8 @@ li[instance] {
     padding-left: 20px;
     overflow-x: hidden;
     overflow-y: auto; /* Scrollable contents if viewport is shorter than content. */
-    background-color: #ffffff;
-    border-right: 1px solid #eee;
+    background-color: var(--page-background);
+    border-right: 1px solid var(--background-featured);
   }
 
   /* Sidebar collapsing and transitions */
@@ -1203,8 +1306,8 @@ li[instance] {
   .main > .collapse-control {
     position: fixed;
     display: block;
-    background: #eee;
-    border: 1px solid #fff;
+    background: var(--background-featured);
+    border: 1px solid var(--page-background);
     border-left: 0;
     top: 58px;
     left: 275px;
@@ -1272,4 +1375,19 @@ li[instance] {
   .sidebar.sidebar-collapsed .adsbygoogle {
     display: none !important;
   }
+}
+
+
+.table-striped>tbody>tr:nth-of-type(odd) {
+  background-color: var(--table-odd-background);
+}
+
+.table-striped>tbody>tr:nth-of-type(even) {
+  background-color: var(--table-even-background);
+}
+
+.table>tbody>tr>td, .table>tbody>tr>th, .table>tfoot>tr>td, .table>tfoot>tr>th, .table>thead>tr>td, .table>thead>tr>th {
+  padding: 0.750em;
+  border-bottom: 1px solid var(--background-featured);
+  border-top: 1px solid var(--background-featured);
 }

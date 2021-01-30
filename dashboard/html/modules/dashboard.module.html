@@ -1,5 +1,5 @@
 <status ng-if="status" ng-animate ng-bind-html="status" ng-click="setStatus()"></status>
-<logo ng-if="view != 'dashboard'"><img src="/img/webCoRE-text.svg"></logo>
+<logo ng-if="view != 'dashboard'"><img src="/img/webCoRE-text-{{ theme }}.svg"></logo>
 <div id="preloader">
 		<div id="loader"></div>
 </div>
@@ -25,6 +25,7 @@
 			<li><a target="_blank" aria-haspopup="true" aria-expanded="false" href="https://www.paypal.me/ady624"><i class="fab fa-paypal"></i>&nbsp;&nbsp;Donate</a></li>
 			<li><a target="_blank" aria-haspopup="true" aria-expanded="false" href="https://community.webcore.co"><i class="fa fa-comments"></i>&nbsp;&nbsp;Forum</a></li>
 			<li><a target="_blank" aria-haspopup="true" aria-expanded="false" href="https://wiki.webcore.co"><i class="fa fa-book"></i>&nbsp;&nbsp;Wiki</a></li>
+			<li><a href="#" aria-expanded="false" ng-click="toggleDarkMode()" title="Toggle Dark Mode"><i class="fa fa-adjust"></i>&nbsp;&nbsp;</a></li>
 	</ul>
 
 <!-- Nav links and content -->
@@ -103,7 +104,7 @@
 		<div class="row">
 			<div id="dashboardSidebar" class="sidebar no-ng-animate" ng-class="{ 'sidebar-collapsed': sidebarCollapsed, 'allow-transition': completedInitialRender }" collapse-target collapse-class="">
 				<ul class="nav nav-sidebar">
-					<li class="logo"><img class="logo-sm" src="img/webCoRE-mark.svg" alt="webCoRE logo"><img class="logo-lg" src="img/webCoRE-text.svg" width="90%"></li>
+					<li class="logo"><img class="logo-sm" src="img/webCoRE-mark-{{ theme }}.svg" alt="webCoRE logo"><img class="logo-lg" src="img/webCoRE-text-{{ theme }}.svg" width="90%"></li>
 					<li><a href="" ng-click="newPiston();" class="newPiston" data-toggle="{{sidebarCollapsed ? 'tooltip' : ''}}" data-placement="right" data-title="New Piston">
 						<i class="fas fa-plus"></i>&nbsp;&nbsp;New Piston
 					</a></li>
