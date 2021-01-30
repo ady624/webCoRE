@@ -2352,4 +2352,4 @@ if (!String.prototype.endsWith) {
 
 // Minimum version to display as an optional upgrade
 minCoreVersion = 'v0.3.110.20191009';
-version = function() { return 'v0.3.110.20191010'; };
+version = function() { return 'v0.3.111.20210130'; };
