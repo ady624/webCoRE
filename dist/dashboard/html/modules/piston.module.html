@@ -160,7 +160,7 @@
 				<div class="col-md-4">
 					<div class="columnCards">
 					<h2>Quick Facts</h2>
-					<p>Piston state: <span ng-bind-html="renderString(state.new)"></span></p>
+					<p>Piston state: <span ng-bind-html="state.new | renderString"></span></p>
 					<p>Last executed: {{lastExecuted ? utcToString(lastExecuted) : 'never'}}</p>
 					<p>Next scheduled: {{nextSchedule ? utcToString(nextSchedule) : 'never'}}</p>
 					<p>Subscriptions: {{subscriptions.events ? subscriptions.events : 'no'}} event{{subscriptions.events != 1 ? 's' : ''}}, {{subscriptions.controls ? subscriptions.controls : 'no'}} control{{subscriptions.controls != 1 ? 's' : ''}}</p>
@@ -231,7 +231,7 @@
 								<tr ng-repeat="log in logs" log="{{log.c}}">
 									<td ng-if="log.t" colspan="2" class="hdr">{{utcToString(log.t) + ' +' + (log.t % 1000) + 'ms'}}</td>
 									<td ng-if-start="log.o != null">+{{log.o}}ms</td>
-									<td ng-if-end>{{log.p}}<span ng-bind-html="renderString(log.m)"></span></td>
+									<td ng-if-end>{{log.p}}<span ng-bind-html="log.m | renderString"></span></td>
 								</tr>
 							</tbody>
 						</table>
