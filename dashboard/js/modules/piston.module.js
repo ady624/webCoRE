@@ -175,6 +175,9 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 				if (response.activity.globalVars) {
 					$scope.updateGlobalVars(response.activity.globalVars);
 				}
+				if (response.activity.systemVars) {
+					$scope.updateSystemVars(response.activity.systemVars);
+				}
 			}
 			tmrActivity = $timeout($scope.updateActivity, 3000);
 		}, function (error) {
@@ -185,7 +188,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 
 	$scope.updateGlobalVars = function(globalVars) {
 		$scope.globalVars = $scope.globalVars instanceof Object ? $scope.globalVars : {};
-		for (varName in globalVars) {
+		for (var varName in globalVars) {
 			var varType = globalVars[varName].t;
 			var varValue = globalVars[varName].v;
 			var v = $scope.globalVars[varName];
@@ -196,8 +199,28 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 				if (v.v != varValue) v.v = varValue;
 			}
 		}
-		for (varName in $scope.globalVars) {
+		for (var varName in $scope.globalVars) {
 			if (!globalVars[varName]) delete($scope.globalVars[varName]);
+		}
+	}
+
+	$scope.updateSystemVars = function(systemVars) {
+		$scope.systemVars = $scope.systemVars instanceof Object ? $scope.systemVars : {};
+		for (var varName in systemVars) {
+			var varType = systemVars[varName].t;
+			var varValue = systemVars[varName].v;
+			var varValD = systemVars[varName].d;
+			var v = $scope.systemVars[varName];
+			if (!v) {
+				if (varValD) {
+					$scope.systemVars[varName] = {t: varType, v: varValue, d: true};
+				} else {
+					$scope.systemVars[varName] = {t: varType, v: varValue};
+				}
+			} else {
+				if (v.t != varType) v.t = varType;
+				if (v.v != varValue) v.v = varValue;
+			}
 		}
 	}
 
@@ -207,7 +230,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		$scope.initialized = false;
 		$scope.loading = true;
 		if ($scope.piston) $scope.loading = true;
-		dataService.getPiston($scope.pistonId).then(function (response) {
+		dataService.getPiston($scope.pistonId, true).then(function (response) {
 			if ($scope.$$destroyed) return;
 			$scope.endpoint = data.endpoint + 'execute/' + $scope.pistonId + (si.accessToken ? '?access_token=' + si.accessToken : '');
 			try {
@@ -663,7 +686,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		});
 	};
 
-	$scope.formatVariableValue = function(variable, name) {
+	$scope.formatVariableValue = nanomemoize(function(variable, name) {
 		if ((variable.v == null) && !!name && $scope.localVars) {
 			variable = $scope.copy(variable);
             variable.v = $scope.localVars[name];
@@ -686,7 +709,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 			return angular.toJson(variable.v);
 		}
 		return variable.v;
-	}
+	});
 
 	$scope.deleteDialog = function() {
 		$scope.designer.dialog = ngDialog.open({
@@ -3625,7 +3648,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 
 		comparison.timed = comp ? comp.t : 0;
 
-		if ((comparison.parameterCount > 0) || (comparison.dataType == 'email')) {
+		if (comparison.right && ((comparison.parameterCount > 0) || (comparison.dataType == 'email'))) {
 			comparison.right.multiple = comparison.multiple;
 			comparison.right.disableAggregation = comparison.multiple;
 			comparison.right.dataType = (comparison.dataType == 'email' ? 'string' : comparison.left.selectedDataType);
@@ -3641,7 +3664,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 			comparison.valid = comparison.valid && comparison.right.valid;
 		}
 
-		if ((comparison.parameterCount > 1) || (comparison.dataType == 'email')) {
+		if (comparison.right2 && ((comparison.parameterCount > 1) || (comparison.dataType == 'email'))) {
 			comparison.right2.multiple = comparison.multiple;
 			comparison.right2.disableAggregation = comparison.multiple;
 			comparison.right2.dataType = (comparison.dataType == 'email' ? 'string' : comparison.left.selectedDataType);
@@ -4188,7 +4211,8 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		suffix = (aggregation == 'any' ? 'or' : 'and');
 		var prefix = '';
 		if (devices instanceof Array) {
-			if (devices.length > 1) {
+			var isVariable = !$scope.getDeviceById(devices[0]);
+			if (devices.length > 1 || isVariable) {
 				switch (aggregation) {
 					case 'any':
 						prefix = 'Any of ';

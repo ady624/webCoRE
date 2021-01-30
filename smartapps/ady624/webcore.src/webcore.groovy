@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.3.110.20191009" }
+public static String version() { return "v0.3.111.20210130" }
 /*
+ *	01/30/2021 >>> v0.3.111.20210130 - BETA M3 - Numerous bug fixes, performance improvements for HTTP, *CLEAR index to reset list variables, reset access token
  *	10/09/2019 >>> v0.3.110.20191009 - BETA M3 - Load devices into dashboard in multiple batches when necessary, switch to FontAwesome Kit to always use latest version
  *	08/22/2019 >>> v0.3.10f.20190822 - BETA M3 - Custom headers on web requests by @Bloodtick_Jones (write as JSON in Authorization header field), capabilities split into three pages to fix device selection errors
  *	06/28/2019 >>> v0.3.10e.20190628 - BETA M3 - Reinstated dirty fix for dashboard timeouts after reports of increased error rates, NaN device status is back
@@ -168,7 +169,7 @@ public static String version() { return "v0.3.110.20191009" }
  *	04/21/2017 >>> v0.0.07d.20170421 - ALPHA - Lots of improvements for device variables
  *	04/20/2017 >>> v0.0.07c.20170420 - ALPHA - Timed conditions are finally working (was* and changed/not changed), basic tests performed
  *	04/19/2017 >>> v0.0.07b.20170419 - ALPHA - First attempt to get 'was' conditions up and running
- *	04/19/2017 >>> v0.0.07a.20170419 - ALPHA - Minor bug fixes, triggers inside timers no longer subscribe to events (the timer is a trigger itself) - triggers should not normally be used inside timers
+ *	04/19/2017 >>> v0.0.07a.20170419 - ALPHA - Minor bug fixes, triggers inside timers no longer to events (the timer is a trigger itself) - triggers should not normally be used inside timers
  *	04/19/2017 >>> v0.0.079.20170419 - ALPHA - Time condition restrictions are now working, added date and date&time conditions, offsets still missing
  *	04/18/2017 >>> v0.0.078.20170418 - ALPHA - Time conditions now subscribe for time events - added restrictions to UI dialog, but not yet implemented
  *	04/18/2017 >>> v0.0.077.20170418 - ALPHA - Implemented time conditions - no date or datetime yet, also, no subscriptions for time events yet
@@ -325,6 +326,7 @@ preferences {
     page(name: "pageChangePassword")
     page(name: "pageSavePassword")
     page(name: "pageRebuildCache")
+    page(name: "pageResetEndpoint")
 	page(name: "pageRemove")
 }
 
@@ -644,7 +646,13 @@ private pageSectionPIN() {
         input "PIN", "password", title: "Choose a security password for your dashboard", required: true
         input "expiry", "enum", options: ["Every hour", "Every day", "Every week", "Every month (recommended)", "Every three months", "Never (not recommended)"], defaultValue: "Every month (recommended)", title: "Choose how often the dashboard login expires", required: true
     }
-
+	if (settings.PIN) {
+		section() {
+			paragraph "The webCoRE dashboard uses an access token to communicate with the smart apps on your SmartThings account. In some cases SmartThings may invalidate an access token, or you may choose to invalidate it periodically for increased security.", required: false
+			paragraph "If your dashboard fails to load and no log messages appear in Live Logging when you refresh the dashboard, resetting the access token may restore access to webCoRE.", required: false
+			href "pageResetEndpoint", title: "Reset access token", description: "WARNING: External URLs for triggering pistons will need to be updated"
+		}
+	}
 }
 
 private pageSavePassword() {
@@ -663,6 +671,20 @@ def pageRebuildCache() {
     		paragraph "Success! Data cache has been cleaned up and rebuilt."
         }
     }
+}
+
+def pageResetEndpoint() {
+	revokeAccessToken()
+	state.endpoint = null
+	initializeWebCoREEndpoint()
+	initTokens()
+	registerInstance()
+	dynamicPage(name: "pageResetEndpoint", title: "", install: false, uninstall: false) {
+		section() {
+			paragraph "Success! Please sign out and back in to the webCoRE dashboard."
+			paragraph "If you use external URLs to trigger pistons, these URLs must be updated. See the piston detail page for an updated external URL; all pistons will use the same new token."
+		}
+	}
 }
 
 def pageIntegrations() {
@@ -866,7 +888,8 @@ private subscribeAll() {
 	subscribe(location, "${'@@' + handle()}", webCoREHandler)
 	subscribe(location, "askAlexa", askAlexaHandler)
 	subscribe(location, "echoSistant", echoSistantHandler)
-    subscribe(location, "HubUpdated", hubUpdatedHandler, [filterEvents: false])
+	subscribe(location, "hubInfo", hubInfoHandler, [filterEvents: false])
+	subscribe(location, "HubUpdated", hubUpdatedHandler, [filterEvents: false])
     subscribe(location, "summary", summaryHandler, [filterEvents: false])
     setPowerSource(getHub()?.isBatteryInUse() ? 'battery' : 'mains')
 }
@@ -1734,11 +1757,13 @@ public Map listAvailableDevices(raw = false, updateCache = false, offset = 0) {
 	if (storageApp) {
 		result = storageApp.listAvailableDevices(raw, offset)
 	} else {
-		def devices = settings.findAll{ it.key.startsWith("dev:") }.collect{ it.value }.flatten().sort{ it.getDisplayName() }
+		def myDevices = settings.findAll{ it.key.startsWith("dev:") }.collect{ it.value }.flatten().sort{ it.getDisplayName() }
+		def devices = myDevices.unique{ it.id }
 		if (raw) {
 			result = devices.collectEntries{ dev -> [(hashId(dev.id, updateCache)): dev]}
 		} else {
 			def deviceCount = devices.size()
+			def time = now()
 			devices = devices[offset..-1]
 			result.devices = [:]
 			result.complete = !devices.indexed().find{ idx, dev ->
@@ -2232,6 +2257,30 @@ def echoSistantHandler(evt) {
 	}
 }
 
+// Used for current hubs
+def hubInfoHandler(evt) {
+    //log.debug "Hub info event received"
+    def hubInfo = evt.value
+    
+    // Get power source information
+    def powerSourceMatcher = hubInfo =~ "batterygpiostat:(\\d{2}),"
+    def powerSource = powerSourceMatcher[0][1]
+    //log.debug "Power Source is ${powerSource}"
+    
+    switch (powerSource) {
+        case "00":
+            setPowerSource('mains')
+            break
+        case "01":
+            setPowerSource('battery')
+            break
+        default:
+            log.error "Unrecognized hub power source value of ${powerSource}"
+            break
+       }
+}
+
+// Used for legacy hubs
 def hubUpdatedHandler(evt) {
 	if (evt.jsonData && (evt.jsonData.hubType == 'PHYSICAL') && evt.jsonData.data && evt.jsonData.data.batteryInUse) {
     	setPowerSource(evt.jsonData.data.batteryInUse ? 'battery' : 'mains')
