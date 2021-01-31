@@ -194,7 +194,7 @@ def Map listAvailableDevices(raw = false, offset = 0) {
 			false
 		}
 	}
-	log.debug "Generated list of ${offet}-${offset + devices.size()} of ${deviceCount} devices in ${now() - time}ms. Data size is ${response.toString().size()}"
+	log.debug "Generated list of ${offset}-${offset + devices.size()} of ${deviceCount} devices in ${now() - time}ms. Data size is ${response.toString().size()}"
 	return response
 }
 
