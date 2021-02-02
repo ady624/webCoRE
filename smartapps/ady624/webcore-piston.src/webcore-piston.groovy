@@ -3266,6 +3266,9 @@ private long vcmd_httpRequest(rtData, device, params) {
 			data[variable] = getVariable(rtData, variable).v
 		}
     }
+    if (requestContentType == 'application/x-www-form-urlencoded' && data instanceof List) {
+    	data = data.collect{ k,v -> "${encodeURIComponent(k)}=${encodeURIComponent(v)}" }.join('&')
+    }
 	if (internal) {
 		try {
 			if (rtData.logging > 2) debug "Sending internal web request to: $userPart$uri", rtData
@@ -7258,11 +7261,8 @@ private func_urlencode(rtData, params) {
 	if (!params || !(params instanceof List) || (params.size() != 1)) {
     	return [t: "error", v: "Invalid parameters. Expecting urlencode(value])"];
     }
-    // URLEncoder converts spaces to + which is then indistinguishable from any 
-    // actual + characters in the value. Match encodeURIComponent in ECMAScript
-    // which encodes "a+b c" as "a+b%20c" rather than URLEncoder's "a+b+c"
-    def value = (evaluateExpression(rtData, params[0], 'string').v ?: '').replaceAll('\\+', '__wc_plus__')
-    return [t: 'string', v: URLEncoder.encode(value, 'UTF-8').replaceAll('\\+', '%20').replaceAll('__wc_plus__', '+')]
+    def value = (evaluateExpression(rtData, params[0], 'string').v ?: '')
+    return [t: 'string', v: encodeURIComponent(value)]
 }
 private func_encodeuricomponent(rtData, params) { return func_urlencode(rtData, params); }
 
@@ -7281,6 +7281,16 @@ def mem(showBytes = true) {
 /*** UTILITIES																***/
 /***																		***/
 /******************************************************************************/
+
+def encodeURIComponent(value) {
+    // URLEncoder converts spaces to + which is then indistinguishable from any 
+    // actual + characters in the value. Match encodeURIComponent in ECMAScript
+    // which encodes "a+b c" as "a+b%20c" rather than URLEncoder's "a+b+c"
+    return URLEncoder.encode(
+        "${value}".toString().replaceAll('\\+', '__wc_plus__'), 
+        'UTF-8'
+    ).replaceAll('\\+', '%20').replaceAll('__wc_plus__', '+')
+}
 
 def String md5(String md5) {
    try {
