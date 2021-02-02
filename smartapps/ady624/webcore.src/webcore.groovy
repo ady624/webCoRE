@@ -1835,11 +1835,10 @@ private Boolean verifySecurityToken(tokenId) {
     	atomicState.securityTokens = tokens
     }
 	def token = tokens[tokenId]
-    if (!token || token < now()) {
+    if (token && token < now()) {
         error "Dashboard: Authentication failed due to an invalid token"
-    	return false
     }
-    return true
+    return token && token >= now()
 }
 
 private String createSecurityToken() {
