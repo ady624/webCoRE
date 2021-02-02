@@ -3266,7 +3266,7 @@ private long vcmd_httpRequest(rtData, device, params) {
 			data[variable] = getVariable(rtData, variable).v
 		}
     }
-    if (requestContentType == 'application/x-www-form-urlencoded' && data instanceof List) {
+    if (requestContentType == 'application/x-www-form-urlencoded' && data instanceof Map) {
     	data = data.collect{ k,v -> "${encodeURIComponent(k)}=${encodeURIComponent(v)}" }.join('&')
     }
 	if (internal) {
