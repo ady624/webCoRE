@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.3.111.20210130" }
+public static String version() { return "v0.3.112.20210202" }
 /*
+ *	02/02/2021 >>> v0.3.112.20210202 - BETA M3 - Fixed FORM type web requests that used Send Variables (broken in 0.3.111), improved a few confusing log messages
  *	01/30/2021 >>> v0.3.111.20210130 - BETA M3 - Numerous bug fixes, performance improvements for HTTP, *CLEAR index to reset list variables, reset access token
  *	10/09/2019 >>> v0.3.110.20191009 - BETA M3 - Load devices into dashboard in multiple batches when necessary, switch to FontAwesome Kit to always use latest version
  *	08/22/2019 >>> v0.3.10f.20190822 - BETA M3 - Custom headers on web requests by @Bloodtick_Jones (write as JSON in Authorization header field), capabilities split into three pages to fix device selection errors
@@ -3265,6 +3266,9 @@ private long vcmd_httpRequest(rtData, device, params) {
         	data  = data ?: [:]
 			data[variable] = getVariable(rtData, variable).v
 		}
+    }
+    if (requestContentType == 'application/x-www-form-urlencoded' && data instanceof Map) {
+        data = data.collect{ k,v -> "${encodeURIComponent(k)}=${encodeURIComponent(v)}" }.join('&')
     }
 	if (internal) {
 		try {
@@ -7258,11 +7262,8 @@ private func_urlencode(rtData, params) {
 	if (!params || !(params instanceof List) || (params.size() != 1)) {
     	return [t: "error", v: "Invalid parameters. Expecting urlencode(value])"];
     }
-    // URLEncoder converts spaces to + which is then indistinguishable from any 
-    // actual + characters in the value. Match encodeURIComponent in ECMAScript
-    // which encodes "a+b c" as "a+b%20c" rather than URLEncoder's "a+b+c"
-    def value = (evaluateExpression(rtData, params[0], 'string').v ?: '').replaceAll('\\+', '__wc_plus__')
-    return [t: 'string', v: URLEncoder.encode(value, 'UTF-8').replaceAll('\\+', '%20').replaceAll('__wc_plus__', '+')]
+    def value = (evaluateExpression(rtData, params[0], 'string').v ?: '')
+    return [t: 'string', v: encodeURIComponent(value)]
 }
 private func_encodeuricomponent(rtData, params) { return func_urlencode(rtData, params); }
 
@@ -7281,6 +7282,16 @@ def mem(showBytes = true) {
 /*** UTILITIES																***/
 /***																		***/
 /******************************************************************************/
+
+def encodeURIComponent(value) {
+    // URLEncoder converts spaces to + which is then indistinguishable from any 
+    // actual + characters in the value. Match encodeURIComponent in ECMAScript
+    // which encodes "a+b c" as "a+b%20c" rather than URLEncoder's "a+b+c"
+    return URLEncoder.encode(
+        "${value}".toString().replaceAll('\\+', '__wc_plus__'), 
+        'UTF-8'
+    ).replaceAll('\\+', '%20').replaceAll('__wc_plus__', '+')
+}
 
 def String md5(String md5) {
    try {

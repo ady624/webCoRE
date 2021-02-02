@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.3.111.20210130" }
+public static String version() { return "v0.3.112.20210202" }
 /*
+ *	02/02/2021 >>> v0.3.112.20210202 - BETA M3 - Fixed FORM type web requests that used Send Variables (broken in 0.3.111), improved a few confusing log messages
  *	01/30/2021 >>> v0.3.111.20210130 - BETA M3 - Numerous bug fixes, performance improvements for HTTP, *CLEAR index to reset list variables, reset access token
  *	10/09/2019 >>> v0.3.110.20191009 - BETA M3 - Load devices into dashboard in multiple batches when necessary, switch to FontAwesome Kit to always use latest version
  *	08/22/2019 >>> v0.3.10f.20190822 - BETA M3 - Custom headers on web requests by @Bloodtick_Jones (write as JSON in Authorization header field), capabilities split into three pages to fix device selection errors
@@ -1835,11 +1836,10 @@ private Boolean verifySecurityToken(tokenId) {
     	atomicState.securityTokens = tokens
     }
 	def token = tokens[tokenId]
-    if (!token || token < now()) {
+    if (token && token < now()) {
         error "Dashboard: Authentication failed due to an invalid token"
-    	return false
     }
-    return true
+    return token && token >= now()
 }
 
 private String createSecurityToken() {
