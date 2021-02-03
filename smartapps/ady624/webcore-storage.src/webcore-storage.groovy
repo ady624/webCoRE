@@ -16,7 +16,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-public static String version() { return "v0.3.111.20210130" }
+public static String version() { return "v0.3.112.20210202" }
 /******************************************************************************/
 /*** webCoRE DEFINITION														***/
 /******************************************************************************/
@@ -194,7 +194,7 @@ def Map listAvailableDevices(raw = false, offset = 0) {
 			false
 		}
 	}
-	log.debug "Generated list of ${offet}-${offset + devices.size()} of ${deviceCount} devices in ${now() - time}ms. Data size is ${response.toString().size()}"
+	log.debug "Generated list of ${offset}-${offset + devices.size()} of ${deviceCount} devices in ${now() - time}ms. Data size is ${response.toString().size()}"
 	return response
 }
 

@@ -614,7 +614,7 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 
 	var fixSI = function(si) {
 		if (!si || !si.uri) return null;
-		if (si.uri.indexOf('?access_token=')) {
+		if (si.uri.indexOf('?access_token=') > 0) {
 			var parts = si.uri.split('?access_token=');
 			si.uri = parts[0];
 			si.accessToken = parts[1];
@@ -2400,4 +2400,4 @@ if (!String.prototype.endsWith) {
 
 // Minimum version to display as an optional upgrade
 minCoreVersion = 'v0.3.110.20191009';
-version = function() { return 'v0.3.111.20210130'; };
+version = function() { return 'v0.3.112.20210202'; };
