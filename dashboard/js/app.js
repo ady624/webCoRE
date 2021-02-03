@@ -615,7 +615,7 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 
 	var fixSI = function(si) {
 		if (!si || !si.uri) return null;
-		if (si.uri.indexOf('?access_token=')) {
+		if (si.uri.indexOf('?access_token=') > 0) {
 			var parts = si.uri.split('?access_token=');
 			si.uri = parts[0];
 			si.accessToken = parts[1];
