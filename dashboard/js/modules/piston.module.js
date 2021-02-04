@@ -690,30 +690,39 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', 'colorScheme
 		});
 	};
 
-	$scope.formatVariableValue = nanomemoize(function(variable, name) {
+	var formatValue = nanomemoize(function(name, value, variable) {
+		var t = (name == '$localNow') || (name == '$utc') ? 'long' : variable.t;
+		if ((value === '') || (value === null) || ((value instanceof Array) && !value.length)) return '(not set)';
+		switch (t) {
+			case 'time':
+				return utcToTimeString(value);
+			case 'datetime':
+				return utcToString(value);
+			case 'date':
+				return utcToDateString(value);
+			case 'contact':
+				return $scope.renderContactNameList(value);
+			case 'device':
+				return $scope.renderDeviceNameList(value);
+		}
+		if (value instanceof Object) {
+			return angular.toJson(value);
+		}
+		return value;
+	}, { 
+		// memoize based on variable name and value
+		maxArgs: 2, 
+		// refresh everything after 30 seconds in case any rendering is impure
+		maxAge: 30000 
+	});
+
+	$scope.formatVariableValue = function(variable, name) {
 		if ((variable.v == null) && !!name && $scope.localVars) {
 			variable = $scope.copy(variable);
             variable.v = $scope.localVars[name];
 		}
-		var t = (name == '$localNow') || (name == '$utc') ? 'long' : variable.t;
-		if ((variable.v === '') || (variable.v === null) || ((variable.v instanceof Array) && !variable.v.length)) return '(not set)';
-		switch (t) {
-			case 'time':
-				return utcToTimeString(variable.v);
-			case 'datetime':
-				return utcToString(variable.v);
-			case 'date':
-				return utcToDateString(variable.v);
-			case 'contact':
-				return $scope.renderContactNameList(variable.v);
-			case 'device':
-				return $scope.renderDeviceNameList(variable.v);
-		}
-		if (variable.v instanceof Object) {
-			return angular.toJson(variable.v);
-		}
-		return variable.v;
-	});
+		return formatValue(name, variable.v, variable);
+	};
 
 	$scope.deleteDialog = function() {
 		$scope.designer.dialog = ngDialog.open({
