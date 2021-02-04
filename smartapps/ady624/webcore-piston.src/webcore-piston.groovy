@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.3.112.20210202" }
+public static String version() { return "v0.3.113.20210203" }
 /*
+ *	02/03/2021 >>> v0.3.113.20210203 - BETA M3 - Fixed GET, HEAD, DELETE web requests that used Send Variables (broken in 0.3.112)
  *	02/02/2021 >>> v0.3.112.20210202 - BETA M3 - Fixed FORM type web requests that used Send Variables (broken in 0.3.111), improved a few confusing log messages
  *	01/30/2021 >>> v0.3.111.20210130 - BETA M3 - Numerous bug fixes, performance improvements for HTTP, *CLEAR index to reset list variables, reset access token
  *	10/09/2019 >>> v0.3.110.20191009 - BETA M3 - Load devices into dashboard in multiple batches when necessary, switch to FontAwesome Kit to always use latest version
@@ -3267,7 +3268,7 @@ private long vcmd_httpRequest(rtData, device, params) {
 			data[variable] = getVariable(rtData, variable).v
 		}
     }
-    if (requestContentType == 'application/x-www-form-urlencoded' && data instanceof Map) {
+    if (!useQueryString && requestContentType == 'application/x-www-form-urlencoded' && data instanceof Map) {
         data = data.collect{ k,v -> "${encodeURIComponent(k)}=${encodeURIComponent(v)}" }.join('&')
     }
 	if (internal) {
