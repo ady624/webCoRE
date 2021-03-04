@@ -10,7 +10,7 @@ viewer[mode=view] {
 div[header] {
     margin: 0px -15px;
     margin-bottom: 20px;
-    background: #eee;
+    background: var(--background-featured);
     border-bottom: solid 1px #ccc;
     padding: 0px;
 }
@@ -36,7 +36,7 @@ piston {
 	position: relative;
 	counter-reset: line;
     display: block;
-    background: #fffcf0;
+    background: var(--piston-background);
     margin: 10px 0;
     color: #444;
     font-family: monospace;
@@ -56,7 +56,7 @@ piston > gutter {
     width: 48px;
     border-right: solid 1px #ccc;
     z-index: 0;
-    background: #f8f8f8;
+    background: var(--utilities-background);
 }
 
 piston > gutter:after {
@@ -68,7 +68,7 @@ piston > gutter:after {
 	bottom: 0px;
 	height: 100%;
 	width: 12px;
-	background: #e7e7e7;
+	background: var(--utilities-background);
 	border-left: solid 1px #ccc;
 }
 
@@ -138,7 +138,7 @@ console {
 	display: block;
 	position: relative;
 	height: 160px;
-	background: #f8f8f8 !important;
+	background: var(--utilities-background) !important;
 	margin: 0px;
 	padding: 0px;
 	border: solid 1px #ccc;
@@ -233,6 +233,7 @@ console > footer select {
 	width: 128px !important;
 	z-index: 2 !important;
 	outline: none !important;
+	background-color: var(--background-featured);
 }
 
 console > footer input {
@@ -247,6 +248,7 @@ console > footer input {
 	height: 24px;
 	z-index: 1;
 	outline: none;
+	background-color: var(--background-featured);
 }
 
 
@@ -274,7 +276,7 @@ toolbar {
 	width: 320px;
 	height: auto;
 	border-left: solid 1px #ccc;
-	background: #f8f8f8;
+	background: var(--utilities-background);
 	overflow-y: auto;
 }
 
@@ -303,9 +305,6 @@ toolbar > panel > a {
 toolbar > panel > a:hover {
 	text-decoration: underline;
 }
-
-
-
 
 table[properties] {
 	width: 100%;
@@ -491,81 +490,81 @@ line[pun],
 line[operator],
 span[pun],
 span.hl.pun {
-	color: #000000;
+	color: var(--piston-line-pun);
 }
 
 line[kwd],
 span[kwd],
 span.hl.kwd {
-    color: #0000ff;
+    color: var(--piston-line-kwd);
 }
 
 line[dev],
 span[dev],
 span.hl.dev {
-    color: blueviolet;
+    color: var(--piston-line-dev);
 }
 
 line[cnt],
 span[cnt],
 span.hl.cnt {
-    color: blueviolet;
+    color: var(--piston-line-cnt);
 }
 
 line[vdev],
 span[vdev],
 span.hl.vdev {
-    color: blueviolet;
+    color: var(--piston-line-vdev);
 }
 
 line[attr],
 span[attr],
 span.hl.attr {
-    color: 15a3a3;
+    color: var(--piston-line-attr);
     font-style: italic;
 }
 
 line[lit],
 span[lit],
 span.hl.lit {
-	color: #a31515;
+	color: var(--piston-line-lit);
 }
 
 line[num],
 span[num],
 span.hl.num {
-	color: #1515ff;
+	color: var(--piston-line-num);
 }
 
 line[phn],
 span[phn],
 span.hl.phn {
-	color: #ff15ff;
+	color: var(--piston-line-phn);
 }
 
 line[uri],
 span[uri],
 span.hl.uri {
-	color: #3399ff;
+	color: var(--piston-line-uri);
 }
 
 
 line[exp],
 span[exp],
 span.hl.exp {
-	color: #15a315;
+	color: var(--piston-line-exp);
 }
 
 line[com],
 span[com],
 span.hl.com {
-	color: #008000 !important;
+	color: var(--piston-line-com) !important;
 }
 
 line[warn],
 span[warn],
 span.hl.warn {
-	background: orange !important;
+	background: var(--piston-line-warn) !important;
 	color: white !important;
 	padding: 0px 8px;
 	border: double 4px white;
@@ -580,13 +579,13 @@ span.hl.com.h {
 line[com] *,
 span[com] *,
 span.hl.com * {
-	color: #008000 !important;
+	color: var(--piston-line-com) !important;
 }
 
 line[nul],
 span[nul],
 span.hl.nul {
-    color: #ccc;
+    color: var(--piston-line-nul);
 }
 
 line[com][exportBin]::after {
@@ -634,7 +633,7 @@ label span.error {
 
 line[new],
 span[new] {
-    color: rgba(0, 0, 0, 0.2);
+    color: var(--piston-line-new);
 	cursor: pointer;
 }
 
@@ -750,7 +749,7 @@ piston dnd-nodrag > bar {
     border-top: solid 1px;
     border-left: solid 1px;
     border-bottom: solid 1px;
-    border-color: #07d;
+    border-color: var(--piston-dnd-border);
     margin-right: 4px;
     margin-top: 8px;
     margin-bottom: 7px;
@@ -840,16 +839,17 @@ piston .dndPlaceholder::before {
 	position: absolute;
 	counter-increment: line;
 	left: 0px;
-    color: #aaa;
+    color: var(--piston-line-number);
     width: 35px;
     text-align: right;
 	content: counter(line);
 	padding-right: 2px;
+	font-style: normal;
 }
 
 line:hover::before,
 line:hover {
-	background:rgb(192, 224, 255);
+	background: var(--piston-line-hover);
 	ecolor: #fff;
 }
 
@@ -976,7 +976,7 @@ parameter[optional=true] label.control-label::after {
 	}
 
 	piston[mode=edit] line[new]:hover {
-	    color: rgba(0, 0, 0, 0.5);
+	    color: var(--piston-line-new-hover);
 	}
 
 	designer > item:hover {
@@ -1109,7 +1109,7 @@ div[items] div[item] item {
 	position: relative;
 	display: block;
 	min-height: 192px;
-	background: rgba(0, 0, 0, 0.05);
+	background: var(--piston-div-items-bg);
 	border-radius: 8px;
 	padding: 16px;
 	margin: 0px;
@@ -1144,7 +1144,7 @@ div[multicolumn] {
     -o-column-gap: 0px;
     column-gap: 0px;
     border: 1px solid #ccc;
-    background: #f8f8f8;
+    background: var(--utilities-background);
 	padding-bottom: 8px;
 
 }
@@ -1168,7 +1168,7 @@ label[var] {
 	color: #999;
 	font-weight: normal;
 	margin: 0px;
-	background: #eee;
+	background: var(--background-featured);
 	padding: 4px;
 	border-bottom: solid 1px #ddd;
 }
@@ -1285,8 +1285,8 @@ piston[printing] dnd-nodrag[disabled] {
 
 
 dnd-nodrag[disabled] * {
-	color: rgba(0, 0, 0, 0.2) !important;
-	border-color: rgba(0, 0, 0, 0.05) !important;
+	color: var(--piston-line-disabled) !important;
+	border-color: var(--piston-line-disabled-border) !important;
 	font-style: italic;
 }
 

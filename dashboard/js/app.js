@@ -509,8 +509,7 @@ config.factory('$exceptionHandler',
 );
 */
 
-
-config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$q', function ($http, $location, $rootScope, $window, $q) {
+config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$q', '$interval', function ($http, $location, $rootScope, $window, $q, $interval) {
     var dataService = {};
 	var initialInstanceUri = '';
 	var location = null;
@@ -765,6 +764,18 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 
 	dataService.ready = function() {
 		return !!initialized;
+	}
+
+	dataService.whenReady = function() {
+		var deferred = $q.defer();
+		if (!!initialized) {
+			deferred.resolve();
+		} else {
+			$rootScope.$on('dataService.initialized', function() {
+				deferred.resolve()
+			});
+		}
+		return deferred.promise;
 	}
 
 	dataService.logout = function() {
@@ -1624,6 +1635,14 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 		dataService.saveToStore('collapsed', allCollapsed);
 	}
 
+	dataService.getDashboardTheme = function() {
+		return dataService.loadFromStore('dashboard.colorscheme');
+	}
+
+	dataService.setDashboardTheme = function(theme) {
+		return dataService.saveToStore('dashboard.colorscheme', theme);
+	}
+
 
 	var initialize = function() {
 		//initialize store
@@ -1654,17 +1673,37 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 			console.log(response);
 		    });
 		}
+		$rootScope.$broadcast('dataService.initialized');
 	}
 
     return dataService;
 }]);
 
+app.factory('colorSchemeService', ['dataService', '$rootScope', function(dataService, $rootScope) {
+	var colorSchemeService = {};
+
+	colorSchemeService.initialize = async function() {
+		let promise = await dataService.whenReady();
+
+		let userTheme = dataService.getDashboardTheme();
+		// if user didn't choose a default theme, try to infer from the OS or defaults to light
+		if (!userTheme) {
+			userTheme = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
+		}
+		$rootScope.setDashboardTheme(userTheme);
+	}
+
+	colorSchemeService.toggleDarkMode = function() {
+		let newTheme = ($rootScope.getDashboardTheme() == 'light' ? 'dark' : 'light');
+		$rootScope.setDashboardTheme(newTheme);
+		dataService.setDashboardTheme(newTheme);
+	}
+
+	return colorSchemeService;
+  }]);
 
 
-
-
-
-app.run(['$rootScope', '$window', '$location', function($rootScope, $window, $location) {
+app.run(['$rootScope', '$window', '$location', 'colorSchemeService', function($rootScope, $window, $location, colorSchemeService) {
     $rootScope.getTime = function (date) {
         if (date) {
             return date.format('h:mmtt');                
@@ -1707,7 +1746,16 @@ app.run(['$rootScope', '$window', '$location', function($rootScope, $window, $lo
         if (bytes == 0) return '0 Byte';
         var i = parseInt(Math.floor(Math.log(bytes) / Math.log(1024)));
         return (bytes / Math.pow(1024, i)).toFixed(i == 0 ? 0 : 2) + ' ' + sizes[i];
-    };
+	};
+
+	// $rootScope.theme = 'light';
+	colorSchemeService.initialize();
+	$rootScope.getDashboardTheme = function() {
+		return $rootScope.theme;
+	}
+	$rootScope.setDashboardTheme = function(theme) {
+		$rootScope.theme = theme;
+	}
 }]);
 
 

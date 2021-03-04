@@ -286,11 +286,8 @@ config.controller('fuel', ['$scope', '$rootScope', 'dataService', '$timeout', '$
     $scope.utcToString = utcToString;
 	//$scope.$$postDigest(function() {$window.FB.XFBML.parse()});
 	window.scope = $scope;
-	var tmrInit = setInterval(function() {
-		if (dataService.ready()) {
-			clearInterval(tmrInit);
-			$scope.init();
-		}
-	}, 1);
+	dataService.whenReady().then(function() {
+		$scope.init();
+	});
 
 }]);
