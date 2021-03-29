@@ -1782,8 +1782,8 @@ public Map listAvailableDevices(raw = false, updateCache = false, offset = 0) {
 						p: it.getArguments()
 					]} 
 				]
-				// Stop after 10 seconds
-				if (idx < devices.size() - 1 && now() - time > 10000) {
+				// Stop after 17 seconds to avoid 20 second cutoff
+				if (idx < devices.size() - 1 && now() - time > 17000) {
 					result.nextOffset = offset + idx + 1
 					return true
 				}
