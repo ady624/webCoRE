@@ -2118,6 +2118,23 @@ var renderString = nanomemoize(function renderString($sce, value) {
 		return result;
     });
 
+
+app.filter('escapeHtml', escapeHtml);
+var entityMap = {
+	"&": "&amp;",
+	"<": "&lt;",
+	">": "&gt;",
+	'"': '&quot;',
+	"'": '&#39;'
+};
+var entityPattern = /[&<>"']/g;
+function charToHtmlEntity(char) { 
+	return entityMap[char] || char; 
+}
+function escapeHtml(value) {
+	return (value || '').replace(entityPattern, charToHtmlEntity);
+}
+
 var wuIconForTwcCode = {
 	0:  'tstorms',          // Tornado
 	1:  'tstorms',          // Tropical Storm

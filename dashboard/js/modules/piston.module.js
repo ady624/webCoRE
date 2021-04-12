@@ -2586,7 +2586,8 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', 'colorScheme
 				}
 			}
 		}
-		return (!noQuotes ? '\'' : '') + (itemPrefix ? itemPrefix : '') + name + (!noQuotes ? '\'' : '');
+		var result = (!noQuotes ? '\'' : '') + (itemPrefix ? itemPrefix : '') + name + (!noQuotes ? '\'' : '');
+		return escapeHtml(result);
 	}
 
 
@@ -3749,7 +3750,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', 'colorScheme
 						break;
 					case 'v': //physical devices
 						var device = $scope.getVirtualDeviceById(operand.v);
-						result = '<span vdev>' + (device ? device.n : '(invalid virtual device)') + '</span>';
+						result = '<span vdev>' + (device ? escapeHtml(device.n) : '(invalid virtual device)') + '</span>';
 						break;
 					case 's': //preset
 						if (operand.s)
@@ -3777,19 +3778,19 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', 'colorScheme
 								result = '<span eml>' + operand.c + '</span>';
 								break;
 							case 'piston':
-								result = '<span lit>' + $scope.getPistonName(operand.c) + '</span>';
+								result = '<span lit>' + escapeHtml($scope.getPistonName(operand.c)) + '</span>';
 								break;
 							case 'lifxScene':
-								result = '<span lit>' + $scope.getLifxSceneName(operand.c) + '</span>';
+								result = '<span lit>' + escapeHtml($scope.getLifxSceneName(operand.c)) + '</span>';
 								break;
 							case 'lifxSelector':
-								result = '<span lit>' + $scope.getLifxSelectorName(operand.c) + '</span>';
+								result = '<span lit>' + escapeHtml($scope.getLifxSelectorName(operand.c)) + '</span>';
 								break;
 							case 'phone':
 								result = '<span phn>' + operand.c + '</span>';
 								break;
 							case 'uri':
-								result = '<span uri>' + operand.c + '</span>';
+								result = '<span uri>' + escapeHtml(operand.c) + '</span>';
 								break;
 							case 'contact':
 								result = $scope.renderContactNameList(operand.c);
@@ -3806,11 +3807,11 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', 'colorScheme
 						}
 						break;
 					case 'u':
-						result = result + '<span var>{$args.' + operand.u + '}</span>';
+						result = result + '<span var>{$args.' + escapeHtml(operand.u) + '}</span>';
 						break;
 					case 'e': //expression
 						if (operand.e)
-							result = '<span exp>{' + operand.e + '}</span>';
+							result = '<span exp>{' + escapeHtml(operand.e) + '}</span>';
 						break;
 				}
 //			}
@@ -4266,9 +4267,9 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', 'colorScheme
 			for (deviceIndex in devices) {
 				var device = $scope.getDeviceById(devices[deviceIndex]);
 				if (device) {
-					deviceNames.push({n: device.n, a: device.an, t: 'dev'});
+					deviceNames.push({n: escapeHtml(device.n), a: device.an, t: 'dev'});
 				} else {
-					deviceNames.push({ n: '{' + devices[deviceIndex] + '}', t: 'var'});
+					deviceNames.push({ n: '{' + escapeHtml(devices[deviceIndex]) + '}', t: 'var'});
 				}
 			}
 			if (deviceNames.length) {
