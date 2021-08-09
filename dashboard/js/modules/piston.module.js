@@ -4267,9 +4267,9 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', 'colorScheme
 			for (deviceIndex in devices) {
 				var device = $scope.getDeviceById(devices[deviceIndex]);
 				if (device) {
-					deviceNames.push({n: escapeHtml(device.n), a: device.an, t: 'dev'});
+					deviceNames.push({n: device.n, a: device.an, t: 'dev'});
 				} else {
-					deviceNames.push({ n: '{' + escapeHtml(devices[deviceIndex]) + '}', t: 'var'});
+					deviceNames.push({ n: '{' + devices[deviceIndex] + '}', t: 'var'});
 				}
 			}
 			if (deviceNames.length) {
