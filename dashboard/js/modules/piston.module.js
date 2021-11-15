@@ -3070,11 +3070,18 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', 'colorScheme
 
 	$scope.localTimeToDate = function(time) {
 		time = time ? time : 0;
-		var today = new Date();
-		today.setHours(Math.floor(time / 60));
-		today.setMinutes(time % 60);
-		today.setSeconds(0);
-		today.setMilliseconds(0)
+		var today = new Date(70, 0, 1);
+		if (time < 1500) {
+			today.setHours(Math.floor(time / 60));
+			today.setMinutes(time % 60);
+			today.setSeconds(0);
+			today.setMilliseconds(0)
+		} else {
+			today.setHours((time / 1000 / 60 / 60) % 24);
+			today.setMinutes((time / 1000 / 60) % 60);
+			today.setSeconds((time / 1000) % 60);
+			today.setMilliseconds(time % 1000)
+		}
 		return today;
 	};
 
