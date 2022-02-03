@@ -4317,7 +4317,6 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', 'colorScheme
 					object[property] = traverseObject(object[property], object, object.vt ? object.vt : object.t, level);
 				}
 				if (!!object.t) {
-					delete(object.w);
 					switch (object.t) {
 						case 'every': if (level > 3) addWarning(object, 'Timers are designed to be top-level statements and should not be used inside other statements. If you need a conditional timer, please look into using a while loop instead.'); break;
 						case 'on': if (level > 3) addWarning(object, 'On event statements are designed to be top-level statements and should not be used inside other statements.'); break;
