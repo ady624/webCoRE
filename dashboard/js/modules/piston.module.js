@@ -3085,6 +3085,15 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', 'colorScheme
 		return today;
 	};
 
+	function isMultiValueOperand(operandData) {
+		return operandData.t == 'p' 
+			&& operandData.d 
+			&& operandData.g == 'all' 
+			&& (operandData.d.length > 1 
+				|| (operandData.d[0] && operandData.d[0][0] != ':')
+			);
+	}
+
 	$scope.validateOperand = function(operand, reinit, managed) {
 		if (!!$scope.designer.comparison && !managed) {
 			$scope.validateComparison($scope.designer.comparison, reinit);
@@ -3327,7 +3336,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', 'colorScheme
 		operand.allowAll = true;
 		operand.attributes = (operand.data.t == 'p') ? $scope.listAvailableAttributes(operand.data.d, operand.restrictAttribute) : [];
 		operand.valid = false;
-		operand.selectedMultiple = (operand.data.t=='p') && operand.data.d && (operand.data.d.length > 1) && ((operand.data.g == 'all') || (operand.data.g == 'any'));
+		operand.selectedMultiple = isMultiValueOperand(operand.data);
 		operand.error = null;
 		operand.momentary = false;
 
@@ -3854,7 +3863,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', 'colorScheme
 		if (!comparison) comparison = $scope.db.comparisons.conditions[o];
 		if (!comparison) return '[ERROR: Invalid comparison]';
 		var pedantic = l.t == 'v';
-		var plural = l && (l.t == 'p') && l.d && (l.d.length > 1) && (l.g == 'all');
+		var plural = isMultiValueOperand(l);
 		var noQuotes = false;
 		var unit = '';
 		var a = null;
