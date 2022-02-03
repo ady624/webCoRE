@@ -1023,6 +1023,15 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 			});
     }
 
+    dataService.getDb = function () {
+		var inst = dataService.getInstance();
+		si = store ? store[inst.id] : null;
+    	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/piston/getDb?' + getAccessToken(si) + 'token=' + (si && si.token ? si.token : ''), {jsonpCallbackParam: 'callback'})
+			.then(function(response) {
+				return response.data;
+			});
+    }
+
     dataService.getPiston = function (pistonId, shouldSetInstance) {
 		var inst = dataService.getPistonInstance(pistonId);
 		if (!inst) { inst = dataService.getInstance() };
@@ -1031,6 +1040,17 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
         var dbVersion = readObject('db.version', _dk);
 		status('Loading piston...');
     	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/piston/get?' + getAccessToken(si) + 'id=' + pistonId + '&db=' + dbVersion + '&token=' + (si && si.token ? si.token : '') + '&dev=' + deviceVersion, {jsonpCallbackParam: 'callback'})
+			// db upgrade data may not be included with the piston response
+			.then(function(response) {
+				var data = response.data;
+				if (data.dbVersion && !data.db) {
+					return dataService.getDb().then(function(dbData) {
+						const mergedData = Object.assign({}, data, dbData);
+						return Object.assign({}, response, { data: mergedData });
+					});
+				}
+				return response;
+			})
 			// Base response is no longer included with the piston
 			.then(function(response) {
 				var data = response.data;
