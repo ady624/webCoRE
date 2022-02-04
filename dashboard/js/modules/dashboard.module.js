@@ -1,4 +1,4 @@
-config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout', '$interval', '$location', '$sce', '$routeParams', 'ngDialog', '$window', '$q', function($scope, $rootScope, dataService, $timeout, $interval, $location, $sce, $routeParams, ngDialog, $window, $q) {
+config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout', '$interval', '$location', '$sce', '$routeParams', 'ngDialog', '$window', '$q', 'colorSchemeService', function($scope, $rootScope, dataService, $timeout, $interval, $location, $sce, $routeParams, ngDialog, $window, $q, colorSchemeService) {
 	var tmrStatus = null;
 	var tmrClock = null;
 	var tmrActivity = null;
@@ -1282,8 +1282,11 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 		$scope.sidebarCollapsed = !$scope.sidebarCollapsed;
 	}
 
+	$scope.toggleDarkMode = function() {
+		colorSchemeService.toggleDarkMode();
+	}
 
-    //init
+	//init
 	var userAgent = navigator.userAgent || navigator.vendor || window.opera;
 	if( userAgent.match( /Android/i ) ) {
 		$scope.android = true;
@@ -1294,12 +1297,9 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 	$scope.formatTime = formatTime;
     $scope.utcToString = utcToString;
 	//$scope.$$postDigest(function() {$window.FB.XFBML.parse()});
-	var tmrInit = setInterval(function() {
-		if (dataService.ready()) {
-			clearInterval(tmrInit);
-			$scope.init();
-		}
-	}, 1);
+	dataService.whenReady().then(function() {
+		$scope.init();
+	});
 
 	if (navigator.geolocation) {
 	    navigator.geolocation.getCurrentPosition($scope.updateLocation);

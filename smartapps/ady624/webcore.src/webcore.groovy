@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.3.113.20210203" }
+public static String version() { return "v0.3.114.20220203" }
 /*
+ *	02/03/2022 >>> v0.3.114.20220203 - BETA M3 - Minor fixes, dark mode by @tyron
  *	02/03/2021 >>> v0.3.113.20210203 - BETA M3 - Fixed GET, HEAD, DELETE web requests that used Send Variables (broken in 0.3.112)
  *	02/02/2021 >>> v0.3.112.20210202 - BETA M3 - Fixed FORM type web requests that used Send Variables (broken in 0.3.111), improved a few confusing log messages
  *	01/30/2021 >>> v0.3.111.20210130 - BETA M3 - Numerous bug fixes, performance improvements for HTTP, *CLEAR index to reset list variables, reset access token
@@ -1782,8 +1783,8 @@ public Map listAvailableDevices(raw = false, updateCache = false, offset = 0) {
 						p: it.getArguments()
 					]} 
 				]
-				// Stop after 10 seconds
-				if (idx < devices.size() - 1 && now() - time > 10000) {
+				// Stop after 17 seconds to avoid 20 second cutoff
+				if (idx < devices.size() - 1 && now() - time > 17000) {
 					result.nextOffset = offset + idx + 1
 					return true
 				}

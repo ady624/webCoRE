@@ -16,7 +16,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-public static String version() { return "v0.3.113.20210203" }
+public static String version() { return "v0.3.114.20220203" }
 /******************************************************************************/
 /*** webCoRE DEFINITION														***/
 /******************************************************************************/
@@ -186,8 +186,8 @@ def Map listAvailableDevices(raw = false, offset = 0) {
 					p: it.getArguments()
 				]} 
 			]
-			// Stop after 10 seconds
-			if (idx < devices.size() - 1 && now() - time > 10000) {
+			// Stop after 17 seconds to avoid 20 second cutoff
+			if (idx < devices.size() - 1 && now() - time > 17000) {
 				response.nextOffset = offset + idx + 1
 				return true
 			}

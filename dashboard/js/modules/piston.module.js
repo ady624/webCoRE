@@ -1,4 +1,4 @@
-config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', '$interval', '$location', '$sce', '$routeParams', 'ngDialog', '$window', '$animate', '$q', function($scope, $rootScope, dataService, $timeout, $interval, $location, $sce, $routeParams, ngDialog, $window, $animate, $q) {
+config.controller('piston', ['$scope', '$rootScope', 'dataService', 'colorSchemeService', '$timeout', '$interval', '$location', '$sce', '$routeParams', 'ngDialog', '$window', '$animate', '$q', function($scope, $rootScope, dataService, colorSchemeService, $timeout, $interval, $location, $sce, $routeParams, ngDialog, $window, $animate, $q) {
 	var tmrReveal;
 	var tmrStatus;
 	var tmrActivity;
@@ -606,6 +606,10 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		});
 	}
 
+	$scope.toggleDarkMode = function() {
+		colorSchemeService.toggleDarkMode();
+	}
+
 	$scope.pause = function() {
 		$scope.loading = true;
 		return dataService.pausePiston($scope.pistonId).then(function(data) {
@@ -686,30 +690,39 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		});
 	};
 
-	$scope.formatVariableValue = nanomemoize(function(variable, name) {
+	var formatValue = nanomemoize(function(name, value, variable) {
+		var t = (name == '$localNow') || (name == '$utc') ? 'long' : variable.t;
+		if ((value === '') || (value === null) || ((value instanceof Array) && !value.length)) return '(not set)';
+		switch (t) {
+			case 'time':
+				return utcToTimeString(value);
+			case 'datetime':
+				return utcToString(value);
+			case 'date':
+				return utcToDateString(value);
+			case 'contact':
+				return $scope.renderContactNameList(value);
+			case 'device':
+				return $scope.renderDeviceNameList(value);
+		}
+		if (value instanceof Object) {
+			return angular.toJson(value);
+		}
+		return value;
+	}, { 
+		// memoize based on variable name and value
+		maxArgs: 2, 
+		// refresh everything after 30 seconds in case any rendering is impure
+		maxAge: 30000 
+	});
+
+	$scope.formatVariableValue = function(variable, name) {
 		if ((variable.v == null) && !!name && $scope.localVars) {
 			variable = $scope.copy(variable);
             variable.v = $scope.localVars[name];
 		}
-		var t = (name == '$localNow') || (name == '$utc') ? 'long' : variable.t;
-		if ((variable.v === '') || (variable.v === null) || ((variable.v instanceof Array) && !variable.v.length)) return '(not set)';
-		switch (t) {
-			case 'time':
-				return utcToTimeString(variable.v);
-			case 'datetime':
-				return utcToString(variable.v);
-			case 'date':
-				return utcToDateString(variable.v);
-			case 'contact':
-				return $scope.renderContactNameList(variable.v);
-			case 'device':
-				return $scope.renderDeviceNameList(variable.v);
-		}
-		if (variable.v instanceof Object) {
-			return angular.toJson(variable.v);
-		}
-		return variable.v;
-	});
+		return formatValue(name, variable.v, variable);
+	};
 
 	$scope.deleteDialog = function() {
 		$scope.designer.dialog = ngDialog.open({
@@ -2573,7 +2586,8 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 				}
 			}
 		}
-		return (!noQuotes ? '\'' : '') + (itemPrefix ? itemPrefix : '') + name + (!noQuotes ? '\'' : '');
+		var result = (!noQuotes ? '\'' : '') + (itemPrefix ? itemPrefix : '') + name + (!noQuotes ? '\'' : '');
+		return escapeHtml(result);
 	}
 
 
@@ -3056,13 +3070,29 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 
 	$scope.localTimeToDate = function(time) {
 		time = time ? time : 0;
-		var today = new Date();
-		today.setHours(Math.floor(time / 60));
-		today.setMinutes(time % 60);
-		today.setSeconds(0);
-		today.setMilliseconds(0)
+		var today = new Date(70, 0, 1);
+		if (time < 1500) {
+			today.setHours(Math.floor(time / 60));
+			today.setMinutes(time % 60);
+			today.setSeconds(0);
+			today.setMilliseconds(0)
+		} else {
+			today.setHours((time / 1000 / 60 / 60) % 24);
+			today.setMinutes((time / 1000 / 60) % 60);
+			today.setSeconds((time / 1000) % 60);
+			today.setMilliseconds(time % 1000)
+		}
 		return today;
 	};
+
+	function isMultiValueOperand(operandData) {
+		return operandData.t == 'p' 
+			&& operandData.d 
+			&& operandData.g == 'all' 
+			&& (operandData.d.length > 1 
+				|| (operandData.d[0] && operandData.d[0][0] != ':')
+			);
+	}
 
 	$scope.validateOperand = function(operand, reinit, managed) {
 		if (!!$scope.designer.comparison && !managed) {
@@ -3306,7 +3336,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		operand.allowAll = true;
 		operand.attributes = (operand.data.t == 'p') ? $scope.listAvailableAttributes(operand.data.d, operand.restrictAttribute) : [];
 		operand.valid = false;
-		operand.selectedMultiple = (operand.data.t=='p') && operand.data.d && (operand.data.d.length > 1) && ((operand.data.g == 'all') || (operand.data.g == 'any'));
+		operand.selectedMultiple = isMultiValueOperand(operand.data);
 		operand.error = null;
 		operand.momentary = false;
 
@@ -3736,7 +3766,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 						break;
 					case 'v': //physical devices
 						var device = $scope.getVirtualDeviceById(operand.v);
-						result = '<span vdev>' + (device ? device.n : '(invalid virtual device)') + '</span>';
+						result = '<span vdev>' + (device ? escapeHtml(device.n) : '(invalid virtual device)') + '</span>';
 						break;
 					case 's': //preset
 						if (operand.s)
@@ -3764,19 +3794,19 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 								result = '<span eml>' + operand.c + '</span>';
 								break;
 							case 'piston':
-								result = '<span lit>' + $scope.getPistonName(operand.c) + '</span>';
+								result = '<span lit>' + escapeHtml($scope.getPistonName(operand.c)) + '</span>';
 								break;
 							case 'lifxScene':
-								result = '<span lit>' + $scope.getLifxSceneName(operand.c) + '</span>';
+								result = '<span lit>' + escapeHtml($scope.getLifxSceneName(operand.c)) + '</span>';
 								break;
 							case 'lifxSelector':
-								result = '<span lit>' + $scope.getLifxSelectorName(operand.c) + '</span>';
+								result = '<span lit>' + escapeHtml($scope.getLifxSelectorName(operand.c)) + '</span>';
 								break;
 							case 'phone':
 								result = '<span phn>' + operand.c + '</span>';
 								break;
 							case 'uri':
-								result = '<span uri>' + operand.c + '</span>';
+								result = '<span uri>' + escapeHtml(operand.c) + '</span>';
 								break;
 							case 'contact':
 								result = $scope.renderContactNameList(operand.c);
@@ -3793,11 +3823,11 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 						}
 						break;
 					case 'u':
-						result = result + '<span var>{$args.' + operand.u + '}</span>';
+						result = result + '<span var>{$args.' + escapeHtml(operand.u) + '}</span>';
 						break;
 					case 'e': //expression
 						if (operand.e)
-							result = '<span exp>{' + operand.e + '}</span>';
+							result = '<span exp>{' + escapeHtml(operand.e) + '}</span>';
 						break;
 				}
 //			}
@@ -3833,7 +3863,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 		if (!comparison) comparison = $scope.db.comparisons.conditions[o];
 		if (!comparison) return '[ERROR: Invalid comparison]';
 		var pedantic = l.t == 'v';
-		var plural = l && (l.t == 'p') && l.d && (l.d.length > 1) && (l.g == 'all');
+		var plural = isMultiValueOperand(l);
 		var noQuotes = false;
 		var unit = '';
 		var a = null;
@@ -4296,7 +4326,6 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 					object[property] = traverseObject(object[property], object, object.vt ? object.vt : object.t, level);
 				}
 				if (!!object.t) {
-					delete(object.w);
 					switch (object.t) {
 						case 'every': if (level > 3) addWarning(object, 'Timers are designed to be top-level statements and should not be used inside other statements. If you need a conditional timer, please look into using a while loop instead.'); break;
 						case 'on': if (level > 3) addWarning(object, 'On event statements are designed to be top-level statements and should not be used inside other statements.'); break;
@@ -5351,12 +5380,9 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', '$timeout', 
 	$scope.formatLogTime = function(timestamp, offset) { return utcToString(timestamp) + '+' + offset; };
 	$scope.md5 = window.md5;
 	//init
-    var tmrInit = setInterval(function() {
-        if (dataService.ready()) {
-            clearInterval(tmrInit);
-            $scope.init();
-        }
-    }, 1);
+	dataService.whenReady().then(function() {
+		$scope.init();
+	});
 
 }]);
 

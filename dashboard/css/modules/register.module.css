@@ -1,6 +1,6 @@
 body {
 	overflow-y: auto;
-	background-color: #fff;
+	background-color: var(--page-background);
 	display: flex;
 	align-items: center;
 	justify-content: center;

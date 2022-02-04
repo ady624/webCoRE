@@ -509,8 +509,7 @@ config.factory('$exceptionHandler',
 );
 */
 
-
-config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$q', function ($http, $location, $rootScope, $window, $q) {
+config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$q', '$interval', function ($http, $location, $rootScope, $window, $q, $interval) {
     var dataService = {};
 	var initialInstanceUri = '';
 	var location = null;
@@ -767,6 +766,18 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 		return !!initialized;
 	}
 
+	dataService.whenReady = function() {
+		var deferred = $q.defer();
+		if (!!initialized) {
+			deferred.resolve();
+		} else {
+			$rootScope.$on('dataService.initialized', function() {
+				deferred.resolve()
+			});
+		}
+		return deferred.promise;
+	}
+
 	dataService.logout = function() {
 		locations = {};
 		instances = {};
@@ -1012,6 +1023,15 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 			});
     }
 
+    dataService.getDb = function () {
+		var inst = dataService.getInstance();
+		si = store ? store[inst.id] : null;
+    	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/piston/getDb?' + getAccessToken(si) + 'token=' + (si && si.token ? si.token : ''), {jsonpCallbackParam: 'callback'})
+			.then(function(response) {
+				return response.data;
+			});
+    }
+
     dataService.getPiston = function (pistonId, shouldSetInstance) {
 		var inst = dataService.getPistonInstance(pistonId);
 		if (!inst) { inst = dataService.getInstance() };
@@ -1020,6 +1040,17 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
         var dbVersion = readObject('db.version', _dk);
 		status('Loading piston...');
     	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/piston/get?' + getAccessToken(si) + 'id=' + pistonId + '&db=' + dbVersion + '&token=' + (si && si.token ? si.token : '') + '&dev=' + deviceVersion, {jsonpCallbackParam: 'callback'})
+			// db upgrade data may not be included with the piston response
+			.then(function(response) {
+				var data = response.data;
+				if (data.dbVersion && !data.db) {
+					return dataService.getDb().then(function(dbData) {
+						var mergedData = Object.assign({}, data, dbData);
+						return Object.assign({}, response, { data: mergedData });
+					});
+				}
+				return response;
+			})
 			// Base response is no longer included with the piston
 			.then(function(response) {
 				var data = response.data;
@@ -1032,7 +1063,7 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 						data.instance = setInstance(data.instance);
 					} else {
 						return dataService.loadInstance(inst).then(function(instData) {
-							const mergedData = Object.assign({}, data, instData);
+							var mergedData = Object.assign({}, data, instData);
 							return Object.assign({}, response, { data: mergedData });
 						});
 					}
@@ -1624,6 +1655,14 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 		dataService.saveToStore('collapsed', allCollapsed);
 	}
 
+	dataService.getDashboardTheme = function() {
+		return dataService.loadFromStore('dashboard.colorscheme');
+	}
+
+	dataService.setDashboardTheme = function(theme) {
+		return dataService.saveToStore('dashboard.colorscheme', theme);
+	}
+
 
 	var initialize = function() {
 		//initialize store
@@ -1654,17 +1693,37 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 			console.log(response);
 		    });
 		}
+		$rootScope.$broadcast('dataService.initialized');
 	}
 
     return dataService;
 }]);
 
+app.factory('colorSchemeService', ['dataService', '$rootScope', function(dataService, $rootScope) {
+	var colorSchemeService = {};
+
+	colorSchemeService.initialize = function() {
+		dataService.whenReady().then(function() {
+			var userTheme = dataService.getDashboardTheme();
+			// if user didn't choose a default theme, try to infer from the OS or defaults to light
+			if (!userTheme) {
+				userTheme = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
+			}
+			$rootScope.setDashboardTheme(userTheme);
+		});
+	}
+
+	colorSchemeService.toggleDarkMode = function() {
+		var newTheme = ($rootScope.getDashboardTheme() == 'light' ? 'dark' : 'light');
+		$rootScope.setDashboardTheme(newTheme);
+		dataService.setDashboardTheme(newTheme);
+	}
+
+	return colorSchemeService;
+  }]);
 
 
-
-
-
-app.run(['$rootScope', '$window', '$location', function($rootScope, $window, $location) {
+app.run(['$rootScope', '$window', '$location', 'colorSchemeService', function($rootScope, $window, $location, colorSchemeService) {
     $rootScope.getTime = function (date) {
         if (date) {
             return date.format('h:mmtt');                
@@ -1707,7 +1766,16 @@ app.run(['$rootScope', '$window', '$location', function($rootScope, $window, $lo
         if (bytes == 0) return '0 Byte';
         var i = parseInt(Math.floor(Math.log(bytes) / Math.log(1024)));
         return (bytes / Math.pow(1024, i)).toFixed(i == 0 ? 0 : 2) + ' ' + sizes[i];
-    };
+	};
+
+	// $rootScope.theme = 'light';
+	colorSchemeService.initialize();
+	$rootScope.getDashboardTheme = function() {
+		return $rootScope.theme;
+	}
+	$rootScope.setDashboardTheme = function(theme) {
+		$rootScope.theme = theme;
+	}
 }]);
 
 
@@ -2070,6 +2138,23 @@ var renderString = nanomemoize(function renderString($sce, value) {
 		return result;
     });
 
+
+app.filter('escapeHtml', escapeHtml);
+var entityMap = {
+	"&": "&amp;",
+	"<": "&lt;",
+	">": "&gt;",
+	'"': '&quot;',
+	"'": '&#39;'
+};
+var entityPattern = /[&<>"']/g;
+function charToHtmlEntity(c) { 
+	return entityMap[c] || c; 
+}
+function escapeHtml(value) {
+	return (value || '').replace(entityPattern, charToHtmlEntity);
+}
+
 var wuIconForTwcCode = {
 	0:  'tstorms',          // Tornado
 	1:  'tstorms',          // Tropical Storm
@@ -2352,4 +2437,4 @@ if (!String.prototype.endsWith) {
 
 // Minimum version to display as an optional upgrade
 minCoreVersion = 'v0.3.110.20191009';
-version = function() { return 'v0.3.113.20210203'; };
+version = function() { return 'v0.3.114.20220203'; };

@@ -18,8 +18,9 @@
  *
  *  Version history
 */
-public static String version() { return "v0.3.113.20210203" }
+public static String version() { return "v0.3.114.20220203" }
 /*
+ *	02/03/2022 >>> v0.3.114.20220203 - BETA M3 - Minor fixes, dark mode by @tyron
  *	02/03/2021 >>> v0.3.113.20210203 - BETA M3 - Fixed GET, HEAD, DELETE web requests that used Send Variables (broken in 0.3.112)
  *	02/02/2021 >>> v0.3.112.20210202 - BETA M3 - Fixed FORM type web requests that used Send Variables (broken in 0.3.111), improved a few confusing log messages
  *	01/30/2021 >>> v0.3.111.20210130 - BETA M3 - Numerous bug fixes, performance improvements for HTTP, *CLEAR index to reset list variables, reset access token
@@ -3281,7 +3282,8 @@ private long vcmd_httpRequest(rtData, device, params) {
 				path: (uri.indexOf("/") > 0) ? uri.substring(uri.indexOf("/")) : "",
 				headers: [
 					HOST: userPart + ip,
-					'Content-Type': requestContentType
+					'Content-Type': requestContentType,
+					'Accept': 'application/json, */*;q=0.9'
 				] + (auth ? ((auth.startsWith('{') && auth.endsWith('}')) ? ( new groovy.json.JsonSlurper().parseText( auth ) ) : [Authorization : auth]) : [:]),
 				query: useQueryString ? data : null, //thank you @destructure00
 				body: !useQueryString ? data : null //thank you @destructure00
@@ -3298,7 +3300,8 @@ private long vcmd_httpRequest(rtData, device, params) {
 				uri:  "${protocol}://${userPart}${uri}",
 				query: useQueryString ? data : null,
 				headers: (auth ? ((auth.startsWith('{') && auth.endsWith('}')) ? ( new groovy.json.JsonSlurper().parseText( auth ) ) : [Authorization : auth]) : [:]),
-				requestContentType: requestContentType,
+				contentType: '*/*',
+                requestContentType: requestContentType,
 				body: !useQueryString ? data : null
 			]
 			def func = ""
