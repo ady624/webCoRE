@@ -368,6 +368,7 @@ td span[state] {
 	padding: 0px 8px;
 	color: #aaa;
 	line-height: 17px;
+	vertical-align: top;
 }
 
 td[state=true]::after {
