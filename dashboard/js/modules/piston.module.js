@@ -3085,12 +3085,20 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', 'colorScheme
 		return today;
 	};
 
+	var singularDeviceVariables = [
+		'$currentEventDevice',
+		'$previousEventDevice'
+	];
+
 	function isMultiValueOperand(operandData) {
 		return operandData.t == 'p' 
 			&& operandData.d 
 			&& operandData.g == 'all' 
 			&& (operandData.d.length > 1 
-				|| (operandData.d[0] && operandData.d[0][0] != ':')
+				|| (operandData.d[0] 
+					&& operandData.d[0][0] != ':' 
+					&& singularDeviceVariables.indexOf(operandData.d[0]) < 0
+				)
 			);
 	}
 
@@ -4245,7 +4253,12 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', 'colorScheme
 			if (devices.length > 1 || isVariable) {
 				switch (aggregation) {
 					case 'any':
-						prefix = 'Any of ';
+						if (!(isVariable 
+							&& devices.length === 1 
+							&& singularDeviceVariables.indexOf(devices[0]) >= 0
+						)) {
+							prefix = 'Any of ';
+						}
 						break;
 					case 'all':
 						prefix = 'All of ';
