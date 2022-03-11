@@ -567,7 +567,7 @@
 			<conditions data-ng-repeat="collection in [statement]" data-ng-include="'conditions'" dnd-nodrag data-nag-model="statement" eval="{{statement && trace && trace.points && trace.points['c:' + statement.$] ? trace.points['c:' + statement.$].v : ''}}"></conditions>
 			<line kwd ng-if="(mode=='edit') || (statement.s && statement.s.length)" ng-click="select(statement, statements)">then</line>
 			<statements ng-if="(mode=='edit') || (statement.s && statement.s.length)" dnd-list="statement.s" dnd-allowed-types="['statement']" data-ng-repeat="statements in [statement.s]" data-ng-include="'statements'" dnd-nodrag data-nag-model="statement.s" exec="{{statement && statement.s && statement.s.length && trace && trace.points && !!trace.points['s:' + statement.s[0].$]}}"></statements>
-			<line kwd ng-if="(mode=='edit') || (statement.ei && statement.ei.length)" ng-repeat-start="elseIf in statement.ei" ng-click="select(statement, statements)">else if</line>
+			<line kwd ng-if="(mode=='edit') || (statement.ei && statement.ei.length)" ng-repeat-start="elseIf in statement.ei" ng-click="select(statement, statements)">else if <span ng-if="view.trace && (mode=='view')" nul> /* #{{elseIf.$}} */</span></line>
 			<conditions ng-if="(mode=='edit') || (statement.ei && statement.ei.length)" data-ng-repeat="collection in [elseIf]" data-ng-include="'conditions'" ng-init="parentCollection = elseIf" dnd-nodrag data-nag-model="elseIf" eval="{{elseIf && trace && trace.points && trace.points['c:' + elseIf.$] ? trace.points['c:' + elseIf.$].v : ''}}"></conditions>
 			<line kwd ng-if="(mode=='edit') || (statement.ei && statement.ei.length)" ng-click="select(statement, statements)">then</line>
 			<statements ng-if="(mode=='edit') || (statement.ei && statement.ei.length)" dnd-list="elseIf.s" dnd-allowed-types="['statement']" ng-repeat-end data-ng-repeat="statements in [elseIf.s]" data-ng-include="'statements'" dnd-nodrag data-nag-model="elseIf.s" exec="{{elseIf && elseIf.s && elseIf.s.length && trace && trace.points && !!trace.points['s:' + elseIf.s[0].$]}}"></statements>
@@ -575,7 +575,7 @@
 			<conditions ng-if-end>
 				<line new data-ng-click="addCondition(statement.ei, true, null, statement.o)">+ add a new condition</line>
 			</conditions>
-			<line kwd ng-if="(mode=='edit') || (statement.e && statement.e.length)" ng-click="select(statement, statements)">else</line>
+			<line kwd ng-if="(mode=='edit') || (statement.e && statement.e.length)" ng-click="select(statement, statements)">else <span ng-if="view.trace && (mode=='view')" nul> /* #{{statement.e[0].$}} */</span></line>
 			<statements ng-if="(mode=='edit') || (statement.e && statement.e.length)" dnd-list="statement.e" dnd-allowed-types="['statement']" data-ng-repeat="statements in [statement.e]" data-ng-include="'statements'" dnd-nodrag data-nag-model="statement.e"  exec="{{statement && statement.e && statement.e.length && trace && trace.points && !!trace.points['s:' + statement.e[0].$]}}"></statements>
 			<line kwd ng-click="select(statement, statements)">end if;</line>
 		</div>
