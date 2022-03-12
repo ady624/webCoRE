@@ -2898,6 +2898,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', 'colorScheme
 			var attributes = {}
 			var deviceCount = devices.length;
 			var hasThreeAxis = false;
+			var hasVariable = false;
 			for (deviceIndex in devices) {
 				var device = $scope.getDeviceById(devices[deviceIndex]);
 				if (device) {
@@ -2908,25 +2909,28 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', 'colorScheme
 					}
 				} else {
 					var varValue = $scope.getVariableByName(devices[deviceIndex]);
-
-					//variable includes all global attributes
-					var varAttributes = Object.assign({}, $scope.db.attributes);
+					hasVariable = true;
 
 					//attempt to include attributes from current variable value
 					if (varValue && varValue.v && varValue.v.d) {
+						var varAttributes = {};
+						//add attributes shared by all devices in the variable
 						for (var i in varValue.v.d) {
 							device = $scope.getDeviceById(varValue.v.d[i]);
 							if (device) {
 								allDevices.push(device);
-								Object.assign(varAttributes, getDeviceAttributeNames(device, restrictAttribute));
+								var attrNames = getDeviceAttributeNames(device, restrictAttribute);
+								for (var attr in attrNames) {
+									if (!restrictAttribute || attributeName == restrictAttribute) {
+										varAttributes[attr] = (varAttributes[attr] || 0) + 1;
+									}
+								}
 							}
 						}
-					}
-
-					// Add all possible attributes represented in the variable with device count 1
-					for (attributeName in varAttributes) {
-						if (!restrictAttribute || attributeName == restrictAttribute) {
-							attributes[attributeName] = (attributes[attributeName] || 0) + 1;
+						for (attributeName in varAttributes) {
+							if (varAttributes[attributeName] == varValue.v.d.length) {
+								attributes[attributeName] = (attributes[attributeName] || 0) + 1;
+							}
 						}
 					}
 				}
@@ -2967,6 +2971,21 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', 'colorScheme
 			}
 			result.push({id: statusAttribute, n: '⌂ ' + statusAttribute, t:'string'});
 			result.sort($scope.sortByName);
+
+			//add all known attributes when a variable is present
+			if (hasVariable) {
+				var variableAttributes = [];
+				for (attributeId in $scope.db.attributes) {
+					if (!(attributeId in attributes)) {
+						var attribute = $scope.getAttributeById(attributeId);
+						if (attribute) {
+							variableAttributes.push(mergeObjects({id: attributeId}, attribute));
+						}
+					}
+				}
+				variableAttributes.sort($scope.sortByName);
+				result.push.apply(result, variableAttributes);
+			}
 		}
 		return result;
 	}
