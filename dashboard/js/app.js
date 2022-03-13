@@ -446,7 +446,7 @@ app.filter('uniqueDashify', function() {
 
 
 
-var config = app.config(['$routeProvider', '$locationProvider', '$sceDelegateProvider', '$rootScopeProvider', '$animateProvider',  function ($routeProvider, $locationProvider, $sceDelegateProvider,  $rootScopeProvider, $animateProvider) {
+var config = app.config(['$routeProvider', '$locationProvider', '$sceDelegateProvider', '$rootScopeProvider', '$animateProvider', '$httpProvider',  function ($routeProvider, $locationProvider, $sceDelegateProvider,  $rootScopeProvider, $animateProvider, $httpProvider) {
 	$rootScopeProvider.digestTtl(10000); 
 	//$cfpLoadingBarProvider.includeSpinner = false;
     var ext = '.module.css';
@@ -494,6 +494,20 @@ var config = app.config(['$routeProvider', '$locationProvider', '$sceDelegatePro
         redirectTo: '/'
     });
     $locationProvider.html5Mode(true);
+
+	$httpProvider.interceptors.push(['$location', '$injector', function($location, $injector) {
+		return {
+			// log out on ERR_INVALID_TOKEN
+			'response': function(response) {
+				if (response.data && response.data.error == 'ERR_INVALID_TOKEN') {
+					$injector.get('dataService').logout().then(function() {
+						$location.path('register');			
+					});
+				}
+				return response;
+			}
+		};
+	}]);
 }]);
 
 
