@@ -500,9 +500,13 @@ var config = app.config(['$routeProvider', '$locationProvider', '$sceDelegatePro
 			// log out on ERR_INVALID_TOKEN
 			'response': function(response) {
 				if (response.data && response.data.error == 'ERR_INVALID_TOKEN') {
-					$injector.get('dataService').logout().then(function() {
-						$location.path('register');			
-					});
+					var dataService = $injector.get('dataService');
+					// if logged in to any instance
+					if (dataService.getInstance(null, true)) {
+						dataService.logout().then(function() {
+							$location.path('register');			
+						});
+					}
 				}
 				return response;
 			}
