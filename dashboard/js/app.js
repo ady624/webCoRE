@@ -495,17 +495,22 @@ var config = app.config(['$routeProvider', '$locationProvider', '$sceDelegatePro
     });
     $locationProvider.html5Mode(true);
 
-	$httpProvider.interceptors.push(['$location', '$injector', function($location, $injector) {
+	$httpProvider.interceptors.push(['$location', '$injector', '$q', function($location, $injector, $q) {
 		return {
 			// log out on ERR_INVALID_TOKEN
 			'response': function(response) {
-				if (response.data && response.data.error == 'ERR_INVALID_TOKEN') {
+				if (response.data 
+					&& response.data.error == 'ERR_INVALID_TOKEN' 
+					// Ignore attempt to get a token
+					&& response.config.url.indexOf('&token=&') < 0
+				) {
 					var dataService = $injector.get('dataService');
 					// if logged in to any instance
 					if (dataService.getInstance(null, true)) {
 						dataService.logout().then(function() {
-							$location.path('register');			
+							$location.path('/register');			
 						});
+						return $q.reject();
 					}
 				}
 				return response;
@@ -800,6 +805,7 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 		locations = {};
 		instances = {};
 		storage = {};
+		store = {};
 		return localforage.clear();
 	}
 
