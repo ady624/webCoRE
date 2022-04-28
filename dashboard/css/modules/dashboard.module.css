@@ -28,7 +28,7 @@ viewer.settings > .header {
 	background: rgba(0, 0, 0, 0.05);
 	border-bottom: solid 1px #ccc;
 	margin: 0px;
-	color: #444;
+	color: var(--text-color);
 }
 
 viewer.settings > form {
@@ -790,7 +790,7 @@ ul.nav.nav-pills {
 
 .nav-pills > li > a {
 	border-radius: 0px;
-	color: #000;
+	color: var(--text-color);
 	text-transform: uppercase;
 	cursor: pointer;
 }
