@@ -784,12 +784,14 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 		for(i in $scope.designer.instances) {
 			if (iid != '') break;
 			var instance = $scope.designer.instances[i];
+			var instanceData = dataService.getInstance(i);
+			var batchSize = instanceData && instanceData.heVersion ? 1 : 10;
 			for(p in instance) {
 				if (((iid == '') || (iid == i)) && (!instance[p].requested)) {
 					iid = i;
 					instance[p].requested = true;
 					pids.push(instance[p].pid);
-					if (pids.length >= 10) break;
+					if (pids.length >= batchSize) break;
 				}
 			}
 		}
