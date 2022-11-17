@@ -2147,10 +2147,10 @@ var renderString = nanomemoize(function renderString($sce, value) {
             // Only v4 supports the numeric codes
 				icon = iconSet === 'v4' ? +icon : (wuIconForTwcCode[+icon] || icon);
 			}
-			return '<img class="wu" src="https://icons.wxug.com/i/c/' + iconSet + '/' + icon + ext + '" />';
+			return '<img class="wu" src="https://www.wunderground.com/static/i/c/' + iconSet + '/' + icon + ext + '" />';
 		}).replace(/\:twc-(\d+)\:/gi, function(match, iconCode) {
 			iconCode = (iconCode.length > 1 ? '' : '0') + iconCode
-			return '<img class="twc wu" src="https://smartthings-twc-icons.s3.amazonaws.com/' + iconCode + '.png" />';
+			return '<img class="twc wu" src="https://cdn.jsdelivr.net/gh/imnotbob/webCoRE@hubitat-patches/resources/icons/' + iconCode + '.png" />';
 		}).replace(/(?![^<]*[>])#[a-z0-9]{6}/gi, function(match) {
 			return '<span class="swatch" style="background-color:' + match + '">&nbsp;&nbsp;&nbsp;&nbsp;</span>' + match;
 		}).replace(/\\[rn]/gi, '<br/>');
