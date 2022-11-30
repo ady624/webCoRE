@@ -163,6 +163,26 @@
 			</div>
 			<div class="main no-ng-animate" ng-class="{ 'sidebar-collapsed': sidebarCollapsed, 'allow-transition': completedInitialRender }">
 				<span ng-click="toggleSidebar()" class="fa fa-caret-left collapse-control" collapse-control data-target="#dashboardSidebar"></span>
+				<div ng-if="isSmartThings" class="alert alert-danger">
+					<div class="container">
+						<p class="h2">
+							SmartThings will shut down your webCoRE automations and all other groovy-based SmartApps on December 31, 2022. 
+						</p>
+						<div style="color: #444">
+							<p class="lead">
+								Please use the red snapshot button to save a screenshot of each piston for your reference.
+							</p>
+							Those who wish to remain with SmartThings will need to manually convert pistons to Routines in the SmartThings app or migrate to a service like SharpTools or ActionTiles that works with the limited capabilities of the new SmartThings architecture.
+							There are no solutions for SmartThings that are fully compatible with the complex automations supported by webCoRE pistons so this path may require significant compromises.
+							<br><br>
+							<strong>webCoRE is supported on the Hubitat Elevation hub</strong>, an alternative to SmartThings, and has been maintained by that community for several years.
+							Use the <strong>Backup Piston(s)</strong> tool in the side menu to download a password protected backup of your pistons that can be restored if you choose to install webCoRE on a Hubitat Elevation smart home hub. 
+							This is the <strong>only way to preserve your pistons</strong> if you decide to migrate from SmartThings to Hubitat Elevation (i.e. automatic backup bin codes will not work). 
+							Migration to Hubitat requires a new hub and pairing all devices but may be much easier than redesigning your automations from scratch with SmartThings.
+							<a href="https://community.hubitat.com/t/webcore-documentation-digest/88285" target="_blank" rel="noreferrer noopener" class="alert-link">Learn more about webCoRE on Hubitat</a>
+						</div>
+					</div>
+				</div>
 				<div lonely ng-if="!loading && !instance.pistons.length">
 					<i class="far fa-frown"></i>
 					<div>It's kinda lonely in here...<br/>How about <a ng-click="newPiston();">creating a piston</a>?</div>
