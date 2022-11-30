@@ -959,6 +959,7 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 		if (!si) {
 			$location.path('/register');
 		} else {
+			$rootScope.isSmartThings = si.uri.indexOf('things') > 0;
 			var error = document.getElementById('error');
 			if (error) error.parentNode.removeChild(error);
 		}
