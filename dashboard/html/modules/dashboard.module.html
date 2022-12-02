@@ -164,7 +164,7 @@
 			<div class="main no-ng-animate" ng-class="{ 'sidebar-collapsed': sidebarCollapsed, 'allow-transition': completedInitialRender }">
 				<span ng-click="toggleSidebar()" class="fa fa-caret-left collapse-control" collapse-control data-target="#dashboardSidebar"></span>
 				<div ng-if="isSmartThings" class="alert alert-danger">
-					<div class="container">
+					<div class="container-fluid" style="max-width: 1000px;">
 						<p class="h2">
 							SmartThings will shut down your webCoRE automations and all other groovy-based SmartApps on December 31, 2022. 
 						</p>
