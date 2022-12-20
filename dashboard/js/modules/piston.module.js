@@ -1953,7 +1953,8 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', 'colorScheme
 		$scope.designer.$new = _new;
 		$scope.designer.page = 0;
 		$scope.designer.parent = parent;
-		$scope.designer.command = task.c;
+		$scope.designer.command = task.c + (task.cm ? '$custom' : '');
+		$scope.designer.custom = !!task.cm;
 		$scope.designer.mode = task.m;
 		$scope.designer.description = task.z;
 		$scope.prepareParameters(task);
@@ -1973,7 +1974,8 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', 'colorScheme
 	$scope.updateTask = function(nextDialog) {
 		$scope.autoSave();
 		var task = $scope.designer.$new ? {} : $scope.designer.$task;
-		task.c = $scope.designer.command;
+		task.c = $scope.designer.command.replace('$custom', '');
+		task.cm = $scope.designer.custom;
 		task.a = $scope.designer.async;
 		task.z = $scope.designer.description;
 		task.m = $scope.designer.mode;
@@ -2324,9 +2326,12 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', 'colorScheme
 
 	$scope.prepareParameters = function(task) {
 		$scope.designer.parameters = [];
-		var command = $scope.db.commands.physical[$scope.designer.command] || $scope.db.commands.virtual[$scope.designer.command];
-		$scope.designer.parameters = [];
+		var command = !$scope.designer.custom && (
+			$scope.db.commands.physical[$scope.designer.command] 
+			|| $scope.db.commands.virtual[$scope.designer.command]
+		);
 		$scope.designer.custom = false;
+		$scope.designer.parameters = [];
 		if (command) {
 			for (parameterIndex in command.p) {
 				var parameter = $scope.copy(command.p[parameterIndex]);
@@ -2354,12 +2359,33 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', 'colorScheme
 				$scope.designer.parameters.push(p);
 			}
 		} else {
-			$scope.designer.custom = !!$scope.designer.command;
-			for (i in task.p) {
-				var param = {dataType: task.p[i].vt, data: $scope.copy(task.p[i])};
-				$scope.validateOperand(param);
-				$scope.designer.parameters.push(param);
+			if ($scope.designer.commands) {
+				var common = $scope.designer.commands.common;
+				for (var i in common) {
+					if ($scope.designer.command == common[i].id) {
+						$scope.designer.custom = !!common[i].cm;
+						for (var parameterIndex in common[i].p) {
+							var param = {
+								dataType: common[i].p[parameterIndex].toLowerCase(), 
+								data: task ? $scope.copy(task.p[parameterIndex]) : undefined
+							};
+							$scope.validateOperand(param);
+							$scope.designer.parameters.push(param);
+						}
+						break;
+					}
+				}
 			}
+			if (task) {
+				for (i in task.p) {
+					if (i >= $scope.designer.parameters.length) {
+						var param = {dataType: task.p[i].vt, data: $scope.copy(task.p[i])};
+						$scope.validateOperand(param);
+						$scope.designer.parameters.push(param);
+					}
+				}
+			}
+			$scope.renameParameters();
 			//custom command - we add our own parameters
 		}
 		if ($scope.designer.command == 'setVariable') {
@@ -2694,8 +2720,9 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', 'colorScheme
 	}
 
 	$scope.listAvailableCommands = function(devices) {
-		var commands = {}
+		var commandsCount = {}
 		var deviceCount = devices ? devices.length : 0;
+		var customCommands = {};
 		for (deviceIndex in devices) {
 			var deviceId = devices[deviceIndex] || '';
 			var cmds = [];
@@ -2709,12 +2736,18 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', 'colorScheme
 			}
 			//get all the device supported commands
 			for (commandIndex in cmds) {
-				var commandName = all ? commandIndex : cmds[commandIndex].n;
-				if (commands[commandName]) {
-					commands[commandName] += 1;
-				} else {
-					commands[commandName] = 1;
+				var command = cmds[commandIndex];
+				var commandId = all ? commandIndex : command.n;
+				var commandName = commandId;
+				if (command.cm || !$scope.db.commands.physical[commandId]) {
+					// Identify custom commands in the context of the designer, not serialized to piston data 
+					commandId += '$custom';
+					customCommands[commandId] = mergeObjects({
+						n: commandName, 
+						cm: true
+					}, command);
 				}
+				commandsCount[commandId] = (commandsCount[commandId] || 0) + 1;
 			}
 		}
 		var result = {
@@ -2722,13 +2755,12 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', 'colorScheme
 			partial: [],
 			virtual: []
 		}
-		for (commandName in commands) {
-			var command = $scope.db.commands.physical[commandName];
-			if (!command) command = {n: commandName + '(..)', cm: true};
-			if (commands[commandName] == deviceCount) {
-				result.common.push(mergeObjects({id: commandName}, command));
+		for (commandId in commandsCount) {
+			var command = customCommands[commandId] || $scope.db.commands.physical[commandId];
+			if (commandsCount[commandId] == deviceCount) {
+				result.common.push(mergeObjects({id: commandId}, command));
 			} else {
-				result.partial.push(mergeObjects({id: commandName}, command));
+				result.partial.push(mergeObjects({id: commandId}, command));
 			}
 		}
 		for (commandName in $scope.db.commands.virtual) {
@@ -4228,7 +4260,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', 'colorScheme
 	};
 
 	$scope.renderTask = function(task) {
-		var command = $scope.getCommandById(task.c);
+		var command = !task.cm && $scope.getCommandById(task.c);
 		var display;
 		if (!command) {
 			display = task.c + '(';
