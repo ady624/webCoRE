@@ -960,6 +960,7 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 			$location.path('/register');
 		} else {
 			$rootScope.isSmartThings = si.uri.indexOf('things') > 0;
+			$rootScope.platformCode = $rootScope.isSmartThings ? 'st' : 'he';
 			var error = document.getElementById('error');
 			if (error) error.parentNode.removeChild(error);
 		}
