@@ -540,6 +540,7 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 	var instance = null;
 	var instances = {};
 	var store = {};
+	var sessionId = null;
 	var _dk = 'N7zqL6a8Texs4wY5y&y2YPLzus+_dZ%s';
 	var _ek = _dk;
 	var cbkStatus = null;
@@ -965,7 +966,7 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 			if (error) error.parentNode.removeChild(error);
 		}
 
-    	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/load?' + getAccessToken(si) + 'token=' + (si && si.token ? si.token : '') + (pin ? '&pin=' + pin : '') + '&dashboard='+ (dashboard ? 1 : 0) + '&dev=' + deviceVersion, {jsonpCallbackParam: 'callback'}).then(function(response) {
+		return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/load?' + getAccessToken(si) + 'token=' + (si && si.token ? si.token : '') + (pin ? '&pin=' + pin : '') + '&dashboard='+ (dashboard ? 1 : 0) + '&dev=' + deviceVersion + '&session=' + sessionId, {jsonpCallbackParam: 'callback'}).then(function(response) {
 				var data = response.data;
 				if (data.now) {
 					adjustTimeOffset(data.now);
@@ -1689,6 +1690,15 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 		return dataService.saveToStore('dashboard.colorscheme', theme);
 	}
 
+	dataService.randomHash = function(nChar, wrapWithColons) {
+		var chars = '0123456789abcdef'.split('');
+		var hex = '';
+		for (var i = 0; i < nChar; i++) {
+			hex += chars[Math.floor(Math.random() * 16)];
+		}
+		return wrapWithColons ? ':' + hex + ':' : hex;
+	}
+
 
 	var initialize = function() {
 		//initialize store
@@ -1710,6 +1720,7 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 		}
 
 		userId = 0;
+		sessionId = dataService.randomHash(16);
 
 		initialized = true;
 		window.ds = dataService;
