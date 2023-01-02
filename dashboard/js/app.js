@@ -1134,7 +1134,7 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 		var inst = dataService.getPistonInstance(pistonId);
 		if (!inst) { inst = dataService.getInstance() };
 		si = store ? store[inst.id] : null;
-    	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/piston/activity?' + getAccessToken(si) + 'id=' + pistonId + '&log=' + (lastLogTimestamp ? lastLogTimestamp : 0) + '&token=' + (si && si.token ? si.token : ''), {jsonpCallbackParam: 'callback'})
+    	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/piston/activity?' + getAccessToken(si) + 'id=' + pistonId + '&log=' + (lastLogTimestamp ? lastLogTimestamp : 0) + '&token=' + (si && si.token ? si.token : '') + '&session=' + sessionId, {jsonpCallbackParam: 'callback'})
 			.then(function(response) {
 				return response.data;
 			});
