@@ -15,6 +15,7 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 	$scope.rawEndpoint = '';
 	$scope.categories = [];
 	$scope.pausedPistons = [];
+	$scope.pistonBackupRows = [];
 	$scope.view = 'piston';
 	$scope.isAppHosted = !!window.BridgeCommander;
 	$scope.hostDeviceId = '';
@@ -68,6 +69,7 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 							$scope.categories[i].p = [];
 						}
 						$scope.pausedPistons = [];
+						$scope.pistonBackupRows = [];
 						for(pistonIndex in $scope.instance.pistons) {
 							var piston = $scope.instance.pistons[pistonIndex];
 							if (piston.meta && piston.meta.a) {
@@ -82,6 +84,14 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 								var cat = $scope.getCategory(piston.meta.c);
 								cat.p = (cat.p instanceof Array) ? cat.p : [];
 								cat.p.push(piston);
+								$scope.pistonBackupRows.push({
+									id: piston.id,
+									name: piston.name,
+									category: cat.n,
+									modified: piston.meta.m,
+									backupEnabled: !!piston.meta.b,
+									bin: piston.meta.b
+								});
 							} else {
 								$scope.pausedPistons.push(piston);
 							}
@@ -1286,4 +1296,21 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 	    navigator.geolocation.getCurrentPosition($scope.updateLocation);
 	}
 
+}]);
+
+config.controller('pistonBackupsTable', ['$scope', function($scope) {
+	$scope.orderProp = 'name';
+	$scope.reversed = false;
+	$scope.showBins = false;
+	$scope.reversedColumn = {};
+
+	$scope.sortBy = function(orderProp) {
+		if ($scope.orderProp == orderProp) {
+			$scope.reversed = !$scope.reversedColumn[orderProp];
+			$scope.reversedColumn[orderProp] = $scope.reversed;
+		} else {
+			$scope.reversed = false;
+			$scope.orderProp = orderProp;
+		}
+	}
 }]);

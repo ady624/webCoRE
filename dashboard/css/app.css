@@ -1396,3 +1396,7 @@ li[instance] {
   border-bottom: 1px solid var(--background-featured);
   border-top: 1px solid var(--background-featured);
 }
+
+.table-sortable thead th {
+  cursor: default;
+}
