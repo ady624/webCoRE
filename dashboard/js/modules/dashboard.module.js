@@ -862,7 +862,10 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 							true
 						);
 					}
-				})	
+				})
+				.then(function() {
+					return dataService.markPistonModified(piston.id);
+				})
 				.then(function(data) {
 					$scope.designer.results.push(data);
 					$scope.designer.progress = $scope.designer.results.length;

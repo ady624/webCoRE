@@ -1322,6 +1322,16 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 			});
     }
 
+    dataService.markPistonModified = function (pid) {
+		var inst = dataService.getPistonInstance(pid);
+		if (!inst) { inst = dataService.getInstance() };
+		si = store ? store[inst.id] : null;
+    	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/piston/set.modified?' + getAccessToken(si) + 'id=' + pid + '&token=' + (si && si.token ? si.token : ''), {jsonpCallbackParam: 'callback'})
+			.then(function(response) {
+				return response.data;
+			});
+    }
+
     dataService.clickPistonTile = function (pid, tile) {
 		var inst = dataService.getPistonInstance(pid);
 		if (!inst) { inst = dataService.getInstance() };
