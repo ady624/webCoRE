@@ -1165,8 +1165,8 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
         });
     }
 
-    dataService.saveToBin = function (binId, data) {
-		status('Saving piston to backup bin...');
+    dataService.saveToBin = function (binId, data, silent) {
+		if (!silent) status('Saving piston to backup bin...');
 		var inst = dataService.getInstance();
 		if (inst && inst.account && inst.account.id) {
 			data = {e: encryptObject(data, _dk + inst.account.id)};
@@ -1180,7 +1180,7 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
             url: 'https://api.webcore.co/bins/' + md5(inst.account.id) + '/' + binId,
             data: data,
             transformResponse: function(data) {
-				status('Backup bin updated');
+				if (!silent) status('Backup bin updated');
 				return true;
 			}
         });
