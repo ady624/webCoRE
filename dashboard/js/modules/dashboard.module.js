@@ -589,6 +589,7 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 			var instance = dataService.getInstance(instanceId);
 			if (instance) {
 				$scope.instance = null;
+				$scope.requestId = 0;
 		        if (tmrActivity) $timeout.cancel(tmrActivity);
 				tmrActivity = null;
 				$scope.devices = null;
