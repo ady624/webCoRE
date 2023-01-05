@@ -1139,8 +1139,8 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
         });
     }
 
-    dataService.saveToBin = function (binId, data) {
-		status('Saving piston to backup bin...');
+    dataService.saveToBin = function (binId, data, silent) {
+		if (!silent) status('Saving piston to backup bin...');
 		var inst = dataService.getInstance();
 		if (inst && inst.account && inst.account.id) {
 			data = {e: encryptObject(data, _dk + inst.account.id)};
@@ -1154,7 +1154,7 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
             url: 'https://api.webcore.co/bins/' + md5(inst.account.id) + '/' + binId,
             data: data,
             transformResponse: function(data) {
-				status('Backup bin updated');
+				if (!silent) status('Backup bin updated');
 				return true;
 			}
         });
@@ -1292,6 +1292,16 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
     	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/piston/set.bin?' + getAccessToken(si) + 'id=' + pid + '&bin=' + bin+ '&token=' + (si && si.token ? si.token : ''), {jsonpCallbackParam: 'callback'})
 			.then(function(response) {
 				status();
+				return response.data;
+			});
+    }
+
+    dataService.markPistonModified = function (pid) {
+		var inst = dataService.getPistonInstance(pid);
+		if (!inst) { inst = dataService.getInstance() };
+		si = store ? store[inst.id] : null;
+    	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/piston/set.modified?' + getAccessToken(si) + 'id=' + pid + '&token=' + (si && si.token ? si.token : ''), {jsonpCallbackParam: 'callback'})
+			.then(function(response) {
 				return response.data;
 			});
     }

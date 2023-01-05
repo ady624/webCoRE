@@ -616,7 +616,7 @@
 		<div class="form-group">
 			<label for="piston">Retrieving selected pistons, please wait...</label>
 			<div class="progress">
-				<div class="progress-bar" role="progressbar" aria-valuenow="1" aria-valuemin="0" aria-valuemax="{{designer.piston.length}}" style="width:{{100.0 * designer.progress / designer.pistons.length}}%">
+				<div class="progress-bar" role="progressbar" aria-valuenow="1" aria-valuemin="0" aria-valuemax="{{designer.pistons.length}}" style="width:{{100.0 * designer.progress / designer.pistons.length}}%">
 			    	<span>{{designer.progress}} of {{designer.pistons.length}}</span>
 				</div>
 			</div>
@@ -638,6 +638,42 @@
           <button ng-if="designer.page==0" type="button" class="btn btn-info pull-right" ng-disabled="!designer.pistons || !designer.pistons.length" ng-click="backupPistons();">Backup</button>
           <button ng-if="designer.page==2" type="button" class="btn btn-info pull-right" ng-disabled="!designer.pistons || !designer.pistons.length" ng-click="saveBackup();">Save</button>
           <button type="button" class="btn btn-default" ng-click="closeDialog();">Cancel</button>
+      </footer>
+  </designer>
+</script>
+
+<script type="text/ng-template" id="dialog-migrate-piston-bins">
+<designer>
+      <header>
+          <h3>Migrate automatic backups</h3>
+          <span>Your account identifier has changed and all automatic backups of your pistons must be migrated to the new account. This is an automated process and no changes will be made to your pistons.</span>
+      </header>
+	<form ng-if="designer.page==0">
+		<p>The following piston backups need to be migrated:</p>
+		<ul>
+			<li ng-repeat="piston in designer.pistons track by piston.id">
+				{{piston.name}}
+			</li>
+		</ul>
+    </form>
+	<form ng-if="designer.page==1">
+		<div class="form-group">
+			<label for="piston">Migrating piston backups, please wait...</label>
+			<div class="progress">
+				<div class="progress-bar" role="progressbar" aria-valuenow="1" aria-valuemin="0" aria-valuemax="{{designer.pistons.length}}" style="width:{{100.0 * designer.progress / designer.pistons.length}}%">
+			    	<span>{{designer.progress}} of {{designer.pistons.length}}</span>
+				</div>
+			</div>
+		</div>
+      </form>
+	<div ng-if="designer.page==2">
+		<h3>Migration complete</h3>
+		<p>This was a one time migration, all future piston edits will back up to your new account. Check out the Settings > Backups page to keep track of your backup codes.</p>
+    </div>
+      <footer>
+          <button ng-if="designer.page==0" type="button" class="btn btn-info pull-right" ng-click="migratePistonBackups();">Migrate backups</button>
+          <button ng-if="designer.page==2" type="button" class="btn btn-info" ng-click="closeDialog();">Done</button>
+          <button ng-if="designer.page!=2" type="button" class="btn btn-default" ng-click="closeDialog();">Cancel</button>
       </footer>
   </designer>
 </script>

@@ -68,6 +68,8 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 							$scope.categories[i].p = [];
 						}
 						$scope.pausedPistons = [];
+						var lastAccountIdChange = currentRequestId == 1 && $scope.instance.account && $scope.instance.account.t;
+						var pistonsToMigrate = [];
 						for(pistonIndex in $scope.instance.pistons) {
 							var piston = $scope.instance.pistons[pistonIndex];
 							if (piston.meta && piston.meta.a) {
@@ -85,6 +87,22 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 							} else {
 								$scope.pausedPistons.push(piston);
 							}
+							if (lastAccountIdChange && piston.meta && piston.meta.b && piston.meta.m && piston.meta.m < lastAccountIdChange) {
+								pistonsToMigrate.push(piston);
+							}
+						}
+						if (pistonsToMigrate.length) {
+							$scope.designer = {
+								page: 0,
+								pistons: pistonsToMigrate
+							};
+							$scope.designer.dialog = ngDialog.open({
+								template: 'dialog-migrate-piston-bins',
+								className: 'ngdialog-theme-default ngdialog-large',
+								closeByDocument: false,
+								disableAnimation: true,
+								scope: $scope
+							});
 						}
 						$scope.clock();
 						$scope.render();
@@ -582,6 +600,7 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 			var instance = dataService.getInstance(instanceId);
 			if (instance) {
 				$scope.instance = null;
+				$scope.requestId = 0;
 		        if (tmrActivity) $timeout.cancel(tmrActivity);
 				tmrActivity = null;
 				$scope.devices = null;
@@ -828,6 +847,43 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 			window.URL.revokeObjectURL(link.href);
 		}, 100);  
 		$scope.closeDialog();
+	}
+
+	$scope.migratePistonBackups = function() {
+		$scope.designer.page = 1;
+		$scope.designer.progress = 0;
+		$scope.designer.results = [];
+		$scope.migratePistonBackup();
+	}
+
+	$scope.migratePistonBackup = function() {
+		if (!$scope.designer || !$scope.designer.pistons) return;
+		//we're done
+		if ($scope.designer.pistons.length == $scope.designer.results.length) {
+			//success
+			$scope.designer.page = 2;
+		} else {
+			const piston = $scope.designer.pistons[$scope.designer.results.length];
+			dataService.backupPistons($scope.currentInstanceId, [piston.id])
+				.then(function(data) {
+					if (data && (data.pistons instanceof Array)) {
+						var piston = data.pistons[0];
+						return dataService.saveToBin(
+							piston.meta.bin, 
+							Object.assign({ id: piston.meta.id, n: piston.meta.name }, piston.piston),
+							true
+						);
+					}
+				})
+				.then(function() {
+					return dataService.markPistonModified(piston.id);
+				})
+				.then(function(data) {
+					$scope.designer.results.push(data);
+					$scope.designer.progress = $scope.designer.results.length;
+					$scope.migratePistonBackup();
+				});
+		}
 	}
 
 	$scope.movePiston = function() {
