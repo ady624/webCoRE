@@ -2326,7 +2326,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', 'colorScheme
 	function expandParameter(parameter) {
 		if (typeof parameter === 'string') {
 			return {
-				dataType: common[i].p[parameterIndex].toLowerCase()
+				dataType: parameter.toLowerCase()
 			};
 		} else {
 			return {
@@ -2335,7 +2335,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', 'colorScheme
 				dataType: parameter.t.toLowerCase(),
 				multiple: false,
 				optional: ((parameter.t != 'bool') && (parameter.t != 'boolean')) && !!parameter.d,
-				options: parameter.o,			
+				options: $scope.copy(parameter.o),
 				strict: !!parameter.s,
 				warn: parameter.w
 			};
@@ -2352,7 +2352,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', 'colorScheme
 		$scope.designer.parameters = [];
 		if (command) {
 			for (parameterIndex in command.p) {
-				var parameter = $scope.copy(command.p[parameterIndex]);
+				var parameter = command.p[parameterIndex];
 				var p = expandParameter(parameter);
 				var attribute = $scope.getAttributeById(parameter.t);
 				if (attribute) {
