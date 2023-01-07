@@ -2348,7 +2348,6 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', 'colorScheme
 			$scope.db.commands.physical[$scope.designer.command] 
 			|| $scope.db.commands.virtual[$scope.designer.command]
 		);
-		$scope.designer.custom = false;
 		$scope.designer.parameters = [];
 		if (command) {
 			for (parameterIndex in command.p) {
@@ -2365,6 +2364,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', 'colorScheme
 					p.data = $scope.copy(task.p[parameterIndex]);
 				}
 				$scope.validateOperand(p);
+				$scope.designer.custom = false;
 				$scope.designer.parameters.push(p);
 			}
 		} else {
