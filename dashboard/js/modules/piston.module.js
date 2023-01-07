@@ -2323,6 +2323,24 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', 'colorScheme
 		});
 	}
 
+	function expandParameter(parameter) {
+		if (typeof parameter === 'string') {
+			return {
+				dataType: common[i].p[parameterIndex].toLowerCase()
+			};
+		} else {
+			return {
+				data: {},
+				name: parameter.n,
+				dataType: parameter.t.toLowerCase(),
+				multiple: false,
+				optional: ((parameter.t != 'bool') && (parameter.t != 'boolean')) && !!parameter.d,
+				options: parameter.o,			
+				strict: !!parameter.s,
+				warn: parameter.w
+			};
+		}
+	}
 
 	$scope.prepareParameters = function(task) {
 		$scope.designer.parameters = [];
@@ -2335,16 +2353,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', 'colorScheme
 		if (command) {
 			for (parameterIndex in command.p) {
 				var parameter = $scope.copy(command.p[parameterIndex]);
-				var p = {
-					data: {},
-					name: parameter.n,
-					dataType: parameter.t.toLowerCase(),
-					multiple: false,
-					optional: ((parameter.t != 'bool') && (parameter.t != 'boolean')) && !!parameter.d,
-					options: parameter.o,			
-					strict: !!parameter.s,
-					warn: parameter.w
-				}
+				var p = expandParameter(parameter);
 				var attribute = $scope.getAttributeById(parameter.t);
 				if (attribute) {
 					p.attribute = attribute;
@@ -2365,10 +2374,10 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', 'colorScheme
 					if ($scope.designer.command == common[i].id) {
 						$scope.designer.custom = !!common[i].cm;
 						for (var parameterIndex in common[i].p) {
-							var param = {
-								dataType: common[i].p[parameterIndex].toLowerCase(), 
-								data: task ? $scope.copy(task.p[parameterIndex]) : undefined
-							};
+							var param = expandParameter(common[i].p[parameterIndex]);
+							if (task) {
+								param.data = $scope.copy(task.p[parameterIndex]);
+							}
 							$scope.validateOperand(param);
 							$scope.designer.parameters.push(param);
 						}
@@ -2398,7 +2407,9 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', 'colorScheme
 	$scope.renameParameters = function() {
 		if (!$scope.designer.custom) return;
 		for (i in $scope.designer.parameters) {
-			$scope.designer.parameters[i].name = 'Parameter #' + (parseInt(i) + 1).toString() + ' (' + $scope.designer.parameters[i].dataType + ')';
+			if (!$scope.designer.parameters[i].name) {
+				$scope.designer.parameters[i].name = 'Parameter #' + (parseInt(i) + 1).toString() + ' (' + $scope.designer.parameters[i].dataType + ')';
+			}
 		}
 		$scope.refreshSelects();
 	}
