@@ -2333,9 +2333,11 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', 'colorScheme
 				data: {},
 				name: parameter.n,
 				dataType: parameter.t.toLowerCase(),
+				// Show help text below the field unless it matches the parameter name
+				help: parameter.h && parameter.h.toLowerCase() != parameter.n.toLowerCase() ? parameter.h : null,
 				multiple: false,
 				optional: ((parameter.t != 'bool') && (parameter.t != 'boolean')) && !!parameter.d,
-				options: $scope.copy(parameter.o),
+				options: $scope.copy(parameter.o || parameter.c),
 				strict: !!parameter.s,
 				warn: parameter.w
 			};
