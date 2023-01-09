@@ -414,6 +414,10 @@ toggle.input-group-addon {
 	text-align: justify;
 }
 
+.form-group + .help-text {
+  margin: -15px 0 15px 0;
+}
+
 
 .input-group toggle > div {
     width: 100% !important;
