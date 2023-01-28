@@ -717,11 +717,11 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', 'colorScheme
 	});
 
 	$scope.formatVariableValue = function(variable, name) {
-		if ((variable.v == null) && !('cv' in variable) && !!name && $scope.localVars) {
+		if ((variable.v == null || variable.n in $scope.localVars) && !!name && $scope.localVars) {
 			variable = $scope.copy(variable);
 			variable.v = $scope.localVars[name];
 		}
-		return formatValue(name, 'cv' in variable ? variable.cv : variable.v, variable);
+		return formatValue(name, variable.v, variable);
 	};
 
 	$scope.deleteDialog = function() {
