@@ -1957,15 +1957,19 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', 'colorScheme
 		$scope.designer.custom = !!task.cm;
 		$scope.designer.mode = task.m;
 		$scope.designer.description = task.z;
-		var commands = $scope.listAvailableCommands(parent.d);
-		if (task.cm == null && !commands.common[task.c] && !commands.partial[task.c] && !commands.virtual[task.c]) {
+		$scope.designer.commands = $scope.listAvailableCommands(parent.d);
+		if (task.c
+			&& task.cm == null 
+			&& !$scope.hasId($scope.designer.commands.virtual, task.c) 
+			&& !$scope.hasId($scope.designer.commands.common, task.c) 
+			&& !$scope.hasId($scope.designer.commands.partial, task.c)
+		) {
 			$scope.designer.command += '$custom';
 			$scope.designer.custom = true;
 		}
 		$scope.prepareParameters(task);
 		window.designer = $scope.designer;
 		window.scope = $scope;
-		$scope.designer.commands = commands;
 		$('a-ckolor-wheel').remove();
 		$scope.designer.dialog = ngDialog.open({
 			template: 'dialog-edit-task',
