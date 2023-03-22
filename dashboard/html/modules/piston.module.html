@@ -426,7 +426,7 @@
 		<line com h>{{padComment('', 64)}}</line>
 		<line com h ng-if-end>/**************************************************************/</line>
 		<line>&nbsp;</line>
-		<line kwd ng-if-start="((mode == 'edit') && view.settings) || piston.o.pep || piston.o.cto || piston.o.ced || piston.o.mps || piston.o.dco || piston.o.des || piston.o.aps" ng-click="editSettings();">settings</line>
+		<line kwd ng-if-start="((mode == 'edit') && view.settings) || piston.o.pep || piston.o.cto || piston.o.ced || piston.o.mps || piston.o.dco || piston.o.des || piston.o.aps || piston.o.ish" ng-click="editSettings();">settings</line>
 		<container>
 			<line kwd ng-if="piston.o.pep">enable parallelism<span pun>;</span></line>
 			<line kwd ng-if="piston.o.mps">disable automatic piston state<span pun>;</span></line>
@@ -435,6 +435,14 @@
 			<line kwd ng-if="piston.o.des">disable event subscriptions<span pun>;</span></line>
 			<line kwd ng-if="piston.o.ced">set command execution delay to {{piston.o.ced}}ms<span pun>;</span></line>
 			<line kwd ng-if="piston.o.aps">allow pre-scheduled tasks to execute during restrictions<span pun>;</span></line>
+			<line kwd ng-if="piston.o.ish">
+				<strong class="text-danger" data-toggle="tooltip" data-title="This is a security risk, disable this setting unless you know what you are doing.">
+					<i class="fas fa-exclamation-triangle fa-sm"></i>
+					ignore SSL errors
+				</strong> 
+				on web requests to 
+				<span ng-bind-html="buildNameList(piston.o.ish.split('\n'), 'or', null, null, false, true)"></span><span pun>;</span>
+			</line>
 		</container>
 		<line kwd>end settings;</line>
 		<line ng-if-end>&nbsp;</line>
@@ -2411,6 +2419,11 @@
 						<input type="number" class="form-control" ng-model="designer.commandDelay" min="0" max="5000"/>
 						<span class="input-group-addon">ms</span>
 					</div>
+				</div>
+				<div class="form-group">
+					<label class="col-lg-12 no-padding">Ignore SSL security issues for hostnames</label>
+					<textarea class="form-control" placeholder="One hostname or IP address per line" ng-model="designer.ignoreSslHosts" msd-elastic="\n"></textarea>
+					<div class="help-text text-secondary small">Allows the use of self-signed SSL certificates on remote hosts for web requests issued by this piston. One domain name or IP address per line.</div>
 				</div>
 			</div>
 		</form>
