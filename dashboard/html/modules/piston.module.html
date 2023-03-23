@@ -438,10 +438,7 @@
 			<line kwd ng-if="piston.o.ish">
 				<strong class="text-danger" data-toggle="tooltip" data-title="This is a security risk, disable this setting unless you know what you are doing.">
 					<i class="fas fa-exclamation-triangle fa-sm"></i>
-					ignore SSL errors
-				</strong> 
-				on web requests to 
-				<span ng-bind-html="buildNameList(piston.o.ish.split('\n'), 'or', null, null, false, true)"></span><span pun>;</span>
+					ignore SSL errors on all web requests</strong><span pun>;</span>
 			</line>
 		</container>
 		<line kwd>end settings;</line>
@@ -2414,16 +2411,19 @@
 					</select>
 				</div>
 				<div class="form-group">
+					<label class="col-lg-12 no-padding">Ignore SSL security issues for web requests</label>
+					<select data-actions-box="true" id="type" selectpicker class="selectpicker show-tick input-addon" data-width="100%" data-style="btn-info" ng-model="designer.ignoreSslErrors" data-mobile="{{mobile}}">
+						<option ng-value="1">Enabled</option>
+						<option ng-value="0">Disabled (default)</option>
+					</select>
+					<div class="help-text text-secondary small">Allows the use of self-signed SSL certificates on remote hosts for web requests issued by this piston.</div>
+				</div>
+				<div class="form-group">
 					<label class="col-lg-12 no-padding">Command execution delay</label>
 					<div class="input-group">
 						<input type="number" class="form-control" ng-model="designer.commandDelay" min="0" max="5000"/>
 						<span class="input-group-addon">ms</span>
 					</div>
-				</div>
-				<div class="form-group">
-					<label class="col-lg-12 no-padding">Ignore SSL security issues for hostnames</label>
-					<textarea class="form-control" placeholder="One hostname or IP address per line" ng-model="designer.ignoreSslHosts" msd-elastic="\n"></textarea>
-					<div class="help-text text-secondary small">Allows the use of self-signed SSL certificates on remote hosts for web requests issued by this piston. One domain name or IP address per line.</div>
 				</div>
 			</div>
 		</form>

@@ -1020,7 +1020,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', 'colorScheme
 			eventSubscriptions: $scope.piston.o.des ? 1 : 0,
 			allowPreSchedules: $scope.piston.o.aps ? 1 : 0,
 			commandDelay: $scope.piston.o.ced ? $scope.piston.o.ced : 0,
-			ignoreSslHosts: $scope.piston.o.ish
+			ignoreSslErrors: $scope.piston.o.ish ? 1 : 0
 		};
 		window.designer = $scope.designer;
 		$scope.designer.dialog = ngDialog.open({
@@ -1042,7 +1042,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', 'colorScheme
 		$scope.piston.o.des = $scope.designer.eventSubscriptions ? 1 : 0;
 		$scope.piston.o.aps = $scope.designer.allowPreSchedules ? 1 : 0;
 		$scope.piston.o.ced = isNaN($scope.designer.commandDelay) ? 0 : parseInt($scope.designer.commandDelay);
-		$scope.piston.o.ish = $scope.designer.ish.replace(/\s+/g, '\n');
+		$scope.piston.o.ish = $scope.designer.ignoreSslErrors ? 1 : 0;
 		$scope.closeDialog();
 	}
 
