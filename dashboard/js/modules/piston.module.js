@@ -2952,9 +2952,35 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', 'colorScheme
 		var allDevices = [];
 		if (devices && devices.length) {
 			var attributes = {}
-			var deviceCount = devices.length;
+			var uniqueAttributes = [];
 			var hasThreeAxis = false;
 			var hasVariable = false;
+			function resolveDeviceVariable(varName) {
+				var varValue = $scope.getVariableByName(varName);
+				hasVariable = true;
+
+				//attempt to include attributes from current variable value
+				if (varValue && varValue.v && varValue.v.d && varValue.v.d.length) {
+					//add attributes shared by all devices in the variable
+					for (var i in varValue.v.d) {
+						var device = $scope.getDeviceById(varValue.v.d[i]);
+						if (device) {
+							allDevices.push(device);
+							var attrNames = getDeviceAttributeNames(device, restrictAttribute);
+							for (var attr in attrNames) {
+								if (!restrictAttribute || attributeName == restrictAttribute) {
+									attributes[attr] = (attributes[attr] || 0) + 1;
+								}
+							}
+						} else {
+							resolveDeviceVariable(varValue.v.d[i]);
+						}
+					}
+				} else {
+					// Represents the empty/unknown variable
+					allDevices.push({});
+				}
+			}
 			for (deviceIndex in devices) {
 				var device = $scope.getDeviceById(devices[deviceIndex]);
 				if (device) {
@@ -2964,58 +2990,36 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', 'colorScheme
 						attributes[attrName] = (attributes[attrName] || 0) + attrNames[attrName];
 					}
 				} else {
-					var varValue = $scope.getVariableByName(devices[deviceIndex]);
 					hasVariable = true;
-
-					//attempt to include attributes from current variable value
-					if (varValue && varValue.v && varValue.v.d) {
-						var varAttributes = {};
-						//add attributes shared by all devices in the variable
-						for (var i in varValue.v.d) {
-							device = $scope.getDeviceById(varValue.v.d[i]);
-							if (device) {
-								allDevices.push(device);
-								var attrNames = getDeviceAttributeNames(device, restrictAttribute);
-								for (var attr in attrNames) {
-									if (!restrictAttribute || attributeName == restrictAttribute) {
-										varAttributes[attr] = (varAttributes[attr] || 0) + 1;
-									}
-								}
-							}
-						}
-						for (attributeName in varAttributes) {
-							if (varAttributes[attributeName] == varValue.v.d.length) {
-								attributes[attributeName] = (attributes[attributeName] || 0) + 1;
-							}
-						}
-					}
+					resolveDeviceVariable(devices[deviceIndex]);
 				}
 			}
+			var deviceCount = allDevices.length;
 			for (attributeId in attributes) {
-				if (attributes[attributeId] == deviceCount) {
-					var attribute = $scope.getAttributeById(attributeId);
-					if (attribute) {
-						result.push(mergeObjects({id: attributeId}, attribute));
-						if (attributeId == 'threeAxis') hasThreeAxis = true;
-					} else {
-						//custom attribute? device should contain the last device we've been through
-						for (var i in allDevices) {
-							if (device.a) {
-								for (a in device.a) {
-									if (device.a[a].n == attributeId) {
-										attribute = device.a[a];
-										break;
-									}
+				var target = attributes[attributeId] == deviceCount ? result : uniqueAttributes;
+				var attribute = $scope.getAttributeById(attributeId);
+				if (attribute) {
+					target.push(mergeObjects({id: attributeId}, attribute));
+					if (attributeId == 'threeAxis') hasThreeAxis = true;
+				} else {
+					//custom attribute? device should contain the last device we've been through
+					for (var i in allDevices) {
+						var device = allDevices[i];
+						if (device.a) {
+							for (a in device.a) {
+								if (device.a[a].n == attributeId) {
+									attribute = device.a[a];
+									break;
 								}
 							}
-							if (attribute) break;
 						}
-						if (attribute) {
-							var obj = mergeObjects({id: attributeId, c:true}, attribute);
-							obj.n = '⌂ ' + obj.n;
-							obj.t = (obj.t || 'string').toLowerCase().replace('number', 'decimal');
-							result.push(obj);
-						}
+						if (attribute) break;
+					}
+					if (attribute) {
+						var obj = mergeObjects({id: attributeId, c:true}, attribute);
+						obj.n = '⌂ ' + obj.n;
+						obj.t = (obj.t || 'string').toLowerCase().replace('number', 'decimal');
+						target.push(obj);
 					}
 				}
 			}
@@ -3028,6 +3032,15 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', 'colorScheme
 			result.push({id: statusAttribute, n: '⌂ ' + statusAttribute, t:'string'});
 			result.sort($scope.sortByName);
 
+			// Add attributes from a subset of devices
+			if (uniqueAttributes.length) {
+				for (var i in uniqueAttributes) {
+					uniqueAttributes[i].group = 'Supported by a subset of the devices';
+				}
+				uniqueAttributes.sort($scope.sortByName);
+				result.push.apply(result, uniqueAttributes);
+			}
+			
 			//add all known attributes when a variable is present
 			if (hasVariable) {
 				var variableAttributes = [];
@@ -3035,7 +3048,10 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', 'colorScheme
 					if (!(attributeId in attributes)) {
 						var attribute = $scope.getAttributeById(attributeId);
 						if (attribute) {
-							variableAttributes.push(mergeObjects({id: attributeId}, attribute));
+							variableAttributes.push(mergeObjects({
+								id: attributeId,
+								group: 'Generic attributes'
+							}, attribute));
 						}
 					}
 				}

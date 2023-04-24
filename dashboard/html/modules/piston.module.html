@@ -1868,7 +1868,7 @@
 							<option ng-repeat="name in systemVarNames" value="{{name}}" ng-if="systemVars[name].t == 'device'" data-content="<span class='vartype'>{{systemVars[name].t}}</span>{{name}}<span class='varval'>{{systemVars[name].v}}</span>">{{name}} ({{systemVars[name].t}})</option>
 						</optgroup>
 					</select>
-					<select data-actions-box="true" attr selectpicker class="selectpicker show-tick input-addon" data-width="25%" data-style="btn-default" ng-model="operand.data.a" data-mobile="{{mobile}}" ng-change="validateOperand(operand)" ng-options="attribute.id as attribute.n for attribute in operand.attributes">
+					<select data-actions-box="true" attr selectpicker class="selectpicker show-tick input-addon" data-width="25%" data-style="btn-default" ng-model="operand.data.a" data-mobile="{{mobile}}" ng-change="validateOperand(operand)" ng-options="attribute.id as attribute.n group by attribute.group for attribute in operand.attributes">
 						<option style="display:none" value="">Nothing selected</option>
 					</select>
 				</div>
