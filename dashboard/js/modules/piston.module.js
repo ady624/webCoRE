@@ -691,8 +691,11 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', 'colorScheme
 	};
 
 	var formatValue = nanomemoize(function(name, value, variable) {
-		var t = (name == '$localNow') || (name == '$utc') ? 'long' : variable.t;
+		var t = variable.t;
 		if ((value === '') || (value === null) || ((value instanceof Array) && !value.length)) return '(not set)';
+		if (name === '$utc') {
+			return new Date(value).toUTCString();
+		}
 		switch (t) {
 			case 'time':
 				return utcToTimeString(value);
