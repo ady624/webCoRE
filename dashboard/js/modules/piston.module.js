@@ -1111,6 +1111,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', 'colorScheme
 		//$scope.designer.tos = statement.os;
 		$scope.designer.ctp = statement.ctp || 'i';
 		$scope.designer.async = statement.a;
+		$scope.designer.smode = statement.sm || 'auto';
 		$scope.designer.ontypechanged = function(designer, type) {
 			designer.operand.requirePositiveNumber = false;
 			designer.operand2.requirePositiveNumber = false;
@@ -1211,6 +1212,11 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', 'colorScheme
 		statement.rop = $scope.designer.roperator;
 		statement.rn = $scope.designer.rnot == '1';
 		statement.di = $scope.designer.disabled == '1';
+		if (!$scope.designer.smode || $scope.designer.smode === 'auto') {
+			delete statement.sm;
+		} else {
+			statement.sm = $scope.designer.smode;
+		}
 		switch (statement.t) {
 			case 'action':
 				statement.d = $scope.designer.devices;

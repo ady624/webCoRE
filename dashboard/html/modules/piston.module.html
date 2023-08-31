@@ -350,7 +350,7 @@
 					<td>Execution Method</td>
 					<td><select ng-model="selection.a"><option value="0" style="color: #999">Synchronous</option><option value="1">Asynchronous</option></select>
 				</tr>
-				<tr ng-if="(selectionType == 'condition')">
+				<tr ng-if="(selectionType == 'condition') || (selectionType == 'statement' && selection.ct == 'c' && selection.t == 'switch')">
 					<td>Subscription Method</td>
 					<td><select ng-model="selection.sm"><option value="auto" style="color: #999">Auto</option><option value="always">Always</option><option value="never">Never</option></select>
 				</tr>
@@ -594,6 +594,8 @@
 			<restrictions ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)" data-ng-repeat="collection in [statement]" data-ng-include="'restrictions'" dnd-nodrag data-nag-model="statement"></restrictions>
 			<line kwd ng-click="select(statement, statements)">
 				<handle dnd-handle><svg class="sprite-icon" symbol="drag-handle"></svg></handle><span ng-click="editStatement(statement, statements)" kwd>{{statement.a == '1' ? 'async ' : ''}}switch</span> <span pun>(</span><span ng-bind-html="statement.$$html || (statement.$$html = renderOperand(statement.lo))"></span><span pun>)</span><span pun title="Fall-through mode" ng-if="statement.ctp == 'e'"><i class="fas fa-sort-amount-asc"></i></span>
+				<badge blue ng-if="statement.sm == 'always'" badge="+" title="Always subscribe"></badge>
+				<badge red ng-if="statement.sm == 'never'" badge="-" title="Never subscribe"></badge>
 				<badge green ng-if="(statement.tep == 'c')" badge="C" title="Only execute on condition state change"></badge>
 				<badge green ng-if="(statement.tep == 'p')" badge="P" title="Only execute on piston state change"></badge>
 				<badge green ng-if="(statement.tep == 'b')" badge="C|P" title="Only execute on condition or piston state change"></badge>
@@ -1238,6 +1240,14 @@
 					<select data-actions-box="true" name="async" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-default" ng-model="designer.async" data-mobile="{{mobile}}">
 						<option value="0">Synchronous (default)</option>
 						<option value="1">Asynchronous</option>
+					</select>
+				</div>
+				<div class="form-group" ng-if="designer.type == 'switch' && designer.$statement.ct == 'c'">
+					<label for="smode">Subscription method</label>
+					<select data-actions-box="true" id="smode" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-default" ng-model="designer.smode" data-mobile="{{mobile}}">
+						<option value="auto">Automatic</option>
+						<option value="always">Always subscribe</option>
+						<option value="never">Never subscribe</option>
 					</select>
 				</div>
 				<div class="form-group">
