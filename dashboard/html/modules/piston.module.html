@@ -590,6 +590,7 @@
 			<line com ng-if="statement.z">/* {{statement.z}} */</line>
 			<line warn ng-repeat="w in statement.w">WARNING: {{w}}</line>
 			<line kwd ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)">only when</line>
+			<subscription ng-if="(mode == 'view') && !!statement.s" class="fa fa-bolt" title="This switch statement subscribes to events"></subscription>
 			<restrictions ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)" data-ng-repeat="collection in [statement]" data-ng-include="'restrictions'" dnd-nodrag data-nag-model="statement"></restrictions>
 			<line kwd ng-click="select(statement, statements)">
 				<handle dnd-handle><svg class="sprite-icon" symbol="drag-handle"></svg></handle><span ng-click="editStatement(statement, statements)" kwd>{{statement.a == '1' ? 'async ' : ''}}switch</span> <span pun>(</span><span ng-bind-html="statement.$$html || (statement.$$html = renderOperand(statement.lo))"></span><span pun>)</span><span pun title="Fall-through mode" ng-if="statement.ctp == 'e'"><i class="fas fa-sort-amount-asc"></i></span>
