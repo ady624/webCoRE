@@ -2748,23 +2748,62 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', 'colorScheme
 
 	$scope.listAvailableCommands = function(devices) {
 		var commandsCount = {}
-		var deviceCount = devices ? devices.length : 0;
+		var allDevices = [];
 		var customCommands = {};
+		function resolveDeviceVariable(varName) {
+			var cmds = [];
+			var varValue = $scope.getVariableByName(varName);
+			hasVariable = true;
+
+			//attempt to include attributes from current variable value
+			if (varValue && varValue.v && varValue.v.d && varValue.v.d.length) {
+				//add attributes shared by all devices in the variable
+				for (var i in varValue.v.d) {
+					var device = $scope.getDeviceById(varValue.v.d[i]);
+					if (device) {	
+						allDevices.push(device);
+						cmds.push.apply(cmds, device.c);
+					} else {
+						cmds.push.apply(cmds, resolveDeviceVariable(varValue.v.d[i]));
+					}
+				}
+			} else {
+				// Represents the empty/unknown variable
+				allDevices.push({});
+				cmds.push.apply(cmds, $scope.db.commands.physical);
+			}
+			return cmds;
+		}
 		for (deviceIndex in devices) {
 			var deviceId = devices[deviceIndex] || '';
 			var cmds = [];
-			var all = false;
+			var hasVariable = false;
 			if (deviceId.startsWith(':')) {
 				var device = $scope.getDeviceById(devices[deviceIndex]);
-				if (device) cmds = device.c;
+				if (device) {
+					allDevices.push(device);
+					cmds = device.c;
+				}
 			} else {
-				all = true;
-				cmds = $scope.db.commands.physical;
+				hasVariable = true;
+				var seenCmds = {};
+				cmds = resolveDeviceVariable(deviceId).filter(function (cmd) {
+					if (seenCmds[cmd.n]) {
+						var name = cmd.cm || !$scope.db.commands.physical[cmd.n]
+							? cmd.n + '$custom'
+							: cmd.n;
+						// Add to the count for duplicate commands
+						commandsCount[name] = (commandsCount[name] || 0) + 1;
+						return false;
+					}
+					seenCmds[cmd.n] = true;
+					return true;
+				});
 			}
 			//get all the device supported commands
 			for (commandIndex in cmds) {
 				var command = cmds[commandIndex];
-				var commandId = all ? commandIndex : command.n;
+				var commandId =  command.n || commandIndex;
 				var commandName = commandId;
 				if (command.cm || !$scope.db.commands.physical[commandId]) {
 					// Identify custom commands in the context of the designer, not serialized to piston data 
@@ -2777,6 +2816,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', 'colorScheme
 				commandsCount[commandId] = (commandsCount[commandId] || 0) + 1;
 			}
 		}
+		var deviceCount = allDevices.length;
 		var result = {
 			common: [],
 			partial: [],
