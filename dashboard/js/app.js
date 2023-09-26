@@ -2156,7 +2156,6 @@ var renderString = nanomemoize(function renderString($sce, value) {
             prefix = prefix.toLowerCase();
             prefix = prefix === 'fa5' ? 'fas' : prefix;
             // Support shorthand fas-stroopwafel for fas fa-stroopwafel
-            classes = classes.toLowerCase();
             classes = union === '-' ? 'fa-' + classes : classes;
             classes = classes.replace(/(data-fa.*?=(?:'.*?'|".*?"))\s*/gi, function(match) {
                 attributes += ' ' + match;
