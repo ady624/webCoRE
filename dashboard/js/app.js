@@ -2073,6 +2073,16 @@ var renderString = nanomemoize(function renderString($sce, value) {
                             return '[' + result + ']';
                         }
                         var cls = classList.trim();
+                        var attributes = '';
+                        var styles = '';
+                        cls = cls.replace(/(\S*?)=('.*?'|".*?")/g, function(match, tag, value) {
+                            if (tag == 'style') {
+                                styles += ' ' + value.replace(/^['"]|;?['"]$/g, '') + ';';
+                            } else {
+                                attributes += ' ' + match;
+                            }
+                            return '';
+                        });
                         // Ensure that unencoded commas in URLs do not get split
                         // into separate commands
                         while (/(\bsrc=\S+),/.test(cls)) {
@@ -2084,7 +2094,6 @@ var renderString = nanomemoize(function renderString($sce, value) {
                         cls = cls.split(/,|\s+/);
                         var className = '';
                         var color = '';
-						var attributes = '';
 						var backColor='';
 						var fontSize = '';
                         for (x in cls) {
@@ -2122,8 +2131,6 @@ var renderString = nanomemoize(function renderString($sce, value) {
 										fontSize = cls[x].replace('x', 'em');
 									} else if (cls[x].startsWith('fa-')) {
 										className += cls[x] + ' ';
-									} else if (cls[x].startsWith('data-fa-')) {
-										attributes += ' ' + cls[x];
 									} else if (cls[x].startsWith('color-')) {
 										color = cls[x].substr(6);
 									} else if (/^(b|bg|bk|back)-/.test(cls[x])) {
@@ -2141,7 +2148,7 @@ var renderString = nanomemoize(function renderString($sce, value) {
 						meta.className = className;
 						meta.color = color;
 						meta.backColor = backColor;
-                        return '<span ' + (className ? 'class="' + className + '" ' : '') + (!!color || !!backColor || !!fontSize ? 'style="' + (color ? 'color: ' + color + ' !important;' : '') + ' ' + (backColor ? 'background-color: ' + backColor + ' !important;' : '') + ' ' + (fontSize ? 'font-size: ' + fontSize + ' !important;' : '') + '"' : '') + attributes + '>' + result + '</span>';
+                        return '<span ' + (className ? 'class="' + className + '" ' : '') + (!!color || !!backColor || !!fontSize || !!styles ? 'style="' + (color ? 'color: ' + color + ' !important;' : '') + ' ' + (backColor ? 'background-color: ' + backColor + ' !important;' : '') + ' ' + (fontSize ? 'font-size: ' + fontSize + ' !important;' : '') + styles + '"' : '') + attributes + '>' + result + '</span>';
                     default:
                         result += c;
                 }
@@ -2150,14 +2157,14 @@ var renderString = nanomemoize(function renderString($sce, value) {
             return result;
         }
 
-		meta.html = process(value).replace(/\:(fa[blrs5]?)([ -])([a-z0-9\-\s.="']*)\:/gi, function(match, prefix, union, classes) {
+		meta.html = process(value).replace(/\:(fa[blrs5]?)([ -])((?:[a-z0-9\-\s.]|=".*?"|='.*?')*)\:/gi, function(match, prefix, union, classes) {
             var attributes = '';
             // Default deprecated fa5 prefix to solid weight
             prefix = prefix.toLowerCase();
             prefix = prefix === 'fa5' ? 'fas' : prefix;
             // Support shorthand fas-stroopwafel for fas fa-stroopwafel
             classes = union === '-' ? 'fa-' + classes : classes;
-            classes = classes.replace(/(data-fa.*?=(?:'.*?'|".*?"))\s*/gi, function(match) {
+            classes = classes.replace(/(\S+=(?:'.*?'|".*?"))\s*/gi, function(match) {
                 attributes += ' ' + match;
                 return '';
             });
