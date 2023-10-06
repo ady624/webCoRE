@@ -15,6 +15,7 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 	$scope.rawEndpoint = '';
 	$scope.categories = [];
 	$scope.pausedPistons = [];
+	$scope.pistonBackupRows = [];
 	$scope.view = 'piston';
 	$scope.isAppHosted = !!window.BridgeCommander;
 	$scope.hostDeviceId = '';
@@ -68,6 +69,7 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 							$scope.categories[i].p = [];
 						}
 						$scope.pausedPistons = [];
+						$scope.pistonBackupRows = [];
 						var lastAccountIdChange = currentRequestId == 1 && $scope.instance.account && $scope.instance.account.t;
 						var pistonsToMigrate = [];
 						for(pistonIndex in $scope.instance.pistons) {
@@ -84,6 +86,14 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 								var cat = $scope.getCategory(piston.meta.c);
 								cat.p = (cat.p instanceof Array) ? cat.p : [];
 								cat.p.push(piston);
+								$scope.pistonBackupRows.push({
+									id: piston.id,
+									name: piston.name,
+									category: cat.n,
+									modified: piston.meta.m,
+									backupEnabled: !!piston.meta.b,
+									bin: piston.meta.b
+								});
 							} else {
 								$scope.pausedPistons.push(piston);
 							}
@@ -278,27 +288,6 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 	}
 
 
-
-	$scope.randomHash = function(nChar) {
-	    var chars = '0123456789abcdef'.split('');
-	    var hex = '';
-	    for (var i = 0; i < nChar; i++) {
-	        hex += chars[Math.floor(Math.random() * 16)];
-	    }
-	    return ':' + hex + ':';
-	 }
-
-/*
-	$scope.addPlace = function() {
-	    coords = $scope.coords ? $scope.coords : {longituted: 0, latitude: 0};
-	    var place = {n: "Unnamed place", p:[coords.latitude, coords.longitude], i: 100, o: 400, id: $scope.randomHash(32)};
-	    $scope.settings.places.push(place);
-	}
-*/
-
-
-
-
         $scope.addPlace = function() {
                 return $scope.editPlace(null);
         };
@@ -307,7 +296,7 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
                 var _new = !!_place ? false : true;
                 if (!_place) {
 		    coords = $scope.coords ? $scope.coords : {longituted: 0, latitude: 0};
-		    _place = {n: "", p:[coords.latitude, coords.longitude], i: 100, o: 500, id: $scope.randomHash(32)};
+		    _place = {n: "", p:[coords.latitude, coords.longitude], i: 100, o: 500, id: dataService.randomHash(32, true)};
                 }
 		$scope.designer = {};
                 $scope.designer.$place = _place;
@@ -1363,4 +1352,21 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 	    navigator.geolocation.getCurrentPosition($scope.updateLocation);
 	}
 
+}]);
+
+config.controller('pistonBackupsTable', ['$scope', function($scope) {
+	$scope.orderProp = 'name';
+	$scope.reversed = false;
+	$scope.showBins = false;
+	$scope.reversedColumn = {};
+
+	$scope.sortBy = function(orderProp) {
+		if ($scope.orderProp == orderProp) {
+			$scope.reversed = !$scope.reversedColumn[orderProp];
+			$scope.reversedColumn[orderProp] = $scope.reversed;
+		} else {
+			$scope.reversed = false;
+			$scope.orderProp = orderProp;
+		}
+	}
 }]);

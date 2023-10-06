@@ -804,7 +804,8 @@ restrictions > dnd-nodrag > div > container > line[operator]:nth-last-child(2) {
 }
 
 event subscription,
-condition subscription {
+condition subscription,
+statement subscription {
 	position: absolute;
 	left: 39px;
 	margin-top: 3px;

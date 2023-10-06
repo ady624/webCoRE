@@ -446,7 +446,7 @@ app.filter('uniqueDashify', function() {
 
 
 
-var config = app.config(['$routeProvider', '$locationProvider', '$sceDelegateProvider', '$rootScopeProvider', '$animateProvider',  function ($routeProvider, $locationProvider, $sceDelegateProvider,  $rootScopeProvider, $animateProvider) {
+var config = app.config(['$routeProvider', '$locationProvider', '$sceDelegateProvider', '$rootScopeProvider', '$animateProvider', '$httpProvider',  function ($routeProvider, $locationProvider, $sceDelegateProvider,  $rootScopeProvider, $animateProvider, $httpProvider) {
 	$rootScopeProvider.digestTtl(10000); 
 	//$cfpLoadingBarProvider.includeSpinner = false;
     var ext = '.module.css';
@@ -494,6 +494,29 @@ var config = app.config(['$routeProvider', '$locationProvider', '$sceDelegatePro
         redirectTo: '/'
     });
     $locationProvider.html5Mode(true);
+
+	$httpProvider.interceptors.push(['$location', '$injector', '$q', function($location, $injector, $q) {
+		return {
+			// log out on ERR_INVALID_TOKEN
+			'response': function(response) {
+				if (response.data 
+					&& response.data.error == 'ERR_INVALID_TOKEN' 
+					// Ignore attempt to get a token
+					&& response.config.url.indexOf('&token=&') < 0
+				) {
+					var dataService = $injector.get('dataService');
+					// if logged in to any instance
+					if (dataService.getInstance(null, true)) {
+						dataService.logout().then(function() {
+							$location.path('/register');			
+						});
+						return $q.reject();
+					}
+				}
+				return response;
+			}
+		};
+	}]);
 }]);
 
 
@@ -517,6 +540,7 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 	var instance = null;
 	var instances = {};
 	var store = {};
+	var sessionId = null;
 	var _dk = 'N7zqL6a8Texs4wY5y&y2YPLzus+_dZ%s';
 	var _ek = _dk;
 	var cbkStatus = null;
@@ -782,6 +806,7 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 		locations = {};
 		instances = {};
 		storage = {};
+		store = {};
 		return localforage.clear();
 	}
 
@@ -936,11 +961,12 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 			$location.path('/register');
 		} else {
 			$rootScope.isSmartThings = si.uri.indexOf('things') > 0;
+			$rootScope.platformCode = $rootScope.isSmartThings ? 'st' : 'he';
 			var error = document.getElementById('error');
 			if (error) error.parentNode.removeChild(error);
 		}
 
-    	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/load?' + getAccessToken(si) + 'token=' + (si && si.token ? si.token : '') + (pin ? '&pin=' + pin : '') + '&dashboard='+ (dashboard ? 1 : 0) + '&dev=' + deviceVersion, {jsonpCallbackParam: 'callback'}).then(function(response) {
+		return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/load?' + getAccessToken(si) + 'token=' + (si && si.token ? si.token : '') + (pin ? '&pin=' + pin : '') + '&dashboard='+ (dashboard ? 1 : 0) + '&dev=' + deviceVersion + '&session=' + sessionId, {jsonpCallbackParam: 'callback'}).then(function(response) {
 				var data = response.data;
 				if (data.now) {
 					adjustTimeOffset(data.now);
@@ -1108,7 +1134,7 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 		var inst = dataService.getPistonInstance(pistonId);
 		if (!inst) { inst = dataService.getInstance() };
 		si = store ? store[inst.id] : null;
-    	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/piston/activity?' + getAccessToken(si) + 'id=' + pistonId + '&log=' + (lastLogTimestamp ? lastLogTimestamp : 0) + '&token=' + (si && si.token ? si.token : ''), {jsonpCallbackParam: 'callback'})
+    	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/piston/activity?' + getAccessToken(si) + 'id=' + pistonId + '&log=' + (lastLogTimestamp ? lastLogTimestamp : 0) + '&token=' + (si && si.token ? si.token : '') + '&session=' + sessionId, {jsonpCallbackParam: 'callback'})
 			.then(function(response) {
 				return response.data;
 			});
@@ -1674,6 +1700,15 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 		return dataService.saveToStore('dashboard.colorscheme', theme);
 	}
 
+	dataService.randomHash = function(nChar, wrapWithColons) {
+		var chars = '0123456789abcdef'.split('');
+		var hex = '';
+		for (var i = 0; i < nChar; i++) {
+			hex += chars[Math.floor(Math.random() * 16)];
+		}
+		return wrapWithColons ? ':' + hex + ':' : hex;
+	}
+
 
 	var initialize = function() {
 		//initialize store
@@ -1695,6 +1730,7 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 		}
 
 		userId = 0;
+		sessionId = dataService.randomHash(16);
 
 		initialized = true;
 		window.ds = dataService;
@@ -2037,6 +2073,16 @@ var renderString = nanomemoize(function renderString($sce, value) {
                             return '[' + result + ']';
                         }
                         var cls = classList.trim();
+                        var attributes = '';
+                        var styles = '';
+                        cls = cls.replace(/(\S*?)=('.*?'|".*?")/g, function(match, tag, value) {
+                            if (tag == 'style') {
+                                styles += ' ' + value.replace(/^['"]|;?['"]$/g, '') + ';';
+                            } else {
+                                attributes += ' ' + match;
+                            }
+                            return '';
+                        });
                         // Ensure that unencoded commas in URLs do not get split
                         // into separate commands
                         while (/(\bsrc=\S+),/.test(cls)) {
@@ -2048,7 +2094,6 @@ var renderString = nanomemoize(function renderString($sce, value) {
                         cls = cls.split(/,|\s+/);
                         var className = '';
                         var color = '';
-						var attributes = '';
 						var backColor='';
 						var fontSize = '';
                         for (x in cls) {
@@ -2086,8 +2131,6 @@ var renderString = nanomemoize(function renderString($sce, value) {
 										fontSize = cls[x].replace('x', 'em');
 									} else if (cls[x].startsWith('fa-')) {
 										className += cls[x] + ' ';
-									} else if (cls[x].startsWith('data-fa-')) {
-										attributes += ' ' + cls[x];
 									} else if (cls[x].startsWith('color-')) {
 										color = cls[x].substr(6);
 									} else if (/^(b|bg|bk|back)-/.test(cls[x])) {
@@ -2105,7 +2148,7 @@ var renderString = nanomemoize(function renderString($sce, value) {
 						meta.className = className;
 						meta.color = color;
 						meta.backColor = backColor;
-                        return '<span ' + (className ? 'class="' + className + '" ' : '') + (!!color || !!backColor || !!fontSize ? 'style="' + (color ? 'color: ' + color + ' !important;' : '') + ' ' + (backColor ? 'background-color: ' + backColor + ' !important;' : '') + ' ' + (fontSize ? 'font-size: ' + fontSize + ' !important;' : '') + '"' : '') + attributes + '>' + result + '</span>';
+                        return '<span ' + (className ? 'class="' + className + '" ' : '') + (!!color || !!backColor || !!fontSize || !!styles ? 'style="' + (color ? 'color: ' + color + ' !important;' : '') + ' ' + (backColor ? 'background-color: ' + backColor + ' !important;' : '') + ' ' + (fontSize ? 'font-size: ' + fontSize + ' !important;' : '') + styles + '"' : '') + attributes + '>' + result + '</span>';
                     default:
                         result += c;
                 }
@@ -2114,15 +2157,14 @@ var renderString = nanomemoize(function renderString($sce, value) {
             return result;
         }
 
-		meta.html = process(value).replace(/\:(fa[blrs5]?)([ -])([a-z0-9\-\s.="']*)\:/gi, function(match, prefix, union, classes) {
+		meta.html = process(value).replace(/\:(fa[blrs5]?)([ -])((?:[a-z0-9\-\s.]|=".*?"|='.*?')*)\:/gi, function(match, prefix, union, classes) {
             var attributes = '';
             // Default deprecated fa5 prefix to solid weight
             prefix = prefix.toLowerCase();
             prefix = prefix === 'fa5' ? 'fas' : prefix;
             // Support shorthand fas-stroopwafel for fas fa-stroopwafel
-            classes = classes.toLowerCase();
             classes = union === '-' ? 'fa-' + classes : classes;
-            classes = classes.replace(/(data-fa.*?=(?:'.*?'|".*?"))\s*/gi, function(match) {
+            classes = classes.replace(/(\S+=(?:'.*?'|".*?"))\s*/gi, function(match) {
                 attributes += ' ' + match;
                 return '';
             });

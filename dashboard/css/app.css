@@ -85,7 +85,7 @@
   --piston-line-hover: var(--solarized-base02);
   --piston-line-new: rgba(253, 246, 227, 0.3); /* based on --solarized-base3 */
   --piston-line-new-hover: rgba(253, 246, 227, 0.4); /* based on --solarized-base3 */
-  --piston-line-disabled: rgba(88, 110, 117, 0.2); /* based on --solarized-base01 */
+  --piston-line-disabled: rgba(88, 110, 117, 0.5); /* based on --solarized-base01 */
   --piston-line-disabled-border: rgba(88, 110, 117, 0.05);
   --piston-line-number: var(--solarized-base01);
   --piston-dnd-border: var(--solarized-blue);
@@ -118,7 +118,7 @@ h3 {
 }
 
 body {
-	font-family: Verdana;
+	font-family: Verdana, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
 	font-size: 12px;
 	font-weight: normal;
 	color: var(--text-color);
@@ -636,10 +636,15 @@ label:not(.form-check-label) > input {
 	font-family: 'FontAwesome';
 }
 
+.dropdown-menu {
+  color: #444;
+}
+
 ul .dropdown-menu {
     background-color: var(--background-featured);
     border: 1px solid var(--page-background);
     border-radius: 7px;
+    color: var(--text-color);
 }
 
 ul .dropdown-menu:hover {
@@ -652,7 +657,7 @@ ul .dropdown li {
     cursor: pointer;
 }
 
-.dropdown-menu > li > a {
+ul .dropdown-menu > li > a {
   color: var(--text-color);
 }
 
@@ -1394,4 +1399,8 @@ li[instance] {
   padding: 0.750em;
   border-bottom: 1px solid var(--background-featured);
   border-top: 1px solid var(--background-featured);
+}
+
+.table-sortable thead th {
+  cursor: default;
 }

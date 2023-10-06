@@ -691,8 +691,11 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', 'colorScheme
 	};
 
 	var formatValue = nanomemoize(function(name, value, variable) {
-		var t = (name == '$localNow') || (name == '$utc') ? 'long' : variable.t;
+		var t = variable.t;
 		if ((value === '') || (value === null) || ((value instanceof Array) && !value.length)) return '(not set)';
+		if (name === '$utc') {
+			return new Date(value).toUTCString();
+		}
 		switch (t) {
 			case 'time':
 				return utcToTimeString(value);
@@ -717,9 +720,9 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', 'colorScheme
 	});
 
 	$scope.formatVariableValue = function(variable, name) {
-		if ((variable.v == null) && !!name && $scope.localVars) {
+		if ((variable.v == null || variable.n in $scope.localVars) && !!name && $scope.localVars) {
 			variable = $scope.copy(variable);
-            variable.v = $scope.localVars[name];
+			variable.v = $scope.localVars[name];
 		}
 		return formatValue(name, variable.v, variable);
 	};
@@ -1019,7 +1022,8 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', 'colorScheme
 			executionParallelism: $scope.piston.o.pep ? 1 : 0,
 			eventSubscriptions: $scope.piston.o.des ? 1 : 0,
 			allowPreSchedules: $scope.piston.o.aps ? 1 : 0,
-			commandDelay: $scope.piston.o.ced ? $scope.piston.o.ced : 0
+			commandDelay: $scope.piston.o.ced ? $scope.piston.o.ced : 0,
+			ignoreSslErrors: $scope.piston.o.ish ? 1 : 0
 		};
 		window.designer = $scope.designer;
 		$scope.designer.dialog = ngDialog.open({
@@ -1041,6 +1045,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', 'colorScheme
 		$scope.piston.o.des = $scope.designer.eventSubscriptions ? 1 : 0;
 		$scope.piston.o.aps = $scope.designer.allowPreSchedules ? 1 : 0;
 		$scope.piston.o.ced = isNaN($scope.designer.commandDelay) ? 0 : parseInt($scope.designer.commandDelay);
+		$scope.piston.o.ish = $scope.designer.ignoreSslErrors ? 1 : 0;
 		$scope.closeDialog();
 	}
 
@@ -1106,6 +1111,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', 'colorScheme
 		//$scope.designer.tos = statement.os;
 		$scope.designer.ctp = statement.ctp || 'i';
 		$scope.designer.async = statement.a;
+		$scope.designer.smode = statement.sm || 'auto';
 		$scope.designer.ontypechanged = function(designer, type) {
 			designer.operand.requirePositiveNumber = false;
 			designer.operand2.requirePositiveNumber = false;
@@ -1206,6 +1212,11 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', 'colorScheme
 		statement.rop = $scope.designer.roperator;
 		statement.rn = $scope.designer.rnot == '1';
 		statement.di = $scope.designer.disabled == '1';
+		if (!$scope.designer.smode || $scope.designer.smode === 'auto') {
+			delete statement.sm;
+		} else {
+			statement.sm = $scope.designer.smode;
+		}
 		switch (statement.t) {
 			case 'action':
 				statement.d = $scope.designer.devices;
@@ -1957,10 +1968,19 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', 'colorScheme
 		$scope.designer.custom = !!task.cm;
 		$scope.designer.mode = task.m;
 		$scope.designer.description = task.z;
+		$scope.designer.commands = $scope.listAvailableCommands(parent.d);
+		if (task.c
+			&& task.cm == null 
+			&& !$scope.hasId($scope.designer.commands.virtual, task.c) 
+			&& !$scope.hasId($scope.designer.commands.common, task.c) 
+			&& !$scope.hasId($scope.designer.commands.partial, task.c)
+		) {
+			$scope.designer.command += '$custom';
+			$scope.designer.custom = true;
+		}
 		$scope.prepareParameters(task);
 		window.designer = $scope.designer;
 		window.scope = $scope;
-		$scope.designer.commands = $scope.listAvailableCommands(parent.d);
 		$('a-ckolor-wheel').remove();
 		$scope.designer.dialog = ngDialog.open({
 			template: 'dialog-edit-task',
@@ -2734,23 +2754,62 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', 'colorScheme
 
 	$scope.listAvailableCommands = function(devices) {
 		var commandsCount = {}
-		var deviceCount = devices ? devices.length : 0;
+		var allDevices = [];
 		var customCommands = {};
+		function resolveDeviceVariable(varName) {
+			var cmds = [];
+			var varValue = $scope.getVariableByName(varName);
+			hasVariable = true;
+
+			//attempt to include attributes from current variable value
+			if (varValue && varValue.v && varValue.v.d && varValue.v.d.length) {
+				//add attributes shared by all devices in the variable
+				for (var i in varValue.v.d) {
+					var device = $scope.getDeviceById(varValue.v.d[i]);
+					if (device) {	
+						allDevices.push(device);
+						cmds.push.apply(cmds, device.c);
+					} else {
+						cmds.push.apply(cmds, resolveDeviceVariable(varValue.v.d[i]));
+					}
+				}
+			} else {
+				// Represents the empty/unknown variable
+				allDevices.push({});
+				cmds.push.apply(cmds, $scope.db.commands.physical);
+			}
+			return cmds;
+		}
 		for (deviceIndex in devices) {
 			var deviceId = devices[deviceIndex] || '';
 			var cmds = [];
-			var all = false;
+			var hasVariable = false;
 			if (deviceId.startsWith(':')) {
 				var device = $scope.getDeviceById(devices[deviceIndex]);
-				if (device) cmds = device.c;
+				if (device) {
+					allDevices.push(device);
+					cmds = device.c;
+				}
 			} else {
-				all = true;
-				cmds = $scope.db.commands.physical;
+				hasVariable = true;
+				var seenCmds = {};
+				cmds = resolveDeviceVariable(deviceId).filter(function (cmd) {
+					if (seenCmds[cmd.n]) {
+						var name = cmd.cm || !$scope.db.commands.physical[cmd.n]
+							? cmd.n + '$custom'
+							: cmd.n;
+						// Add to the count for duplicate commands
+						commandsCount[name] = (commandsCount[name] || 0) + 1;
+						return false;
+					}
+					seenCmds[cmd.n] = true;
+					return true;
+				});
 			}
 			//get all the device supported commands
 			for (commandIndex in cmds) {
 				var command = cmds[commandIndex];
-				var commandId = all ? commandIndex : command.n;
+				var commandId =  command.n || commandIndex;
 				var commandName = commandId;
 				if (command.cm || !$scope.db.commands.physical[commandId]) {
 					// Identify custom commands in the context of the designer, not serialized to piston data 
@@ -2763,6 +2822,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', 'colorScheme
 				commandsCount[commandId] = (commandsCount[commandId] || 0) + 1;
 			}
 		}
+		var deviceCount = allDevices.length;
 		var result = {
 			common: [],
 			partial: [],
@@ -2923,59 +2983,92 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', 'colorScheme
 		return result;
 	}
 
+	function getDeviceAttributeNames(device, restrictAttribute) {
+		var attributes = {};
+		if (device && device.a) {
+			for (var attributeIndex in device.a) {
+				var attribute = device.a[attributeIndex];
+				if (!restrictAttribute || (attribute.n == restrictAttribute)) {
+					attributes[attribute.n] = (attributes[attribute.n] || 0) + 1;
+				}
+			}
+		}
+		return attributes;
+	}
+
 	$scope.listAvailableAttributes = function(devices, restrictAttribute) {
 		var result = [];
-		var device = null;
+		var allDevices = [];
 		if (devices && devices.length) {
 			var attributes = {}
-			var deviceCount = devices.length;
+			var uniqueAttributes = [];
 			var hasThreeAxis = false;
-			for (deviceIndex in devices) {
-				device = $scope.getDeviceById(devices[deviceIndex]);
-				if (device) {
-					for (attributeIndex in device.a) {
-						var attribute = device.a[attributeIndex];
-						if (!restrictAttribute || (attribute.n == restrictAttribute)) {
-							if (attributes[attribute.n]) {
-								attributes[attribute.n] += 1;
-							} else {
-								attributes[attribute.n] = 1;
+			var hasVariable = false;
+			function resolveDeviceVariable(varName) {
+				var varValue = $scope.getVariableByName(varName);
+				hasVariable = true;
+
+				//attempt to include attributes from current variable value
+				if (varValue && varValue.v && varValue.v.d && varValue.v.d.length) {
+					//add attributes shared by all devices in the variable
+					for (var i in varValue.v.d) {
+						var device = $scope.getDeviceById(varValue.v.d[i]);
+						if (device) {
+							allDevices.push(device);
+							var attrNames = getDeviceAttributeNames(device, restrictAttribute);
+							for (var attr in attrNames) {
+								if (!restrictAttribute || attributeName == restrictAttribute) {
+									attributes[attr] = (attributes[attr] || 0) + 1;
+								}
 							}
+						} else {
+							resolveDeviceVariable(varValue.v.d[i]);
 						}
 					}
 				} else {
-					//variable
-					for (attributeName in $scope.db.attributes) {
-						if (!restrictAttribute || (attributeName == restrictAttribute)) {
-							if (attributes[attributeName]) {
-								attributes[attributeName] += 1;
-							} else {
-								attributes[attributeName] = 1;
-							}
-						}
-					}
+					// Represents the empty/unknown variable
+					allDevices.push({});
 				}
 			}
+			for (deviceIndex in devices) {
+				var device = $scope.getDeviceById(devices[deviceIndex]);
+				if (device) {
+					allDevices.push(device);
+					var attrNames = getDeviceAttributeNames(device, restrictAttribute);
+					for (var attrName in attrNames) {
+						attributes[attrName] = (attributes[attrName] || 0) + attrNames[attrName];
+					}
+				} else {
+					hasVariable = true;
+					resolveDeviceVariable(devices[deviceIndex]);
+				}
+			}
+			var deviceCount = allDevices.length;
 			for (attributeId in attributes) {
-				if (attributes[attributeId] == deviceCount) {
-					var attribute = $scope.getAttributeById(attributeId);
-					if (attribute) {
-						result.push(mergeObjects({id: attributeId}, attribute));
-						if (attributeId == 'threeAxis') hasThreeAxis = true;
-					} else {
-						//custom attribute? device should contain the last device we've been through
-						for (a in device.a) {
-							if (device.a[a].n == attributeId) {
-								attribute = device.a[a];
-								break;
+				var target = attributes[attributeId] == deviceCount ? result : uniqueAttributes;
+				var attribute = $scope.getAttributeById(attributeId);
+				if (attribute) {
+					target.push(mergeObjects({id: attributeId}, attribute));
+					if (attributeId == 'threeAxis') hasThreeAxis = true;
+				} else {
+					//custom attribute? device should contain the last device we've been through
+					for (var i in allDevices) {
+						var device = allDevices[i];
+						if (device.a) {
+							for (a in device.a) {
+								if (device.a[a].n == attributeId) {
+									attribute = device.a[a];
+									break;
+								}
 							}
 						}
-						if (attribute) {
-							var obj = mergeObjects({id: attributeId, c:true}, attribute);
-							obj.n = '⌂ ' + obj.n;
-							obj.t = (obj.t || 'string').toLowerCase().replace('number', 'decimal');
-							result.push(obj);
-						}
+						if (attribute) break;
+					}
+					if (attribute) {
+						var obj = mergeObjects({id: attributeId, c:true}, attribute);
+						obj.n = '⌂ ' + obj.n;
+						obj.t = (obj.t || 'string').toLowerCase().replace('number', 'decimal');
+						target.push(obj);
 					}
 				}
 			}
@@ -2987,6 +3080,33 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', 'colorScheme
 			}
 			result.push({id: statusAttribute, n: '⌂ ' + statusAttribute, t:'string'});
 			result.sort($scope.sortByName);
+
+			// Add attributes from a subset of devices
+			if (uniqueAttributes.length) {
+				for (var i in uniqueAttributes) {
+					uniqueAttributes[i].group = 'Supported by a subset of the devices';
+				}
+				uniqueAttributes.sort($scope.sortByName);
+				result.push.apply(result, uniqueAttributes);
+			}
+			
+			//add all known attributes when a variable is present
+			if (hasVariable) {
+				var variableAttributes = [];
+				for (attributeId in $scope.db.attributes) {
+					if (!(attributeId in attributes)) {
+						var attribute = $scope.getAttributeById(attributeId);
+						if (attribute) {
+							variableAttributes.push(mergeObjects({
+								id: attributeId,
+								group: 'Generic attributes'
+							}, attribute));
+						}
+					}
+				}
+				variableAttributes.sort($scope.sortByName);
+				result.push.apply(result, variableAttributes);
+			}
 		}
 		return result;
 	}
@@ -3130,12 +3250,20 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', 'colorScheme
 		return today;
 	};
 
+	var singularDeviceVariables = [
+		'$currentEventDevice',
+		'$previousEventDevice'
+	];
+
 	function isMultiValueOperand(operandData) {
 		return operandData.t == 'p' 
 			&& operandData.d 
 			&& operandData.g == 'all' 
 			&& (operandData.d.length > 1 
-				|| (operandData.d[0] && operandData.d[0][0] != ':')
+				|| (operandData.d[0] 
+					&& operandData.d[0][0] != ':' 
+					&& singularDeviceVariables.indexOf(operandData.d[0]) < 0
+				)
 			);
 	}
 
@@ -4290,7 +4418,12 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', 'colorScheme
 			if (devices.length > 1 || isVariable) {
 				switch (aggregation) {
 					case 'any':
-						prefix = 'Any of ';
+						if (!(isVariable 
+							&& devices.length === 1 
+							&& singularDeviceVariables.indexOf(devices[0]) >= 0
+						)) {
+							prefix = 'Any of ';
+						}
 						break;
 					case 'all':
 						prefix = 'All of ';

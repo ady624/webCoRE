@@ -99,6 +99,14 @@ config.controller('fuel', ['$scope', '$rootScope', 'dataService', '$timeout', '$
 				*/
 
 //google charts
+				// Expand compact data format `[t1, d1, t2, d2, t3, d3]`
+				if (typeof fuelStream.data[0] !== 'object') {
+					var data = [];
+					for (var i = 0; i < fuelStream.data.length; i += 2) {
+						data.push({ t: fuelStream.data[i], d: fuelStream.data[i + 1] });
+					}
+					fuelStream.data = data;
+				}
 				var t = isNumeric(fuelStream.data[0].d) ? 'number' : 'string';
 				data.cols.push({'id': i, 'label': (fuelStream.c ? fuelStream.c + ' \\ ' : '') + fuelStream.n, 'type': t});
 				var ch = [];
