@@ -265,7 +265,7 @@
 
 					<div multicolumn>
 						<label var ng-if="piston && piston.v">Local variables</label>
-						<div ng-if="localVars" var ng-repeat="var in piston.v"><span><span class="vartype">{{var.t}}</span><span>{{var.n}}</span> <i class="clickable far fa-edit" aria-hidden="true" ng-if="!var.v && (var.t.substr(-1) != ']')" ng-click="editLocalVariable(var)"></i></span><span class="{{var.v == null ? 'notset' : ''}}" ng-bind-html="var.v ? renderOperand(var.v) : formatVariableValue(var, var.n)"></span></div>
+						<div ng-if="localVars" var ng-repeat="var in piston.v"><span><span class="vartype">{{var.t}}</span><span>{{var.n}}</span> <i class="clickable far fa-edit" aria-hidden="true" ng-if="!var.v && (var.t.substr(-1) != ']')" ng-click="editLocalVariable(var)"></i></span><span class="{{var.v == null ? 'notset' : ''}}" ng-bind-html="var.v && localVars[var.n] === undefined ? renderOperand(var.v) : formatVariableValue(var, var.n)"></span></div>
 						<div novar>(no variables defined)</div>
 						<label var ng-if="globalVars">Global variables</label>
 						<div ng-if="globalVars" var ng-repeat="(name, var) in globalVars"><span><span class="vartype">{{var.t}}</span><span>{{name}}</span></span><span class="{{var.v == null ? 'notset' : ''}}" ng-bind-html="formatVariableValue(var)"></span></div>
@@ -350,7 +350,7 @@
 					<td>Execution Method</td>
 					<td><select ng-model="selection.a"><option value="0" style="color: #999">Synchronous</option><option value="1">Asynchronous</option></select>
 				</tr>
-				<tr ng-if="(selectionType == 'condition')">
+				<tr ng-if="(selectionType == 'condition') || (selectionType == 'statement' && selection.ct == 'c' && selection.t == 'switch')">
 					<td>Subscription Method</td>
 					<td><select ng-model="selection.sm"><option value="auto" style="color: #999">Auto</option><option value="always">Always</option><option value="never">Never</option></select>
 				</tr>
@@ -426,7 +426,7 @@
 		<line com h>{{padComment('', 64)}}</line>
 		<line com h ng-if-end>/**************************************************************/</line>
 		<line>&nbsp;</line>
-		<line kwd ng-if-start="((mode == 'edit') && view.settings) || piston.o.pep || piston.o.cto || piston.o.ced || piston.o.mps || piston.o.dco || piston.o.des || piston.o.aps" ng-click="editSettings();">settings</line>
+		<line kwd ng-if-start="((mode == 'edit') && view.settings) || piston.o.pep || piston.o.cto || piston.o.ced || piston.o.mps || piston.o.dco || piston.o.des || piston.o.aps || piston.o.ish" ng-click="editSettings();">settings</line>
 		<container>
 			<line kwd ng-if="piston.o.pep">enable parallelism<span pun>;</span></line>
 			<line kwd ng-if="piston.o.mps">disable automatic piston state<span pun>;</span></line>
@@ -435,6 +435,11 @@
 			<line kwd ng-if="piston.o.des">disable event subscriptions<span pun>;</span></line>
 			<line kwd ng-if="piston.o.ced">set command execution delay to {{piston.o.ced}}ms<span pun>;</span></line>
 			<line kwd ng-if="piston.o.aps">allow pre-scheduled tasks to execute during restrictions<span pun>;</span></line>
+			<line kwd ng-if="piston.o.ish">
+				<strong class="text-danger" data-toggle="tooltip" data-title="This is a security risk, disable this setting unless you know what you are doing.">
+					<i class="fas fa-exclamation-triangle fa-sm"></i>
+					ignore SSL errors on all web requests</strong><span pun>;</span>
+			</line>
 		</container>
 		<line kwd>end settings;</line>
 		<line ng-if-end>&nbsp;</line>
@@ -465,7 +470,7 @@
 				<line com ng-if="variable.z">/* {{variable.z}} */</line>
 				<line pun>
 					<handle dnd-handle><svg class="sprite-icon" symbol="drag-handle"></svg></handle>
-					<span ng-click="editVariable(variable);" dnd-nodrag><span pun ng-if="(variable.a == 's') && (variable.v)">const&nbsp;</span><span typ>{{variable.t}}&nbsp;</span><span var>{{variable.n}}</span><span ng-if="variable.v" pun>&nbsp;=&nbsp;</span><span ng-if="variable.v" ng-bind-html="variable.$$html || (variable.$$html = renderOperand(variable.v))"></span><span pun>;</span><span ng-if="!variable.v" com sensitive>&nbsp;/* <span ng-bind-html="formatVariableValue(variable, variable.n)"></span> */</span></span>
+					<span ng-click="editVariable(variable);" dnd-nodrag><span pun ng-if="(variable.a == 's') && (variable.v)">const&nbsp;</span><span typ>{{variable.t}}&nbsp;</span><span var>{{variable.n}}</span><span ng-if="variable.v" pun>&nbsp;=&nbsp;</span><span ng-if="variable.v" ng-bind-html="variable.$$html || (variable.$$html = renderOperand(variable.v))"></span><span pun>;</span><span ng-if="!variable.v || localVars[variable.n] !== undefined" com sensitive>&nbsp;/* <span ng-bind-html="formatVariableValue(variable, variable.n)"></span> */</span></span>
 				</line>
 			</span>
 			<line new data-ng-click="addVariable()">+ add a new variable</line>
@@ -567,7 +572,7 @@
 			<conditions data-ng-repeat="collection in [statement]" data-ng-include="'conditions'" dnd-nodrag data-nag-model="statement" eval="{{statement && trace && trace.points && trace.points['c:' + statement.$] ? trace.points['c:' + statement.$].v : ''}}"></conditions>
 			<line kwd ng-if="(mode=='edit') || (statement.s && statement.s.length)" ng-click="select(statement, statements)">then</line>
 			<statements ng-if="(mode=='edit') || (statement.s && statement.s.length)" dnd-list="statement.s" dnd-allowed-types="['statement']" data-ng-repeat="statements in [statement.s]" data-ng-include="'statements'" dnd-nodrag data-nag-model="statement.s" exec="{{statement && statement.s && statement.s.length && trace && trace.points && !!trace.points['s:' + statement.s[0].$]}}"></statements>
-			<line kwd ng-if="(mode=='edit') || (statement.ei && statement.ei.length)" ng-repeat-start="elseIf in statement.ei" ng-click="select(statement, statements)">else if</line>
+			<line kwd ng-if="(mode=='edit') || (statement.ei && statement.ei.length)" ng-repeat-start="elseIf in statement.ei" ng-click="select(statement, statements)">else if <span ng-if="view.trace && (mode=='view')" nul> /* #{{elseIf.$}} */</span></line>
 			<conditions ng-if="(mode=='edit') || (statement.ei && statement.ei.length)" data-ng-repeat="collection in [elseIf]" data-ng-include="'conditions'" ng-init="parentCollection = elseIf" dnd-nodrag data-nag-model="elseIf" eval="{{elseIf && trace && trace.points && trace.points['c:' + elseIf.$] ? trace.points['c:' + elseIf.$].v : ''}}"></conditions>
 			<line kwd ng-if="(mode=='edit') || (statement.ei && statement.ei.length)" ng-click="select(statement, statements)">then</line>
 			<statements ng-if="(mode=='edit') || (statement.ei && statement.ei.length)" dnd-list="elseIf.s" dnd-allowed-types="['statement']" ng-repeat-end data-ng-repeat="statements in [elseIf.s]" data-ng-include="'statements'" dnd-nodrag data-nag-model="elseIf.s" exec="{{elseIf && elseIf.s && elseIf.s.length && trace && trace.points && !!trace.points['s:' + elseIf.s[0].$]}}"></statements>
@@ -575,7 +580,7 @@
 			<conditions ng-if-end>
 				<line new data-ng-click="addCondition(statement.ei, true, null, statement.o)">+ add a new condition</line>
 			</conditions>
-			<line kwd ng-if="(mode=='edit') || (statement.e && statement.e.length)" ng-click="select(statement, statements)">else</line>
+			<line kwd ng-if="(mode=='edit') || (statement.e && statement.e.length)" ng-click="select(statement, statements)">else <span ng-if="view.trace && (mode=='view')" nul> /* #{{statement.e[0].$}} */</span></line>
 			<statements ng-if="(mode=='edit') || (statement.e && statement.e.length)" dnd-list="statement.e" dnd-allowed-types="['statement']" data-ng-repeat="statements in [statement.e]" data-ng-include="'statements'" dnd-nodrag data-nag-model="statement.e"  exec="{{statement && statement.e && statement.e.length && trace && trace.points && !!trace.points['s:' + statement.e[0].$]}}"></statements>
 			<line kwd ng-click="select(statement, statements)">end if;</line>
 		</div>
@@ -585,9 +590,12 @@
 			<line com ng-if="statement.z">/* {{statement.z}} */</line>
 			<line warn ng-repeat="w in statement.w">WARNING: {{w}}</line>
 			<line kwd ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)">only when</line>
+			<subscription ng-if="(mode == 'view') && !!statement.s" class="fa fa-bolt" title="This switch statement subscribes to events"></subscription>
 			<restrictions ng-if="((mode=='edit') && view.restrictions) || (statement.r && statement.r.length)" data-ng-repeat="collection in [statement]" data-ng-include="'restrictions'" dnd-nodrag data-nag-model="statement"></restrictions>
 			<line kwd ng-click="select(statement, statements)">
 				<handle dnd-handle><svg class="sprite-icon" symbol="drag-handle"></svg></handle><span ng-click="editStatement(statement, statements)" kwd>{{statement.a == '1' ? 'async ' : ''}}switch</span> <span pun>(</span><span ng-bind-html="statement.$$html || (statement.$$html = renderOperand(statement.lo))"></span><span pun>)</span><span pun title="Fall-through mode" ng-if="statement.ctp == 'e'"><i class="fas fa-sort-amount-asc"></i></span>
+				<badge blue ng-if="statement.sm == 'always'" badge="+" title="Always subscribe"></badge>
+				<badge red ng-if="statement.sm == 'never'" badge="-" title="Never subscribe"></badge>
 				<badge green ng-if="(statement.tep == 'c')" badge="C" title="Only execute on condition state change"></badge>
 				<badge green ng-if="(statement.tep == 'p')" badge="P" title="Only execute on piston state change"></badge>
 				<badge green ng-if="(statement.tep == 'b')" badge="C|P" title="Only execute on condition or piston state change"></badge>
@@ -1234,6 +1242,14 @@
 						<option value="1">Asynchronous</option>
 					</select>
 				</div>
+				<div class="form-group" ng-if="designer.type == 'switch' && designer.$statement.ct == 'c'">
+					<label for="smode">Subscription method</label>
+					<select data-actions-box="true" id="smode" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-default" ng-model="designer.smode" data-mobile="{{mobile}}">
+						<option value="auto">Automatic</option>
+						<option value="always">Always subscribe</option>
+						<option value="never">Never subscribe</option>
+					</select>
+				</div>
 				<div class="form-group">
 					<label help>Disable statement</label>
 					<select data-actions-box="true" name="disabled" selectpicker class="selectpicker show-tick" data-width="100%" data-style="btn-default" ng-model="designer.disabled" data-mobile="{{mobile}}">
@@ -1863,7 +1879,7 @@
 							<option ng-repeat="name in systemVarNames" value="{{name}}" ng-if="systemVars[name].t == 'device'" data-content="<span class='vartype'>{{systemVars[name].t}}</span>{{name}}<span class='varval'>{{systemVars[name].v}}</span>">{{name}} ({{systemVars[name].t}})</option>
 						</optgroup>
 					</select>
-					<select data-actions-box="true" attr selectpicker class="selectpicker show-tick input-addon" data-width="25%" data-style="btn-default" ng-model="operand.data.a" data-mobile="{{mobile}}" ng-change="validateOperand(operand)" ng-options="attribute.id as attribute.n for attribute in operand.attributes">
+					<select data-actions-box="true" attr selectpicker class="selectpicker show-tick input-addon" data-width="25%" data-style="btn-default" ng-model="operand.data.a" data-mobile="{{mobile}}" ng-change="validateOperand(operand)" ng-options="attribute.id as attribute.n group by attribute.group for attribute in operand.attributes">
 						<option style="display:none" value="">Nothing selected</option>
 					</select>
 				</div>
@@ -2404,6 +2420,14 @@
 						<option ng-value="1">Enabled</option>
 						<option ng-value="0">Disabled (default)</option>
 					</select>
+				</div>
+				<div class="form-group">
+					<label class="col-lg-12 no-padding">Ignore SSL security issues for web requests</label>
+					<select data-actions-box="true" id="type" selectpicker class="selectpicker show-tick input-addon" data-width="100%" data-style="btn-info" ng-model="designer.ignoreSslErrors" data-mobile="{{mobile}}">
+						<option ng-value="1">Enabled</option>
+						<option ng-value="0">Disabled (default)</option>
+					</select>
+					<div class="help-text text-secondary small">Allows the use of self-signed SSL certificates on remote hosts for web requests issued by this piston.</div>
 				</div>
 				<div class="form-group">
 					<label class="col-lg-12 no-padding">Command execution delay</label>

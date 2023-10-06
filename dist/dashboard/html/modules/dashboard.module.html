@@ -189,7 +189,7 @@
 					<div>It's kinda lonely in here...<br/>How about <a ng-click="newPiston();">creating a piston</a>?</div>
 				</div>
 				<!--<div class="alert alert-warning" ng-if="devices && (devices.length > 50)">It is recommended that the list of available devices does not exceed 50 items. You have selected a total of {{devices.length}} available devices for this instance. While not a problem, you may experience slower start-up times for your pistons. If you do, please consider breaking this instance into at least two instances and group the pistons in such a way that each instance requires less than 50 available devices. Multpile instances can safely share the same device.</div>-->
-				<div class="table-responsive no-animate topinfo" ng-if="instance">
+				<div class="table-responsive no-animate topinfo" ng-if="instance && location">
 					<hub ng-repeat="hub in location.hubs" ng-if="hub.physical" power-source="{{hub.powerSource}}"><i class="fas fa-battery-full" ng-if="hub.powerSource === 'battery'"></i><span>{{hub.name}}</span><span fw>{{hub.firmware}}</span></hub>
 					<location-mode data-toggle="tooltip" title="Location mode is {{getLocationMode()}}">{{getLocationMode()}}</location-mode>
 					<shm-mode data-toggle="tooltip" title="Smart Home Monitor is {{getSHMModeName()}}" ng-if="location.shm && location.shm !== 'unconfigured'" alert="{{location.incidents && (location.incidents.length > 0)}}" mode="{{location.shm}}">{{getSHMModeName()}}</shm-mode>
@@ -268,6 +268,8 @@
     <li><a data-target="#categories" data-toggle="tab">Categories</a>
     </li>
     <li><a data-target="#integrations" data-toggle="tab">Integrations</a>
+    </li>
+    <li><a data-target="#backups" data-toggle="tab">Backups</a>
     </li>
 </ul>
 
@@ -360,6 +362,67 @@
 	    </shape>
 	  </ng-map>
 	</div><div ng-if="!!settings.places.length && isAppHosted && !presenceSensorId" class="place device" ng-click="registerPresenceSensor()"><i class="fas fa-map-marker-alt"></i><footer>Setup sensor</footer></div><div ng-if="settings.places.length < 10" class="place new" ng-click="addPlace()"></div>
+</div>
+
+<div ng-controller="pistonBackupsTable" class="tab-pane" id="backups">
+	<panel name="Automatic backups">
+		<p>Enable automatic backups to save the latest version of your piston for recovery in case the piston or webCoRE smart app is deleted. Use <em>New Piston > Restore a piston using a backup code</em> to recover a piston.</p>
+		<p>Use the Backup Pistons menu command to download all of your pistons to a file which is more convenient to restore and allows tracking of past versions rather than just the latest.</p>
+		<table ng-if="pistonBackupRows" class="table table-striped table-sortable">
+			<thead>
+				<tr>
+					<th ng-click="sortBy('name')">
+						Piston
+						<i data-prefix="fas" class="fas fa-sort{{orderProp != 'name' ? ' text-secondary' : reversed ? '-down' : '-up'}} no-ng-animate"></i>
+					</th>
+					<th ng-click="sortBy('category')">
+						Category
+						<i data-prefix="fas" class="fas fa-sort{{orderProp != 'category' ? ' text-secondary' : reversed ? '-down' : '-up'}} no-ng-animate"></i>
+					</th>
+					<th ng-click="sortBy('modified')">
+						Modified
+						<i data-prefix="fas" class="fas fa-sort{{orderProp != 'modified' ? ' text-secondary' : reversed ? '-down' : '-up'}} no-ng-animate"></i>
+					</th>
+					<th ng-click="sortBy('backupEnabled')">
+						Auto Backup
+						<i data-prefix="fas" class="fas fa-sort{{orderProp != 'backupEnabled' ? ' text-secondary' : reversed ? '-down' : '-up'}} no-ng-animate"></i>
+					</th>
+				</tr>
+			</thead>
+			<tbody>
+				<tr ng-repeat="pistonRow in pistonBackupRows | orderBy:orderProp:reversed track by pistonRow.id">
+					<td>
+						<a ng-href="/piston/{{pistonRow.id}}" ng-click="openPiston(pistonRow.id);">
+							{{pistonRow.name}}
+						</a>
+					</td>
+					<td>
+						{{pistonRow.category}}
+					</td>
+					<td>
+						{{pistonRow.modified | date}}
+					</td>
+					<td>
+						<code ng-if="showBins && pistonRow.bin">
+							{{pistonRow.bin}}
+						</code>
+						<span ng-if="!showBins" class="{{pistonRow.bin ? 'text-success s-b' : ''}}">
+							<i class="fal fa-{{pistonRow.bin ? 'check' : 'times'}}"></i>
+							{{pistonRow.bin ? 'Enabled' : 'Disabled'}}
+						</span>
+					</td>
+				</tr>
+				<tr>
+					<td colspan="3"></td>
+					<td>
+						<button class="btn btn-info btn-sm" ng-click="showBins = !showBins">
+							{{showBins ? 'Hide' : 'Show'}} backup codes
+						</button>
+					</th>
+				</tr>
+			</tbody>
+		</table>
+	</panel>	
 </div>
   </div>
 	<form class="form-horizontal">
@@ -668,7 +731,7 @@
       </form>
 	<div ng-if="designer.page==2">
 		<h3>Migration complete</h3>
-		<p>This was a one time migration, all future piston edits will back up to your new account.</p>
+		<p>This was a one time migration, all future piston edits will back up to your new account. Check out the Settings > Backups page to keep track of your backup codes.</p>
     </div>
       <footer>
           <button ng-if="designer.page==0" type="button" class="btn btn-info pull-right" ng-click="migratePistonBackups();">Migrate backups</button>
