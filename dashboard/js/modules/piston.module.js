@@ -2758,19 +2758,21 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', 'colorScheme
 		var customCommands = {};
 		function resolveDeviceVariable(varName) {
 			var cmds = [];
-			var varValue = $scope.getVariableByName(varName);
+			var varMetadata = $scope.getVariableByName(varName);
+			var varValue = varMetadata && varMetadata.v ? varMetadata.v : null;
+			var devices = varValue && !('length' in varValue) ? varValue.d : varValue;
 			hasVariable = true;
 
 			//attempt to include attributes from current variable value
-			if (varValue && varValue.v && varValue.v.d && varValue.v.d.length) {
+			if (devices && devices.length) {
 				//add attributes shared by all devices in the variable
-				for (var i in varValue.v.d) {
-					var device = $scope.getDeviceById(varValue.v.d[i]);
+				for (var i in devices) {
+					var device = $scope.getDeviceById(devices[i]);
 					if (device) {	
 						allDevices.push(device);
 						cmds.push.apply(cmds, device.c);
 					} else {
-						cmds.push.apply(cmds, resolveDeviceVariable(varValue.v.d[i]));
+						cmds.push.apply(cmds, resolveDeviceVariable(devices[i]));
 					}
 				}
 			} else {
@@ -3005,14 +3007,16 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', 'colorScheme
 			var hasThreeAxis = false;
 			var hasVariable = false;
 			function resolveDeviceVariable(varName) {
-				var varValue = $scope.getVariableByName(varName);
+				var varMetadata = $scope.getVariableByName(varName);
+				var varValue = varMetadata && varMetadata.v ? varMetadata.v : null;
+				var devices = varValue && !('length' in varValue) ? varValue.d : varValue;
 				hasVariable = true;
 
 				//attempt to include attributes from current variable value
-				if (varValue && varValue.v && varValue.v.d && varValue.v.d.length) {
+				if (devices && devices.length) {
 					//add attributes shared by all devices in the variable
-					for (var i in varValue.v.d) {
-						var device = $scope.getDeviceById(varValue.v.d[i]);
+					for (var i in devices) {
+						var device = $scope.getDeviceById(devices[i]);
 						if (device) {
 							allDevices.push(device);
 							var attrNames = getDeviceAttributeNames(device, restrictAttribute);
@@ -3022,7 +3026,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', 'colorScheme
 								}
 							}
 						} else {
-							resolveDeviceVariable(varValue.v.d[i]);
+							resolveDeviceVariable(devices[i]);
 						}
 					}
 				} else {
