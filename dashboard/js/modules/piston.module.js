@@ -2188,7 +2188,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', 'colorScheme
 		$scope.designer.$new = variableName ? false : true;
 		$scope.designer.name = variableName ? '' + variableName : '@';
 		$scope.designer.type = variable.t;
-		$scope.designer.operand = {data: {t: (variable.v == null || variable.v == undefined) ? '' : ( variable.t == 'device' ? 'd' : 'c'), c: variable.v, d: variable.v, vt: variable.t}, multiple: false, dataType: variable.t, optional: true, onlyAllowConstants: true}
+		$scope.designer.operand = {data: {t: (variable.v == null || variable.v == undefined) ? '' : ( variable.t == 'device' ? 'd' : 'c'), c: variable.v, d: variable.v, vt: variable.t}, multiple: false, dataType: variable.t, optional: true, onlyAllowConstants: true, disableExpressions: true}
 		window.designer = $scope.designer;
 		window.scope = $scope;
 		$scope.validateOperand($scope.designer.operand);
