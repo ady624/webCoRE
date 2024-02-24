@@ -5542,7 +5542,11 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', 'colorScheme
 		if (expression.err) {
 			return 'Evaluation error: ' + expression.err;
 		}
-		var variables = $scope.compilePiston({ v: scope.piston.v }).v;
+		// Include variables when editing so that new and changed variables are evaluated based on
+		// the unsaved changes.
+		var variables = $scope.mode === 'edit' 
+			? $scope.compilePiston({ v: scope.piston.v }).v
+			: null;
 		dataService.evaluateExpression($scope.pistonId, expression, dataType, variables).then(function (response) {
 			var result = '';
 			if (!response || (response.status != 'ST_SUCCESS')) {		

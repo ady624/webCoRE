@@ -1476,8 +1476,8 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 		if (!inst) { inst = dataService.getInstance() };
 		si = store ? store[inst.id] : null;
 		var data = utoa(angular.toJson(expression));
-		var v = utoa(angular.toJson(variables));
-    	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/piston/evaluate?' + getAccessToken(si) + 'id=' + pid + '&expression=' + encodeURIComponent(data) + '&dataType=' + (dataType ? encodeURIComponent(dataType) : '') + '&token=' + (si && si.token ? si.token : '') + '&v=' + encodeURIComponent(v), {jsonpCallbackParam: 'callback'})
+		var v = variables && utoa(angular.toJson(variables));
+    	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/piston/evaluate?' + getAccessToken(si) + 'id=' + pid + '&expression=' + encodeURIComponent(data) + '&dataType=' + (dataType ? encodeURIComponent(dataType) : '') + '&token=' + (si && si.token ? si.token : '') + (v ? '&v=' + encodeURIComponent(v) : ''), {jsonpCallbackParam: 'callback'})
 			.then(function(response) {
 				return response.data;
 			}, function(error) {
