@@ -1471,14 +1471,20 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 			});
     }
 
-    dataService.evaluateExpression = function (pid, expression, dataType) {
+    dataService.evaluateExpression = function (pid, expression, dataType, variables) {
 		var inst = dataService.getPistonInstance(pid);
 		if (!inst) { inst = dataService.getInstance() };
 		si = store ? store[inst.id] : null;
 		var data = utoa(angular.toJson(expression));
-    	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/piston/evaluate?' + getAccessToken(si) + 'id=' + pid + '&expression=' + encodeURIComponent(data) + '&dataType=' + (dataType ? encodeURIComponent(dataType) : '') + '&token=' + (si && si.token ? si.token : ''), {jsonpCallbackParam: 'callback'})
+		var v = utoa(angular.toJson(variables));
+    	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/piston/evaluate?' + getAccessToken(si) + 'id=' + pid + '&expression=' + encodeURIComponent(data) + '&dataType=' + (dataType ? encodeURIComponent(dataType) : '') + '&token=' + (si && si.token ? si.token : '') + '&v=' + encodeURIComponent(v), {jsonpCallbackParam: 'callback'})
 			.then(function(response) {
 				return response.data;
+			}, function(error) {
+				if (variables) {
+					return dataService.evaluateExpression(pid, expression, dataType);
+				}
+				throw error;
 			});
     }
 

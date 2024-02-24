@@ -5542,7 +5542,8 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', 'colorScheme
 		if (expression.err) {
 			return 'Evaluation error: ' + expression.err;
 		}
-		dataService.evaluateExpression($scope.pistonId, expression, dataType).then(function (response) {
+		var variables = $scope.compilePiston({ v: scope.piston.v }).v;
+		dataService.evaluateExpression($scope.pistonId, expression, dataType, variables).then(function (response) {
 			var result = '';
 			if (!response || (response.status != 'ST_SUCCESS')) {		
 				result = 'Evaluation error: Received a ' + (response ? response.status : '(unknown)') + ' result.';
