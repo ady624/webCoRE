@@ -4,6 +4,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', 'colorScheme
 	var tmrActivity;
 	var tmrClock;
 	var statusAttribute = '$status';
+	var configVersion = 1;
 	$scope.lastLogEntry = 0;
 	$scope.error = '';
 	$scope.loading = true;
@@ -2188,7 +2189,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', 'colorScheme
 		$scope.designer.$new = variableName ? false : true;
 		$scope.designer.name = variableName ? '' + variableName : '@';
 		$scope.designer.type = variable.t;
-		$scope.designer.operand = {data: {t: (variable.v == null || variable.v == undefined) ? '' : ( variable.t == 'device' ? 'd' : 'c'), c: variable.v, d: variable.v, vt: variable.t}, multiple: false, dataType: variable.t, optional: true, onlyAllowConstants: true}
+		$scope.designer.operand = {data: {t: (variable.v == null || variable.v == undefined) ? '' : ( variable.t == 'device' ? 'd' : 'c'), c: variable.v, d: variable.v, vt: variable.t}, multiple: false, dataType: variable.t, optional: true, onlyAllowConstants: true, disableExpressions: true}
 		window.designer = $scope.designer;
 		window.scope = $scope;
 		$scope.validateOperand($scope.designer.operand);
@@ -2962,11 +2963,21 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', 'colorScheme
 
 	}
 
-	$scope.autoAddVariable = function(name) {
+	$scope.autoAddVariable = function(operand) {
+		var name = operand &&operand.expressionVar;
 		if (!name) return false;
 		name = name ? name.trim() : '';
 		var v = $scope.getVariableByName(name);
 		$scope.piston.v.push({t: 'dynamic', n: name});
+		
+		// Update expression editor with the new variable
+		$scope.designer.config = $scope.getExpressionConfig();
+		configVersion++;
+		$scope.validateOperand(operand);
+		$scope.refreshSelects();
+		$scope.$$postDigest(function() {
+			$('[smart-area]').triggerHandler('keyup');
+		});
 	}
 
 	$scope.hasAttribute = function(device, attributeName) {
@@ -3412,9 +3423,10 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', 'colorScheme
 
 			if (((operand.data.t == 'p') && (!operand.allowPhysical)) || ((operand.data.t == 'v') && (!operand.allowVirtual))) operand.data.t = (!!operand.allowPreset) ? 's' : 'c';
 
-			if (!operand.config) {
+			if (!operand.config || operand.configVersion < configVersion) {
 				operand.config = $scope.copy($scope.getExpressionConfig());
 				operand.config.autocomplete[5].words = [/([0-9]+)(\.[0-9]+)?/g];
+				operand.configVersion = configVersion;
 			}
 
 
@@ -5530,7 +5542,12 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', 'colorScheme
 		if (expression.err) {
 			return 'Evaluation error: ' + expression.err;
 		}
-		dataService.evaluateExpression($scope.pistonId, expression, dataType).then(function (response) {
+		// Include variables when editing so that new and changed variables are evaluated based on
+		// the unsaved changes.
+		var variables = $scope.mode === 'edit' 
+			? $scope.compilePiston({ v: scope.piston.v }).v
+			: null;
+		dataService.evaluateExpression($scope.pistonId, expression, dataType, variables).then(function (response) {
 			var result = '';
 			if (!response || (response.status != 'ST_SUCCESS')) {		
 				result = 'Evaluation error: Received a ' + (response ? response.status : '(unknown)') + ' result.';

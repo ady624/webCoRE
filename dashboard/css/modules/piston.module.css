@@ -429,11 +429,11 @@ piston[trace=true] statements[exec=true] {
 	border-color: rgba(0, 128, 255, 0.5);
 }
 
-piston[trace=true] conditions[eval=true] {
+piston[trace=true] conditions[eval=true], piston[trace=true] restrictions[eval=true] {
 	border-color: rgba(0, 192, 0, 0.5);
 }
 
-piston[trace=true] conditions[eval=false] {
+piston[trace=true] conditions[eval=false], piston[trace=true] restrictions[eval=false] {
 	border-color: rgba(255, 0, 0, 0.5);
 }
 
