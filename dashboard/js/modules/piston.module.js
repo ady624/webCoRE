@@ -858,7 +858,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', 'colorScheme
 					cssClass: 'hl dev'
 				},
 				{
-					words: [/([0-9]+)(\.[0-9]+)?/g],
+					words: [/\b([0-9]+)(\.[0-9]+)?\b/g],
 					cssClass: 'hl num'
 				}
 				]
@@ -3424,8 +3424,8 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', 'colorScheme
 			if (((operand.data.t == 'p') && (!operand.allowPhysical)) || ((operand.data.t == 'v') && (!operand.allowVirtual))) operand.data.t = (!!operand.allowPreset) ? 's' : 'c';
 
 			if (!operand.config || operand.configVersion < configVersion) {
-				operand.config = $scope.copy($scope.getExpressionConfig());
-				operand.config.autocomplete[5].words = [/([0-9]+)(\.[0-9]+)?/g];
+				operand.config = $scope.getExpressionConfig();
+				operand.config.autocomplete[5].words = [/\b([0-9]+)(\.[0-9]+)?\b/g];
 				operand.configVersion = configVersion;
 			}
 
