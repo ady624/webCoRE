@@ -1001,6 +1001,7 @@ div.divider {
 
 
 textarea[expression] {
+	caret-color: #0078a3;
 	font-size: 14px;
 }
 
