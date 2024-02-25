@@ -389,7 +389,7 @@ angular.module('smartArea', [])
 
                                 $scope.dropdown.customSelect = element.onSelect;
                                 $scope.dropdown.mode = element.mode || 'append';
-                                $scope.dropdown.match = match[1];
+                                $scope.dropdown.match = match[0];
                                 $scope.dropdown.showFilter = element.filter || false;
                             });
 
