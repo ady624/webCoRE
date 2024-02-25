@@ -292,6 +292,7 @@ angular.module('smartArea', [])
                 }
                 
                 ngModel.$setViewValue(areaData, 'default');
+                $timeout(checkTriggers);
             }
 
             /**
