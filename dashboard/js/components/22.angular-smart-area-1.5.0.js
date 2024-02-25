@@ -312,7 +312,7 @@ angular.module('smartArea', [])
                         var cssId = cssClasses.length;
                         cssClasses.push(autoList.cssClass);
                         if(typeof(autoList.words[i]) === "string"){
-                            text = text.replace(new RegExp("([^\\w]|\\b)("+autoList.words[i]+")([^\\w]|\\b)", 'g'), '$1§x'+cssId+'x§$2§/x' + cssId + 'x§$3');
+                            text = text.replace(new RegExp("([^\\w]|\\b)("+autoList.words[i].replace(/[/\-\\^$*+?.()|[\]{}]/g, '\\$&')+")([^\\w]|\\b)", 'g'), '$1§x'+cssId+'x§$2§/x' + cssId + 'x§$3');
                         }else{
                             text = text.replace(autoList.words[i], function(match){
                                 return '§x' + cssId + 'x§'+match+'§/x' + cssId + 'x§';
