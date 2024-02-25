@@ -860,6 +860,10 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', 'colorScheme
 				{
 					words: [/\b([0-9]+)(\.[0-9]+)?\b/g],
 					cssClass: 'hl num'
+				},
+				{
+					words: [/["“”](\\.|[^\\])*?["“”]/g, /['‘’](\\.|[^\\])*?['‘’]/g],
+					cssClass: 'hl lit'
 				}
 				]
 			}
