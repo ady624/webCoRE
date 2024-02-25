@@ -829,15 +829,38 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', 'colorScheme
 	$scope.getExpressionConfig = function() {
 		var attributes = [];
 		for (attribute in $scope.db.attributes) {
-			attributes.push(': ' + attribute + ']');
+			attributes.push(attribute);
 			if (attribute == 'threeAxis') {
-				attributes.push(': axisX]');
-				attributes.push(': axisY]');
-				attributes.push(': axisZ]');
-				attributes.push(': orientation]');
+				attributes.push('axisX', 'axisY', 'axisZ', 'orientation');
 			}
 		}
 		return {
+			dropdown: [
+				{
+					trigger: /\[\s*([^\]:]*?)\s*:\s*([^\]]*)/g,
+					list: function(match, callback) {
+						var name = match[1];
+						var query = match[2];
+						var device = $scope.getDeviceByName(name);
+						const attributes = $scope.listAvailableAttributes([
+							device ? device.id : name
+						]);
+						callback(attributes.flatMap(function(attribute) {
+							if (query && attribute.id.indexOf(query) !== 0) {
+								return [];
+							}
+							return { display: ' ' + attribute.id + ']', data: { 
+								device: match[1], 
+								attribute: attribute.id
+							} };
+						}));
+					},
+					onSelect: function(item) {
+						return '[' + item.data.device + ' : ' + item.data.attribute + ']';
+					},
+					mode: 'replace'
+				}
+			],
 				autocomplete: [{
 					words: []
 				},
@@ -851,10 +874,6 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', 'colorScheme
 				},
 				{
 					words: $scope.listAutoCompleteDevices(),
-					cssClass: 'hl dev'
-				},
-				{
-					words: attributes,
 					cssClass: 'hl dev'
 				},
 				{
@@ -2907,24 +2926,44 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', 'colorScheme
 	}
 
 	$scope.escapeRegExp = function(str) {
-		return str;//str.replace(/[\-\[\]\/\{\}\(\)\*\+\?\.\\\^\$\|]/g, "\\$&");
+		return str && str.replace(/[/\-\\^$*+?.()|[\]{}]/g, '\\$&');
 	};
+
+	function caseInsensitiveSort(a, b) {
+		return a.localeCompare(b);
+	}
 
 	$scope.listAutoCompleteFunctions = function() {
 		var result = [];
 		for(functionIndex in $scope.db.functions) {
 			result.push(($scope.db.functions[functionIndex].d ? $scope.db.functions[functionIndex].d : functionIndex) + '(');
 		}
-		return result.sort();
+		return result.sort(caseInsensitiveSort);
 	}
 
 	$scope.listAutoCompleteDevices = function() {
 		var result = [];
 		for(deviceIndex in $scope.instance.devices) {
 			var device = $scope.instance.devices[deviceIndex];
-			result.push($scope.escapeRegExp('[' + device.n + ' :'));
+			result.push(device.n);
 		}
-		return result.sort();
+		for (varIndex in $scope.piston.v) {
+			var v = $scope.piston.v[varIndex];
+			if (v.t === 'device') {
+				result.push(v.n);
+			}
+		}
+		result.push('$currentEventDevice', '$previousEventDevice');
+		if ($scope.globalVars) {
+			for (varName in $scope.globalVars) {
+				if ($scope.globalVars[varName].t == 'device') {
+					result.push(varName);
+				}
+			}
+		}
+		return result.sort(caseInsensitiveSort).map(function(value) {
+			return '[' + value + ' : ';
+		});
 	}
 
 
@@ -2932,15 +2971,15 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', 'colorScheme
 		var result = [];
 		for(varIndex in $scope.piston.v) {
 			var v = $scope.piston.v[varIndex];
-			result.push($scope.escapeRegExp(v.n));
+			result.push(v.n);
 		}
 		if ($scope.systemVars)
 			for(varName in $scope.systemVars)
-				result.push($scope.escapeRegExp(varName));
+				result.push(varName);
 		if ($scope.globalVars)
 		for(varName in $scope.globalVars)
-			result.push($scope.escapeRegExp(varName));
-		return result.sort();
+			result.push(varName);
+		return result.sort(caseInsensitiveSort);
 	}
 
 	$scope.getVariableByName = function(name) {
@@ -3429,7 +3468,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', 'colorScheme
 
 			if (!operand.config || operand.configVersion < configVersion) {
 				operand.config = $scope.getExpressionConfig();
-				operand.config.autocomplete[5].words = [/\b([0-9]+)(\.[0-9]+)?\b/g];
+				operand.config.autocomplete[4].words = [/\b([0-9]+)(\.[0-9]+)?\b/g];
 				operand.configVersion = configVersion;
 			}
 
