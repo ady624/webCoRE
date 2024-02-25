@@ -266,7 +266,7 @@ angular.module('smartArea', [])
 
                 var text = $scope.areaData,
                     position = getCharacterPosition(),
-                    lastWord = text.substr(0, position).split(/[\s\b{}]/),
+                    lastWord = text.substr(0, position).split(/[\s\b{}()]|\w\[/),
                     remove = lastWord[lastWord.length - 1].length;
 
                 if(!append && $scope.dropdown.match){
@@ -417,7 +417,7 @@ angular.module('smartArea', [])
                     suggestions = [],
                     text = $scope.areaData,
                     position = getCharacterPosition(),
-                    lastWord = text.substr(0, position).split(/[\s\b{}]/);
+                    lastWord = text.substr(0, position).split(/[\s\b{}()]|\w\[/);
 
                 // Get the last typed word
                 lastWord = lastWord[lastWord.length-1];
