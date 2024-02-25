@@ -300,8 +300,8 @@ angular.module('smartArea', [])
              * a cssClass specified.
              */
             function highlightText(){
-                var text = $scope.areaData,
-                    html = htmlEncode(text);
+                var text = $scope.areaData;
+                var cssClasses = [];
 
                 if(typeof($scope.areaConfig.autocomplete) === 'undefined' || $scope.areaConfig.autocomplete.length === 0){
                     return;
@@ -309,15 +309,26 @@ angular.module('smartArea', [])
 
                 $scope.areaConfig.autocomplete.forEach(function(autoList){
                     for(var i=0; i<autoList.words.length; i++){
+                        var cssId = cssClasses.length;
+                        cssClasses.push(autoList.cssClass);
                         if(typeof(autoList.words[i]) === "string"){
-                            html = html.replace(new RegExp("([^\\w]|\\b)("+autoList.words[i]+")([^\\w]|\\b)", 'g'), '$1<span class="'+autoList.cssClass+'">$2</span>$3');
+                            text = text.replace(new RegExp("([^\\w]|\\b)("+autoList.words[i]+")([^\\w]|\\b)", 'g'), '$1§x'+cssId+'x§$2§/x' + cssId + 'x§$3');
                         }else{
-                            html = html.replace(autoList.words[i], function(match){
-                                return '<span class="'+autoList.cssClass+'">'+match+'</span>';
+                            text = text.replace(autoList.words[i], function(match){
+                                return '§x' + cssId + 'x§'+match+'§/x' + cssId + 'x§';
                             });
                         }
                     }
                 });
+                var html = htmlEncode(text);
+                let changed;
+                do {
+                    changed = false;
+                    html = html.replace(/§x(\d+)x§([\s\S]*?)§\/x\1x§/g, function(match, cssId, content) {
+                        changed = true;
+                        return '<span class="'+cssClasses[cssId]+'">'+content+'</span>';
+                    });
+                } while (changed)
                 // Add to the fakeArea
                 $scope.fakeArea = $sce.trustAsHtml(html);
             }
