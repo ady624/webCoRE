@@ -126,6 +126,7 @@ angular.module('smartArea', [])
             return mainWrap;
         },
         controller: ['$scope', '$element', '$timeout', '$sce', function($scope, $element, $timeout, $sce){
+          var ngModel = $element.controller('ngModel');
             /* +----------------------------------------------------+
              * +                     Scope Data                     +
              * +----------------------------------------------------+ */
@@ -278,20 +279,19 @@ angular.module('smartArea', [])
                 }
 
                 // Now remove the last word, and replace with the dropped down one
-                $scope.areaData = text.substr(0, position - remove) +
+                var areaData = text.substr(0, position - remove) +
                     selectedWord +
                     text.substr(position);
 
                 // Now reset the caret position
                 if($element[0].selectionStart) {
-                    $timeout(function(){
-                        var caretPosition = position - remove + selectedWord.toString().length;
-                        $element[0].focus();
-                        $element[0].setSelectionRange(caretPosition, caretPosition);
-                        checkTriggers();
-                    }, 100);
+                    var caretPosition = position - remove + selectedWord.toString().length;
+                    $element[0].value = areaData;
+                    $element[0].focus();
+                    $element[0].setSelectionRange(caretPosition, caretPosition);
                 }
-
+                
+                ngModel.$setViewValue(areaData, 'default');
             }
 
             /**
