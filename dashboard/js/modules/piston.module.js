@@ -2989,6 +2989,15 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', 'colorScheme
 				t: 'device'
 			}
 		}
+		if (name === '$currentEventDevice') {
+			var v = $scope.resolveOnEventsFromDevice();
+			if (v && v.length) {
+				return {
+					v: v,
+					t: 'device'
+				};
+			}
+		}
 		if ($scope.systemVars && $scope.systemVars[name]) return $scope.systemVars[name];
 		if ($scope.globalVars && $scope.globalVars[name]) return $scope.globalVars[name];
 		for(varIndex in $scope.piston.v) {
@@ -3117,6 +3126,22 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', 'colorScheme
 		var statement = $scope.resolveClosestStatement('each');
 		return statement && statement.lo;
 	}
+
+	$scope.resolveOnEventsFromDevice = function() {
+		var statement = $scope.resolveClosestStatement('on');
+		if (!statement) {
+			return null;
+		}
+		var devices = [];
+		for (var i in statement.c) {
+			var condition = statement.c[i];
+			if (condition && condition.lo && condition.lo.d) {
+				devices.push.apply(devices, condition.lo.d);
+			}
+		}
+		return devices;
+	}
+
 
 	$scope.listAvailableAttributes = function(devices, restrictAttribute) {
 		var result = [];
