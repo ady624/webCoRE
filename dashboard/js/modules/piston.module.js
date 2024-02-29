@@ -2983,6 +2983,12 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', 'colorScheme
 	}
 
 	$scope.getVariableByName = function(name) {
+		if (name === '$device') {
+			return {
+				v: $scope.resolveForEachDevice(),
+				t: 'device'
+			}
+		}
 		if ($scope.systemVars && $scope.systemVars[name]) return $scope.systemVars[name];
 		if ($scope.globalVars && $scope.globalVars[name]) return $scope.globalVars[name];
 		for(varIndex in $scope.piston.v) {
@@ -3050,6 +3056,66 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', 'colorScheme
 			}
 		}
 		return attributes;
+	}
+
+	var nestingKeys = ['s', 'c', 'k']
+	$scope.keyPathToObject = function(target, root) {
+		var toCheck = [[root || $scope.piston, []]];
+		while (toCheck.length) {
+			var info = toCheck.shift();
+			var item = info[0];
+			var keyPath = info[1];
+			if (item === target) {
+				return keyPath;
+			}
+			if (Array.isArray(item)) {
+				for (var i in item) {
+					toCheck.push([item[i], keyPath.concat(i)]);
+				}
+			} else {
+				for (var i in nestingKeys) {
+					var key = nestingKeys[i];
+					if (item[key] && typeof item[key] === 'object') {
+						toCheck.push([item[key], keyPath.concat(key)]);
+					}
+				}
+			}
+		}
+		return null;
+	}
+
+	$scope.resolveKeyPath = function(keyPath, root) {
+		var item = root || $scope.piston;
+		for (var i in keyPath) {
+			if (item[keyPath[i]] == null) {
+				return null;
+			}
+			item = item[keyPath[i]];
+		}
+		return item;
+	}
+
+	$scope.resolveClosestStatement = function(statementType) {
+		var keyPath = $scope.keyPathToObject(
+			$scope.designer.parent, 
+			$scope.piston
+		);
+		if (keyPath) {
+			// Find the deepest for each loop
+			while (keyPath.length) {
+				var statement = $scope.resolveKeyPath(keyPath);
+				if (statement.t === statementType) {
+					return statement;
+				}
+				keyPath.pop();
+			}
+		}
+		return null;
+	}
+
+	$scope.resolveForEachDevice = function() {
+		var statement = $scope.resolveClosestStatement('each');
+		return statement && statement.lo;
 	}
 
 	$scope.listAvailableAttributes = function(devices, restrictAttribute) {
