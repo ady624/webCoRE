@@ -3227,7 +3227,9 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', 'colorScheme
 				result.push({id: 'axisZ', n: 'Z axis', t:'decimal'});
 				result.push({id: 'orientation', n: 'orientation', t:'string'});
 			}
-			result.push({id: statusAttribute, n: '⌂ ' + statusAttribute, t:'string'});
+			if (!restrictAttribute || restrictAttribute == 'status') {
+				result.push({id: statusAttribute, n: '⌂ ' + statusAttribute, t:'string'});
+			}
 			result.sort($scope.sortByName);
 
 			// Add attributes from a subset of devices
