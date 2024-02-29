@@ -3142,6 +3142,21 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', 'colorScheme
 		return devices;
 	}
 
+	$scope.resolveOnEventsFromAttributes = function() {
+		var statement = $scope.resolveClosestStatement('on');
+		if (!statement || !statement.c.length) {
+			return null;
+		}
+		var attributes = [];
+		for (var i in statement.c) {
+			var condition = statement.c[i];
+			if (condition && condition.lo && condition.lo.d) {
+				attributes.push.apply(attributes, $scope.listAvailableAttributes(condition.lo.d, condition.lo.a));
+			}
+		}
+		return attributes.length ? attributes : null;
+	}
+
 
 	$scope.listAvailableAttributes = function(devices, restrictAttribute) {
 		var result = [];
@@ -3762,6 +3777,23 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', 'colorScheme
 					var variable = $scope.getVariableByName(operand.data.x);
 					if (variable) {
 						operand.selectedDataType = variable.t;
+						if (operand.data.x === '$currentEventValue') {
+							var a = $scope.resolveOnEventsFromAttributes();
+							var t;
+							var o = [];
+							for (var i in a) {
+								if (t && t !== a[i].t) {
+									t = null;
+									break;
+								}
+								t = a[i].t;
+								o.push.apply(o, a[i].o);
+							}
+							if (t) {
+								operand.selectedDataType = t;
+								operand.selectedOptions = o;
+							}
+						}
 						if (operand.selectedDataType == 'boolean') {
 							operand.selectedOptions = ['false', 'true'];
 						}
