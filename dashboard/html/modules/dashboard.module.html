@@ -97,7 +97,7 @@
 	</tiles>
 </viewer>
 
-<viewer class="pistons" ng-if="initialized && ((view == 'piston') || (view == 'settings'))" class="no-animate">
+<viewer class="pistons" ng-if="initialized && ((view == 'piston') || (view == 'settings'))" ng-scroll="trackScrollPosition($event)" class="no-animate">
 	<i data-fa-symbol="ellipsis-v" class="far fa-ellipsis-v svg-inline--fa"></i>
 	<i data-fa-symbol="circle" class="fas fa-circle svg-inline--fa"></i>
 	<div class="body container-fluid">

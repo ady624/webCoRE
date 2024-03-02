@@ -1,3 +1,4 @@
+var dashboardScrollTop = 0;
 config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout', '$interval', '$location', '$sce', '$routeParams', 'ngDialog', '$window', '$q', 'colorSchemeService', function($scope, $rootScope, dataService, $timeout, $interval, $location, $sce, $routeParams, ngDialog, $window, $q, colorSchemeService) {
 	var tmrStatus = null;
 	var tmrClock = null;
@@ -117,7 +118,10 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 						$scope.clock();
 						$scope.render();
 						$timeout(function() {
-							$scope.completedInitialRender = true;
+							if (!$scope.completedInitialRender) {
+								$scope.completedInitialRender = true;
+								$scope.restoreScrollPosition();
+							}
 						});
 					}
 				} else {
@@ -516,6 +520,9 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 		dataService.closeWebSocket();
 		$scope.view = 'piston';
 		$scope.dropDownMenu = false;
+		$timeout(function() {
+			$scope.restoreScrollPosition();
+		}, 500);
 	}
 
 	$scope.onWheel = function(event) {
@@ -526,6 +533,15 @@ config.controller('dashboard', ['$scope', '$rootScope', 'dataService', '$timeout
 	$scope.onSwipe = function(event, direction) {
 		$scope.dropDownMenu = (event.currentTarget.scrollTop == 0) && (direction == 'down');
 		return true;
+	}
+
+	$scope.trackScrollPosition = function(event) {
+		dashboardScrollTop = event.target.scrollTop;
+	}
+	$scope.restoreScrollPosition = function() {
+		if (dashboardScrollTop) {
+			document.querySelector('viewer').scrollTo(0, dashboardScrollTop, { behavior: 'smooth' });
+		}
 	}
 
     $scope.range = function(n) {
