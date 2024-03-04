@@ -3067,7 +3067,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', 'colorScheme
 		return attributes;
 	}
 
-	var nestingKeys = ['s', 'c', 'k']
+	var nestingKeys = ['s', 'c', 'k', 'e', 'ei', 'cs'];
 	$scope.keyPathToObject = function(target, root) {
 		var toCheck = [[root || $scope.piston, []]];
 		while (toCheck.length) {
