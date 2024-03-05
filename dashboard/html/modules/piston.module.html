@@ -2140,11 +2140,11 @@
 						<optgroup label="Commands available to all devices" ng-if="designer.commands.common">
 							<option ng-repeat="command in designer.commands.common" value="{{command.id}}" data-content="<span class='vartype'>{{command.em ? 'emulated' : (command.cm ? 'custom' : 'device')}}</span>{{command.n}}">{{command.n}}</option>
 						</optgroup>
-						<optgroup label="Location commands (non-device)">
-							<option ng-repeat="command in designer.commands.virtual" value="{{command.id}}" data-content="<span class='vartype'>location</span>{{command.n}}">{{command.n}}</option>
-						</optgroup>
 						<optgroup label="Commands available to only some devices" ng-if="designer.commands.partial">
 							<option ng-repeat="command in designer.commands.partial" value="{{command.id}}" data-content="<span class='vartype'>{{command.em ? 'emulated' : (command.cm ? 'custom' : 'device')}}</span>{{command.n}}">{{command.n}}</option>
+						</optgroup>
+						<optgroup label="Location commands (non-device)">
+							<option ng-repeat="command in designer.commands.virtual" value="{{command.id}}" data-content="<span class='vartype'>location</span>{{command.n}}">{{command.n}}</option>
 						</optgroup>
 					</select>
 				</div>

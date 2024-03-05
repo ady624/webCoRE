@@ -49,6 +49,20 @@ app.directive('ngWheel', ['$parse', function($parse) {
 		};
 	}]);
 
+app.directive('ngScroll', ['$parse', function($parse) {
+	return function(scope, element, attr) {
+		var fn = $parse(attr.ngScroll);
+		console.log('bound', element, fn);
+		element.bind('scroll', function(event) {
+			scope.$apply(function() {
+				fn(scope, {
+					$event: event
+				});
+			});
+		});
+	};
+}]);
+
 
 app.directive('refresh',['$interval', function($interval){
 		return {

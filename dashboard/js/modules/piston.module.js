@@ -829,15 +829,38 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', 'colorScheme
 	$scope.getExpressionConfig = function() {
 		var attributes = [];
 		for (attribute in $scope.db.attributes) {
-			attributes.push(': ' + attribute + ']');
+			attributes.push(attribute);
 			if (attribute == 'threeAxis') {
-				attributes.push(': axisX]');
-				attributes.push(': axisY]');
-				attributes.push(': axisZ]');
-				attributes.push(': orientation]');
+				attributes.push('axisX', 'axisY', 'axisZ', 'orientation');
 			}
 		}
 		return {
+			dropdown: [
+				{
+					trigger: /\[\s*([^\]:]*?)\s*:\s*([^\]]*)/g,
+					list: function(match, callback) {
+						var name = match[1];
+						var query = match[2];
+						var device = $scope.getDeviceByName(name);
+						const attributes = $scope.listAvailableAttributes([
+							device ? device.id : name
+						]);
+						callback(attributes.flatMap(function(attribute) {
+							if (query && attribute.id.indexOf(query) !== 0) {
+								return [];
+							}
+							return { display: ' ' + attribute.id + ']', data: { 
+								device: match[1], 
+								attribute: attribute.id
+							} };
+						}));
+					},
+					onSelect: function(item) {
+						return '[' + item.data.device + ' : ' + item.data.attribute + ']';
+					},
+					mode: 'replace'
+				}
+			],
 				autocomplete: [{
 					words: []
 				},
@@ -854,12 +877,12 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', 'colorScheme
 					cssClass: 'hl dev'
 				},
 				{
-					words: attributes,
-					cssClass: 'hl dev'
+					words: [/\b([0-9]+)(\.[0-9]+)?\b/g],
+					cssClass: 'hl num'
 				},
 				{
-					words: [/([0-9]+)(\.[0-9]+)?/g],
-					cssClass: 'hl num'
+					words: [/["“”](\\.|[^\\])*?["“”]/g, /['‘’](\\.|[^\\])*?['‘’]/g],
+					cssClass: 'hl lit'
 				}
 				]
 			}
@@ -2903,24 +2926,44 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', 'colorScheme
 	}
 
 	$scope.escapeRegExp = function(str) {
-		return str;//str.replace(/[\-\[\]\/\{\}\(\)\*\+\?\.\\\^\$\|]/g, "\\$&");
+		return str && str.replace(/[/\-\\^$*+?.()|[\]{}]/g, '\\$&');
 	};
+
+	function caseInsensitiveSort(a, b) {
+		return a.localeCompare(b);
+	}
 
 	$scope.listAutoCompleteFunctions = function() {
 		var result = [];
 		for(functionIndex in $scope.db.functions) {
 			result.push(($scope.db.functions[functionIndex].d ? $scope.db.functions[functionIndex].d : functionIndex) + '(');
 		}
-		return result.sort();
+		return result.sort(caseInsensitiveSort);
 	}
 
 	$scope.listAutoCompleteDevices = function() {
 		var result = [];
 		for(deviceIndex in $scope.instance.devices) {
 			var device = $scope.instance.devices[deviceIndex];
-			result.push($scope.escapeRegExp('[' + device.n + ' :'));
+			result.push(device.n);
 		}
-		return result.sort();
+		for (varIndex in $scope.piston.v) {
+			var v = $scope.piston.v[varIndex];
+			if (v.t === 'device') {
+				result.push(v.n);
+			}
+		}
+		result.push('$currentEventDevice', '$previousEventDevice');
+		if ($scope.globalVars) {
+			for (varName in $scope.globalVars) {
+				if ($scope.globalVars[varName].t == 'device') {
+					result.push(varName);
+				}
+			}
+		}
+		return result.sort(caseInsensitiveSort).map(function(value) {
+			return '[' + value + ' : ';
+		});
 	}
 
 
@@ -2928,18 +2971,33 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', 'colorScheme
 		var result = [];
 		for(varIndex in $scope.piston.v) {
 			var v = $scope.piston.v[varIndex];
-			result.push($scope.escapeRegExp(v.n));
+			result.push(v.n);
 		}
 		if ($scope.systemVars)
 			for(varName in $scope.systemVars)
-				result.push($scope.escapeRegExp(varName));
+				result.push(varName);
 		if ($scope.globalVars)
 		for(varName in $scope.globalVars)
-			result.push($scope.escapeRegExp(varName));
-		return result.sort();
+			result.push(varName);
+		return result.sort(caseInsensitiveSort);
 	}
 
 	$scope.getVariableByName = function(name) {
+		if (name === '$device') {
+			return {
+				v: $scope.resolveForEachDevice(),
+				t: 'device'
+			}
+		}
+		if (name === '$currentEventDevice') {
+			var v = $scope.resolveOnEventsFromDevice();
+			if (v && v.length) {
+				return {
+					v: v,
+					t: 'device'
+				};
+			}
+		}
 		if ($scope.systemVars && $scope.systemVars[name]) return $scope.systemVars[name];
 		if ($scope.globalVars && $scope.globalVars[name]) return $scope.globalVars[name];
 		for(varIndex in $scope.piston.v) {
@@ -3008,6 +3066,97 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', 'colorScheme
 		}
 		return attributes;
 	}
+
+	var nestingKeys = ['s', 'c', 'k', 'e', 'ei', 'cs'];
+	$scope.keyPathToObject = function(target, root) {
+		var toCheck = [[root || $scope.piston, []]];
+		while (toCheck.length) {
+			var info = toCheck.shift();
+			var item = info[0];
+			var keyPath = info[1];
+			if (item === target) {
+				return keyPath;
+			}
+			if (Array.isArray(item)) {
+				for (var i in item) {
+					toCheck.push([item[i], keyPath.concat(i)]);
+				}
+			} else {
+				for (var i in nestingKeys) {
+					var key = nestingKeys[i];
+					if (item[key] && typeof item[key] === 'object') {
+						toCheck.push([item[key], keyPath.concat(key)]);
+					}
+				}
+			}
+		}
+		return null;
+	}
+
+	$scope.resolveKeyPath = function(keyPath, root) {
+		var item = root || $scope.piston;
+		for (var i in keyPath) {
+			if (item[keyPath[i]] == null) {
+				return null;
+			}
+			item = item[keyPath[i]];
+		}
+		return item;
+	}
+
+	$scope.resolveClosestStatement = function(statementType) {
+		var keyPath = $scope.keyPathToObject(
+			$scope.designer.parent, 
+			$scope.piston
+		);
+		if (keyPath) {
+			// Find the deepest for each loop
+			while (keyPath.length) {
+				var statement = $scope.resolveKeyPath(keyPath);
+				if (statement.t === statementType) {
+					return statement;
+				}
+				keyPath.pop();
+			}
+		}
+		return null;
+	}
+
+	$scope.resolveForEachDevice = function() {
+		var statement = $scope.resolveClosestStatement('each');
+		return statement && statement.lo;
+	}
+
+	$scope.resolveOnEventsFromDevice = function() {
+		var statement = $scope.resolveClosestStatement('on');
+		if (!statement) {
+			return null;
+		}
+		var devices = [];
+		for (var i in statement.c) {
+			var condition = statement.c[i];
+			if (condition && condition.lo && condition.lo.d) {
+				devices.push.apply(devices, condition.lo.d);
+			}
+		}
+		return devices;
+	}
+
+	$scope.resolveOnEventsFromAttributes = function() {
+		var statement = $scope.resolveClosestStatement('on');
+		if (!statement || !statement.c.length) {
+			return null;
+		}
+		var attributes = [];
+		for (var i in statement.c) {
+			var condition = statement.c[i];
+			if (condition && condition.lo && condition.lo.d) {
+				attributes.push.apply(attributes, $scope.listAvailableAttributes(condition.lo.d, condition.lo.a));
+			}
+		}
+		return attributes.length ? attributes : null;
+	}
+
 
 	$scope.listAvailableAttributes = function(devices, restrictAttribute) {
 		var result = [];
@@ -3093,7 +3242,9 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', 'colorScheme
 				result.push({id: 'axisZ', n: 'Z axis', t:'decimal'});
 				result.push({id: 'orientation', n: 'orientation', t:'string'});
 			}
-			result.push({id: statusAttribute, n: '⌂ ' + statusAttribute, t:'string'});
+			if (!restrictAttribute || restrictAttribute == 'status') {
+				result.push({id: statusAttribute, n: '⌂ ' + statusAttribute, t:'string'});
+			}
 			result.sort($scope.sortByName);
 
 			// Add attributes from a subset of devices
@@ -3424,8 +3575,8 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', 'colorScheme
 			if (((operand.data.t == 'p') && (!operand.allowPhysical)) || ((operand.data.t == 'v') && (!operand.allowVirtual))) operand.data.t = (!!operand.allowPreset) ? 's' : 'c';
 
 			if (!operand.config || operand.configVersion < configVersion) {
-				operand.config = $scope.copy($scope.getExpressionConfig());
-				operand.config.autocomplete[5].words = [/([0-9]+)(\.[0-9]+)?/g];
+				operand.config = $scope.getExpressionConfig();
+				operand.config.autocomplete[4].words = [/\b([0-9]+)(\.[0-9]+)?\b/g];
 				operand.configVersion = configVersion;
 			}
 
@@ -3626,6 +3777,23 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', 'colorScheme
 					var variable = $scope.getVariableByName(operand.data.x);
 					if (variable) {
 						operand.selectedDataType = variable.t;
+						if (operand.data.x === '$currentEventValue') {
+							var a = $scope.resolveOnEventsFromAttributes();
+							var t;
+							var o = [];
+							for (var i in a) {
+								if (t && t !== a[i].t) {
+									t = null;
+									break;
+								}
+								t = a[i].t;
+								o.push.apply(o, a[i].o);
+							}
+							if (t) {
+								operand.selectedDataType = t;
+								operand.selectedOptions = o;
+							}
+						}
 						if (operand.selectedDataType == 'boolean') {
 							operand.selectedOptions = ['false', 'true'];
 						}
