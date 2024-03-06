@@ -1,8 +1,6 @@
 <status ng-if="status" ng-animate ng-bind-html="status" ng-click="setStatus()"></status>
 <logo ng-if="view != 'dashboard'"><img src="/img/webCoRE-text-{{ theme }}.svg"></logo>
-<div id="preloader">
-		<div id="loader"></div>
-</div>
+<div id="preloader"></div>
 
 
 <!-- Start navigation -->
@@ -97,7 +95,7 @@
 	</tiles>
 </viewer>
 
-<viewer class="pistons" ng-if="initialized && ((view == 'piston') || (view == 'settings'))" class="no-animate">
+<viewer class="pistons" ng-if="initialized && ((view == 'piston') || (view == 'settings'))" ng-scroll="trackScrollPosition($event)" class="no-animate">
 	<i data-fa-symbol="ellipsis-v" class="far fa-ellipsis-v svg-inline--fa"></i>
 	<i data-fa-symbol="circle" class="fas fa-circle svg-inline--fa"></i>
 	<div class="body container-fluid">
@@ -163,12 +161,33 @@
 			</div>
 			<div class="main no-ng-animate" ng-class="{ 'sidebar-collapsed': sidebarCollapsed, 'allow-transition': completedInitialRender }">
 				<span ng-click="toggleSidebar()" class="fa fa-caret-left collapse-control" collapse-control data-target="#dashboardSidebar"></span>
+				<div ng-if="isSmartThings" class="alert alert-danger">
+					<div class="container-fluid" style="max-width: 1000px;">
+						<p class="h2">
+							SmartThings will shut down your webCoRE automations and all other groovy-based SmartApps 
+							<a href="https://community.smartthings.com/t/update-to-smartthings-groovy-transition/254856" target="_blank" class="alert-link">sometime in early 2023</a>. 
+						</p>
+						<div style="color: #444">
+							<p class="lead">
+								Please use the red snapshot button to save a screenshot of each piston for your reference.
+							</p>
+							Those who wish to remain with SmartThings will need to manually convert pistons to Routines in the SmartThings app or migrate to a service like SharpTools or ActionTiles that works with the limited capabilities of the new SmartThings architecture.
+							There are no solutions for SmartThings that are fully compatible with the complex automations supported by webCoRE pistons so this path may require significant compromises.
+							<br><br>
+							<strong>webCoRE is supported on the Hubitat Elevation hub</strong>, an alternative to SmartThings, and has been maintained by that community for several years.
+							Use the <strong>Backup Piston(s)</strong> tool in the side menu to download a password protected backup of your pistons that can be restored if you choose to install webCoRE on a Hubitat Elevation smart home hub. 
+							This is the <strong>only way to preserve your pistons</strong> if you decide to migrate from SmartThings to Hubitat Elevation (i.e. automatic backup bin codes will not work). 
+							Migration to Hubitat requires a new hub and pairing all devices but may be much easier than redesigning your automations from scratch with SmartThings.
+							<a href="https://community.hubitat.com/t/webcore-documentation-digest/88285" target="_blank" rel="noreferrer noopener" class="alert-link">Learn more about webCoRE on Hubitat</a>
+						</div>
+					</div>
+				</div>
 				<div lonely ng-if="!loading && !instance.pistons.length">
 					<i class="far fa-frown"></i>
 					<div>It's kinda lonely in here...<br/>How about <a ng-click="newPiston();">creating a piston</a>?</div>
 				</div>
 				<!--<div class="alert alert-warning" ng-if="devices && (devices.length > 50)">It is recommended that the list of available devices does not exceed 50 items. You have selected a total of {{devices.length}} available devices for this instance. While not a problem, you may experience slower start-up times for your pistons. If you do, please consider breaking this instance into at least two instances and group the pistons in such a way that each instance requires less than 50 available devices. Multpile instances can safely share the same device.</div>-->
-				<div class="table-responsive no-animate topinfo" ng-if="instance">
+				<div class="table-responsive no-animate topinfo" ng-if="instance && location">
 					<hub ng-repeat="hub in location.hubs" ng-if="hub.physical" power-source="{{hub.powerSource}}"><i class="fas fa-battery-full" ng-if="hub.powerSource === 'battery'"></i><span>{{hub.name}}</span><span fw>{{hub.firmware}}</span></hub>
 					<location-mode data-toggle="tooltip" title="Location mode is {{getLocationMode()}}">{{getLocationMode()}}</location-mode>
 					<shm-mode data-toggle="tooltip" title="Smart Home Monitor is {{getSHMModeName()}}" ng-if="location.shm && location.shm !== 'unconfigured'" alert="{{location.incidents && (location.incidents.length > 0)}}" mode="{{location.shm}}">{{getSHMModeName()}}</shm-mode>
@@ -247,6 +266,8 @@
     <li><a data-target="#categories" data-toggle="tab">Categories</a>
     </li>
     <li><a data-target="#integrations" data-toggle="tab">Integrations</a>
+    </li>
+    <li><a data-target="#backups" data-toggle="tab">Backups</a>
     </li>
 </ul>
 
@@ -339,6 +360,67 @@
 	    </shape>
 	  </ng-map>
 	</div><div ng-if="!!settings.places.length && isAppHosted && !presenceSensorId" class="place device" ng-click="registerPresenceSensor()"><i class="fas fa-map-marker-alt"></i><footer>Setup sensor</footer></div><div ng-if="settings.places.length < 10" class="place new" ng-click="addPlace()"></div>
+</div>
+
+<div ng-controller="pistonBackupsTable" class="tab-pane" id="backups">
+	<panel name="Automatic backups">
+		<p>Enable automatic backups to save the latest version of your piston for recovery in case the piston or webCoRE smart app is deleted. Use <em>New Piston > Restore a piston using a backup code</em> to recover a piston.</p>
+		<p>Use the Backup Pistons menu command to download all of your pistons to a file which is more convenient to restore and allows tracking of past versions rather than just the latest.</p>
+		<table ng-if="pistonBackupRows" class="table table-striped table-sortable">
+			<thead>
+				<tr>
+					<th ng-click="sortBy('name')">
+						Piston
+						<i data-prefix="fas" class="fas fa-sort{{orderProp != 'name' ? ' text-secondary' : reversed ? '-down' : '-up'}} no-ng-animate"></i>
+					</th>
+					<th ng-click="sortBy('category')">
+						Category
+						<i data-prefix="fas" class="fas fa-sort{{orderProp != 'category' ? ' text-secondary' : reversed ? '-down' : '-up'}} no-ng-animate"></i>
+					</th>
+					<th ng-click="sortBy('modified')">
+						Modified
+						<i data-prefix="fas" class="fas fa-sort{{orderProp != 'modified' ? ' text-secondary' : reversed ? '-down' : '-up'}} no-ng-animate"></i>
+					</th>
+					<th ng-click="sortBy('backupEnabled')">
+						Auto Backup
+						<i data-prefix="fas" class="fas fa-sort{{orderProp != 'backupEnabled' ? ' text-secondary' : reversed ? '-down' : '-up'}} no-ng-animate"></i>
+					</th>
+				</tr>
+			</thead>
+			<tbody>
+				<tr ng-repeat="pistonRow in pistonBackupRows | orderBy:orderProp:reversed track by pistonRow.id">
+					<td>
+						<a ng-href="/piston/{{pistonRow.id}}" ng-click="openPiston(pistonRow.id);">
+							{{pistonRow.name}}
+						</a>
+					</td>
+					<td>
+						{{pistonRow.category}}
+					</td>
+					<td>
+						{{pistonRow.modified | date}}
+					</td>
+					<td>
+						<code ng-if="showBins && pistonRow.bin">
+							{{pistonRow.bin}}
+						</code>
+						<span ng-if="!showBins" class="{{pistonRow.bin ? 'text-success s-b' : ''}}">
+							<i class="fal fa-{{pistonRow.bin ? 'check' : 'times'}}"></i>
+							{{pistonRow.bin ? 'Enabled' : 'Disabled'}}
+						</span>
+					</td>
+				</tr>
+				<tr>
+					<td colspan="3"></td>
+					<td>
+						<button class="btn btn-info btn-sm" ng-click="showBins = !showBins">
+							{{showBins ? 'Hide' : 'Show'}} backup codes
+						</button>
+					</th>
+				</tr>
+			</tbody>
+		</table>
+	</panel>	
 </div>
   </div>
 	<form class="form-horizontal">
@@ -595,7 +677,7 @@
 		<div class="form-group">
 			<label for="piston">Retrieving selected pistons, please wait...</label>
 			<div class="progress">
-				<div class="progress-bar" role="progressbar" aria-valuenow="1" aria-valuemin="0" aria-valuemax="{{designer.piston.length}}" style="width:{{100.0 * designer.progress / designer.pistons.length}}%">
+				<div class="progress-bar" role="progressbar" aria-valuenow="1" aria-valuemin="0" aria-valuemax="{{designer.pistons.length}}" style="width:{{100.0 * designer.progress / designer.pistons.length}}%">
 			    	<span>{{designer.progress}} of {{designer.pistons.length}}</span>
 				</div>
 			</div>
@@ -617,6 +699,42 @@
           <button ng-if="designer.page==0" type="button" class="btn btn-info pull-right" ng-disabled="!designer.pistons || !designer.pistons.length" ng-click="backupPistons();">Backup</button>
           <button ng-if="designer.page==2" type="button" class="btn btn-info pull-right" ng-disabled="!designer.pistons || !designer.pistons.length" ng-click="saveBackup();">Save</button>
           <button type="button" class="btn btn-default" ng-click="closeDialog();">Cancel</button>
+      </footer>
+  </designer>
+</script>
+
+<script type="text/ng-template" id="dialog-migrate-piston-bins">
+<designer>
+      <header>
+          <h3>Migrate automatic backups</h3>
+          <span>Your account identifier has changed and all automatic backups of your pistons must be migrated to the new account. This is an automated process and no changes will be made to your pistons.</span>
+      </header>
+	<form ng-if="designer.page==0">
+		<p>The following piston backups need to be migrated:</p>
+		<ul>
+			<li ng-repeat="piston in designer.pistons track by piston.id">
+				{{piston.name}}
+			</li>
+		</ul>
+    </form>
+	<form ng-if="designer.page==1">
+		<div class="form-group">
+			<label for="piston">Migrating piston backups, please wait...</label>
+			<div class="progress">
+				<div class="progress-bar" role="progressbar" aria-valuenow="1" aria-valuemin="0" aria-valuemax="{{designer.pistons.length}}" style="width:{{100.0 * designer.progress / designer.pistons.length}}%">
+			    	<span>{{designer.progress}} of {{designer.pistons.length}}</span>
+				</div>
+			</div>
+		</div>
+      </form>
+	<div ng-if="designer.page==2">
+		<h3>Migration complete</h3>
+		<p>This was a one time migration, all future piston edits will back up to your new account. Check out the Settings > Backups page to keep track of your backup codes.</p>
+    </div>
+      <footer>
+          <button ng-if="designer.page==0" type="button" class="btn btn-info pull-right" ng-click="migratePistonBackups();">Migrate backups</button>
+          <button ng-if="designer.page==2" type="button" class="btn btn-info" ng-click="closeDialog();">Done</button>
+          <button ng-if="designer.page!=2" type="button" class="btn btn-default" ng-click="closeDialog();">Cancel</button>
       </footer>
   </designer>
 </script>
