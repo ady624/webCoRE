@@ -1,8 +1,6 @@
 <status ng-if="status" ng-animate ng-bind-html="status" ng-click="setStatus()"></status>
 <logo ng-if="view != 'dashboard'"><img src="/img/webCoRE-text-{{ theme }}.svg"></logo>
-	<div id="preloader">
-  		<div id="loader"></div>
-	</div>
+	<div id="preloader"></div>
 <error ng-if="error" ng-animate><p ng-bind-html="error"></p><button class="btn btn-default" ng-click="home()">Go home</button></error>
 
 <!-- Start nav -->
