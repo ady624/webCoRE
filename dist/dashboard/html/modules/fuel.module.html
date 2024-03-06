@@ -1,8 +1,6 @@
 <status ng-if="status" ng-animate ng-bind-html="status" ng-click="setStatus()"></status>
 <logo ng-if="view != 'dashboard'"><img src="/img/webCoRE-text-{{ theme }}.svg"></logo>
-	<div id="preloader">
-  		<div id="loader"></div>
-	</div>
+	<div id="preloader"></div>
 <viewer class="dashboard animated noPreventDefault" ng-if="initialized">
 	<div class="main">
 		<ul canisters>
