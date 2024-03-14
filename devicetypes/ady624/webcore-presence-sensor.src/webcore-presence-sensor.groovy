@@ -69,6 +69,8 @@ metadata {
         attribute "bearing", "Number"
         command "asleep"
         command "awake"
+	command "arrived"
+	command "departed"
         command "toggleSleeping"
 	}
 
@@ -480,6 +482,14 @@ def asleep() {
 
 def awake() {
 	toggleSleeping('not sleeping')
+}
+
+def arrived() {
+	sendEvent(name: "presence", value: "present")
+}
+
+def departed() {
+    sendEvent(name: "presence", value: "not present")
 }
 
 private formatLocalTime(format = "EEE, MMM d yyyy @ h:mm:ss a z", time = now()) {
