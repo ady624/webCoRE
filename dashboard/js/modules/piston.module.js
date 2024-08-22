@@ -961,7 +961,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', 'colorScheme
 		}
 		if (i < clipboard.length) {
 			clipboard.splice(i, 1);
-			dataService.saveToStore('clipboard', []);
+			dataService.saveToStore('clipboard', clipboard);
 		}		
 	}
 
