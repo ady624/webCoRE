@@ -1975,22 +1975,17 @@ private scheduleTimeCondition(rtData, condition) {
     def v2 = trigger ? v1 : ((comparison.p > 1) ? (evaluateExpression(rtData, evaluateOperand(rtData, null, condition.ro2, null, false, true), 'datetime').v + (tv2 ? evaluateExpression(rtData, [t: 'duration', v: tv2.v, vt: tv2.vt]).v : 0)) : (condition.lo.v == 'time' ? getMidnightTime(rtData) : v1))
     def n = now() + 2000
     if (condition.lo.v == 'time') {
-    	//v1 = (v1 % 86400000) + getMidnightTime()
-    	//v2 = (v2 % 86400000) + getMidnightTime()
 	    while (v1 < n) v1 += 86400000
     	while (v2 < n) v2 += 86400000
-/*        int cnt = 100
-        error "checking restrictions for $condition.lo", rtData
-        while (cnt) {
-        	//repeat until we find a day that's matching the restrictions
-	    	n = v1 < v2 ? v1 : v2
-			if (checkTimeRestrictions(rtData, condition.lo, n, 5, 1) == 0) break
-            long n2 = localToUtcTime(utcToLocalTime(n) + 86400000)
-            error "adding a day, $n >>> $n2", rtData
-            v1 = (v1 == n) ? n2 : v1
-            v2 = (v2 == n) ? n2 : v2
-            cnt = cnt - 1
-        }*/
+      int cnt = 366
+      while (cnt) {
+        //repeat until we find a day that's matching the restrictions
+        n = v1 < v2 ? v1 : v2
+        if (checkTimeRestrictions(rtData, condition.lo, n, 5, 1) == 0) break
+        v1 = localToUtcTime(utcToLocalTime(v1) + 86400000)
+        v2 = localToUtcTime(utcToLocalTime(v2) + 86400000)
+        cnt = cnt - 1
+      }
     }
     //figure out the next time
     v1 = (v1 < n) ? v2 : v1
