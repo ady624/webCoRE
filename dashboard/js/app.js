@@ -2364,6 +2364,17 @@ function initBootstrapSelect() {
 	$('select').selectpicker();
 }
 
+switch (navigator.platform) {
+	case 'iPhone':
+	case 'iPad':
+	case 'iPod':
+		document.documentElement.classList.add('is-ios');
+		break;
+	default:
+		document.documentElement.classList.add('is-not-ios');
+		break;
+}
+
 // ios-drag-drop mishandles touches on mobile nav menus; stop propagation of the
 // touchstart event in nav menus before it bubbles up to the document level
 $(document.documentElement).on('touchstart', '.navbar-collapse *', function (e) { 

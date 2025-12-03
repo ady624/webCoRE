@@ -1404,3 +1404,8 @@ li[instance] {
 .table-sortable thead th {
   cursor: default;
 }
+
+/* Use native spinner rather than bootstrap-select dropdown only for iOS */
+.is-not-ios .bootstrap-select > select[multiple].mobile-device {
+  z-index: 1;
+}
