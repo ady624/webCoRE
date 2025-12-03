@@ -996,7 +996,7 @@ span.s-up {
   .bootstrap-select .dropdown-menu {
     left: unset;
     right: 0;
-    min-width: min(calc(100vw - 25px), 380px) !important;
+    min-width: min(calc(100vw - 25px), 300px) !important;
   }
 }
 
