@@ -992,6 +992,12 @@ span.s-up {
 		text-shadow: none !important;
 	}
 
+  /* On small screens, overflow dropdown leftward and up to the full screen width minus padding */
+  .bootstrap-select .dropdown-menu {
+    left: unset;
+    right: 0;
+    min-width: min(calc(100vw - 25px), 380px) !important;
+  }
 }
 
 .logo {
