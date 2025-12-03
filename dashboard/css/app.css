@@ -967,10 +967,15 @@ span.s-up {
 	}
 
 	li.dropdown-header {
-		padding: 8px 20px !important;
+		padding: 8px 10px;
 		border-bottom: solid 1px #ccc;
-
 	}
+
+  .dropdown-menu > li > a, 
+  .bootstrap-select.btn-group .dropdown-menu li a.opt {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
 
 	ul:active {
 		background: none !important;
@@ -1405,7 +1410,42 @@ li[instance] {
   cursor: default;
 }
 
-/* Use native spinner rather than bootstrap-select dropdown only for iOS */
+.bootstrap-select {
+  white-space: normal;
+}
+
+/* Constrain dropdown width to toggle button dimensions, was overflowing viewport on small screens */
+.bootstrap-select .dropdown-menu {
+  width: 100%;
+}
+
+/* Reserve right margin in multi select dropdown only for selected items and truncate text */
+.bootstrap-select.btn-group .dropdown-menu li a span.text {
+  display: block;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+.bootstrap-select.btn-group.show-tick .dropdown-menu li a span.text {
+  margin-right: 0;
+}
+.bootstrap-select.btn-group.show-tick .dropdown-menu li.selected a span.text {
+  margin-right: 16px;
+}
+
+/* Ensure menu items with floating content visually contain that content if it wraps */
+.dropdown-menu li > a:after {
+  content: '';
+  display: block;
+  clear: both;
+}
+
+/* Use native multi-select spinner rather than bootstrap-select dropdown ONLY for iOS */
+.bootstrap-select > .dropdown-toggle {
+  z-index: 2;
+}
+.bootstrap-select > select.mobile-device {
+  z-index: 3;
+}
 .is-not-ios .bootstrap-select > select[multiple].mobile-device {
   z-index: 1;
 }
