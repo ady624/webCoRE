@@ -338,7 +338,7 @@ table[properties] tr td:last-child > * {
 	outline: none;
 	padding: 0px;
 	opacity: 1;
-	background: #fff;
+	background: var(--piston-properties-input-bg);
 }
 
 table[properties] tr td:last-child > input {
@@ -1112,6 +1112,7 @@ div[items] div[item] item {
 	display: block;
 	min-height: 192px;
 	background: var(--piston-div-items-bg);
+	text-shadow: var(--piston-div-items-text-shadow);
 	border-radius: 8px;
 	padding: 16px;
 	margin: 0px;
@@ -1157,7 +1158,7 @@ div[dev] {
 }
 
 div[dev]+div[dev] {
-	border-top: solid 1px #eee;
+	border-top: solid 1px var(--piston-device-separator-color);
 }
 
 div[dev] div[col] {
@@ -1304,14 +1305,6 @@ dnd-nodrag[disabled] * {
 		line-height: 16px !important;
 		min-height: 22px !important;
 		font-size: 12px;
-	}
-
-	piston:not([printing]) line::after {
-		display: block;
-		content: "";
-		margin-left: -100px;
-		height: 1px;
-		border-top: solid 1px #eee;
 	}
 
 	piston:not([printing]) event subscription,
