@@ -1428,7 +1428,7 @@ li[instance] {
 
 /* Constrain dropdown width to toggle button dimensions, was overflowing viewport on small screens */
 .bootstrap-select .dropdown-menu {
-  width: 100%;
+  min-width: 100%;
 }
 
 /* Reserve right margin in multi select dropdown only for selected items and truncate text */
