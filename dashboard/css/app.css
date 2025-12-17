@@ -992,6 +992,7 @@ span.s-up {
 
   /* On small screens, overflow dropdown leftward and up to the full screen width minus padding */
   .bootstrap-select .dropdown-menu {
+    max-width: 100%;
     left: unset;
     right: 0;
     min-width: min(calc(100vw - 25px), 250px) !important;
@@ -1422,11 +1423,6 @@ li[instance] {
 
 .bootstrap-select {
   white-space: normal;
-}
-
-/* Constrain dropdown width to toggle button dimensions, was overflowing viewport on small screens */
-.bootstrap-select .dropdown-menu {
-  max-width: 100%;
 }
 
 /* Reserve right margin in multi select dropdown only for selected items and truncate text */
