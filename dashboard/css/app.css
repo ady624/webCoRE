@@ -987,8 +987,6 @@ span.s-up {
 		background: none !important;
 	}
 	a:hover {
-		background: var(--background-featured) !important;
-		color: #333 !important;
 		text-shadow: none !important;
 	}
 
@@ -996,7 +994,7 @@ span.s-up {
   .bootstrap-select .dropdown-menu {
     left: unset;
     right: 0;
-    min-width: min(calc(100vw - 25px), 300px) !important;
+    min-width: min(calc(100vw - 25px), 250px) !important;
   }
 }
 
@@ -1428,7 +1426,7 @@ li[instance] {
 
 /* Constrain dropdown width to toggle button dimensions, was overflowing viewport on small screens */
 .bootstrap-select .dropdown-menu {
-  min-width: 100%;
+  max-width: 100%;
 }
 
 /* Reserve right margin in multi select dropdown only for selected items and truncate text */
