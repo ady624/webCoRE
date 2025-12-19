@@ -999,6 +999,16 @@ span.s-up {
   }
 }
 
+/* On extremely small screens, dropdowns inside input groups will fall out of the bounds of the screen, so try to center them on screen */
+@media (max-width: 319px) {
+  /* Target the device dropdown with 25% dropdowns on either side */ 
+  .input-group > [style*="width: 25%"] + .input-group .bootstrap-select[style*="width: 75%"] .dropdown-menu {
+    left: -45%;
+    right: -33%;
+    max-width: unset !important;
+  }
+}
+
 .logo {
     text-align: center;
     padding: 25px 0;
