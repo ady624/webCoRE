@@ -993,14 +993,12 @@ span.s-up {
   /* On small screens, overflow dropdown leftward and up to the full screen width minus padding */
   .bootstrap-select .dropdown-menu {
     max-width: 100%;
-    left: unset;
-    right: 0;
     min-width: min(calc(100vw - 25px), 250px) !important;
   }
 }
 
-/* On extremely small screens, dropdowns inside input groups will fall out of the bounds of the screen, so try to center them on screen */
-@media (max-width: 319px) {
+/* On small screens, dropdowns inside input groups will fall out of the bounds of the screen, so try to center them on screen */
+@media (max-width: 360px) {
   /* Target the device dropdown with 25% dropdowns on either side */ 
   .input-group > [style*="width: 25%"] + .input-group .bootstrap-select[style*="width: 75%"] .dropdown-menu {
     left: -45%;
