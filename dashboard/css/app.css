@@ -1455,11 +1455,11 @@ li[instance] {
 
 /* Use native multi-select spinner rather than bootstrap-select dropdown ONLY for iOS */
 .bootstrap-select > .dropdown-toggle {
-  z-index: 2;
+  z-index: 2 !important;
 }
 .bootstrap-select > select.mobile-device {
-  z-index: 3;
+  z-index: 3 !important;
 }
 .is-not-ios .bootstrap-select > select[multiple].mobile-device {
-  z-index: 1;
+  z-index: 1 !important;
 }
