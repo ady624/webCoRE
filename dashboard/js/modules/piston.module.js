@@ -4089,7 +4089,7 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', 'colorScheme
 			$scope.validateOperand(comparison.within, reinit, true);
 			comparison.valid = comparison.valid && comparison.within.valid;
 		}
-		//$scope.refreshSelects();
+		$scope.refreshSelects();
 
 	}
 
